@@ -1,37 +1,70 @@
 # CCV Shop - Development Helper (Firefox)
 
-Firefox extension for CCV Shop theme and integration development. Features:
+Firefox extension for CCV Shop theme and integration development.
 
-- **Environment bar** — colored footer on CCV Shop pages showing node/theme context
-- **Message extraction** — collect conversations from Freshdesk tickets and GitLab discussions
+## Features
 
-## Prerequisites
+### Environment bar
 
-- [Node.js](https://nodejs.org/) 18+
-- [Firefox](https://www.mozilla.org/firefox/) 140+
+- Injects a colored footer bar on CCV Shop pages that shows the current node and theme context
+- Highlights acceptatie vs production nodes (yellow vs red stripe)
+- Click the bar to dismiss it on the current page
 
-## Setup
+### Message extraction
+
+- Collect conversations from **Freshdesk** support tickets
+- Collect discussions from **GitLab** merge requests and issues
+- Popup UI with page detection, preview, copy-to-clipboard, and JSON download
+- Optional scroll-to-load for lazy-loaded messages
+- Optional raw HTML export per message
+- Pluggable extractor registry — add new sources without editing the manifest
+
+### Tooling
+
+- Built with [WXT](https://wxt.dev/) (TypeScript, hot reload)
+- Vitest tests for extractors
+- ESLint, Prettier, and `web-ext lint`
+- AMO signing workflow for permanent Firefox installs
+
+## Quick start
+
+**Using Cursor?** Run the [`/quick-start`](.cursor/commands/quick-start.md) command — it installs dependencies, starts the dev server, runs sanity checks, and reports what to do next.
+
+Otherwise, from the repo root:
 
 ```bash
 npm install
-```
-
-## Development
-
-Start the WXT dev server (rebuilds on file changes):
-
-```bash
 npm run dev
 ```
 
-Load the extension in Firefox:
+Then load the extension in Firefox:
 
 1. Open `about:debugging`
 2. Click **This Firefox**
 3. **Load Temporary Add-on…**
 4. Select `manifest.json` from `.output/firefox-mv2/`
 
+Verify with:
+
+```bash
+npm test
+npm run build
+```
+
 After code changes, reload the extension in `about:debugging` and refresh affected tabs.
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) 18+
+- [Firefox](https://www.mozilla.org/firefox/) 140+
+
+## Development
+
+See [Quick start](#quick-start) for first-time setup. The WXT dev server rebuilds on file changes:
+
+```bash
+npm run dev
+```
 
 ## Build
 
