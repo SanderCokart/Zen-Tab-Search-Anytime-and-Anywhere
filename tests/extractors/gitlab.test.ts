@@ -97,6 +97,72 @@ See analysis details on SonarQube</div>
     expect(notes[0].id).toBe("note_1");
   });
 
+  it("parses file name from diff discussion notes on merge request overview", () => {
+    document.body.innerHTML = `
+      <ul id="notes-list">
+        <li id="note_483505" class="note note-comment" data-discussion-id="f883125242899f4e91eac47e6c98ff1598406988">
+          <div class="timeline-entry-inner">
+            <div class="timeline-content">
+              <a class="author-name-link" href="/jschreurs">Jan-Willem Schreurs</a>
+              <span class="author-username">@jschreurs</span>
+              <time datetime="2026-06-05T11:13:01.601+02:00">4 hours ago</time>
+              <div class="discussion js-discussion-container">
+                <div class="discussion-body">
+                  <div class="diff-file file-holder card discussion-wrapper text-file">
+                    <div class="file-title file-title-flex-parent">
+                      <div class="file-header-content">
+                        <strong
+                          data-testid="file-name-content"
+                          class="file-title-name"
+                          data-original-title="Global/Includes/Library/Login/GlobalFunctions.php"
+                        >Global/Includes/Library/Login/GlobalFunctions.php</strong>
+                      </div>
+                    </div>
+                    <div class="diff-content">
+                      <div class="line-numbers" data-linenumber>124</div>
+                    </div>
+                  </div>
+                  <div class="note-text">Dit is niet de juiste plek voor de aanpassing.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </li>
+      </ul>
+    `;
+
+    const el = document.querySelector("#note_483505")!;
+    const parsed = parseNoteElement(el, 1);
+
+    expect(parsed.fileName).toBe("Global/Includes/Library/Login/GlobalFunctions.php");
+    expect(parsed.line).toBe("124");
+  });
+
+  it("parses file name when note is nested under diff-content without diff-file ancestor", () => {
+    document.body.innerHTML = `
+      <div class="discussion-wrapper">
+        <div class="file-title">
+          <strong data-testid="file-name-content" class="file-title-name">app/Models/Product.php</strong>
+        </div>
+        <div class="diff-content">
+          <span class="diff-line-num">42</span>
+          <li id="note_100" class="note">
+            <div class="timeline-content">
+              <a class="author-name-link" href="/bob">Bob</a>
+              <div class="note-text">Check this line</div>
+            </div>
+          </li>
+        </div>
+      </div>
+    `;
+
+    const el = document.querySelector("#note_100")!;
+    const parsed = parseNoteElement(el, 1);
+
+    expect(parsed.fileName).toBe("app/Models/Product.php");
+    expect(parsed.line).toBe("42");
+  });
+
   it("canHandle matches gitlab hostnames", () => {
     Object.defineProperty(window, "location", {
       value: new URL("https://gitlab.example.com/group/project/-/merge_requests/1"),

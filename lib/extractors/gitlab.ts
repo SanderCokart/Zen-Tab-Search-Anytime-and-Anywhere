@@ -151,21 +151,51 @@ function parseActionText(timelineContent: Element): string {
   return (clone.textContent || "").replace(/\s+/g, " ").trim();
 }
 
+const FILE_NAME_SELECTORS =
+  '.file-title-name, [data-testid="file-name-content"], [data-testid="file-name"], a[data-testid="file-title"]';
+
+const LINE_SELECTORS =
+  ".line-numbers, .diff-line-num, [data-linenumber], .js-linkable-line-number";
+
+function findDiffContextRoot(el: Element): Element | null {
+  const fromAncestor = (node: Element | null): Element | null => {
+    if (!node) return null;
+
+    return (
+      node.closest(".diff-file, .file-holder, .discussion-wrapper") ||
+      node.closest(".diff-content")?.closest(
+        ".diff-file, .file-holder, .discussion-wrapper, .discussion-body, .discussion",
+      ) ||
+      node.closest(".diff-content")
+    );
+  };
+
+  return (
+    fromAncestor(el) ||
+    fromAncestor(el.querySelector(".diff-file, .file-holder, .discussion-wrapper, .diff-content"))
+  );
+}
+
+function extractFileName(root: Element): string {
+  const fileEl = root.querySelector(FILE_NAME_SELECTORS);
+  if (!fileEl) return "";
+
+  const text = fileEl.textContent?.replace(/\s+/g, " ").trim() || "";
+  const title = fileEl.getAttribute("data-original-title")?.trim() || "";
+  return text || title;
+}
+
 function parseDiffContext(el: Element) {
-  const diffFile = el.closest(".diff-file, .file-holder, .diff-content");
-  if (!diffFile) {
+  const root = findDiffContextRoot(el);
+  if (!root) {
     return { fileName: "", line: "" };
   }
 
-  const fileName =
-    diffFile
-      .querySelector('.file-title-name, [data-testid="file-name"], a[data-testid="file-title"]')
-      ?.textContent?.replace(/\s+/g, " ")
-      .trim() || "";
+  const fileName = extractFileName(root);
 
   const line =
-    diffFile
-      .querySelector(".line-numbers, .diff-line-num, [data-linenumber]")
+    root
+      .querySelector(LINE_SELECTORS)
       ?.textContent?.replace(/\s+/g, " ")
       .trim() || "";
 
