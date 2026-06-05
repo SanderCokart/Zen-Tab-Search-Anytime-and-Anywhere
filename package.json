@@ -1,6 +1,6 @@
 {
   "name": "ccvshop-dev-tools-firefox",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,6 +17,7 @@
     "env:use:local": "dotenvx decrypt -f .envx.local --stdout > .env",
     "env:encrypt:local": "dotenvx encrypt -f .envx.local",
     "sign": "npm run env:use:local && dotenvx run -- node scripts/sign.mjs",
+    "release": "node scripts/release.mjs",
     "download-signed": "dotenvx run -- node download-signed.js",
     "postinstall": "node scripts/generate-icons.mjs"
   },
