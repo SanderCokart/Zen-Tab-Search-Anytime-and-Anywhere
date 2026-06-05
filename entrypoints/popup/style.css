@@ -1,0 +1,150 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 14px 16px 16px;
+  width: 380px;
+  font: 13px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
+  color: #1a1a1a;
+}
+
+header h1 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.tab {
+  flex: 1;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  background: #f7f7f7;
+  padding: 7px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tab.active {
+  border-color: #2c5cc5;
+  background: #eef3fc;
+  color: #1d4fbf;
+  font-weight: 600;
+}
+
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
+}
+
+.hint {
+  margin: 0 0 12px;
+  color: #555;
+  font-size: 12px;
+}
+
+.hint.subtle {
+  margin-top: 14px;
+  color: #777;
+}
+
+.feature-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: #444;
+}
+
+.feature-list li + li {
+  margin-top: 6px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+button {
+  border: 1px solid #c8c8c8;
+  border-radius: 6px;
+  background: #f5f5f5;
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #ebebeb;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button.primary {
+  width: 100%;
+  border-color: #2c5cc5;
+  background: #2c5cc5;
+  color: #fff;
+  font-weight: 600;
+}
+
+button.primary:hover:not(:disabled) {
+  background: #244ba3;
+}
+
+.status {
+  margin: 10px 0 0;
+  min-height: 1.4em;
+  font-size: 12px;
+}
+
+.status.error {
+  color: #b00020;
+}
+
+.status.ok {
+  color: #0d6b2f;
+}
+
+.status.info {
+  color: #555;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.actions.hidden,
+.preview.hidden {
+  display: none;
+}
+
+.preview {
+  margin: 10px 0 0;
+  padding: 8px;
+  max-height: 200px;
+  overflow: auto;
+  border-radius: 6px;
+  background: #f7f7f7;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

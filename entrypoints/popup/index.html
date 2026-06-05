@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CCV Shop - Development Helper</title>
+  </head>
+  <body>
+    <header>
+      <h1>CCV Shop Dev Helper</h1>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab active" data-tab="messages" role="tab">
+        Messages
+      </button>
+      <button type="button" class="tab" data-tab="devtools" role="tab">
+        Dev Tools
+      </button>
+    </nav>
+
+    <section id="panel-messages" class="panel active" role="tabpanel">
+      <p id="pageContext" class="hint"></p>
+
+      <label class="checkbox">
+        <input type="checkbox" id="scrollToLoad" checked />
+        Scroll pane first (loads lazy messages)
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" id="includeHtml" />
+        Include raw HTML per message (large export)
+      </label>
+
+      <button type="button" id="collect" class="primary">Collect messages</button>
+
+      <p id="status" class="status" role="status"></p>
+
+      <div id="actions" class="actions hidden">
+        <button type="button" id="copyJson">Copy JSON</button>
+        <button type="button" id="downloadJson">Download JSON</button>
+      </div>
+
+      <pre id="preview" class="preview hidden"></pre>
+    </section>
+
+    <section id="panel-devtools" class="panel" role="tabpanel" hidden>
+      <p class="hint">
+        The environment bar is injected automatically on CCV Shop pages and shows
+        the current node/theme context at the bottom of the page.
+      </p>
+      <ul class="feature-list">
+        <li>Acceptatie and production nodes get a colored footer bar</li>
+        <li>Click the bar to dismiss it on the current page</li>
+      </ul>
+      <p class="hint subtle">
+        Message extraction supports Freshdesk tickets and GitLab merge request
+        or issue discussions.
+      </p>
+    </section>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
