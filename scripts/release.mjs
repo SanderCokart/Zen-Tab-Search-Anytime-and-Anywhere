@@ -70,7 +70,7 @@ console.log(`Release: v${oldVersion} -> v${newVersion}`);
 
 run("Regenerating icons", "npm", ["run", "generate-icons"]);
 run("ESLint", "npm", ["run", "lint:js"]);
-run("Prettier", "npm", ["run", "format:check"]);
+run("Prettier", "npm", ["run", "format"]);
 run("Tests", "npm", ["run", "test"]);
 run("web-ext lint", "npm", ["run", "lint"]);
 
