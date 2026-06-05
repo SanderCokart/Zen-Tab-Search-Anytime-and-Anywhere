@@ -154,8 +154,7 @@ function parseActionText(timelineContent: Element): string {
 const FILE_NAME_SELECTORS =
   '.file-title-name, [data-testid="file-name-content"], [data-testid="file-name"], a[data-testid="file-title"]';
 
-const LINE_SELECTORS =
-  ".line-numbers, .diff-line-num, [data-linenumber], .js-linkable-line-number";
+const LINE_SELECTORS = ".line-numbers, .diff-line-num, [data-linenumber], .js-linkable-line-number";
 
 function findDiffContextRoot(el: Element): Element | null {
   const fromAncestor = (node: Element | null): Element | null => {
@@ -163,9 +162,9 @@ function findDiffContextRoot(el: Element): Element | null {
 
     return (
       node.closest(".diff-file, .file-holder, .discussion-wrapper") ||
-      node.closest(".diff-content")?.closest(
-        ".diff-file, .file-holder, .discussion-wrapper, .discussion-body, .discussion",
-      ) ||
+      node
+        .closest(".diff-content")
+        ?.closest(".diff-file, .file-holder, .discussion-wrapper, .discussion-body, .discussion") ||
       node.closest(".diff-content")
     );
   };
@@ -193,11 +192,7 @@ function parseDiffContext(el: Element) {
 
   const fileName = extractFileName(root);
 
-  const line =
-    root
-      .querySelector(LINE_SELECTORS)
-      ?.textContent?.replace(/\s+/g, " ")
-      .trim() || "";
+  const line = root.querySelector(LINE_SELECTORS)?.textContent?.replace(/\s+/g, " ").trim() || "";
 
   return { fileName, line };
 }
