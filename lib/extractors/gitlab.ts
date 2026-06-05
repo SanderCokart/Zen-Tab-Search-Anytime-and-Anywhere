@@ -31,6 +31,21 @@ function findGitLabConversationRoot(): Element | null {
   return null;
 }
 
+export function isSonarQubeBody(body: string): boolean {
+  const normalized = body.replace(/\s+/g, " ").trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized.startsWith("sonarqube code analysis")) return true;
+  if (normalized.includes("see analysis details on sonarqube")) return true;
+  if (
+    normalized.includes("quality gate passed") &&
+    normalized.includes("coverage on new code") &&
+    normalized.includes("new issues")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function isSonarQubeNote(el: Element): boolean {
   const authorEl = el.querySelector(
     '.author-name-link, a[data-testid="author-link"], .note-header-author a',
@@ -39,7 +54,16 @@ export function isSonarQubeNote(el: Element): boolean {
   if (authorText.includes("sonarqube") || authorText.includes("sonar qube")) {
     return true;
   }
-  return Boolean(el.querySelector(".sonarqube-report, [data-testid='sonarqube-note']"));
+  if (el.querySelector(".sonarqube-report, [data-testid='sonarqube-note']")) {
+    return true;
+  }
+
+  const bodyRoot =
+    el.querySelector(
+      '.note-text, [data-testid="note-body"], .note-body, .system-note-content, .md',
+    ) || el.querySelector(".timeline-content");
+  const body = extractGitLabBody(bodyRoot) || bodyRoot?.textContent || "";
+  return isSonarQubeBody(body);
 }
 
 function isConversationNote(el: Element): boolean {

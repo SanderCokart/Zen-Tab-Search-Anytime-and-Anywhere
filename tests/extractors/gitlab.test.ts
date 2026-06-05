@@ -41,7 +41,32 @@ describe("gitlab extractor", () => {
     expect(isSonarQubeNote(el)).toBe(true);
   });
 
-  it("excludes SonarQube notes from findNoteElements", () => {
+  it("detects SonarQube notes by body content when author is a human", () => {
+    document.body.innerHTML = `
+      <li id="note_483290">
+        <div class="timeline-content">
+          <a class="author-name-link">Frank Assink</a>
+          <span class="author-username">@fassink</span>
+          <div class="note-text">SonarQube Code Analysis
+Quality Gate passed
+Issues
+ 0 New issues
+ 0 Fixed issues
+ 0 Accepted issues
+Measures
+ 0 Security Hotspots
+ 78.3% Coverage on New Code
+ 0.0% Duplication on New Code
+See analysis details on SonarQube</div>
+        </div>
+      </li>
+    `;
+
+    const el = document.querySelector("#note_483290")!;
+    expect(isSonarQubeNote(el)).toBe(true);
+  });
+
+  it("excludes SonarQube notes posted under a human author from findNoteElements", () => {
     document.body.innerHTML = `
       <div id="notes-list">
         <li id="note_1">
@@ -50,10 +75,16 @@ describe("gitlab extractor", () => {
             <div class="note-text">Human comment</div>
           </div>
         </li>
-        <li id="note_2">
+        <li id="note_483290">
           <div class="timeline-content">
-            <a class="author-name-link">SonarQube</a>
-            <div class="note-text">Bot report</div>
+            <a class="author-name-link">Frank Assink</a>
+            <div class="note-text">SonarQube Code Analysis
+Quality Gate passed
+Issues
+ 0 New issues
+Measures
+ 78.3% Coverage on New Code
+See analysis details on SonarQube</div>
           </div>
         </li>
       </div>

@@ -3,16 +3,14 @@ import { detectSource, getExtractor } from "../lib/extractors/registry";
 import type { CollectResult } from "../lib/types";
 
 export default defineContentScript({
-  matches: [
-    "*://*.freshdesk.com/*",
-    "*://*.freshworks.com/*",
-    "*://*.myfreshworks.com/*",
-    "*://gitlab.com/*",
-    "*://*.gitlab.com/*",
-    "*://*/*gitlab*/*",
-  ],
+  matches: ["*://*/*"],
   runAt: "document_idle",
   main() {
+    const source = detectSource();
+    if (!source) {
+      return;
+    }
+
     browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (message?.type === MESSAGE_TYPES.DETECT_SOURCE) {
         sendResponse({ source: detectSource() });
