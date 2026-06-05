@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -11,12 +11,8 @@
     </header>
 
     <nav class="tabs" role="tablist">
-      <button type="button" class="tab active" data-tab="messages" role="tab">
-        Messages
-      </button>
-      <button type="button" class="tab" data-tab="devtools" role="tab">
-        Dev Tools
-      </button>
+      <button type="button" class="tab active" data-tab="messages" role="tab">Messages</button>
+      <button type="button" class="tab" data-tab="devtools" role="tab">Dev Tools</button>
     </nav>
 
     <section id="panel-messages" class="panel active" role="tabpanel">
@@ -46,16 +42,15 @@
 
     <section id="panel-devtools" class="panel" role="tabpanel" hidden>
       <p class="hint">
-        The environment bar is injected automatically on CCV Shop pages and shows
-        the current node/theme context at the bottom of the page.
+        The environment bar is injected automatically on CCV Shop pages and shows the current
+        node/theme context at the bottom of the page.
       </p>
       <ul class="feature-list">
         <li>Acceptatie and production nodes get a colored footer bar</li>
         <li>Click the bar to dismiss it on the current page</li>
       </ul>
       <p class="hint subtle">
-        Message extraction supports Freshdesk tickets and GitLab merge request
-        or issue discussions.
+        Message extraction supports Freshdesk tickets and GitLab merge request or issue discussions.
       </p>
     </section>
     <script type="module" src="./main.ts"></script>

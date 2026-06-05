@@ -16,10 +16,7 @@ export interface ExtractBodyOptions {
   includeSignature?: boolean;
 }
 
-export function extractBody(
-  bodyRoot: Element | null,
-  options: ExtractBodyOptions = {},
-): string {
+export function extractBody(bodyRoot: Element | null, options: ExtractBodyOptions = {}): string {
   if (!bodyRoot) return "";
 
   const clone = bodyRoot.cloneNode(true) as Element;
@@ -49,7 +46,5 @@ export function extractBody(
 }
 
 export function dedupeByContainment(elements: Element[]): Element[] {
-  return elements.filter(
-    (el, _i, arr) => !arr.some((other) => other !== el && other.contains(el)),
-  );
+  return elements.filter((el, _i, arr) => !arr.some((other) => other !== el && other.contains(el)));
 }

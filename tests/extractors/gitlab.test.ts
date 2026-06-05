@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  findNoteElements,
-  isSonarQubeNote,
-  parseNoteElement,
-} from "../../lib/extractors/gitlab";
+import { findNoteElements, isSonarQubeNote, parseNoteElement } from "../../lib/extractors/gitlab";
 import { gitlabExtractor } from "../../lib/extractors/gitlab";
 
 describe("gitlab extractor", () => {

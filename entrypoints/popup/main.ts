@@ -116,8 +116,7 @@ collectBtn.addEventListener("click", async () => {
         return `#${m.index} ${label} (${m.messageType})${meta ? `\n${meta}` : ""}\n${String(m.body || "").slice(0, 120)}`;
       })
       .join("\n\n");
-    previewEl.textContent =
-      result.messages.length > 3 ? `${preview}\n\n...` : preview;
+    previewEl.textContent = result.messages.length > 3 ? `${preview}\n\n...` : preview;
     previewEl.classList.remove("hidden");
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -148,9 +147,7 @@ downloadBtn.addEventListener("click", () => {
   let name = "messages.json";
   if (lastResult.source === "freshdesk") {
     const ticketId = (lastResult.pageUrl || "").match(/\/tickets\/(\d+)/);
-    name = ticketId
-      ? `freshdesk-ticket-${ticketId[1]}-messages.json`
-      : "freshdesk-messages.json";
+    name = ticketId ? `freshdesk-ticket-${ticketId[1]}-messages.json` : "freshdesk-messages.json";
   } else if (lastResult.source === "gitlab") {
     const mrId = lastResult.pageContext?.mergeRequestIid;
     const issueId = lastResult.pageContext?.issueIid;

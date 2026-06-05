@@ -1,11 +1,6 @@
 import { SOURCE_IDS } from "../constants";
 import { extractBody, sleep } from "../dom-utils";
-import type {
-  CollectOptions,
-  CollectResult,
-  GitLabPageContext,
-  MessageExtractor,
-} from "../types";
+import type { CollectOptions, CollectResult, GitLabPageContext, MessageExtractor } from "../types";
 
 const CONTAINER_SELECTORS = [
   "#notes-list",
@@ -89,8 +84,7 @@ function parseAuthor(timelineContent: Element) {
 
   const usernameEl = timelineContent.querySelector(".author-username");
   const usernameFromEl = usernameEl?.textContent?.replace(/^@/, "").trim() || "";
-  const usernameFromHref =
-    authorEl?.getAttribute("href")?.match(/\/([^/]+)\/?$/)?.[1] || "";
+  const usernameFromHref = authorEl?.getAttribute("href")?.match(/\/([^/]+)\/?$/)?.[1] || "";
 
   return {
     author,
@@ -254,8 +248,7 @@ async function collectMessages(options: CollectOptions = {}): Promise<CollectRes
     return {
       ok: false,
       source: SOURCE_IDS.GITLAB,
-      error:
-        "Discussion container not found. Open the merge request or issue discussion tab.",
+      error: "Discussion container not found. Open the merge request or issue discussion tab.",
       messages: [],
       pageUrl: location.href,
       collectedAt: new Date().toISOString(),

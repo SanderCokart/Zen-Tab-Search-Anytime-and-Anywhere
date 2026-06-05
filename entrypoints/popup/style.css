@@ -6,7 +6,11 @@ body {
   margin: 0;
   padding: 14px 16px 16px;
   width: 380px;
-  font: 13px/1.45 system-ui, -apple-system, Segoe UI, sans-serif;
+  font:
+    13px/1.45 system-ui,
+    -apple-system,
+    Segoe UI,
+    sans-serif;
   color: #1a1a1a;
 }
 

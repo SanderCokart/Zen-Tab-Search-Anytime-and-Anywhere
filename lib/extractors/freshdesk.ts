@@ -1,10 +1,5 @@
 import { SOURCE_IDS } from "../constants";
-import {
-  dedupeByContainment,
-  extractBody,
-  findConversationRoot,
-  sleep,
-} from "../dom-utils";
+import { dedupeByContainment, extractBody, findConversationRoot, sleep } from "../dom-utils";
 import type { CollectOptions, CollectResult, MessageExtractor } from "../types";
 
 const CONTAINER_SELECTORS = [
@@ -25,9 +20,7 @@ function findMessageElements(root: Element): Element[] {
     return dedupeByContainment(items);
   }
 
-  const wrappers = [
-    ...root.querySelectorAll('[data-test-id="conversation-wrapper"]'),
-  ];
+  const wrappers = [...root.querySelectorAll('[data-test-id="conversation-wrapper"]')];
   if (wrappers.length > 0) {
     return dedupeByContainment(wrappers);
   }
@@ -88,8 +81,7 @@ export function parseMessageElement(el: Element, index: number) {
     "";
 
   const status =
-    el.querySelector('[data-test-id="conversation-status"]')?.textContent?.trim() ||
-    "";
+    el.querySelector('[data-test-id="conversation-status"]')?.textContent?.trim() || "";
 
   const timeAgoEl = el.querySelector('[data-test-id="time-ago"]');
   const timeUnitsEl = timeAgoEl?.querySelector(".timeago-units");

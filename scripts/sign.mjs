@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-const rootDir = path.dirname(fileURLToPath(new URL("..", import.meta.url)));
+const rootDir = fileURLToPath(new URL("..", import.meta.url));
 
 const issuer = process.env.AMO_JWT_ISSUER;
 const secret = process.env.AMO_JWT_SECRET;
@@ -11,7 +11,9 @@ if (!issuer || !secret) {
   console.error("Error: AMO API credentials are required.");
   console.error("");
   console.error("1. Create a Mozilla developer account: https://addons.mozilla.org/developers/");
-  console.error("2. Generate API credentials: https://addons.mozilla.org/developers/addon/api/key/");
+  console.error(
+    "2. Generate API credentials: https://addons.mozilla.org/developers/addon/api/key/",
+  );
   console.error("3. Set up encrypted credentials, then decrypt locally:");
   console.error("");
   console.error("   npm run env:use:local");

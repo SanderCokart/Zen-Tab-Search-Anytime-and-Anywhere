@@ -1,9 +1,10 @@
-const crypto = require("crypto");
-const fs = require("fs");
-const path = require("path");
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const ADDON_ID = "ccvshop-dev-helper@ccvshop.local";
-const OUTPUT_DIR = path.join(__dirname, "signed");
+const OUTPUT_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "signed");
 
 function createJwt(issuer, secret) {
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
@@ -79,10 +80,7 @@ async function main() {
   }
 
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  const outputPath = path.join(
-    OUTPUT_DIR,
-    `ccvshop-dev-helper-${version.version}.xpi`,
-  );
+  const outputPath = path.join(OUTPUT_DIR, `ccvshop-dev-helper-${version.version}.xpi`);
   const buffer = Buffer.from(await downloadResponse.arrayBuffer());
   fs.writeFileSync(outputPath, buffer);
 

@@ -16,9 +16,6 @@ fs.mkdirSync(iconDir, { recursive: true });
 
 for (const size of sizes) {
   const outputPath = path.join(iconDir, `${size}.png`);
-  await sharp(svgPath)
-    .resize(size, size)
-    .png()
-    .toFile(outputPath);
+  await sharp(svgPath).resize(size, size).png().toFile(outputPath);
   console.log(`Generated ${outputPath}`);
 }
