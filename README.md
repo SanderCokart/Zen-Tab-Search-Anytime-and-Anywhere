@@ -96,13 +96,16 @@ No manifest edits required — WXT generates the manifest from entrypoints.
 
 Mozilla Add-ons signing is required for permanent Firefox installation outside dev mode.
 
-1. Create API credentials: https://addons.mozilla.org/developers/addon/api/key/
-2. Store them in the encrypted `.envx.local` file (committed to git):
+AMO credentials are stored in the encrypted `.envx.local` file (committed to git). To decrypt it locally, ask **@scokart** (Sander Cokart) for the private key and save it to `.env.keys` (gitignored):
+
+```
+DOTENV_PRIVATE_KEY_LOCAL=<key from Sander>
+```
+
+Then decrypt to a local `.env` (also gitignored):
 
 ```bash
-cp .env.example .env
-# Edit .env with your AMO_JWT_ISSUER and AMO_JWT_SECRET
-npm run env:encrypt:local
+npm run env:use:local
 ```
 
 To update credentials later:
@@ -113,23 +116,21 @@ npm run env:use:local      # decrypt .envx.local → .env
 npm run env:encrypt:local  # save encrypted changes back to .envx.local
 ```
 
-Keep `.env.keys` local only (gitignored). Plaintext `.env` is also gitignored.
-
-3. Sign (decrypts automatically):
+1. Sign (decrypts automatically):
 
 ```bash
 npm run sign
 ```
 
-4. When approved, download the signed XPI:
+2. When approved, download the signed XPI:
 
 ```bash
 npm run download-signed
 ```
 
-5. Install via `about:addons` → gear → **Install Add-on From File…**
+3. Install via `about:addons` → gear → **Install Add-on From File…**
 
-For CI, set `DOTENV_PRIVATE_KEY` from `.env.keys` instead of committing that file.
+For CI, set `DOTENV_PRIVATE_KEY_LOCAL` from `.env.keys` instead of committing that file.
 
 ## Project structure
 
