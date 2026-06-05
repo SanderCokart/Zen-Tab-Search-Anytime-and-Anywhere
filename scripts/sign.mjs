@@ -1,6 +1,5 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import path from "node:path";
 
 const rootDir = fileURLToPath(new URL("..", import.meta.url));
 
