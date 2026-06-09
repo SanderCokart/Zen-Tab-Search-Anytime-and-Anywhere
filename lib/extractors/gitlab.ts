@@ -233,7 +233,6 @@ export function parseNoteElement(el: Element, index: number) {
     fileName,
     line,
     body: extractGitLabBody(bodyRoot),
-    className: el.className?.toString?.() || "",
   };
 }
 

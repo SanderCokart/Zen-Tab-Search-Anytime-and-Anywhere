@@ -110,11 +110,6 @@ export function parseMessageElement(el: Element, index: number) {
     el.querySelector(".ticket_note");
 
   const body = extractBody(bodyRoot, {
-    includeQuoted: false,
-    includeSignature: false,
-  });
-
-  const bodyWithQuotes = extractBody(bodyRoot, {
     includeQuoted: true,
     includeSignature: false,
   });
@@ -134,9 +129,6 @@ export function parseMessageElement(el: Element, index: number) {
     cc: recipients.cc,
     bcc: recipients.bcc,
     body,
-    bodyWithQuotes,
-    dataTestId: el.getAttribute("data-test-id") || "",
-    className: el.className?.toString?.() || "",
   };
 }
 
