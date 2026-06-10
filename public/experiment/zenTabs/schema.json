@@ -1,0 +1,23 @@
+[
+  {
+    "namespace": "zenTabs",
+    "description": "Access Zen Browser custom tab labels (zenStaticLabel)",
+    "functions": [
+      {
+        "name": "getCustomLabels",
+        "type": "function",
+        "description": "Returns custom tab labels for the given tab IDs",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabIds",
+            "type": "array",
+            "items": { "type": "integer" },
+            "optional": true,
+            "description": "Extension tab IDs from browser.tabs.query"
+          }
+        ]
+      }
+    ]
+  }
+]

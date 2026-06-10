@@ -1,3 +1,21 @@
+interface ZenTabsApi {
+  getCustomLabels(tabIds?: number[]): Promise<Record<number, string>>;
+}
+
+async function getCustomTabLabels(tabIds: number[]): Promise<Record<number, string>> {
+  const zenTabs = (browser as typeof browser & { zenTabs?: ZenTabsApi }).zenTabs;
+  if (!zenTabs?.getCustomLabels) {
+    return {};
+  }
+
+  try {
+    return await zenTabs.getCustomLabels(tabIds);
+  } catch (error) {
+    console.warn("Could not read Zen custom tab labels:", error);
+    return {};
+  }
+}
+
 export default defineBackground(() => {
   console.log("Zen Tab Search background started at", new Date().toISOString());
 
@@ -33,11 +51,17 @@ export default defineBackground(() => {
     if (message.type === "getTabs") {
       browser.tabs
         .query({})
-        .then((tabs) => {
+        .then(async (tabs) => {
+          const tabIds = tabs
+            .map((tab) => tab.id)
+            .filter((id): id is number => Number.isInteger(id) && id >= 0);
+          const customLabels = await getCustomTabLabels(tabIds);
+
           sendResponse(
             tabs.map((tab) => ({
               id: tab.id,
               title: tab.title || "Untitled",
+              customLabel: customLabels[tab.id ?? -1] ?? "",
               url: tab.url || "",
               favIconUrl: tab.favIconUrl || "",
               windowId: tab.windowId,

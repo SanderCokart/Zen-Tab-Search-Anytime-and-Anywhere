@@ -21,6 +21,16 @@ export default defineConfig({
       48: "icon/48.png",
       96: "icon/96.png",
     },
+    experiment_apis: {
+      zenTabs: {
+        schema: "experiment/zenTabs/schema.json",
+        parent: {
+          scopes: ["addon_parent"],
+          paths: [["zenTabs"]],
+          script: "experiment/zenTabs/api.js",
+        },
+      },
+    },
     browser_specific_settings: {
       gecko: {
         id: "zen-tab-search@extension.example",
