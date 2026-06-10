@@ -3,10 +3,20 @@ import "./style.css";
 interface TabInfo {
   id: number;
   title: string;
+  customLabel?: string;
   url: string;
   favIconUrl: string;
   windowId: number;
   score?: number;
+}
+
+function formatTabDisplayTitle(tab: TabInfo): string {
+  const title = tab.title || "Untitled";
+  const customLabel = tab.customLabel?.trim();
+  if (customLabel) {
+    return `${customLabel} | ${title}`;
+  }
+  return title;
 }
 
 interface FuzzyMatch {
@@ -188,7 +198,7 @@ export default defineContentScript({
               }
 
               const title = document.createElement("span");
-              title.textContent = tab.title || "Untitled";
+              title.textContent = formatTabDisplayTitle(tab);
               title.className = "zen-title";
 
               const url = document.createElement("span");
@@ -223,14 +233,15 @@ export default defineContentScript({
             const queryLowerCase = query.toLowerCase();
             const scored = allTabs
               .map((tab) => {
+                const labelMatch = fuzzyMatchWithScore(tab.customLabel || "", queryLowerCase);
                 const titleMatch = fuzzyMatchWithScore(tab.title || "", queryLowerCase);
                 const urlMatch = fuzzyMatchWithScore(tab.url || "", queryLowerCase);
-                if (!titleMatch.matches && !urlMatch.matches) {
+                if (!labelMatch.matches && !titleMatch.matches && !urlMatch.matches) {
                   return null;
                 }
                 return {
                   ...tab,
-                  score: Math.max(titleMatch.score, urlMatch.score),
+                  score: Math.max(labelMatch.score, titleMatch.score, urlMatch.score),
                 };
               })
               .filter((tab): tab is TabInfo => tab !== null)
