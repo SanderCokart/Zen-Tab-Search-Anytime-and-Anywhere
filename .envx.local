@@ -1,0 +1,11 @@
+# .envx.local
+#/-------------------[DOTENV_PUBLIC_KEY]--------------------/
+#/            public-key encryption for .env files          /
+#/       [how it works](https://dotenvx.com/encryption)     /
+#/----------------------------------------------------------/
+DOTENV_PUBLIC_KEY_LOCAL="039043e82551cc771f30ffb35a1618cec3e1b1e6479ec181ace8ba7ca2cbcf7c3d"
+
+# Mozilla Add-ons API credentials
+# https://addons.mozilla.org/developers/addon/api/key/
+AMO_JWT_ISSUER=encrypted:BGl8j9u4QEcIdSCzxrOF6v919WcmDtjwg6aD4ObugpgqAR/ZaWkeSjlCheHLPAF/OIl64FpWuq/L5X0PsJsd4buMNAM4R0ki3GBsz9jKU4k83/1lYSJNFdqXhxVIctP/4++uNjKyx27vVASqlrmRA8EC
+AMO_JWT_SECRET=encrypted:BAb+6iClmCYxHERbTms/zBj5zlF57BUBvScs4zc6ibBuQwvkrBu/UURCFa1Yj7Z1yCZz9YJoVJOH3wmcsngmfnPFchRACFBwJCY7YvvyvQq89LAClZk7gxJhVJUFNHOvqCqEwkTFPPyPTasV5B7JxfIWqIjM+tGL0JSIcq49PsilEUN3KbXhgEPu6YIflDUOLqoVW7RMdzm9rko+JGT4/RI=
