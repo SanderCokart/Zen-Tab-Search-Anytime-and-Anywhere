@@ -308,8 +308,7 @@ this.zenTabs = class extends ExtensionAPI {
 
       if (tabWorkspace && tabWorkspace !== activeWorkspace) {
         const lastSelectedTabs = win.gZenWorkspaces.lastSelectedWorkspaceTabs;
-        const previousLastSelected =
-          lastSelectedTabs && lastSelectedTabs[tabWorkspace];
+        const previousLastSelected = lastSelectedTabs && lastSelectedTabs[tabWorkspace];
         if (lastSelectedTabs) {
           lastSelectedTabs[tabWorkspace] = tab;
         }
