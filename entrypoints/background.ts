@@ -1,4 +1,5 @@
 import { DEBUG, debugError, debugLog, debugWarn } from "../lib/debug";
+import type { SpaceInfo, TabInfo } from "../lib/types";
 
 interface ZenDebugInfo {
   timestamp: string;
@@ -29,25 +30,6 @@ interface ZenTabsApi {
   activateTabByDomId(domId: string, anchorTabId?: number): Promise<boolean>;
 }
 
-interface TabInfo {
-  id: number;
-  domId?: string;
-  title: string;
-  customLabel?: string;
-  url: string;
-  favIconUrl: string;
-  windowId: number;
-  workspaceId?: string;
-  workspaceName?: string;
-}
-
-interface SpaceInfo {
-  id: string;
-  name: string;
-  icon?: string;
-  isActive: boolean;
-}
-
 const LOG_PREFIX = "[zen-tab-search]";
 
 function getZenTabsApi(): ZenTabsApi | undefined {
@@ -70,18 +52,95 @@ function formatError(error: unknown): string {
   return String(error);
 }
 
+function isContentScriptInjectableUrl(url: string | undefined): boolean {
+  if (!url) {
+    return false;
+  }
+
+  try {
+    const { protocol } = new URL(url);
+    return protocol === "http:" || protocol === "https:" || protocol === "file:";
+  } catch {
+    return false;
+  }
+}
+
+/** Zen experiment APIs accept -1 when no extension tab can anchor the browser window lookup. */
+function zenAnchorTabId(tabId?: number): number {
+  if (Number.isInteger(tabId) && tabId! >= 0) {
+    return tabId!;
+  }
+  return -1;
+}
+
 async function resolveAnchorTabId(preferredTabId?: number): Promise<number | undefined> {
   if (Number.isInteger(preferredTabId) && preferredTabId! >= 0) {
     return preferredTabId;
   }
 
-  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-  const tabId = tabs[0]?.id;
-  if (Number.isInteger(tabId) && tabId! >= 0) {
-    return tabId;
+  const focusedTabs = await browser.tabs.query({ active: true, currentWindow: true });
+  const focusedTabId = focusedTabs[0]?.id;
+  if (Number.isInteger(focusedTabId) && focusedTabId! >= 0) {
+    return focusedTabId;
+  }
+
+  const activeTabs = await browser.tabs.query({ active: true });
+  const activeTabId = activeTabs[0]?.id;
+  if (Number.isInteger(activeTabId) && activeTabId! >= 0) {
+    return activeTabId;
+  }
+
+  const allTabs = await browser.tabs.query({});
+  const anyTabId = allTabs[0]?.id;
+  if (Number.isInteger(anyTabId) && anyTabId! >= 0) {
+    return anyTabId;
   }
 
   return undefined;
+}
+
+async function openSearchPopup(): Promise<void> {
+  try {
+    await browser.browserAction.openPopup();
+    return;
+  } catch (error) {
+    debugWarn(`${LOG_PREFIX} browserAction.openPopup failed, trying popup window:`, formatError(error));
+  }
+
+  try {
+    await browser.windows.create({
+      url: browser.runtime.getURL("popup.html"),
+      type: "popup",
+      width: 400,
+      height: 480,
+    });
+  } catch (error) {
+    console.error(`${LOG_PREFIX} Could not open search popup:`, formatError(error));
+  }
+}
+
+async function openOmnibar(): Promise<void> {
+  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+  const tab = tabs[0];
+  const tabId = tab?.id;
+
+  if (
+    Number.isInteger(tabId) &&
+    tabId! >= 0 &&
+    isContentScriptInjectableUrl(tab?.url)
+  ) {
+    try {
+      await browser.tabs.sendMessage(tabId!, { type: "showOmnibar", anchorTabId: tabId });
+      return;
+    } catch (error) {
+      debugLog(
+        `${LOG_PREFIX} In-page omnibar unavailable, falling back to popup:`,
+        formatError(error),
+      );
+    }
+  }
+
+  await openSearchPopup();
 }
 
 async function logZenDebugInfo(context: string, anchorTabId?: number): Promise<void> {
@@ -161,10 +220,10 @@ async function queryTabs(anchorTabId?: number): Promise<TabInfo[]> {
   const tabId = await resolveAnchorTabId(anchorTabId);
   const zenTabs = getZenTabsApi();
 
-  if (zenTabs?.getAllTabs && Number.isInteger(tabId)) {
+  if (zenTabs?.getAllTabs) {
     try {
       debugLog(`${LOG_PREFIX} queryTabs via zenTabs.getAllTabs`, { anchorTabId: tabId });
-      const tabs = await zenTabs.getAllTabs(tabId);
+      const tabs = await zenTabs.getAllTabs(zenAnchorTabId(tabId));
       if (tabs) {
         return tabs.map((tab) => ({
           ...tab,
@@ -196,13 +255,13 @@ async function queryTabs(anchorTabId?: number): Promise<TabInfo[]> {
 async function getSpaces(anchorTabId?: number): Promise<SpaceInfo[]> {
   const tabId = await resolveAnchorTabId(anchorTabId);
   const zenTabs = getZenTabsApi();
-  if (!zenTabs?.getSpaces || !Number.isInteger(tabId)) {
+  if (!zenTabs?.getSpaces) {
     debugWarn(`${LOG_PREFIX} getSpaces unavailable`, { hasApi: !!zenTabs?.getSpaces, tabId });
     return [];
   }
 
   try {
-    const spaces = await zenTabs.getSpaces(tabId);
+    const spaces = await zenTabs.getSpaces(zenAnchorTabId(tabId));
     debugLog(`${LOG_PREFIX} getSpaces returned`, { count: spaces.length });
     return spaces;
   } catch (error) {
@@ -217,10 +276,10 @@ async function switchToTab(
   domId?: string,
   anchorTabId?: number,
 ): Promise<void> {
-  const anchorId = await resolveAnchorTabId(anchorTabId);
+  const anchorId = zenAnchorTabId(await resolveAnchorTabId(anchorTabId));
   const zenTabs = getZenTabsApi();
 
-  if (zenTabs?.activateTabByDomId && domId && Number.isInteger(anchorId)) {
+  if (zenTabs?.activateTabByDomId && domId) {
     try {
       const activated = await zenTabs.activateTabByDomId(domId, anchorId);
       if (activated) {
@@ -231,7 +290,7 @@ async function switchToTab(
     }
   }
 
-  if (zenTabs?.activateTab && Number.isInteger(tabId) && tabId! >= 0 && Number.isInteger(anchorId)) {
+  if (zenTabs?.activateTab && Number.isInteger(tabId) && tabId! >= 0) {
     try {
       const activated = await zenTabs.activateTab(tabId!, anchorId);
       if (activated) {
@@ -256,13 +315,13 @@ async function switchToTab(
 }
 
 async function switchToSpace(spaceId: string, anchorTabId?: number): Promise<void> {
-  const tabId = await resolveAnchorTabId(anchorTabId);
+  const anchorId = zenAnchorTabId(await resolveAnchorTabId(anchorTabId));
   const zenTabs = getZenTabsApi();
-  if (!zenTabs?.switchSpace || !Number.isInteger(tabId)) {
+  if (!zenTabs?.switchSpace) {
     throw new Error("Zen spaces API unavailable");
   }
 
-  const switched = await zenTabs.switchSpace(spaceId, tabId);
+  const switched = await zenTabs.switchSpace(spaceId, anchorId);
   if (!switched) {
     throw new Error("Could not switch space");
   }
@@ -283,20 +342,9 @@ export default defineBackground(() => {
       return;
     }
 
-    browser.tabs
-      .query({ active: true, currentWindow: true })
-      .then((tabs) => {
-        const tabId = tabs[0]?.id;
-        if (!Number.isInteger(tabId) || tabId! < 0) {
-          console.error(`${LOG_PREFIX} No valid active tab found`);
-          return;
-        }
-
-        return browser.tabs.sendMessage(tabId!, { type: "showOmnibar", anchorTabId: tabId });
-      })
-      .catch((error) => {
-        console.error(`${LOG_PREFIX} Error handling show-omnibar command:`, formatError(error));
-      });
+    void openOmnibar().catch((error) => {
+      console.error(`${LOG_PREFIX} Error handling show-omnibar command:`, formatError(error));
+    });
   });
 
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {

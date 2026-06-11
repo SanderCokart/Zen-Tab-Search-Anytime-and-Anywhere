@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Zen Tab Search</title>
+    <!-- Ensure WXT generates browser_action (MV2) for the popup -->
+    <meta name="manifest.type" content="browser_action" />
+  </head>
+  <body>
+    <div id="app" class="zen-popup">
+      <input
+        id="search-input"
+        type="text"
+        placeholder="Search tabs and spaces..."
+        class="zen-input"
+        autofocus
+      />
+      <ul id="results" class="zen-list" role="listbox"></ul>
+      <div id="empty" class="zen-empty" hidden>No tabs or spaces found.</div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
