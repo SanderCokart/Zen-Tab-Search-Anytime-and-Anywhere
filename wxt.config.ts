@@ -14,7 +14,16 @@ export default defineConfig({
           default: "Alt+T",
           mac: "MacCtrl+T",
         },
-        description: "Open tab search omnibar",
+        description: "Open tab search omnibar (in-page overlay when possible)",
+      },
+      // Special command name: pressing this (or clicking the toolbar icon) opens the popup directly.
+      // This works even when there is no normal content tab (e.g. about:newtab, no tabs at all).
+      "_execute_browser_action": {
+        suggested_key: {
+          default: "Alt+Shift+T",
+          mac: "MacCtrl+Shift+T",
+        },
+        description: "Open Zen Tab Search popup",
       },
     },
     icons: {

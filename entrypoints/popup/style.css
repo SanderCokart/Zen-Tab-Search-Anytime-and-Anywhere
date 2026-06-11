@@ -1,0 +1,140 @@
+/* Compact popup version of the Zen Tab Search omnibar */
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 8px;
+  width: 380px;
+  min-height: 120px;
+  max-height: 420px;
+  font:
+    13px/1.4 system-ui,
+    -apple-system,
+    Segoe UI,
+    sans-serif;
+  background: #1e1e1e;
+  color: #fff;
+}
+
+.zen-popup {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.zen-input {
+  background: #333;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 14px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  outline: none;
+  width: 100%;
+}
+
+.zen-input::placeholder {
+  color: #888;
+}
+
+.zen-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 60px;
+}
+
+.zen-tab-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 13px;
+}
+
+.zen-tab-item:hover,
+.zen-tab-item.selected {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.zen-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.zen-space-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.zen-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.zen-space-item .zen-title {
+  font-weight: 600;
+}
+
+.zen-title {
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zen-url {
+  color: #aaa;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zen-empty {
+  color: #888;
+  font-size: 12px;
+  padding: 12px 4px;
+  text-align: center;
+}
+
+.zen-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.zen-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.zen-list::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 3px;
+}
+
+.zen-list::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
