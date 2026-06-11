@@ -1,14 +1,30 @@
 import "./style.css";
+import { debugError, debugLog } from "../../lib/debug";
 
 interface TabInfo {
-  id: number;
+  id: number | null;
+  domId?: string;
   title: string;
   customLabel?: string;
   url: string;
   favIconUrl: string;
   windowId: number;
+  workspaceId?: string;
+  workspaceName?: string;
   score?: number;
 }
+
+interface SpaceInfo {
+  id: string;
+  name: string;
+  icon?: string;
+  isActive: boolean;
+  score?: number;
+}
+
+type SearchItem =
+  | { kind: "tab"; data: TabInfo }
+  | { kind: "space"; data: SpaceInfo };
 
 function formatTabDisplayTitle(tab: TabInfo): string {
   const title = tab.title || "Untitled";
@@ -17,6 +33,17 @@ function formatTabDisplayTitle(tab: TabInfo): string {
     return `${customLabel} | ${title}`;
   }
   return title;
+}
+
+function formatSpaceDisplayTitle(space: SpaceInfo): string {
+  return space.name;
+}
+
+function isActivatableTab(tab: TabInfo): boolean {
+  return (
+    (Number.isInteger(tab.id) && tab.id! >= 0) ||
+    (typeof tab.domId === "string" && tab.domId.length > 0)
+  );
 }
 
 interface FuzzyMatch {
@@ -79,16 +106,75 @@ function fuzzyMatchWithScore(str: string, queryLowerCase: string): FuzzyMatch {
   return { matches: true, score };
 }
 
+function buildSearchItems(allTabs: TabInfo[], allSpaces: SpaceInfo[]): SearchItem[] {
+  const items: SearchItem[] = allSpaces.map((space) => ({ kind: "space", data: space }));
+  for (const tab of allTabs) {
+    items.push({ kind: "tab", data: tab });
+  }
+  return items;
+}
+
+function filterSearchItems(items: SearchItem[], query: string): SearchItem[] {
+  if (!query) {
+    return items;
+  }
+
+  const queryLowerCase = query.toLowerCase();
+  const scored: SearchItem[] = [];
+
+  for (const item of items) {
+    if (item.kind === "space") {
+      const nameMatch = fuzzyMatchWithScore(item.data.name, queryLowerCase);
+      const iconMatch = fuzzyMatchWithScore(item.data.icon || "", queryLowerCase);
+      if (!nameMatch.matches && !iconMatch.matches) {
+        continue;
+      }
+
+      scored.push({
+        kind: "space",
+        data: {
+          ...item.data,
+          score: Math.max(nameMatch.score, iconMatch.score) + 300,
+        },
+      });
+      continue;
+    }
+
+    const labelMatch = fuzzyMatchWithScore(item.data.customLabel || "", queryLowerCase);
+    const titleMatch = fuzzyMatchWithScore(item.data.title || "", queryLowerCase);
+    const urlMatch = fuzzyMatchWithScore(item.data.url || "", queryLowerCase);
+    const workspaceMatch = fuzzyMatchWithScore(item.data.workspaceName || "", queryLowerCase);
+    if (!labelMatch.matches && !titleMatch.matches && !urlMatch.matches && !workspaceMatch.matches) {
+      continue;
+    }
+
+    scored.push({
+      kind: "tab",
+      data: {
+        ...item.data,
+        score: Math.max(
+          labelMatch.score,
+          titleMatch.score,
+          urlMatch.score,
+          workspaceMatch.score,
+        ),
+      },
+    });
+  }
+
+  return scored.sort((a, b) => (b.data.score ?? 0) - (a.data.score ?? 0));
+}
+
 export default defineContentScript({
   matches: ["<all_urls>"],
   runAt: "document_end",
   main() {
-    console.log("Zen Tab Search content script loaded at", new Date().toISOString());
+    debugLog("Zen Tab Search content script loaded at", new Date().toISOString());
 
     function showOmnibar() {
-      console.log("showOmnibar called at", new Date().toISOString());
+      debugLog("showOmnibar called at", new Date().toISOString());
       if (document.getElementById("zen-tab-omnibar-overlay")) {
-        console.log("Overlay already exists, skipping");
+        debugLog("Overlay already exists, skipping");
         return;
       }
 
@@ -101,7 +187,7 @@ export default defineContentScript({
 
       const input = document.createElement("input");
       input.type = "text";
-      input.placeholder = "Search tabs...";
+      input.placeholder = "Search tabs and spaces...";
       input.className = "zen-input";
       input.autofocus = true;
 
@@ -149,10 +235,14 @@ export default defineContentScript({
         }
       });
 
-      browser.runtime
-        .sendMessage({ type: "getTabs" })
-        .then((tabs: TabInfo[]) => {
-          const allTabs = tabs.filter((tab) => Number.isInteger(tab.id) && tab.id >= 0);
+      Promise.all([
+        browser.runtime.sendMessage({ type: "getTabs" }) as Promise<TabInfo[]>,
+        browser.runtime.sendMessage({ type: "getSpaces" }) as Promise<SpaceInfo[]>,
+      ])
+        .then(([tabs, spaces]) => {
+          const allTabs = tabs.filter(isActivatableTab);
+          const allSpaces = Array.isArray(spaces) ? spaces : [];
+          let visibleItems = buildSearchItems(allTabs, allSpaces);
           let selectedIndex = -1;
 
           function updateSelection() {
@@ -164,90 +254,122 @@ export default defineContentScript({
             }
           }
 
-          function switchToTab(tabId: number) {
-            if (!Number.isInteger(tabId) || tabId < 0) {
+          function activateItem(item: SearchItem) {
+            if (item.kind === "space") {
+              browser.runtime
+                .sendMessage({ type: "switchSpace", spaceId: item.data.id })
+                .then((response: { error?: string }) => {
+                  if (response?.error) {
+                    debugError("Error response from switchSpace:", response.error);
+                    return;
+                  }
+                  closeOmnibar();
+                })
+                .catch((error) => {
+                  debugError("Error sending switchSpace message:", error);
+                });
+              return;
+            }
+
+            if (!isActivatableTab(item.data)) {
               return;
             }
 
             browser.runtime
-              .sendMessage({ type: "switchTab", tabId })
+              .sendMessage({
+                type: "switchTab",
+                tabId: item.data.id ?? undefined,
+                domId: item.data.domId,
+              })
               .then((response: { error?: string }) => {
                 if (response?.error) {
-                  console.error("Error response from switchTab:", response.error);
+                  debugError("Error response from switchTab:", response.error);
                   return;
                 }
                 closeOmnibar();
               })
               .catch((error) => {
-                console.error("Error sending switchTab message:", error);
+                debugError("Error sending switchTab message:", error);
               });
           }
 
-          function renderTabs(filteredTabs: TabInfo[]) {
+          function renderItems(filteredItems: SearchItem[]) {
             list.innerHTML = "";
-            filteredTabs.forEach((tab) => {
+            filteredItems.forEach((item) => {
               const li = document.createElement("li");
-              li.className = "zen-tab-item";
-              li.dataset.tabId = String(tab.id);
+              li.className =
+                item.kind === "space" ? "zen-tab-item zen-space-item" : "zen-tab-item";
+              li.dataset.kind = item.kind;
 
-              if (tab.favIconUrl) {
-                const img = document.createElement("img");
-                img.src = tab.favIconUrl;
-                img.className = "zen-favicon";
-                li.appendChild(img);
+              if (item.kind === "space") {
+                li.dataset.spaceId = item.data.id;
+
+                const icon = document.createElement("span");
+                icon.className = "zen-space-icon";
+                icon.textContent = item.data.icon?.trim() || "◆";
+                li.appendChild(icon);
+
+                const title = document.createElement("span");
+                title.textContent = formatSpaceDisplayTitle(item.data);
+                title.className = "zen-title";
+
+                const subtitle = document.createElement("span");
+                subtitle.textContent = item.data.isActive ? "Current space" : "Space";
+                subtitle.className = "zen-url";
+
+                li.appendChild(title);
+                li.appendChild(subtitle);
+              } else {
+                if (Number.isInteger(item.data.id) && item.data.id! >= 0) {
+                  li.dataset.tabId = String(item.data.id);
+                }
+                if (item.data.domId) {
+                  li.dataset.domId = item.data.domId;
+                }
+
+                if (item.data.favIconUrl) {
+                  const img = document.createElement("img");
+                  img.src = item.data.favIconUrl;
+                  img.className = "zen-favicon";
+                  li.appendChild(img);
+                }
+
+                const title = document.createElement("span");
+                title.textContent = formatTabDisplayTitle(item.data);
+                title.className = "zen-title";
+
+                const url = document.createElement("span");
+                if (item.data.workspaceName) {
+                  url.textContent = item.data.workspaceName;
+                } else {
+                  try {
+                    url.textContent = item.data.url ? new URL(item.data.url).hostname : "No URL";
+                  } catch {
+                    url.textContent = "No URL";
+                  }
+                }
+                url.className = "zen-url";
+
+                li.appendChild(title);
+                li.appendChild(url);
               }
 
-              const title = document.createElement("span");
-              title.textContent = formatTabDisplayTitle(tab);
-              title.className = "zen-title";
-
-              const url = document.createElement("span");
-              try {
-                url.textContent = tab.url ? new URL(tab.url).hostname : "No URL";
-              } catch {
-                url.textContent = "No URL";
-              }
-              url.className = "zen-url";
-
-              li.appendChild(title);
-              li.appendChild(url);
               li.addEventListener("click", () => {
-                switchToTab(tab.id);
+                activateItem(item);
               });
               list.appendChild(li);
             });
 
-            selectedIndex = filteredTabs.length > 0 ? 0 : -1;
+            selectedIndex = filteredItems.length > 0 ? 0 : -1;
             updateSelection();
           }
 
-          renderTabs(allTabs);
+          renderItems(visibleItems);
 
           input.addEventListener("input", (e) => {
             const query = (e.target as HTMLInputElement).value;
-            if (!query) {
-              renderTabs(allTabs);
-              return;
-            }
-
-            const queryLowerCase = query.toLowerCase();
-            const scored = allTabs
-              .map((tab) => {
-                const labelMatch = fuzzyMatchWithScore(tab.customLabel || "", queryLowerCase);
-                const titleMatch = fuzzyMatchWithScore(tab.title || "", queryLowerCase);
-                const urlMatch = fuzzyMatchWithScore(tab.url || "", queryLowerCase);
-                if (!labelMatch.matches && !titleMatch.matches && !urlMatch.matches) {
-                  return null;
-                }
-                return {
-                  ...tab,
-                  score: Math.max(labelMatch.score, titleMatch.score, urlMatch.score),
-                };
-              })
-              .filter((tab): tab is TabInfo => tab !== null)
-              .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
-
-            renderTabs(scored);
+            visibleItems = filterSearchItems(buildSearchItems(allTabs, allSpaces), query);
+            renderItems(visibleItems);
           });
 
           input.addEventListener("keydown", (e) => {
@@ -271,14 +393,16 @@ export default defineContentScript({
               updateSelection();
               e.preventDefault();
             } else if (e.key === "Enter" && selectedIndex >= 0 && numItems > 0) {
-              const selectedItem = items[selectedIndex] as HTMLLIElement;
-              switchToTab(parseInt(selectedItem.dataset.tabId ?? "", 10));
+              const selected = visibleItems[selectedIndex];
+              if (selected) {
+                activateItem(selected);
+              }
               e.preventDefault();
             }
           });
         })
         .catch((error) => {
-          console.error("Error fetching tabs:", error);
+          console.error("Error fetching tabs and spaces:", error);
         });
     }
 
