@@ -136,8 +136,7 @@ export default defineContentScript({
             list.innerHTML = "";
             filteredItems.forEach((item) => {
               const li = document.createElement("li");
-              li.className =
-                item.kind === "space" ? "zen-tab-item zen-space-item" : "zen-tab-item";
+              li.className = item.kind === "space" ? "zen-tab-item zen-space-item" : "zen-tab-item";
               li.dataset.kind = item.kind;
 
               if (item.kind === "space") {

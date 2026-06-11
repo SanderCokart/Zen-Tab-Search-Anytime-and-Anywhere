@@ -104,7 +104,10 @@ async function openSearchPopup(): Promise<void> {
     await browser.browserAction.openPopup();
     return;
   } catch (error) {
-    debugWarn(`${LOG_PREFIX} browserAction.openPopup failed, trying popup window:`, formatError(error));
+    debugWarn(
+      `${LOG_PREFIX} browserAction.openPopup failed, trying popup window:`,
+      formatError(error),
+    );
   }
 
   try {
@@ -124,11 +127,7 @@ async function openOmnibar(): Promise<void> {
   const tab = tabs[0];
   const tabId = tab?.id;
 
-  if (
-    Number.isInteger(tabId) &&
-    tabId! >= 0 &&
-    isContentScriptInjectableUrl(tab?.url)
-  ) {
+  if (Number.isInteger(tabId) && tabId! >= 0 && isContentScriptInjectableUrl(tab?.url)) {
     try {
       await browser.tabs.sendMessage(tabId!, { type: "showOmnibar", anchorTabId: tabId });
       return;
@@ -170,8 +169,12 @@ async function warmUpZenTabsApi(): Promise<void> {
 
   const zenTabs = getZenTabsApi();
   if (!zenTabs) {
-    debugWarn(`${LOG_PREFIX} warmUp: browser.zenTabs unavailable — Zen Browser experiment API required`);
-    debugWarn(`${LOG_PREFIX} Set extensions.experiments.enabled=true in about:config and restart Zen`);
+    debugWarn(
+      `${LOG_PREFIX} warmUp: browser.zenTabs unavailable — Zen Browser experiment API required`,
+    );
+    debugWarn(
+      `${LOG_PREFIX} Set extensions.experiments.enabled=true in about:config and restart Zen`,
+    );
     return;
   }
 
@@ -271,11 +274,7 @@ async function getSpaces(anchorTabId?: number): Promise<SpaceInfo[]> {
   }
 }
 
-async function switchToTab(
-  tabId?: number,
-  domId?: string,
-  anchorTabId?: number,
-): Promise<void> {
+async function switchToTab(tabId?: number, domId?: string, anchorTabId?: number): Promise<void> {
   const anchorId = zenAnchorTabId(await resolveAnchorTabId(anchorTabId));
   const zenTabs = getZenTabsApi();
 

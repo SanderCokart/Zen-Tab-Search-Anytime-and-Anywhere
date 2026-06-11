@@ -19,9 +19,7 @@ export interface SpaceInfo {
   score?: number;
 }
 
-export type SearchItem =
-  | { kind: "tab"; data: TabInfo }
-  | { kind: "space"; data: SpaceInfo };
+export type SearchItem = { kind: "tab"; data: TabInfo } | { kind: "space"; data: SpaceInfo };
 
 export function formatTabDisplayTitle(tab: TabInfo): string {
   const title = tab.title || "Untitled";

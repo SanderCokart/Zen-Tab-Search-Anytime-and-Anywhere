@@ -18,7 +18,7 @@ export default defineConfig({
       },
       // Special command name: pressing this (or clicking the toolbar icon) opens the popup directly.
       // This works even when there is no normal content tab (e.g. about:newtab, no tabs at all).
-      "_execute_browser_action": {
+      _execute_browser_action: {
         suggested_key: {
           default: "Alt+Shift+T",
           mac: "MacCtrl+Shift+T",

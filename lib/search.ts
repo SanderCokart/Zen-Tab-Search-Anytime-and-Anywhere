@@ -53,8 +53,7 @@ export function fuzzyMatchWithScore(str: string, queryLowerCase: string): FuzzyM
   score += Math.max(0, 100 - firstMatchPosition * 2);
   score += Math.max(0, 200 - normalized.length);
 
-  const matchSpan =
-    matchPositions[matchPositions.length - 1]! - matchPositions[0]! + 1;
+  const matchSpan = matchPositions[matchPositions.length - 1]! - matchPositions[0]! + 1;
   score += Math.max(0, 100 - matchSpan);
 
   return { matches: true, score };
@@ -98,7 +97,12 @@ export function filterSearchItems(items: SearchItem[], query: string): SearchIte
     const titleMatch = fuzzyMatchWithScore(item.data.title || "", queryLowerCase);
     const urlMatch = fuzzyMatchWithScore(item.data.url || "", queryLowerCase);
     const workspaceMatch = fuzzyMatchWithScore(item.data.workspaceName || "", queryLowerCase);
-    if (!labelMatch.matches && !titleMatch.matches && !urlMatch.matches && !workspaceMatch.matches) {
+    if (
+      !labelMatch.matches &&
+      !titleMatch.matches &&
+      !urlMatch.matches &&
+      !workspaceMatch.matches
+    ) {
       continue;
     }
 
@@ -106,12 +110,7 @@ export function filterSearchItems(items: SearchItem[], query: string): SearchIte
       kind: "tab",
       data: {
         ...item.data,
-        score: Math.max(
-          labelMatch.score,
-          titleMatch.score,
-          urlMatch.score,
-          workspaceMatch.score,
-        ),
+        score: Math.max(labelMatch.score, titleMatch.score, urlMatch.score, workspaceMatch.score),
       },
     });
   }
