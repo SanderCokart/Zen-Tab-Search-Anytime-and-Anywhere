@@ -1,8 +1,22 @@
 [
   {
     "namespace": "zenTabs",
-    "description": "Access Zen Browser custom tab labels (zenStaticLabel)",
+    "description": "Access Zen Browser spaces, tabs, and custom tab labels",
     "functions": [
+      {
+        "name": "getDebugInfo",
+        "type": "function",
+        "description": "Return diagnostic info for Zen experiment API debugging",
+        "async": true,
+        "parameters": [
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Active extension tab ID used to locate the Zen browser window"
+          }
+        ]
+      },
       {
         "name": "getCustomLabels",
         "type": "function",
@@ -15,6 +29,91 @@
             "items": { "type": "integer" },
             "optional": true,
             "description": "Extension tab IDs from browser.tabs.query"
+          }
+        ]
+      },
+      {
+        "name": "getSpaces",
+        "type": "function",
+        "description": "Returns all Zen spaces",
+        "async": true,
+        "parameters": [
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Active extension tab ID used to locate the Zen browser window"
+          }
+        ]
+      },
+      {
+        "name": "getAllTabs",
+        "type": "function",
+        "description": "Returns tabs across all Zen spaces",
+        "async": true,
+        "parameters": [
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Active extension tab ID used to locate the Zen browser window"
+          }
+        ]
+      },
+      {
+        "name": "switchSpace",
+        "type": "function",
+        "description": "Switch to a Zen space by UUID",
+        "async": true,
+        "parameters": [
+          {
+            "name": "spaceId",
+            "type": "string",
+            "description": "Zen space UUID"
+          },
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Active extension tab ID used to locate the Zen browser window"
+          }
+        ]
+      },
+      {
+        "name": "activateTab",
+        "type": "function",
+        "description": "Activate a tab by extension ID, switching spaces if needed",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabId",
+            "type": "integer",
+            "description": "Extension tab ID"
+          },
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Active extension tab ID used to locate the Zen browser window"
+          }
+        ]
+      },
+      {
+        "name": "activateTabByDomId",
+        "type": "function",
+        "description": "Activate a tab by DOM id, switching spaces if needed",
+        "async": true,
+        "parameters": [
+          {
+            "name": "domId",
+            "type": "string",
+            "description": "Native tab DOM id"
+          },
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Active extension tab ID used to locate the Zen browser window"
           }
         ]
       }

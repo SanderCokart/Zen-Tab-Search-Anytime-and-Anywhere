@@ -75,6 +75,20 @@
   border-radius: 4px;
 }
 
+.zen-space-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.zen-space-item .zen-title {
+  font-weight: 600;
+}
+
 .zen-title {
   color: #fff;
   font-size: 16px;
