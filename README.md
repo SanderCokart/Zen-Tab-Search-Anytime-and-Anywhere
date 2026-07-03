@@ -60,45 +60,20 @@ See [LICENSE](LICENSE) for the full MIT license text.
 
 ## Why this cannot be published on AMO
 
-Mozilla intentionally blocks extensions that declare `experiment_apis` (privileged Experiment APIs) from being submitted to addons.mozilla.org. Even if you obtain AMO API credentials and run `web-ext sign`, the resulting XPI will still require the two `about:config` changes on end-user machines for the Zen-specific APIs (`browser.zenTabs`) to be available.
+Mozilla intentionally blocks extensions that declare `experiment_apis` (privileged Experiment APIs) from being submitted to addons.mozilla.org, so this repository does not maintain an AMO signing flow. End users still need the two `about:config` changes for the Zen-specific APIs (`browser.zenTabs`) to be available.
 
 The only supported distribution method for this extension is sideloading a zip (or XPI) as described above.
 
-## Obtaining AMO API credentials (for contributors)
+## Creating a release
 
-If you want to sign your own builds of a fork (for example, to test the `sign` and `download-signed` scripts), you can create credentials here:
+Releases are published as GitHub release zips. The release script bumps the package version, commits the version files, tags the commit, builds the extension zip, creates a GitHub release, and attaches the zip.
 
-https://addons.mozilla.org/developers/addon/api/key/
+```bash
+npm run release -- patch --message "Maintenance release"
+npm run release -- minor --notes-file ./RELEASE.md
+```
 
-- "JWT issuer" becomes `AMO_JWT_ISSUER`
-- "JWT secret" becomes `AMO_JWT_SECRET`
-
-These credentials are only useful for signing builds of your own fork. They do not let you publish this extension publicly on AMO.
-
-## Using dotenvx with your own credentials (contributors)
-
-The committed `.envx.local` is encrypted with the maintainer's public key. Contributors cannot decrypt or use the existing AMO secrets.
-
-If you wish to make your own version with your own credentials:
-
-1. Copy `.envx.local` (or start a fresh one).
-2. Edit it so it contains plaintext values and an empty public key:
-
-   ```
-   DOTENV_PUBLIC_KEY_LOCAL=""
-   AMO_JWT_ISSUER=your_jwt_issuer_here
-   AMO_JWT_SECRET=your_jwt_secret_here
-   ```
-
-3. Run:
-
-   ```
-   npx @dotenvx/dotenvx encrypt -f .envx.local
-   ```
-
-4. This produces (or updates) a local `.env.keys` file. Never commit `.env.keys`.
-
-After this, `npm run env:use:local` followed by `npm run sign` (or `npm run download-signed`) will use your credentials.
+Use `patch`/`bump`, `minor`, `major`, or an exact `x.y.z` version. The script requires a clean working tree and an authenticated GitHub CLI session (`gh auth login`) before it starts.
 
 ## Development
 
@@ -111,14 +86,14 @@ npm install
 npm run dev
 ```
 
+While the dev server is running, WXT rebuilds and reloads the extension on file changes.
+
 Load in Zen Browser:
 
 1. Open `about:debugging`
 2. Click **This Firefox**
 3. **Load Temporary Add-on…**
 4. Select `manifest.json` from `.output/firefox-mv2/`
-
-After code changes, reload the extension and refresh affected tabs.
 
 Run quality checks:
 
@@ -135,7 +110,7 @@ npm run lint
 entrypoints/          WXT entrypoints (background, content script, popup)
 public/experiment/    Privileged Experiment API (zenTabs) — required for cross-space Zen support
 public/icon/          Extension icons
-scripts/              Build, sign, and release helpers
+scripts/              Build and release helpers
 ```
 
 ## License
