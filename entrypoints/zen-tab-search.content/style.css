@@ -12,7 +12,6 @@
   justify-content: center;
   align-items: center;
   z-index: 999999;
-  animation: fadeIn 0.2s ease-out;
 }
 
 .zen-omnibar {
@@ -104,15 +103,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 .zen-list::-webkit-scrollbar {
