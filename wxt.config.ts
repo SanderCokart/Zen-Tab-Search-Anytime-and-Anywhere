@@ -11,8 +11,8 @@ export default defineConfig({
     commands: {
       "show-omnibar": {
         suggested_key: {
-          default: "Alt+T",
-          mac: "MacCtrl+T",
+          default: "Ctrl+Shift+F",
+          mac: "MacCtrl+Shift+F",
         },
         description: "Open tab search omnibar (in-page overlay when possible)",
       },
@@ -20,8 +20,8 @@ export default defineConfig({
       // This works even when there is no normal content tab (e.g. about:newtab, no tabs at all).
       _execute_browser_action: {
         suggested_key: {
-          default: "Alt+Shift+T",
-          mac: "MacCtrl+Shift+T",
+          default: "Ctrl+Alt+F",
+          mac: "MacCtrl+Alt+F",
         },
         description: "Open Zen Tab Search popup",
       },
