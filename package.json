@@ -14,11 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "generate-icons": "node scripts/generate-icons.mjs",
-    "env:use:local": "dotenvx decrypt -f .envx.local --stdout > .env",
-    "env:encrypt:local": "dotenvx encrypt -f .envx.local",
-    "sign": "dotenvx run -- node scripts/sign.mjs",
     "release": "node scripts/release.mjs",
-    "download-signed": "dotenvx run -- node download-signed.js",
     "postinstall": "node scripts/generate-icons.mjs"
   },
   "webExt": {
@@ -26,10 +22,7 @@
       "node_modules/**",
       "package.json",
       "package-lock.json",
-      "sign.sh",
       "scripts/**",
-      "download-signed.js",
-      "signed/**",
       "web-ext-artifacts/**",
       ".output/**",
       ".wxt/**",
@@ -41,15 +34,10 @@
       "prettier.config.js",
       "vitest.config.ts",
       "tsconfig.json",
-      "wxt.config.ts",
-      ".env",
-      ".env.example",
-      ".env.keys",
-      ".envx.local"
+      "wxt.config.ts"
     ]
   },
   "devDependencies": {
-    "@dotenvx/dotenvx": "^1.51.1",
     "@eslint/js": "^9.28.0",
     "@types/chrome": "^0.0.323",
     "eslint": "^9.28.0",
