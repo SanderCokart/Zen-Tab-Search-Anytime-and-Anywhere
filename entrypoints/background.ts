@@ -99,6 +99,29 @@ async function resolveAnchorTabId(preferredTabId?: number): Promise<number | und
   return undefined;
 }
 
+let fallbackPopupWindowId: number | undefined;
+
+async function closeSearchPopup(): Promise<boolean> {
+  let closed = false;
+
+  for (const view of browser.extension.getViews({ type: "popup" })) {
+    view.close();
+    closed = true;
+  }
+
+  if (Number.isInteger(fallbackPopupWindowId)) {
+    try {
+      await browser.windows.remove(fallbackPopupWindowId!);
+      closed = true;
+    } catch {
+      // Window was already closed.
+    }
+    fallbackPopupWindowId = undefined;
+  }
+
+  return closed;
+}
+
 async function openSearchPopup(): Promise<void> {
   try {
     await browser.browserAction.openPopup();
@@ -111,25 +134,36 @@ async function openSearchPopup(): Promise<void> {
   }
 
   try {
-    await browser.windows.create({
+    const window = await browser.windows.create({
       url: browser.runtime.getURL("popup.html"),
       type: "popup",
       width: 400,
       height: 480,
     });
+    if (Number.isInteger(window.id)) {
+      fallbackPopupWindowId = window.id;
+    }
   } catch (error) {
     console.error(`${LOG_PREFIX} Could not open search popup:`, formatError(error));
   }
 }
 
-async function openOmnibar(): Promise<void> {
+async function toggleSearchPopup(): Promise<void> {
+  if (await closeSearchPopup()) {
+    return;
+  }
+
+  await openSearchPopup();
+}
+
+async function toggleOmnibar(): Promise<void> {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
   const tabId = tab?.id;
 
   if (Number.isInteger(tabId) && tabId! >= 0 && isContentScriptInjectableUrl(tab?.url)) {
     try {
-      await browser.tabs.sendMessage(tabId!, { type: "showOmnibar", anchorTabId: tabId });
+      await browser.tabs.sendMessage(tabId!, { type: "toggleOmnibar", anchorTabId: tabId });
       return;
     } catch (error) {
       debugLog(
@@ -139,7 +173,7 @@ async function openOmnibar(): Promise<void> {
     }
   }
 
-  await openSearchPopup();
+  await toggleSearchPopup();
 }
 
 async function logZenDebugInfo(context: string, anchorTabId?: number): Promise<void> {
@@ -336,14 +370,25 @@ export default defineBackground(() => {
     void warmUpZenTabsApi();
   }
 
+  browser.windows.onRemoved.addListener((windowId) => {
+    if (windowId === fallbackPopupWindowId) {
+      fallbackPopupWindowId = undefined;
+    }
+  });
+
   browser.commands.onCommand.addListener((command) => {
-    if (command !== "show-omnibar") {
+    if (command === "show-omnibar") {
+      void toggleOmnibar().catch((error) => {
+        console.error(`${LOG_PREFIX} Error handling show-omnibar command:`, formatError(error));
+      });
       return;
     }
 
-    void openOmnibar().catch((error) => {
-      console.error(`${LOG_PREFIX} Error handling show-omnibar command:`, formatError(error));
-    });
+    if (command === "toggle-popup") {
+      void toggleSearchPopup().catch((error) => {
+        console.error(`${LOG_PREFIX} Error handling toggle-popup command:`, formatError(error));
+      });
+    }
   });
 
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
