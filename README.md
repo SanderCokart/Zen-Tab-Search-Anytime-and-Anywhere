@@ -33,8 +33,8 @@ The zip will be produced by WXT. Install it using the same `about:addons` → ge
 
 ## Usage
 
-- `Alt+T` (Windows/Linux) or `Ctrl+T` (macOS) opens the in-page omnibar overlay when possible.
-- `Alt+Shift+T` (or the toolbar button) opens the popup search UI, which works even when no web page tab is active.
+- `Ctrl+Shift+F` opens the in-page omnibar overlay when possible.
+- `Ctrl+Alt+F` (or the toolbar button) opens the popup search UI, which works even when no web page tab is active.
 - Type to filter tabs and spaces. Use arrow keys (or Page Up/Down with Left/Right for larger jumps), Enter to activate, and Escape to close.
 
 ## Features
@@ -46,8 +46,8 @@ The zip will be produced by WXT. Install it using the same `about:addons` → ge
 
 ## Keyboard shortcuts
 
-- `Alt+T` / `Ctrl+T` — Open in-page omnibar (when a content tab is active)
-- `Alt+Shift+T` / `Ctrl+Shift+T` — Open popup search
+- `Ctrl+Shift+F` — Open in-page omnibar (when a content tab is active)
+- `Ctrl+Alt+F` — Open popup search
 - Arrow keys / Enter / Escape — Navigate and activate results
 
 ## Credits and license
