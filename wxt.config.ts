@@ -16,9 +16,9 @@ export default defineConfig({
         },
         description: "Open tab search omnibar (in-page overlay when possible)",
       },
-      // Special command name: pressing this (or clicking the toolbar icon) opens the popup directly.
-      // This works even when there is no normal content tab (e.g. about:newtab, no tabs at all).
-      _execute_browser_action: {
+      // Custom command so the background script can toggle the popup closed when pressed again.
+      // (_execute_browser_action is handled by the browser and cannot be intercepted.)
+      "toggle-popup": {
         suggested_key: {
           default: "Ctrl+Alt+F",
           mac: "MacCtrl+Alt+F",
