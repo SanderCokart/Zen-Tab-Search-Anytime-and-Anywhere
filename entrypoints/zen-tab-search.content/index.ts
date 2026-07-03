@@ -10,6 +10,11 @@ export default defineContentScript({
   main() {
     debugLog("Zen Tab Search content script loaded at", new Date().toISOString());
 
+    function focusSearchInput(input: HTMLInputElement) {
+      input.focus();
+      input.select();
+    }
+
     function showOmnibar() {
       debugLog("showOmnibar called at", new Date().toISOString());
       if (document.getElementById("zen-tab-omnibar-overlay")) {
@@ -37,7 +42,11 @@ export default defineContentScript({
       omnibar.appendChild(list);
       overlay.appendChild(omnibar);
       document.body.appendChild(overlay);
-      input.focus();
+      setTimeout(() => {
+        if (overlay.isConnected) {
+          focusSearchInput(input);
+        }
+      }, 100);
 
       const escListener = (e: KeyboardEvent) => {
         if (e.key === "Escape") {
@@ -84,12 +93,14 @@ export default defineContentScript({
           let visibleItems = buildSearchItems(allTabs, allSpaces);
           let selectedIndex = -1;
 
-          function updateSelection() {
+          function updateSelection(scrollSelectedIntoView = false) {
             const items = list.querySelectorAll("li");
             items.forEach((item) => item.classList.remove("selected"));
             if (selectedIndex >= 0 && selectedIndex < items.length) {
               items[selectedIndex]!.classList.add("selected");
-              items[selectedIndex]!.scrollIntoView({ block: "nearest" });
+              if (scrollSelectedIntoView) {
+                items[selectedIndex]!.scrollIntoView({ block: "nearest" });
+              }
             }
           }
 
@@ -216,19 +227,19 @@ export default defineContentScript({
 
             if (e.key === "ArrowDown") {
               selectedIndex = selectedIndex < numItems - 1 ? selectedIndex + 1 : 0;
-              updateSelection();
+              updateSelection(true);
               e.preventDefault();
             } else if (e.key === "ArrowUp") {
               selectedIndex = selectedIndex <= 0 ? numItems - 1 : selectedIndex - 1;
-              updateSelection();
+              updateSelection(true);
               e.preventDefault();
             } else if (e.key === "ArrowRight") {
               selectedIndex = Math.min(selectedIndex + 10, numItems - 1);
-              updateSelection();
+              updateSelection(true);
               e.preventDefault();
             } else if (e.key === "ArrowLeft") {
               selectedIndex = Math.max(selectedIndex - 10, 0);
-              updateSelection();
+              updateSelection(true);
               e.preventDefault();
             } else if (e.key === "Enter" && selectedIndex >= 0 && numItems > 0) {
               const selected = visibleItems[selectedIndex];

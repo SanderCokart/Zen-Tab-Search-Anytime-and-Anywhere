@@ -13,6 +13,11 @@ let allSpaces: SpaceInfo[] = [];
 let visibleItems: SearchItem[] = [];
 let selectedIndex = -1;
 
+function focusSearchInput() {
+  input.focus();
+  input.select();
+}
+
 function isErrorResponse(value: unknown): value is { error: string } {
   return (
     typeof value === "object" &&
@@ -22,13 +27,15 @@ function isErrorResponse(value: unknown): value is { error: string } {
   );
 }
 
-function updateSelection() {
+function updateSelection(scrollSelectedIntoView = false) {
   const items = list.querySelectorAll("li");
   items.forEach((item) => item.classList.remove("selected"));
   if (selectedIndex >= 0 && selectedIndex < items.length) {
     const el = items[selectedIndex]!;
     el.classList.add("selected");
-    el.scrollIntoView({ block: "nearest" });
+    if (scrollSelectedIntoView) {
+      el.scrollIntoView({ block: "nearest" });
+    }
   }
 }
 
@@ -201,7 +208,7 @@ input.addEventListener("keydown", (e) => {
 
   if (e.key === "ArrowDown") {
     selectedIndex = numItems === 0 ? -1 : (selectedIndex + 1) % numItems;
-    updateSelection();
+    updateSelection(true);
     e.preventDefault();
   } else if (e.key === "ArrowUp") {
     if (numItems === 0) {
@@ -209,18 +216,18 @@ input.addEventListener("keydown", (e) => {
     } else {
       selectedIndex = selectedIndex <= 0 ? numItems - 1 : selectedIndex - 1;
     }
-    updateSelection();
+    updateSelection(true);
     e.preventDefault();
   } else if (e.key === "ArrowRight") {
     if (numItems > 0) {
       selectedIndex = Math.min(selectedIndex + 5, numItems - 1);
-      updateSelection();
+      updateSelection(true);
     }
     e.preventDefault();
   } else if (e.key === "ArrowLeft") {
     if (numItems > 0) {
       selectedIndex = Math.max(selectedIndex - 5, 0);
-      updateSelection();
+      updateSelection(true);
     }
     e.preventDefault();
   } else if (e.key === "Enter" && selectedIndex >= 0 && numItems > 0) {
@@ -235,10 +242,7 @@ input.addEventListener("keydown", (e) => {
   }
 });
 
-// Focus the input in case autofocus didn't take in some environments
-setTimeout(() => {
-  input.focus();
-  input.select();
-}, 0);
+// Let the popup finish opening before asking the browser to move focus.
+setTimeout(focusSearchInput, 100);
 
 debugLog("Zen Tab Search popup opened");
