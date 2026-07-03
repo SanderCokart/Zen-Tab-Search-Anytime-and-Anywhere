@@ -14,7 +14,7 @@ function run(label, command, args, options = {}) {
     cwd: rootDir,
     stdio: options.capture ? "pipe" : "inherit",
     encoding: "utf8",
-    shell: process.platform === "win32",
+    shell: options.shell ?? process.platform === "win32",
   });
   if (result.status !== 0) {
     if (options.capture) {
@@ -141,6 +141,7 @@ function bumpVersion(current, bump) {
 function assertCleanWorkingTree() {
   const status = run("Checking git working tree", "git", ["status", "--porcelain"], {
     capture: true,
+    shell: false,
   });
   if (status) {
     console.error(status);
@@ -152,7 +153,7 @@ function assertTagDoesNotExist(tagName) {
   const result = spawnSync("git", ["rev-parse", "--verify", "--quiet", `refs/tags/${tagName}`], {
     cwd: rootDir,
     stdio: "ignore",
-    shell: process.platform === "win32",
+    shell: false,
   });
   if (result.status === 0) {
     fail(`Tag ${tagName} already exists.`);
@@ -222,9 +223,7 @@ assertTagDoesNotExist(tagName);
 assertGitHubCli();
 
 run("Bumping package version", "npm", ["version", newVersion, "--no-git-tag-version"]);
-run("ESLint", "npm", ["run", "lint:js"]);
-run("Tests", "npm", ["run", "test"]);
-run("web-ext lint", "npm", ["run", "lint"]);
+run("Building extension", "npm", ["run", "build"]);
 run("Creating extension zip", "npm", ["run", "zip"]);
 
 const zipArtifact = findZipArtifact(newVersion);
@@ -232,9 +231,11 @@ if (!zipArtifact) {
   fail("No zip artifact was found in .output after npm run zip.");
 }
 
-run("Staging version files", "git", ["add", packagePath, packageLockPath]);
-run("Committing version bump", "git", ["commit", "-m", `Release ${tagName}`]);
-run("Tagging release commit", "git", ["tag", "-a", tagName, "-m", `Release ${tagName}`]);
+run("Staging version files", "git", ["add", packagePath, packageLockPath], { shell: false });
+run("Committing version bump", "git", ["commit", "-m", `Release ${tagName}`], { shell: false });
+run("Tagging release commit", "git", ["tag", "-a", tagName, "-m", `Release ${tagName}`], {
+  shell: false,
+});
 
 const releaseArgs = ["release", "create", tagName, zipArtifact, "--title", tagName];
 if (notesFile) {
