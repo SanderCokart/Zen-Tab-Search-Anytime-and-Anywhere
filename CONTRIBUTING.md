@@ -22,14 +22,14 @@ Start the development server:
 npm run dev
 ```
 
+While the dev server is running, WXT rebuilds and reloads the extension on file changes.
+
 Load the extension temporarily:
 
 1. Open `about:debugging`
 2. Click **This Firefox**
 3. Click **Load Temporary Add-on…**
 4. Select `manifest.json` from `.output/firefox-mv2/`
-
-After code changes, reload the extension in `about:debugging`, then refresh any affected tabs.
 
 **Cursor users:** You can also run the [`/quick-start`](.cursor/commands/quick-start.md) command.
 
@@ -44,56 +44,9 @@ npm run lint        # Builds first, then runs web-ext lint on the output
 
 All checks should pass cleanly.
 
-## Handling secrets and dotenvx (important)
-
-This project uses `@dotenvx/dotenvx` to manage Mozilla Add-ons API credentials (used by the `sign` and `download-signed` scripts). The committed `.envx.local` is encrypted with the maintainer's public key.
-
-Contributors cannot decrypt or use the existing AMO secrets from the repository.
-
-### If you want to sign your own builds (optional)
-
-1. Obtain your own AMO API credentials (see the section below).
-2. Create or edit a local `.envx.local` with an empty public key and your plaintext values:
-
-   ```
-   DOTENV_PUBLIC_KEY_LOCAL=""
-   AMO_JWT_ISSUER=your_jwt_issuer_here
-   AMO_JWT_SECRET=your_jwt_secret_here
-   ```
-
-3. Encrypt it:
-
-   ```
-   npx @dotenvx/dotenvx encrypt -f .envx.local
-   ```
-
-4. This creates or updates a local `.env.keys` file. Never commit `.env.keys` or any plaintext secrets.
-
-After this, you can run:
-
-```bash
-npm run env:use:local   # decrypts into .env (gitignored)
-npm run sign
-npm run download-signed
-```
-
-`npm run env:use:local` produces a plaintext `.env` which is already listed in `.gitignore`.
-
-## Obtaining AMO API credentials
-
-If you want to test the signing flow or produce signed XPIs for personal use of your own fork:
-
-1. Visit https://addons.mozilla.org/developers/addon/api/key/
-2. Create a new credential.
-3. Copy the "JWT issuer" (this becomes `AMO_JWT_ISSUER`) and the "JWT secret" (this becomes `AMO_JWT_SECRET`).
-
-These credentials are only useful for signing builds of your own fork. They do not allow publishing this extension on AMO.
-
-Important: even a successfully signed XPI from AMO will still require the two `about:config` flags (`extensions.experiments.enabled` and `xpinstall.signatures.required`) on end-user machines, because the extension uses privileged Experiment APIs to access Zen's internal workspaces and tabs. See the README for details.
-
 ## Why AMO publishing is not viable for this extension
 
-The extension declares `experiment_apis` in its manifest (see `wxt.config.ts` and `public/experiment/zenTabs/`). Mozilla intentionally disallows extensions using privileged Experiment APIs from being submitted to addons.mozilla.org. The existing scripts in `scripts/` (including `release.mjs`, `sign.mjs`, and `download-signed.js`) are oriented toward AMO signing and contain TODOs about listing strategy. They are not the primary distribution path for this repository.
+The extension declares `experiment_apis` in its manifest (see `wxt.config.ts` and `public/experiment/zenTabs/`). Mozilla intentionally disallows extensions using privileged Experiment APIs from being submitted to addons.mozilla.org, so this repository does not maintain an AMO signing flow.
 
 The supported way to distribute this extension is via GitHub Releases as a zip file, with the installation instructions documented in the README.
 
@@ -118,16 +71,16 @@ For deeper diagnostics, you can send a `getDebugInfo` message to the background 
 
 ## Release process (for maintainers)
 
-This is a high-level overview. The primary distribution mechanism is GitHub Releases, not AMO.
+The primary distribution mechanism is GitHub Releases, not AMO.
 
-1. Update the version in `package.json` (use semver).
-2. Run quality gates: `npm run lint:js && npm run format && npm test && npm run lint`.
-3. Build and package: `npm run build && npm run zip`.
-4. Commit the version bump.
-5. Tag (e.g., `git tag v2.0.0`) and push the tag.
-6. Create a GitHub Release for the tag and attach the zip produced by `npm run zip` (WXT places it under `web-ext-artifacts/` or a similar location depending on configuration).
+Use the release helper from a clean working tree with an authenticated GitHub CLI session:
 
-The existing `npm run release` script runs the AMO-oriented flow in `scripts/release.mjs`. It is not the primary path for this repo because privileged Experiment APIs cannot be published on AMO.
+```bash
+npm run release -- patch --message "Maintenance release"
+npm run release -- minor --notes-file ./RELEASE.md
+```
+
+The script bumps `package.json` and `package-lock.json`, commits the version change, creates an annotated tag, builds the WXT zip, creates a GitHub Release, and attaches the zip.
 
 ## Cursor commands
 
