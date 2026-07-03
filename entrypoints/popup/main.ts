@@ -2,7 +2,6 @@ import { debugError, debugLog } from "../../lib/debug";
 import type { SearchItem, SpaceInfo, TabInfo } from "../../lib/types";
 import { formatSpaceDisplayTitle, formatTabDisplayTitle, isActivatableTab } from "../../lib/types";
 import { buildSearchItems, filterSearchItems } from "../../lib/search";
-import "./style.css";
 
 const input = document.getElementById("search-input") as HTMLInputElement;
 const list = document.getElementById("results") as HTMLUListElement;

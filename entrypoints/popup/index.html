@@ -6,6 +6,59 @@
     <title>Zen Tab Search</title>
     <!-- Ensure WXT generates browser_action (MV2) for the popup -->
     <meta name="manifest.type" content="browser_action" />
+    <link rel="stylesheet" href="./style.css" />
+    <!-- Paint popup chrome before the external stylesheet finishes loading -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 8px;
+        width: 380px;
+        min-height: 120px;
+        max-height: 420px;
+        background: #1e1e1e;
+        color: #fff;
+        font: 13px/1.4 system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+      .zen-popup {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .zen-input {
+        background: #333;
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 14px;
+        padding: 8px 10px;
+        margin-bottom: 8px;
+        outline: none;
+        width: 100%;
+      }
+      .zen-input::placeholder {
+        color: #888;
+      }
+      .zen-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        overflow-y: auto;
+        flex: 1;
+        min-height: 60px;
+      }
+      .zen-empty {
+        color: #888;
+        font-size: 12px;
+        padding: 12px 4px;
+        text-align: center;
+      }
+    </style>
   </head>
   <body>
     <div id="app" class="zen-popup">
