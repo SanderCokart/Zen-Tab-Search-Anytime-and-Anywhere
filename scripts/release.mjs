@@ -7,6 +7,11 @@ const rootDir = fileURLToPath(new URL("..", import.meta.url));
 const packagePath = path.join(rootDir, "package.json");
 const packageLockPath = path.join(rootDir, "package-lock.json");
 
+let releaseStep = "preflight";
+let currentTagName;
+let versionCommitted = false;
+let tagCreated = false;
+
 function run(label, command, args, options = {}) {
   console.log("");
   console.log(`==> ${label}`);
@@ -14,22 +19,19 @@ function run(label, command, args, options = {}) {
     cwd: rootDir,
     stdio: options.capture ? "pipe" : "inherit",
     encoding: "utf8",
-    shell: options.shell ?? process.platform === "win32",
+    shell: options.shell ?? false,
   });
   if (result.status !== 0) {
     if (options.capture) {
       process.stderr.write(result.stderr || result.stdout || "");
     }
-    process.exit(result.status ?? 1);
+    throw new Error(`${label} failed.`);
   }
   return options.capture ? result.stdout.trim() : "";
 }
 
 function fail(message) {
-  console.error(`Error: ${message}`);
-  console.error("");
-  printUsage();
-  process.exit(1);
+  throw new Error(message);
 }
 
 function printUsage() {
@@ -37,6 +39,8 @@ function printUsage() {
     "Usage:",
     '  npm run release -- patch --message "Release notes"',
     "  npm run release -- minor --notes-file ./RELEASE.md",
+    "  npm run release -- patch --generate-notes",
+    "  npm run release -- patch --dry-run",
     "",
     "Bump:",
     "  patch | bump | minor | major | x.y.z",
@@ -44,6 +48,11 @@ function printUsage() {
     "Release notes:",
     "  -m, --message <text>",
     "  --notes-file <path>",
+    "  --generate-notes",
+    "  --notes-since <tag>",
+    "",
+    "Options:",
+    "  --dry-run",
   ].join("\n");
 
   console.error(output);
@@ -52,13 +61,16 @@ function printUsage() {
 function parseArgs(args) {
   if (args.includes("--help") || args.includes("-h")) {
     printUsage();
-    process.exit(0);
+    return { help: true };
   }
 
   const parsed = {
     bumpArg: undefined,
     message: undefined,
     notesFile: undefined,
+    generateNotes: false,
+    notesSince: undefined,
+    dryRun: false,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -80,6 +92,18 @@ function parseArgs(args) {
       parsed.message = arg.slice("--message=".length);
     } else if (arg.startsWith("--notes-file=")) {
       parsed.notesFile = arg.slice("--notes-file=".length);
+    } else if (arg === "--generate-notes") {
+      parsed.generateNotes = true;
+    } else if (arg === "--notes-since") {
+      parsed.notesSince = args[index + 1];
+      if (!parsed.notesSince || parsed.notesSince.startsWith("-")) {
+        fail("--notes-since requires a tag.");
+      }
+      index += 1;
+    } else if (arg.startsWith("--notes-since=")) {
+      parsed.notesSince = arg.slice("--notes-since=".length);
+    } else if (arg === "--dry-run") {
+      parsed.dryRun = true;
     } else if (arg.startsWith("-")) {
       fail(`Unknown option: ${arg}`);
     } else if (!parsed.bumpArg) {
@@ -89,12 +113,9 @@ function parseArgs(args) {
     }
   }
 
-  if (!parsed.message && !parsed.notesFile) {
-    fail("Release notes are required. Use --message or --notes-file.");
-  }
-
-  if (parsed.message && parsed.notesFile) {
-    fail("Use either --message or --notes-file, not both.");
+  const notesSources = [parsed.message, parsed.notesFile, parsed.generateNotes].filter(Boolean);
+  if (notesSources.length > 1) {
+    fail("Use only one release notes source: --message, --notes-file, or --generate-notes.");
   }
 
   return parsed;
@@ -177,6 +198,53 @@ function resolveNotesFile(notesFile) {
   return resolved;
 }
 
+function latestReachableTag() {
+  try {
+    return run("Finding latest release tag", "git", ["describe", "--tags", "--abbrev=0"], {
+      capture: true,
+      shell: false,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+function generatedNotes(sinceTag, tagName) {
+  const range = sinceTag ? `${sinceTag}..HEAD` : "HEAD";
+  const output = run("Generating release notes", "git", ["log", range, "--pretty=format:%s"], {
+    capture: true,
+    shell: false,
+  });
+  const commits = output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !line.startsWith("Release "))
+    .filter((line) => !line.startsWith("Merge branch "));
+
+  if (commits.length === 0) {
+    fail(`No commits found to generate release notes for ${tagName}.`);
+  }
+
+  return [
+    "## Changes",
+    "",
+    ...commits.map((line) => `- ${line.replace(/^[a-z]+(?:\([^)]+\))?!?:\s*/i, "")}`),
+  ].join("\n");
+}
+
+function resolveReleaseNotes(args, tagName) {
+  if (args.notesFile) {
+    return { type: "file", value: resolveNotesFile(args.notesFile) };
+  }
+  if (args.message) {
+    return { type: "message", value: args.message };
+  }
+
+  const sinceTag = args.notesSince || latestReachableTag();
+  return { type: "message", value: generatedNotes(sinceTag, tagName), sinceTag };
+}
+
 function findZipArtifact(version) {
   const outputDir = path.join(rootDir, ".output");
   if (!fs.existsSync(outputDir)) {
@@ -208,42 +276,113 @@ function findZipArtifact(version) {
     .sort((left, right) => right.mtimeMs - left.mtimeMs)[0]?.file;
 }
 
-const args = parseArgs(process.argv.slice(2));
-const bump = parseBumpArg(args.bumpArg);
-const notesFile = resolveNotesFile(args.notesFile);
-const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-const oldVersion = pkg.version;
-const newVersion = bumpVersion(oldVersion, bump);
-const tagName = `v${newVersion}`;
-
-console.log(`Release: v${oldVersion} -> ${tagName}`);
-
-assertCleanWorkingTree();
-assertTagDoesNotExist(tagName);
-assertGitHubCli();
-
-run("Bumping package version", "npm", ["version", newVersion, "--no-git-tag-version"]);
-run("Building extension", "npm", ["run", "build"]);
-run("Creating extension zip", "npm", ["run", "zip"]);
-
-const zipArtifact = findZipArtifact(newVersion);
-if (!zipArtifact) {
-  fail("No zip artifact was found in .output after npm run zip.");
+function printDryRun({ oldVersion, newVersion, tagName, notes }) {
+  console.log("");
+  console.log("Dry run only. No files, commits, tags, pushes, or releases were created.");
+  console.log(`Version: ${oldVersion} -> ${newVersion}`);
+  console.log(`Tag: ${tagName}`);
+  if (notes.sinceTag) {
+    console.log(`Generated notes since: ${notes.sinceTag}`);
+  }
+  console.log("");
+  console.log("Release notes:");
+  console.log(notes.type === "file" ? fs.readFileSync(notes.value, "utf8").trim() : notes.value);
 }
 
-run("Staging version files", "git", ["add", packagePath, packageLockPath], { shell: false });
-run("Committing version bump", "git", ["commit", "-m", `Release ${tagName}`], { shell: false });
-run("Tagging release commit", "git", ["tag", "-a", tagName, "-m", `Release ${tagName}`], {
-  shell: false,
-});
-
-const releaseArgs = ["release", "create", tagName, zipArtifact, "--title", tagName];
-if (notesFile) {
-  releaseArgs.push("--notes-file", notesFile);
-} else {
-  releaseArgs.push("--notes", args.message);
+function printRecovery(error) {
+  console.error("");
+  console.error(`Release failed during ${releaseStep}: ${error.message}`);
+  console.error("");
+  console.error("Recovery:");
+  if (!versionCommitted) {
+    console.error("  git checkout -- package.json package-lock.json");
+  }
+  if (tagCreated && currentTagName) {
+    console.error(`  git tag -d ${currentTagName}`);
+  }
+  if (versionCommitted) {
+    console.error("  Inspect the release commit before retrying:");
+    console.error("  git log --oneline -3");
+  }
+  console.error("  After cleanup, rerun the release command from a clean working tree.");
 }
-run("Creating GitHub release", "gh", releaseArgs);
 
-console.log("");
-console.log(`Release ${tagName} created with ${path.relative(rootDir, zipArtifact)} attached.`);
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+  if (args.help) {
+    return;
+  }
+
+  const bump = parseBumpArg(args.bumpArg);
+  const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+  const oldVersion = pkg.version;
+  const newVersion = bumpVersion(oldVersion, bump);
+  const tagName = `v${newVersion}`;
+  currentTagName = tagName;
+  const notes = resolveReleaseNotes(args, tagName);
+
+  console.log(`Release: v${oldVersion} -> ${tagName}`);
+
+  if (args.dryRun) {
+    printDryRun({ oldVersion, newVersion, tagName, notes });
+    return;
+  }
+
+  releaseStep = "preflight";
+  assertCleanWorkingTree();
+  assertTagDoesNotExist(tagName);
+  assertGitHubCli();
+
+  releaseStep = "version bump";
+  run("Bumping package version", "npm", ["version", newVersion, "--no-git-tag-version"]);
+  releaseStep = "build";
+  run("Building extension", "npm", ["run", "build"]);
+  releaseStep = "zip";
+  run("Creating extension zip", "npm", ["run", "zip"]);
+
+  const zipArtifact = findZipArtifact(newVersion);
+  if (!zipArtifact) {
+    fail("No zip artifact was found in .output after npm run zip.");
+  }
+
+  releaseStep = "release commit";
+  run("Staging version files", "git", ["add", packagePath, packageLockPath], { shell: false });
+  run("Committing version bump", "git", ["commit", "-m", `Release ${tagName}`], { shell: false });
+  versionCommitted = true;
+
+  releaseStep = "tag";
+  run("Tagging release commit", "git", ["tag", "-a", tagName, "-m", `Release ${tagName}`], {
+    shell: false,
+  });
+  tagCreated = true;
+
+  releaseStep = "push";
+  run("Pushing release commit", "git", ["push", "origin", "HEAD"], { shell: false });
+  run("Pushing release tag", "git", ["push", "origin", tagName], { shell: false });
+
+  const releaseArgs = ["release", "create", tagName, zipArtifact, "--title", tagName];
+  if (notes.type === "file") {
+    releaseArgs.push("--notes-file", notes.value);
+  } else {
+    releaseArgs.push("--notes", notes.value);
+  }
+
+  releaseStep = "GitHub release";
+  run("Creating GitHub release", "gh", releaseArgs);
+
+  console.log("");
+  console.log(`Release ${tagName} created with ${path.relative(rootDir, zipArtifact)} attached.`);
+}
+
+try {
+  main();
+} catch (error) {
+  if (error.message.startsWith("Invalid") || error.message.includes("requires")) {
+    console.error(`Error: ${error.message}`);
+    console.error("");
+    printUsage();
+  } else {
+    printRecovery(error);
+  }
+  process.exit(1);
+}
