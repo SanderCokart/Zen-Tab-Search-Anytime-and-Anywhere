@@ -15,10 +15,36 @@ export default defineContentScript({
       input.select();
     }
 
+    let activeOmnibarClose: (() => void) | null = null;
+
+    function closeOmnibarIfOpen(): boolean {
+      const overlay = document.getElementById("zen-tab-omnibar-overlay");
+      if (!overlay) {
+        return false;
+      }
+
+      if (activeOmnibarClose) {
+        activeOmnibarClose();
+        activeOmnibarClose = null;
+      } else {
+        overlay.remove();
+      }
+
+      debugLog("Omnibar closed at", new Date().toISOString());
+      return true;
+    }
+
+    function toggleOmnibar(): void {
+      if (closeOmnibarIfOpen()) {
+        return;
+      }
+
+      showOmnibar();
+    }
+
     function showOmnibar() {
       debugLog("showOmnibar called at", new Date().toISOString());
       if (document.getElementById("zen-tab-omnibar-overlay")) {
-        debugLog("Overlay already exists, skipping");
         return;
       }
 
@@ -75,7 +101,10 @@ export default defineContentScript({
         existingOverlay.remove();
         document.removeEventListener("keydown", escListener);
         document.removeEventListener("visibilitychange", visibilityListener);
+        activeOmnibarClose = null;
       }
+
+      activeOmnibarClose = closeOmnibar;
 
       overlay.addEventListener("click", (e) => {
         if (e.target === overlay) {
@@ -256,8 +285,8 @@ export default defineContentScript({
     }
 
     browser.runtime.onMessage.addListener((message) => {
-      if (message.type === "showOmnibar") {
-        showOmnibar();
+      if (message.type === "toggleOmnibar" || message.type === "showOmnibar") {
+        toggleOmnibar();
       }
     });
   },
