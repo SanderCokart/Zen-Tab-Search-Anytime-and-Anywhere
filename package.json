@@ -7,7 +7,8 @@
     "dev": "node scripts/set-experiment-debug.mjs true && wxt -b firefox",
     "build": "node scripts/set-experiment-debug.mjs false && wxt build -b firefox",
     "zip": "wxt zip -b firefox",
-    "lint": "npm run build && web-ext lint --source-dir=.output/firefox-mv2",
+    "lint": "npm run lint:web-ext",
+    "lint:web-ext": "node scripts/lint-web-ext.mjs",
     "lint:js": "eslint entrypoints scripts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -15,7 +16,15 @@
     "test:watch": "vitest",
     "generate-icons": "node scripts/generate-icons.mjs",
     "release": "node scripts/release.mjs",
+    "prepare": "husky",
     "postinstall": "node scripts/generate-icons.mjs"
+  },
+  "lint-staged": {
+    "*.{js,mjs,ts,tsx}": "eslint --fix",
+    "*.{json,md,css}": "prettier --write",
+    "{entrypoints,public}/**/*": "npm run lint:web-ext",
+    "wxt.config.ts": "npm run lint:web-ext",
+    "package.json": "npm run lint:web-ext"
   },
   "webExt": {
     "ignoreFiles": [
@@ -42,6 +51,8 @@
     "@types/chrome": "^0.0.323",
     "eslint": "^9.28.0",
     "happy-dom": "^17.4.7",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
     "prettier": "^3.5.3",
     "sharp": "^0.34.2",
     "typescript": "^5.8.3",

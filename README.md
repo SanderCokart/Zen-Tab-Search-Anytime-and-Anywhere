@@ -71,9 +71,21 @@ Releases are published as GitHub release zips. The release script bumps the pack
 ```bash
 npm run release -- patch --message "Maintenance release"
 npm run release -- minor --notes-file ./RELEASE.md
+npm run release -- patch --generate-notes
+npm run release -- patch --dry-run --generate-notes
 ```
 
-Use `patch`/`bump`, `minor`, `major`, or an exact `x.y.z` version. The script requires a clean working tree and an authenticated GitHub CLI session (`gh auth login`) before it starts.
+Use `patch`/`bump`, `minor`, `major`, or an exact `x.y.z` version. Release notes can be supplied with `--message`, loaded with `--notes-file`, or generated from commits since the latest tag with `--generate-notes`. The script requires a clean working tree and an authenticated GitHub CLI session (`gh auth login`) before it starts.
+
+Release checklist:
+
+1. Start from `main` with `git status` clean.
+2. Confirm GitHub CLI auth with `gh auth status`.
+3. Preview the release with `npm run release -- patch --dry-run --generate-notes`.
+4. Run the release command, for example `npm run release -- patch --generate-notes`.
+5. Confirm the GitHub release contains the `zen-tab-search-<version>-firefox.zip` asset.
+
+If a release fails, follow the recovery instructions printed by the script before retrying.
 
 ## Development
 
@@ -101,8 +113,10 @@ Run quality checks:
 npm run lint:js
 npm run format
 npm test
-npm run lint
+npm run lint:web-ext
 ```
+
+Pre-commit hooks run through Husky and lint-staged. They format staged JSON, Markdown, and CSS files, run ESLint fixes for staged JavaScript/TypeScript files, and run the `web-ext` lint wrapper when extension files change. The wrapper allows the known privileged `experiment_apis` finding because this project is distributed as a sideload-only Zen Browser zip.
 
 ## Project structure
 
