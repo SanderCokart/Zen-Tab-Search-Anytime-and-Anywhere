@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [".output/**", ".wxt/**", "node_modules/**", "signed/**"],
+    ignores: [".output/**", ".wxt/**", "node_modules/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -39,7 +39,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["scripts/**/*.mjs", "download-signed.js"],
+    files: ["scripts/**/*.mjs"],
     ...tseslint.configs.disableTypeChecked,
     rules: {
       "@typescript-eslint/no-require-imports": "off",
