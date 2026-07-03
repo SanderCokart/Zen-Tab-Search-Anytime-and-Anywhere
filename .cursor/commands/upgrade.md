@@ -18,7 +18,6 @@ Default: upgrade all `devDependencies` in `package.json` to latest.
 
 Packages in this project:
 
-- `@dotenvx/dotenvx`
 - `@eslint/js`
 - `@types/chrome`
 - `eslint`
@@ -76,7 +75,7 @@ Pay extra attention after major bumps:
 | `wxt` | `wxt.config.ts`, entrypoints, manifest output |
 | `eslint` / `typescript-eslint` | `eslint.config.js` flat-config compatibility |
 | `vitest` / `happy-dom` | `vitest.config.ts`, DOM test APIs |
-| `web-ext` | `scripts/sign.mjs`, lint/sign CLI flags |
+| `web-ext` | lint CLI flags and generated extension output |
 | `sharp` | `scripts/generate-icons.mjs` |
 | `@types/chrome` | Extension API typings in `lib/` and `entrypoints/` |
 
