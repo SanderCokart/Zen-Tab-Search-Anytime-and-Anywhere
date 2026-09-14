@@ -25,6 +25,9 @@ export default defineConfig({
         },
         description: "Open Zen Tab Search popup",
       },
+      "change-tab-label": {
+        description: "Change Zen label of the selected/open tab",
+      },
     },
     icons: {
       48: "icon/48.png",

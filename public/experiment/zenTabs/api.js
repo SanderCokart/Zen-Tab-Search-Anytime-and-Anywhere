@@ -557,6 +557,93 @@ this.zenTabs = class extends ExtensionAPI {
           }
         },
 
+        async changeLabel(anchorTabId = -1) {
+          try {
+            const win = getWin(anchorTabId);
+            if (!win?.gBrowser) {
+              return false;
+            }
+
+            let tab = null;
+            if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
+              tab = getNativeTabByExtId(anchorTabId);
+            }
+            if (!tab) {
+              tab = win.gBrowser.selectedTab;
+            }
+            if (!tab || (typeof win.gBrowser.isTab === "function" && !win.gBrowser.isTab(tab))) {
+              return false;
+            }
+
+            const renameTabStart = win.gZenVerticalTabsManager?.renameTabStart;
+            if (typeof renameTabStart !== "function") {
+              debugLog("changeLabel: renameTabStart unavailable", { anchorTabId });
+              return false;
+            }
+
+            try {
+              win.focus();
+            } catch {
+              // Window focus is best-effort so the rename input can receive keys.
+            }
+
+            if (win.TabContextMenu) {
+              win.TabContextMenu.contextTab = tab;
+            }
+
+            renameTabStart.call(win.gZenVerticalTabsManager, { target: tab });
+
+            return (
+              win.document.documentElement.hasAttribute("zen-renaming-tab") ||
+              !!win.document.getElementById("tab-label-input")
+            );
+          } catch (error) {
+            throw new Error(`changeLabel failed: ${formatError(error)}`);
+          }
+        },
+
+        async setLabel(label, anchorTabId = -1) {
+          try {
+            const newName = typeof label === "string" ? label.replace(/\s+/g, " ").trim() : "";
+            if (!newName) {
+              return false;
+            }
+
+            const win = getWin(anchorTabId);
+            if (!win?.gBrowser) {
+              return false;
+            }
+
+            let tab = null;
+            if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
+              tab = getNativeTabByExtId(anchorTabId);
+            }
+            if (!tab) {
+              tab = win.gBrowser.selectedTab;
+            }
+            if (!tab || (typeof win.gBrowser.isTab === "function" && !win.gBrowser.isTab(tab))) {
+              return false;
+            }
+
+            tab.zenStaticLabel = newName;
+            if (typeof win.gBrowser._setTabLabel === "function") {
+              win.gBrowser._setTabLabel(tab, newName, { _zenChangeLabelFlag: true });
+            } else if (typeof win.gBrowser.setTabTitle === "function") {
+              win.gBrowser.setTabTitle(tab);
+            }
+
+            try {
+              win.gZenUIManager?.showToast?.("zen-tabs-renamed");
+            } catch {
+              // Toast is optional.
+            }
+
+            return tab.zenStaticLabel === newName || tab.label === newName;
+          } catch (error) {
+            throw new Error(`setLabel failed: ${formatError(error)}`);
+          }
+        },
+
         async activateTab(tabId, anchorTabId = -1) {
           try {
             if (!Number.isInteger(tabId) || tabId < 0) {

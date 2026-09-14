@@ -284,7 +284,36 @@ export default defineContentScript({
         });
     }
 
-    browser.runtime.onMessage.addListener((message) => {
+    function collectForgePageInfo() {
+      const titleEl = document.querySelector(
+        "h1, [data-testid='issue-title'], [data-testid='work-item-title'], .js-issue-title, bdi.js-issue-title",
+      );
+      const bodyParts = [
+        document.querySelector("[data-testid='gfm-root']"),
+        document.querySelector(".description"),
+        document.querySelector("[data-testid='widget-related-issues']"),
+        document.querySelector("[data-testid='related-issues-block']"),
+        document.querySelector("[data-testid='closing-issues']"),
+        document.querySelector(".js-issue-body"),
+        document.querySelector(".js-comment-body"),
+        document.querySelector(".comment-body"),
+        document.querySelector("[data-testid='comment-body']"),
+      ]
+        .filter((el): el is Element => !!el)
+        .map((el) => ("innerText" in el ? String((el as HTMLElement).innerText) : ""));
+
+      return {
+        title: titleEl?.textContent?.replace(/\s+/g, " ").trim() || "",
+        bodyText: bodyParts.join("\n"),
+      };
+    }
+
+    browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message.type === "getForgePageInfo") {
+        sendResponse(collectForgePageInfo());
+        return;
+      }
+
       if (message.type === "toggleOmnibar" || message.type === "showOmnibar") {
         toggleOmnibar();
       }

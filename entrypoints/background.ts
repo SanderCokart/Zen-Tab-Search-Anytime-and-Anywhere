@@ -1,4 +1,5 @@
 import { DEBUG, debugError, debugLog, debugWarn } from "../lib/debug";
+import { buildForgeLabel, parseForgeUrl, type ForgePageInfo } from "../lib/forge-label";
 import type { SpaceInfo, TabInfo } from "../lib/types";
 
 interface ZenDebugInfo {
@@ -28,6 +29,8 @@ interface ZenTabsApi {
   switchSpace(spaceId: string, anchorTabId?: number): Promise<boolean>;
   activateTab(tabId: number, anchorTabId?: number): Promise<boolean>;
   activateTabByDomId(domId: string, anchorTabId?: number): Promise<boolean>;
+  changeLabel(anchorTabId?: number): Promise<boolean>;
+  setLabel(label: string, anchorTabId?: number): Promise<boolean>;
 }
 
 const LOG_PREFIX = "[zen-tab-search]";
@@ -347,6 +350,63 @@ async function switchToTab(tabId?: number, domId?: string, anchorTabId?: number)
   await browser.tabs.update(tabId!, { active: true });
 }
 
+async function getForgePageInfo(tabId?: number, url?: string): Promise<ForgePageInfo> {
+  if (!Number.isInteger(tabId) || tabId! < 0 || !isContentScriptInjectableUrl(url)) {
+    return {};
+  }
+
+  try {
+    const info = await browser.tabs.sendMessage(tabId!, { type: "getForgePageInfo" });
+    if (info && typeof info === "object") {
+      return info as ForgePageInfo;
+    }
+  } catch (error) {
+    debugLog(`${LOG_PREFIX} getForgePageInfo unavailable:`, formatError(error));
+  }
+
+  return {};
+}
+
+async function changeSelectedTabLabel(): Promise<void> {
+  const zenTabs = getZenTabsApi();
+  if (!zenTabs) {
+    console.error(`${LOG_PREFIX} change-tab-label: zenTabs API unavailable`);
+    return;
+  }
+
+  const tabId = await resolveAnchorTabId();
+  const tab = Number.isInteger(tabId) && tabId! >= 0 ? await browser.tabs.get(tabId!) : undefined;
+  const url = tab?.url || "";
+
+  if (parseForgeUrl(url) && zenTabs.setLabel) {
+    const pageInfo = await getForgePageInfo(tabId, url);
+    const label = buildForgeLabel(url, tab?.title || "", pageInfo);
+    if (label) {
+      const set = await zenTabs.setLabel(label, zenAnchorTabId(tabId));
+      if (set) {
+        debugLog(`${LOG_PREFIX} change-tab-label: auto-set forge label`, { label, url });
+          const editorOpened = await zenTabs.changeLabel(zenAnchorTabId(tabId));
+          if (!editorOpened) {
+            debugWarn(`${LOG_PREFIX} change-tab-label: could not open Zen label editor`);
+          }
+        return;
+      }
+    }
+  }
+
+  if (!zenTabs.changeLabel) {
+    console.error(`${LOG_PREFIX} change-tab-label: zenTabs.changeLabel unavailable`);
+    return;
+  }
+
+  const changed = await zenTabs.changeLabel(zenAnchorTabId(tabId));
+  if (!changed) {
+    debugWarn(
+      `${LOG_PREFIX} change-tab-label: Zen did not start renaming (sidebar collapsed, essentials, or API unavailable)`,
+    );
+  }
+}
+
 async function switchToSpace(spaceId: string, anchorTabId?: number): Promise<void> {
   const anchorId = zenAnchorTabId(await resolveAnchorTabId(anchorTabId));
   const zenTabs = getZenTabsApi();
@@ -387,6 +447,13 @@ export default defineBackground(() => {
     if (command === "toggle-popup") {
       void toggleSearchPopup().catch((error) => {
         console.error(`${LOG_PREFIX} Error handling toggle-popup command:`, formatError(error));
+      });
+      return;
+    }
+
+    if (command === "change-tab-label") {
+      void changeSelectedTabLabel().catch((error) => {
+        console.error(`${LOG_PREFIX} Error handling change-tab-label command:`, formatError(error));
       });
     }
   });

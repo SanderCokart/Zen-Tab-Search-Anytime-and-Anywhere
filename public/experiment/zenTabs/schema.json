@@ -99,6 +99,39 @@
         ]
       },
       {
+        "name": "changeLabel",
+        "type": "function",
+        "description": "Open Zen's Change Label UI on the selected or specified tab",
+        "async": true,
+        "parameters": [
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Extension tab ID to rename; defaults to the selected tab in the Zen browser window"
+          }
+        ]
+      },
+      {
+        "name": "setLabel",
+        "type": "function",
+        "description": "Set Zen's custom tab label on the selected or specified tab",
+        "async": true,
+        "parameters": [
+          {
+            "name": "label",
+            "type": "string",
+            "description": "Custom tab label to apply"
+          },
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Extension tab ID to rename; defaults to the selected tab in the Zen browser window"
+          }
+        ]
+      },
+      {
         "name": "activateTabByDomId",
         "type": "function",
         "description": "Activate a tab by DOM id, switching spaces if needed",

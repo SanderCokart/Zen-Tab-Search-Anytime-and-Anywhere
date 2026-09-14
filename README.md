@@ -35,11 +35,13 @@ The zip will be produced by WXT. Install it using the same `about:addons` → ge
 
 - `Ctrl+Shift+F` opens the in-page omnibar overlay when possible.
 - `Ctrl+Alt+F` (or the toolbar button) opens the popup search UI, which works even when no web page tab is active.
+- Assign a shortcut for **Change Zen label of the selected/open tab** in `about:addons` → this extension → **Manage Extension Shortcuts**. On GitLab/GitHub issue, merge request, or pull request pages it auto-sets the label from the URL and title; otherwise it opens Zen's native Change Label editor (sidebar must be expanded; essential tabs cannot be renamed).
 - Type to filter tabs and spaces. Use arrow keys (or Page Up/Down with Left/Right for larger jumps), Enter to activate, and Escape to close.
 
 ## Features
 
 - Fuzzy search across tab titles, URLs, and Zen custom tab labels
+- Optional keyboard shortcut to rename the selected tab, with automatic GitLab/GitHub issue and MR/PR labels
 - Search and switch between Zen spaces
 - Real-time results with keyboard navigation
 - Works across all workspaces in Zen Browser via a privileged Experiment API
@@ -48,6 +50,7 @@ The zip will be produced by WXT. Install it using the same `about:addons` → ge
 
 - `Ctrl+Shift+F` — Open in-page omnibar (when a content tab is active)
 - `Ctrl+Alt+F` — Open popup search
+- User-assigned **Change Zen label** shortcut — Auto-label GitLab/GitHub issues (`ISSUE: #id - title`) and MR/PRs (`MR`/`PR: #issue - !id - title`), or open Zen's Change Label UI
 - Arrow keys / Enter / Escape — Navigate and activate results
 
 ## Credits and license
