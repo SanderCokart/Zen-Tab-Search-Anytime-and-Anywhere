@@ -110,7 +110,11 @@ export function createIconButton(options: {
   return button;
 }
 
-export function renderTimerToggle(container: HTMLElement, tab: TabInfo, controller: TimerUiController): void {
+export function renderTimerToggle(
+  container: HTMLElement,
+  tab: TabInfo,
+  controller: TimerUiController,
+): void {
   if (!Number.isInteger(tab.id) || tab.id! < 0) {
     return;
   }
@@ -376,7 +380,11 @@ export function renderActiveTimersPanel(
   container.appendChild(list);
 }
 
-export function syncActiveTimersButton(button: HTMLButtonElement, count: number, open: boolean): void {
+export function syncActiveTimersButton(
+  button: HTMLButtonElement,
+  count: number,
+  open: boolean,
+): void {
   button.replaceChildren(open ? createCloseIcon() : createTimerIcon());
   button.title = open ? "Close active timers" : "Show active timers";
   button.setAttribute("aria-label", button.title);

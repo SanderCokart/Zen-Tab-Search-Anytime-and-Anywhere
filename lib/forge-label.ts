@@ -14,8 +14,7 @@ export interface ForgePageInfo {
 
 const CLOSES_PATTERN =
   /\b(?:closes?|closed|closing|fixes?|fixed|fixing|resolves?|resolved|resolving)\s+(?:[\w.-]+\/[\w.-]+)?#(\d+)\b/gi;
-const MENTIONS_PATTERN =
-  /\b(?:related(?:\s+to)?|mentions?)\s+(?:[\w.-]+\/[\w.-]+)?#(\d+)\b/gi;
+const MENTIONS_PATTERN = /\b(?:related(?:\s+to)?|mentions?)\s+(?:[\w.-]+\/[\w.-]+)?#(\d+)\b/gi;
 const ISSUE_URL_PATTERN = /\/(?:-\/)?issues\/(\d+)/gi;
 const HASH_ISSUE_PATTERN = /(?<![A-Za-z0-9/])#(\d+)\b/g;
 
@@ -116,11 +115,7 @@ export function formatForgeLabel(ref: ForgeRef, title: string, relatedIssueId?: 
   return `${prefix}: !${ref.id}${suffix}`;
 }
 
-export function buildForgeLabel(
-  url: string,
-  tabTitle = "",
-  page?: ForgePageInfo,
-): string | null {
+export function buildForgeLabel(url: string, tabTitle = "", page?: ForgePageInfo): string | null {
   const ref = parseForgeUrl(url);
   if (!ref) {
     return null;

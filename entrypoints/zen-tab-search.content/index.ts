@@ -275,7 +275,9 @@ export default defineContentScript({
               }
             }
             if (item.data.active) {
-              url.textContent = url.textContent ? `${url.textContent} · Current tab` : "Current tab";
+              url.textContent = url.textContent
+                ? `${url.textContent} · Current tab`
+                : "Current tab";
             }
             url.className = "zen-url";
             text.appendChild(url);
