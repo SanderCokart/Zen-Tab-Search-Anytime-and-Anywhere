@@ -1,26 +1,58 @@
 # Zen Tab Search Anytime and Anywhere
 
-Fuzzy tab and space search for Zen Browser with a modern omnibar overlay. This extension is exclusive to Zen Browser. It is a fork of [AntonDobrovinskiy/Zen-Tab-Search](https://github.com/AntonDobrovinskiy/Zen-Tab-Search) with a rewritten git history, migrated into a [WXT](https://wxt.dev/) development scaffold.
+Find any tab, switch spaces, add context, and stay focused in Zen Browser.
 
-## Important notices
+Zen Tab Search is a fast fuzzy search overlay and popup for tabs, spaces, and custom labels. It is exclusive to [Zen Browser](https://zen-browser.app/).
 
-- This extension is exclusive to Zen Browser. It relies on Zen's internal workspace and tab APIs.
-- You must enable two preferences in `about:config` and restart Zen Browser before the extension can function:
-  - `extensions.experiments.enabled` → `true`
-  - `xpinstall.signatures.required` → `false`
-- This extension uses privileged `experiment_apis` to access Zen's internal workspace and tab APIs. Because of this, it cannot be published on addons.mozilla.org (AMO) and must be installed from a zip file.
+## Features
+
+### Search any tab and custom labels across spaces
+
+Search tab titles, URLs, and custom labels from one place—even when the tab is in another Zen space. Results update as you type, and keyboard navigation lets you activate a tab without leaving the current page.
+
+![GIF placeholder: search any tab and custom labels across spaces](docs/gifs/search-tabs-and-spaces.gif)
+
+### Set timers for tabs
+
+Set a timer on the current tab from the popup or keyboard shortcut. The remaining time appears in the tab label, active timers can be reviewed together, and Zen Tab Search restores timers after a restart and notifies you when they finish.
+
+![GIF placeholder: tab timers](docs/gifs/tab-timers.gif)
+
+### Automatic GitLab and GitHub issue and MR/PR labels
+
+On GitLab and GitHub issue, merge request, and pull request pages, the label shortcut reads the page URL and title and creates a useful custom label automatically. For example:
+
+- `ISSUE: #123 - Fix the search results`
+- `MR: #123 - !45 - Improve tab search`
+- `PR: #123 - !45 - Improve tab search`
+
+On other pages, the same shortcut opens Zen's native Change Label editor.
+
+![GIF placeholder: automatic GitLab and GitHub issue/MR/PR labels](docs/gifs/automatic-forge-labels.gif)
+
+## Keyboard shortcuts
+
+Shortcuts use `Ctrl` on Windows/Linux and `⌘` on macOS. Change or assign extension shortcuts in `about:addons` → **Zen Tab Search** → **Manage Extension Shortcuts**.
+
+- `Ctrl+Shift+F` — Open the in-page search overlay when a content tab is active
+- `Ctrl+Alt+F` — Open the popup search UI; also works when no web page tab is active
+- `Ctrl+Alt+T` — Open the timer for the current tab
+- User-assigned **Change Zen label** shortcut — Auto-label GitLab/GitHub issues and MR/PRs, or open Zen's Change Label editor
+- `Arrow keys` / `Page Up` / `Page Down` — Navigate results; use `Left` / `Right` with Page Up/Down for larger jumps
+- `Enter` — Activate the selected result
+- `Escape` — Close the search UI
 
 ## Installation
 
 ### From a GitHub release (recommended)
 
-1. Download the latest `.zip` from the Releases page.
+1. Download the latest `.zip` from the [Releases page](https://github.com/SanderCokart/Zen-Tab-Search-Anytime-and-Anywhere/releases).
 2. Open `about:config` in Zen Browser.
-3. Set the following preferences:
-   - `extensions.experiments.enabled` → `true`
-   - `xpinstall.signatures.required` → `false`
-4. Restart the browser.
-5. Go to `about:addons`, click the gear icon, and choose **Install Add-on From File…**. Select the downloaded `.zip` (you can also drag the zip file onto the page).
+3. Set these preferences to `true` and restart Zen:
+   - `extensions.experiments.enabled`
+   - `xpinstall.signatures.required`
+4. Open `about:addons`, click the gear icon, and choose **Install Add-on From File…**.
+5. Select the downloaded `.zip` (you can also drag it onto the page).
 
 ### Build from source
 
@@ -31,27 +63,20 @@ npm run zip
 
 The zip will be produced by WXT. Install it using the same `about:addons` → gear → **Install Add-on From File…** flow above.
 
-## Usage
+## At a glance
 
-- `Ctrl+Shift+F` opens the in-page omnibar overlay when possible.
-- `Ctrl+Alt+F` (or the toolbar button) opens the popup search UI, which works even when no web page tab is active.
-- Assign a shortcut for **Change Zen label of the selected/open tab** in `about:addons` → this extension → **Manage Extension Shortcuts**. On GitLab/GitHub issue, merge request, or pull request pages it auto-sets the label from the URL and title; otherwise it opens Zen's native Change Label editor (sidebar must be expanded; essential tabs cannot be renamed).
-- Type to filter tabs and spaces. Use arrow keys (or Page Up/Down with Left/Right for larger jumps), Enter to activate, and Escape to close.
-
-## Features
-
-- Fuzzy search across tab titles, URLs, and Zen custom tab labels
-- Optional keyboard shortcut to rename the selected tab, with automatic GitLab/GitHub issue and MR/PR labels
-- Search and switch between Zen spaces
+- Fuzzy search across tab titles, URLs, spaces, and Zen custom labels
+- Search and switch between all Zen spaces
+- Fast in-page overlay plus a popup that works without an active web page
+- Custom tab timers with countdown labels and completion notifications
+- Automatic custom labels for GitLab/GitHub issues, merge requests, and pull requests
 - Real-time results with keyboard navigation
-- Works across all workspaces in Zen Browser via a privileged Experiment API
 
-## Keyboard shortcuts
+## Important notices
 
-- `Ctrl+Shift+F` — Open in-page omnibar (when a content tab is active)
-- `Ctrl+Alt+F` — Open popup search
-- User-assigned **Change Zen label** shortcut — Auto-label GitLab/GitHub issues (`ISSUE: #id - title`) and MR/PRs (`MR`/`PR: #issue - !id - title`), or open Zen's Change Label UI
-- Arrow keys / Enter / Escape — Navigate and activate results
+- This extension is exclusive to Zen Browser and relies on Zen's internal workspace and tab APIs.
+- It uses privileged `experiment_apis`, so it cannot be published on addons.mozilla.org (AMO) and must be installed from a zip file.
+- The two `about:config` preferences above are required for Zen's extension APIs to be available.
 
 ## Credits and license
 
