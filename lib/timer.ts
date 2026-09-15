@@ -85,7 +85,7 @@ export function composeTimerLabel(
   return base ? `${clock} | ${base}` : clock;
 }
 
-export function formatTimerEndTime(endAt: number, now = Date.now()): string {
+export function formatTimerEndTime(endAt: number, _now = Date.now()): string {
   return new Intl.DateTimeFormat(undefined, {
     weekday: "short",
     month: "short",

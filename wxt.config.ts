@@ -1,3 +1,4 @@
+import preact from "@preact/preset-vite";
 import { defineConfig } from "wxt";
 
 const zipLabel = process.env.ZIP_ARTIFACT_LABEL?.trim() || "demo";
@@ -73,4 +74,8 @@ export default defineConfig({
   webExt: {
     disabled: true,
   },
+  // WXT has no official Preact module; this is the documented Vite-plugin path.
+  vite: () => ({
+    plugins: [preact({ reactAliasesEnabled: false })],
+  }),
 });

@@ -9,7 +9,7 @@
     "zip": "node scripts/zip.mjs",
     "lint": "npm run lint:web-ext",
     "lint:web-ext": "node scripts/lint-web-ext.mjs",
-    "lint:js": "eslint entrypoints scripts",
+    "lint:js": "eslint entrypoints lib scripts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
@@ -48,6 +48,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
+    "@preact/preset-vite": "^2.10.6",
     "@types/chrome": "^0.0.323",
     "eslint": "^9.28.0",
     "happy-dom": "^17.4.7",
@@ -60,5 +61,8 @@
     "vitest": "^3.2.1",
     "web-ext": "^10.3.0",
     "wxt": "^0.20.7"
+  },
+  "dependencies": {
+    "preact": "^10.29.8"
   }
 }
