@@ -9,6 +9,14 @@ export interface TabInfo {
   workspaceId?: string;
   workspaceName?: string;
   score?: number;
+  active?: boolean;
+}
+
+export interface TabTimer {
+  tabId: number;
+  endAt: number;
+  originalLabel: string;
+  title: string;
 }
 
 export interface SpaceInfo {

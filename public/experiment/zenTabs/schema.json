@@ -128,6 +128,12 @@
             "type": "integer",
             "optional": true,
             "description": "Extension tab ID to rename; defaults to the selected tab in the Zen browser window"
+          },
+          {
+            "name": "silent",
+            "type": "boolean",
+            "optional": true,
+            "description": "Skip the Zen renamed-tab toast"
           }
         ]
       },

@@ -1,6 +1,7 @@
 import { DEBUG, debugError, debugLog, debugWarn } from "../lib/debug";
 import { buildForgeLabel, parseForgeUrl, type ForgePageInfo } from "../lib/forge-label";
-import type { SpaceInfo, TabInfo } from "../lib/types";
+import type { SpaceInfo, TabInfo, TabTimer } from "../lib/types";
+import { composeTimerLabel, isAllowedTimerEnd, MAX_TIMER_MS, stripTimerPrefix } from "../lib/timer";
 
 interface ZenDebugInfo {
   timestamp: string;
@@ -30,10 +31,12 @@ interface ZenTabsApi {
   activateTab(tabId: number, anchorTabId?: number): Promise<boolean>;
   activateTabByDomId(domId: string, anchorTabId?: number): Promise<boolean>;
   changeLabel(anchorTabId?: number): Promise<boolean>;
-  setLabel(label: string, anchorTabId?: number): Promise<boolean>;
+  setLabel(label: string, anchorTabId?: number, silent?: boolean): Promise<boolean>;
 }
 
 const LOG_PREFIX = "[zen-tab-search]";
+const TIMER_STORAGE_KEY = "tabTimers";
+const TIMER_ALARM_PREFIX = "tab-timer:";
 
 function getZenTabsApi(): ZenTabsApi | undefined {
   return (browser as typeof browser & { zenTabs?: ZenTabsApi }).zenTabs;
@@ -68,6 +71,18 @@ function isContentScriptInjectableUrl(url: string | undefined): boolean {
   }
 }
 
+function isExtensionPageUrl(url: string | undefined): boolean {
+  if (!url) {
+    return false;
+  }
+
+  return url.startsWith("moz-extension:") || url.startsWith("chrome-extension:");
+}
+
+function isUsableBrowserTabId(tabId: number | undefined, url?: string): boolean {
+  return Number.isInteger(tabId) && tabId! >= 0 && !isExtensionPageUrl(url);
+}
+
 /** Zen experiment APIs accept -1 when no extension tab can anchor the browser window lookup. */
 function zenAnchorTabId(tabId?: number): number {
   if (Number.isInteger(tabId) && tabId! >= 0) {
@@ -78,31 +93,36 @@ function zenAnchorTabId(tabId?: number): number {
 
 async function resolveAnchorTabId(preferredTabId?: number): Promise<number | undefined> {
   if (Number.isInteger(preferredTabId) && preferredTabId! >= 0) {
-    return preferredTabId;
+    try {
+      const preferred = await browser.tabs.get(preferredTabId!);
+      if (isUsableBrowserTabId(preferred.id, preferred.url)) {
+        return preferred.id;
+      }
+    } catch {
+      // Preferred tab may already be gone.
+    }
   }
 
-  const focusedTabs = await browser.tabs.query({ active: true, currentWindow: true });
-  const focusedTabId = focusedTabs[0]?.id;
-  if (Number.isInteger(focusedTabId) && focusedTabId! >= 0) {
-    return focusedTabId;
-  }
+  const queries: Array<Record<string, boolean>> = [
+    { active: true, lastFocusedWindow: true },
+    { active: true, currentWindow: true },
+    { active: true },
+    {},
+  ];
 
-  const activeTabs = await browser.tabs.query({ active: true });
-  const activeTabId = activeTabs[0]?.id;
-  if (Number.isInteger(activeTabId) && activeTabId! >= 0) {
-    return activeTabId;
-  }
-
-  const allTabs = await browser.tabs.query({});
-  const anyTabId = allTabs[0]?.id;
-  if (Number.isInteger(anyTabId) && anyTabId! >= 0) {
-    return anyTabId;
+  for (const query of queries) {
+    const tabs = await browser.tabs.query(query);
+    const tab = tabs.find((candidate) => isUsableBrowserTabId(candidate.id, candidate.url));
+    if (tab?.id !== undefined) {
+      return tab.id;
+    }
   }
 
   return undefined;
 }
 
 let fallbackPopupWindowId: number | undefined;
+let timerPopupWindowId: number | undefined;
 
 async function closeSearchPopup(): Promise<boolean> {
   let closed = false;
@@ -148,6 +168,32 @@ async function openSearchPopup(): Promise<void> {
     }
   } catch (error) {
     console.error(`${LOG_PREFIX} Could not open search popup:`, formatError(error));
+  }
+}
+
+async function openCustomTimerPopup(tabId: number): Promise<void> {
+  if (Number.isInteger(timerPopupWindowId)) {
+    try {
+      await browser.windows.remove(timerPopupWindowId!);
+    } catch {
+      // Window was already closed.
+    }
+    timerPopupWindowId = undefined;
+  }
+
+  try {
+    const window = await browser.windows.create({
+      url: `${browser.runtime.getURL("timer-popup.html")}?tabId=${tabId}`,
+      type: "popup",
+      width: 420,
+      height: 420,
+      focused: true,
+    });
+    if (Number.isInteger(window.id)) {
+      timerPopupWindowId = window.id;
+    }
+  } catch (error) {
+    console.error(`${LOG_PREFIX} Could not open custom timer popup:`, formatError(error));
   }
 }
 
@@ -265,9 +311,11 @@ async function queryTabs(anchorTabId?: number): Promise<TabInfo[]> {
       debugLog(`${LOG_PREFIX} queryTabs via zenTabs.getAllTabs`, { anchorTabId: tabId });
       const tabs = await zenTabs.getAllTabs(zenAnchorTabId(tabId));
       if (tabs) {
+        const focusedTabId = await resolveAnchorTabId(tabId);
         return tabs.map((tab) => ({
           ...tab,
           id: tab.id >= 0 ? tab.id : -1,
+          active: Number.isInteger(tab.id) && tab.id === focusedTabId,
         }));
       }
     } catch (error) {
@@ -282,6 +330,7 @@ async function queryTabs(anchorTabId?: number): Promise<TabInfo[]> {
     .filter((id): id is number => Number.isInteger(id) && id >= 0);
   const customLabels = await getCustomTabLabels(tabIds);
 
+  const focusedTabId = await resolveAnchorTabId(tabId);
   return tabs.map((tab) => ({
     id: tab.id!,
     title: tab.title || "Untitled",
@@ -289,7 +338,28 @@ async function queryTabs(anchorTabId?: number): Promise<TabInfo[]> {
     url: tab.url || "",
     favIconUrl: tab.favIconUrl || "",
     windowId: tab.windowId,
+    active: tab.id === focusedTabId,
   }));
+}
+
+async function getTabInfo(tabId: number): Promise<TabInfo> {
+  const tabs = await queryTabs(tabId);
+  const match = tabs.find((tab) => tab.id === tabId);
+  if (match) {
+    return match;
+  }
+
+  const tab = await browser.tabs.get(tabId);
+  const labels = await getCustomTabLabels([tabId]);
+  return {
+    id: tab.id ?? tabId,
+    title: tab.title || "Untitled",
+    customLabel: labels[tabId] ?? "",
+    url: tab.url || "",
+    favIconUrl: tab.favIconUrl || "",
+    windowId: tab.windowId ?? -1,
+    active: tab.active,
+  };
 }
 
 async function getSpaces(anchorTabId?: number): Promise<SpaceInfo[]> {
@@ -385,10 +455,10 @@ async function changeSelectedTabLabel(): Promise<void> {
       const set = await zenTabs.setLabel(label, zenAnchorTabId(tabId));
       if (set) {
         debugLog(`${LOG_PREFIX} change-tab-label: auto-set forge label`, { label, url });
-          const editorOpened = await zenTabs.changeLabel(zenAnchorTabId(tabId));
-          if (!editorOpened) {
-            debugWarn(`${LOG_PREFIX} change-tab-label: could not open Zen label editor`);
-          }
+        const editorOpened = await zenTabs.changeLabel(zenAnchorTabId(tabId));
+        if (!editorOpened) {
+          debugWarn(`${LOG_PREFIX} change-tab-label: could not open Zen label editor`);
+        }
         return;
       }
     }
@@ -420,8 +490,283 @@ async function switchToSpace(spaceId: string, anchorTabId?: number): Promise<voi
   }
 }
 
+const lastTimerIndicators = new Map<number, string>();
+const updatingTimerTabs = new Set<number>();
+const finishingTimerTabs = new Set<number>();
+
+function timerAlarmName(tabId: number): string {
+  return `${TIMER_ALARM_PREFIX}${tabId}`;
+}
+
+function timerNotificationId(tabId: number): string {
+  return `tab-timer-${tabId}`;
+}
+
+async function readTimers(): Promise<Record<string, TabTimer>> {
+  const stored = await browser.storage.local.get(TIMER_STORAGE_KEY);
+  const timers = stored[TIMER_STORAGE_KEY];
+  return timers && typeof timers === "object" ? (timers as Record<string, TabTimer>) : {};
+}
+
+async function writeTimers(timers: Record<string, TabTimer>): Promise<void> {
+  await browser.storage.local.set({ [TIMER_STORAGE_KEY]: timers });
+}
+
+async function setTabLabelSilent(label: string, tabId: number): Promise<void> {
+  const zenTabs = getZenTabsApi();
+  if (!zenTabs?.setLabel) {
+    return;
+  }
+
+  try {
+    await zenTabs.setLabel(label, tabId, true);
+  } catch (error) {
+    debugWarn(`${LOG_PREFIX} Could not update timer tab label:`, formatError(error));
+  }
+}
+
+async function updateTimerIndicator(timer: TabTimer): Promise<void> {
+  const remaining = Math.max(0, timer.endAt - Date.now());
+  const label = composeTimerLabel(remaining, timer.originalLabel);
+  if (lastTimerIndicators.get(timer.tabId) === label || updatingTimerTabs.has(timer.tabId)) {
+    return;
+  }
+  lastTimerIndicators.set(timer.tabId, label);
+  updatingTimerTabs.add(timer.tabId);
+
+  try {
+    await setTabLabelSilent(label, timer.tabId);
+  } finally {
+    updatingTimerTabs.delete(timer.tabId);
+  }
+}
+
+async function clearTimerIndicators(timer: TabTimer): Promise<void> {
+  lastTimerIndicators.delete(timer.tabId);
+  await setTabLabelSilent(timer.originalLabel, timer.tabId);
+}
+
+async function finishTimer(tabId: number, notify: boolean): Promise<void> {
+  if (finishingTimerTabs.has(tabId)) {
+    return;
+  }
+  finishingTimerTabs.add(tabId);
+
+  try {
+    const timers = await readTimers();
+    const timer = timers[String(tabId)];
+    if (!timer) {
+      return;
+    }
+
+    delete timers[String(tabId)];
+    await writeTimers(timers);
+    await Promise.all([browser.alarms.clear(timerAlarmName(tabId)), clearTimerIndicators(timer)]);
+
+    if (!notify) {
+      return;
+    }
+
+    const tabName = timer.originalLabel || timer.title || "Untitled tab";
+    try {
+      await browser.notifications.create(timerNotificationId(tabId), {
+        type: "basic",
+        iconUrl: browser.runtime.getURL("icon/48.png"),
+        title: "Tab timer finished",
+        message: tabName,
+      });
+    } catch (error) {
+      debugWarn(`${LOG_PREFIX} Could not send timer notification:`, formatError(error));
+    }
+  } finally {
+    finishingTimerTabs.delete(tabId);
+  }
+}
+
+async function clearTabTimer(tabId: number): Promise<boolean> {
+  const timers = await readTimers();
+  const timer = timers[String(tabId)];
+  if (!timer) {
+    return false;
+  }
+
+  delete timers[String(tabId)];
+  await writeTimers(timers);
+  await browser.alarms.clear(timerAlarmName(tabId));
+  await clearTimerIndicators(timer);
+  return true;
+}
+
+async function setTabTimer(tabId: number, endAt: number): Promise<TabTimer> {
+  if (!isAllowedTimerEnd(endAt)) {
+    throw new Error("Timer duration must be between 1 minute and 31 days.");
+  }
+
+  const existingTimers = await readTimers();
+  const existing = existingTimers[String(tabId)];
+  if (existing) {
+    await clearTimerIndicators(existing);
+  }
+
+  const labels = await getCustomTabLabels([tabId]);
+  let title = existing?.title || "";
+  if (!title) {
+    try {
+      const tab = await browser.tabs.get(tabId);
+      title = stripTimerPrefix(tab.title || "") || tab.url || "Untitled tab";
+    } catch {
+      title = "Untitled tab";
+    }
+  }
+  const timer: TabTimer = {
+    tabId,
+    endAt,
+    originalLabel: stripTimerPrefix(existing?.originalLabel ?? labels[tabId] ?? ""),
+    title,
+  };
+  existingTimers[String(tabId)] = timer;
+  await writeTimers(existingTimers);
+  lastTimerIndicators.delete(tabId);
+  await browser.alarms.clear(timerAlarmName(tabId));
+  await browser.alarms.create(timerAlarmName(tabId), {
+    when: endAt,
+  });
+  await updateTimerIndicator(timer);
+  return timer;
+}
+
+let tickingTimers = false;
+
+async function tickActiveTimers(): Promise<void> {
+  if (tickingTimers) {
+    return;
+  }
+  tickingTimers = true;
+  try {
+    const timers = await readTimers();
+    for (const timer of Object.values(timers)) {
+      if (timer.endAt <= Date.now()) {
+        await finishTimer(timer.tabId, true);
+      } else {
+        void updateTimerIndicator(timer);
+      }
+    }
+  } finally {
+    tickingTimers = false;
+  }
+}
+
+async function restorePersistedTimers(): Promise<void> {
+  try {
+    await browser.browserAction.setBadgeText({ text: "" });
+  } catch {
+    // Badge APIs are optional; leftover text should never stay on the toolbar icon.
+  }
+
+  const timers = await readTimers();
+  let changed = false;
+  for (const timer of Object.values(timers)) {
+    const originalLabel = stripTimerPrefix(timer.originalLabel || "");
+    if (originalLabel !== timer.originalLabel) {
+      timer.originalLabel = originalLabel;
+      changed = true;
+    }
+  }
+  if (changed) {
+    await writeTimers(timers);
+  }
+
+  for (const timer of Object.values(timers)) {
+    if (timer.endAt <= Date.now() || timer.endAt - Date.now() > MAX_TIMER_MS) {
+      await finishTimer(timer.tabId, timer.endAt <= Date.now());
+      continue;
+    }
+    await browser.alarms.create(timerAlarmName(timer.tabId), { when: timer.endAt });
+    lastTimerIndicators.delete(timer.tabId);
+    await updateTimerIndicator(timer);
+  }
+}
+
+async function getActiveTimers(): Promise<TabTimer[]> {
+  const timers = await readTimers();
+  const active: TabTimer[] = [];
+  for (const timer of Object.values(timers)) {
+    if (timer.endAt <= Date.now()) {
+      await finishTimer(timer.tabId, true);
+    } else {
+      active.push(timer);
+    }
+  }
+  return active;
+}
+
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());
+
+  void browser.contextMenus.removeAll().then(() => {
+    browser.contextMenus.create({
+      id: "tab-timer",
+      title: "Tab timer",
+      contexts: ["tab"],
+    });
+    for (const [id, title] of [
+      ["tab-timer-30-minutes", "30 minutes"],
+      ["tab-timer-1-hour", "1 hour"],
+      ["tab-timer-7-hours", "7 hours"],
+      ["tab-timer-8-hours", "8 hours"],
+    ]) {
+      browser.contextMenus.create({
+        id,
+        parentId: "tab-timer",
+        title,
+        contexts: ["tab"],
+      });
+    }
+    browser.contextMenus.create({
+      id: "tab-timer-custom",
+      parentId: "tab-timer",
+      title: "Custom…",
+      contexts: ["tab"],
+    });
+    browser.contextMenus.create({
+      id: "tab-timer-clear",
+      parentId: "tab-timer",
+      title: "Clear timer",
+      contexts: ["tab"],
+    });
+  });
+
+  browser.contextMenus.onClicked.addListener((info, tab) => {
+    const tabId = tab?.id;
+    if (!Number.isInteger(tabId) || tabId! < 0) {
+      return;
+    }
+
+    if (info.menuItemId === "tab-timer-clear") {
+      void clearTabTimer(tabId!).catch((error) => {
+        console.error(`${LOG_PREFIX} Could not clear context-menu timer:`, formatError(error));
+      });
+      return;
+    }
+
+    const endAtByMenuId: Record<string, number> = {
+      "tab-timer-30-minutes": Date.now() + 30 * 60_000,
+      "tab-timer-1-hour": Date.now() + 60 * 60_000,
+      "tab-timer-7-hours": Date.now() + 7 * 60 * 60_000,
+      "tab-timer-8-hours": Date.now() + 8 * 60 * 60_000,
+    };
+    const endAt = endAtByMenuId[info.menuItemId as string];
+    if (endAt) {
+      void setTabTimer(tabId!, endAt).catch((error) => {
+        console.error(`${LOG_PREFIX} Could not set context-menu timer:`, formatError(error));
+      });
+      return;
+    }
+
+    if (info.menuItemId === "tab-timer-custom") {
+      void openCustomTimerPopup(tabId!);
+    }
+  });
 
   if (DEBUG) {
     browser.tabs.onActivated.addListener(() => {
@@ -434,6 +779,48 @@ export default defineBackground(() => {
     if (windowId === fallbackPopupWindowId) {
       fallbackPopupWindowId = undefined;
     }
+    if (windowId === timerPopupWindowId) {
+      timerPopupWindowId = undefined;
+    }
+  });
+
+  void restorePersistedTimers().catch((error) => {
+    debugWarn(`${LOG_PREFIX} Could not restore persisted timers:`, formatError(error));
+  });
+  setInterval(() => {
+    void tickActiveTimers();
+  }, 1000);
+
+  browser.notifications.onClicked.addListener((notificationId) => {
+    if (!notificationId.startsWith("tab-timer-")) {
+      return;
+    }
+    const tabId = Number(notificationId.slice("tab-timer-".length));
+    if (!Number.isInteger(tabId) || tabId < 0) {
+      return;
+    }
+    void switchToTab(tabId, undefined, tabId).catch((error) => {
+      debugWarn(`${LOG_PREFIX} Could not open timed tab from notification:`, formatError(error));
+    });
+  });
+
+  browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name.startsWith(TIMER_ALARM_PREFIX)) {
+      const tabId = Number(alarm.name.slice(TIMER_ALARM_PREFIX.length));
+      void finishTimer(tabId, true);
+    }
+  });
+
+  browser.tabs.onRemoved.addListener((tabId) => {
+    void readTimers().then(async (timers) => {
+      const timer = timers[String(tabId)];
+      if (timer) {
+        delete timers[String(tabId)];
+        lastTimerIndicators.delete(tabId);
+        await writeTimers(timers);
+        await browser.alarms.clear(timerAlarmName(tabId));
+      }
+    });
   });
 
   browser.commands.onCommand.addListener((command) => {
@@ -455,13 +842,28 @@ export default defineBackground(() => {
       void changeSelectedTabLabel().catch((error) => {
         console.error(`${LOG_PREFIX} Error handling change-tab-label command:`, formatError(error));
       });
+      return;
+    }
+
+    if (command === "set-tab-timer") {
+      void resolveAnchorTabId()
+        .then((tabId) => {
+          if (!Number.isInteger(tabId) || tabId! < 0) {
+            throw new Error("No current tab to set a timer on");
+          }
+          return openCustomTimerPopup(tabId!);
+        })
+        .catch((error) => {
+          console.error(`${LOG_PREFIX} Error handling set-tab-timer command:`, formatError(error));
+        });
     }
   });
 
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    const anchorTabId = Number.isInteger(message.anchorTabId)
-      ? message.anchorTabId
-      : sender.tab?.id;
+    const senderTabId = isUsableBrowserTabId(sender.tab?.id, sender.tab?.url)
+      ? sender.tab?.id
+      : undefined;
+    const anchorTabId = Number.isInteger(message.anchorTabId) ? message.anchorTabId : senderTabId;
 
     if (message.type === "getTabs") {
       queryTabs(anchorTabId)
@@ -495,6 +897,49 @@ export default defineBackground(() => {
     if (message.type === "switchSpace") {
       switchToSpace(message.spaceId, anchorTabId)
         .then(() => sendResponse({ success: true }))
+        .catch((error) => sendResponse({ error: formatError(error) }));
+      return true;
+    }
+
+    if (message.type === "getTab") {
+      const tabId = Number(message.tabId);
+      if (!Number.isInteger(tabId) || tabId < 0) {
+        sendResponse({ error: "No tab selected for the timer." });
+        return false;
+      }
+      getTabInfo(tabId)
+        .then((tab) => sendResponse(tab))
+        .catch((error) => sendResponse({ error: formatError(error) }));
+      return true;
+    }
+
+    if (message.type === "getTimers") {
+      getActiveTimers()
+        .then((timers) => sendResponse(timers))
+        .catch((error) => sendResponse({ error: formatError(error) }));
+      return true;
+    }
+
+    if (message.type === "setTimer") {
+      const tabId = Number(message.tabId);
+      const durationMinutes = Number(message.durationMinutes);
+      const endAt = Number.isFinite(Number(message.endAt))
+        ? Number(message.endAt)
+        : Date.now() + durationMinutes * 60_000;
+      if (!Number.isInteger(tabId) || tabId < 0 || !isAllowedTimerEnd(endAt)) {
+        sendResponse({ error: "Timer duration must be between 1 minute and 31 days." });
+        return false;
+      }
+      setTabTimer(tabId, endAt)
+        .then((timer) => sendResponse(timer))
+        .catch((error) => sendResponse({ error: formatError(error) }));
+      return true;
+    }
+
+    if (message.type === "clearTimer") {
+      const tabId = Number(message.tabId);
+      clearTabTimer(tabId)
+        .then((cleared) => sendResponse({ success: true, cleared }))
         .catch((error) => sendResponse({ error: formatError(error) }));
       return true;
     }

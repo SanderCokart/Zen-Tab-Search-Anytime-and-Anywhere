@@ -2,7 +2,7 @@ import "./style.css";
 import { debugError, debugLog } from "../../lib/debug";
 import type { SearchItem, SpaceInfo, TabInfo } from "../../lib/types";
 import { formatSpaceDisplayTitle, formatTabDisplayTitle, isActivatableTab } from "../../lib/types";
-import { buildSearchItems, filterSearchItems } from "../../lib/search";
+import { buildSearchItems, filterSearchItems, prioritizeCurrentTab } from "../../lib/search";
 
 export default defineContentScript({
   matches: ["<all_urls>"],
@@ -119,7 +119,8 @@ export default defineContentScript({
         .then(([tabs, spaces]) => {
           const allTabs = tabs.filter(isActivatableTab);
           const allSpaces = Array.isArray(spaces) ? spaces : [];
-          let visibleItems = buildSearchItems(allTabs, allSpaces);
+          const currentId = allTabs.find((tab) => tab.active)?.id;
+          let visibleItems = prioritizeCurrentTab(buildSearchItems(allTabs, allSpaces), currentId);
           let selectedIndex = -1;
 
           function updateSelection(scrollSelectedIntoView = false) {
@@ -226,6 +227,11 @@ export default defineContentScript({
                     url.textContent = "No URL";
                   }
                 }
+                if (item.data.active) {
+                  url.textContent = url.textContent
+                    ? `${url.textContent} · Current tab`
+                    : "Current tab";
+                }
                 url.className = "zen-url";
 
                 li.appendChild(title);
@@ -246,7 +252,8 @@ export default defineContentScript({
 
           input.addEventListener("input", (e) => {
             const query = (e.target as HTMLInputElement).value;
-            visibleItems = filterSearchItems(buildSearchItems(allTabs, allSpaces), query);
+            const items = filterSearchItems(buildSearchItems(allTabs, allSpaces), query);
+            visibleItems = query.trim() ? items : prioritizeCurrentTab(items, currentId);
             renderItems(visibleItems);
           });
 

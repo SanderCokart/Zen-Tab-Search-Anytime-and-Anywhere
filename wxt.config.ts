@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: {
     name: "Zen Tab Search",
     description: "Fuzzy search for tabs in Zen Browser with a modern omnibar overlay",
-    permissions: ["tabs", "<all_urls>"],
+    permissions: ["tabs", "<all_urls>", "alarms", "notifications", "storage", "contextMenus"],
     commands: {
       "show-omnibar": {
         suggested_key: {
@@ -27,6 +27,13 @@ export default defineConfig({
       },
       "change-tab-label": {
         description: "Change Zen label of the selected/open tab",
+      },
+      "set-tab-timer": {
+        suggested_key: {
+          default: "Ctrl+Alt+T",
+          mac: "MacCtrl+Alt+T",
+        },
+        description: "Set a timer on the current tab",
       },
     },
     icons: {

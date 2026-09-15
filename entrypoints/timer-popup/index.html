@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Set tab timer</title>
+    <link rel="stylesheet" href="./style.css" />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        padding: 12px;
+        width: 380px;
+        background: #1e1e1e;
+        color: #fff;
+        font: 13px/1.4 system-ui, -apple-system, Segoe UI, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="timer-form" class="zen-timer-popup">
+      <h1 id="tab-title">Loading tab…</h1>
+      <p id="tab-meta" class="zen-timer-meta"></p>
+      <p id="timer-status" class="zen-timer-status" hidden></p>
+      <div id="presets" class="zen-timer-presets"></div>
+      <label class="zen-timer-field">
+        Ends at
+        <input id="ends-at" class="zen-timer-input" type="datetime-local" step="60" required />
+      </label>
+      <p id="preview" class="zen-timer-preview">Pick a time to count down to.</p>
+      <div class="zen-timer-actions">
+        <button id="set-timer" class="zen-timer-button" type="submit">Set timer</button>
+        <button id="clear-timer" class="zen-timer-button zen-timer-clear" type="button" hidden>
+          Clear
+        </button>
+      </div>
+      <p id="error" class="zen-timer-error" hidden></p>
+    </form>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

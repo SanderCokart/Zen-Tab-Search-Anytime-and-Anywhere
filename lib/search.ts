@@ -67,6 +67,27 @@ export function buildSearchItems(allTabs: TabInfo[], allSpaces: SpaceInfo[]): Se
   return items;
 }
 
+export function prioritizeCurrentTab(
+  items: SearchItem[],
+  currentTabId?: number | null,
+): SearchItem[] {
+  if (!Number.isInteger(currentTabId) || currentTabId! < 0) {
+    const current = items.find((item) => item.kind === "tab" && item.data.active);
+    if (!current) {
+      return items;
+    }
+    return [current, ...items.filter((item) => item !== current)];
+  }
+
+  const index = items.findIndex((item) => item.kind === "tab" && item.data.id === currentTabId);
+  if (index <= 0) {
+    return items;
+  }
+
+  const current = items[index]!;
+  return [current, ...items.slice(0, index), ...items.slice(index + 1)];
+}
+
 export function filterSearchItems(items: SearchItem[], query: string): SearchItem[] {
   if (!query) {
     return items;

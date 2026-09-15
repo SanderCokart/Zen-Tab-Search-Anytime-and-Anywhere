@@ -602,12 +602,9 @@ this.zenTabs = class extends ExtensionAPI {
           }
         },
 
-        async setLabel(label, anchorTabId = -1) {
+        async setLabel(label, anchorTabId = -1, silent = false) {
           try {
             const newName = typeof label === "string" ? label.replace(/\s+/g, " ").trim() : "";
-            if (!newName) {
-              return false;
-            }
 
             const win = getWin(anchorTabId);
             if (!win?.gBrowser) {
@@ -626,19 +623,21 @@ this.zenTabs = class extends ExtensionAPI {
             }
 
             tab.zenStaticLabel = newName;
-            if (typeof win.gBrowser._setTabLabel === "function") {
+            if (newName && typeof win.gBrowser._setTabLabel === "function") {
               win.gBrowser._setTabLabel(tab, newName, { _zenChangeLabelFlag: true });
             } else if (typeof win.gBrowser.setTabTitle === "function") {
               win.gBrowser.setTabTitle(tab);
             }
 
-            try {
-              win.gZenUIManager?.showToast?.("zen-tabs-renamed");
-            } catch {
-              // Toast is optional.
+            if (newName && !silent) {
+              try {
+                win.gZenUIManager?.showToast?.("zen-tabs-renamed");
+              } catch {
+                // Toast is optional.
+              }
             }
 
-            return tab.zenStaticLabel === newName || tab.label === newName;
+            return true;
           } catch (error) {
             throw new Error(`setLabel failed: ${formatError(error)}`);
           }
