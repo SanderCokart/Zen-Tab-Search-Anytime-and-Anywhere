@@ -32,6 +32,10 @@ export default defineConfig({
         description: "Open Zen Tab Search popup",
       },
       "change-tab-label": {
+        suggested_key: {
+          default: "Ctrl+Alt+R",
+          mac: "MacCtrl+Alt+R",
+        },
         description: "Change Zen label of the selected/open tab",
       },
       "set-tab-timer": {

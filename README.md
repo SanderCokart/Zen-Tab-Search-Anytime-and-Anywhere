@@ -16,17 +16,23 @@ Search tab titles, URLs, and custom labels from one place—even when the tab is
 
 Set a timer on the current tab from the popup or keyboard shortcut. The remaining time appears in the tab label, active timers can be reviewed together, and Zen Tab Search restores timers after a restart and notifies you when they finish.
 
-![GIF placeholder: tab timers](docs/gifs/tab-timers.gif)
+
+|                                                          |                                                              |
+| -------------------------------------------------------- | ------------------------------------------------------------ |
+| ![GIF placeholder: tab timers](docs/gifs/tab-timers.gif) | ![GIF placeholder: tab timers 2](docs/gifs/tab-timers-2.gif) |
+
+
+
 
 ### Automatic GitLab and GitHub issue and MR/PR labels
 
-On GitLab and GitHub issue, merge request, and pull request pages, the label shortcut reads the page URL and title and creates a useful custom label automatically. For example:
+On GitLab and GitHub issue, merge request, and pull request pages, press `Ctrl+Alt+R` to read the page URL and title and create a useful custom label automatically. For example:
 
 - `ISSUE: #123 - Fix the search results`
 - `MR: #123 - !45 - Improve tab search`
 - `PR: #123 - !45 - Improve tab search`
 
-On other pages, the same shortcut opens Zen's native Change Label editor.
+On other pages, `Ctrl+Alt+R` opens Zen's native Change Label editor.
 
 ![GIF placeholder: automatic GitLab and GitHub issue/MR/PR labels](docs/gifs/automatic-forge-labels.gif)
 
@@ -37,22 +43,28 @@ Shortcuts use `Ctrl` on Windows/Linux and `⌘` on macOS. Change or assign exten
 - `Ctrl+Shift+F` — Open the in-page search overlay when a content tab is active
 - `Ctrl+Alt+F` — Open the popup search UI; also works when no web page tab is active
 - `Ctrl+Alt+T` — Open the timer for the current tab
-- User-assigned **Change Zen label** shortcut — Auto-label GitLab/GitHub issues and MR/PRs, or open Zen's Change Label editor
+- `Ctrl+Alt+R` — Change Zen label: auto-label GitLab/GitHub issues and MR/PRs, or open Zen's Change Label editor
 - `Arrow keys` / `Page Up` / `Page Down` — Navigate results; use `Left` / `Right` with Page Up/Down for larger jumps
 - `Enter` — Activate the selected result
 - `Escape` — Close the search UI
 
+
+
 ## Installation
+
+
 
 ### From a GitHub release (recommended)
 
 1. Download the latest `.zip` from the [Releases page](https://github.com/SanderCokart/Zen-Tab-Search-Anytime-and-Anywhere/releases).
 2. Open `about:config` in Zen Browser.
 3. Set these preferences to `true` and restart Zen:
-   - `extensions.experiments.enabled`
-   - `xpinstall.signatures.required`
+  - `extensions.experiments.enabled`
+  - `xpinstall.signatures.required`
 4. Open `about:addons`, click the gear icon, and choose **Install Add-on From File…**.
 5. Select the downloaded `.zip` (you can also drag it onto the page).
+
+
 
 ### Build from source
 
@@ -72,15 +84,19 @@ The zip will be produced by WXT. Install it using the same `about:addons` → ge
 - Automatic custom labels for GitLab/GitHub issues, merge requests, and pull requests
 - Real-time results with keyboard navigation
 
+
+
 ## Important notices
 
 - This extension is exclusive to Zen Browser and relies on Zen's internal workspace and tab APIs.
 - It uses privileged `experiment_apis`, so it cannot be published on addons.mozilla.org (AMO) and must be installed from a zip file.
 - The two `about:config` preferences above are required for Zen's extension APIs to be available.
 
+
+
 ## Credits and license
 
-This project is based on https://github.com/AntonDobrovinskiy/Zen-Tab-Search, which is released under the MIT license. Anton Dobrovinskiy retains the copyright as per the MIT license.
+This project is based on [https://github.com/AntonDobrovinskiy/Zen-Tab-Search](https://github.com/AntonDobrovinskiy/Zen-Tab-Search), which is released under the MIT license. Anton Dobrovinskiy retains the copyright as per the MIT license.
 
 This repository is a fork of that project with rewritten git history.
 
@@ -117,7 +133,7 @@ If a release fails, follow the recovery instructions printed by the script befor
 
 ## Development
 
-**Using Cursor?** Run the [`/quick-start`](.cursor/commands/quick-start.md) command.
+**Using Cursor?** Run the `[/quick-start](.cursor/commands/quick-start.md)` command.
 
 Otherwise:
 
@@ -154,6 +170,8 @@ public/experiment/    Privileged Experiment API (zenTabs) — required for cross
 public/icon/          Extension icons
 scripts/              Build and release helpers
 ```
+
+
 
 ## License
 
