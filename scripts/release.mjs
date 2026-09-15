@@ -245,7 +245,7 @@ function resolveReleaseNotes(args, tagName) {
   return { type: "message", value: generatedNotes(sinceTag, tagName), sinceTag };
 }
 
-function findZipArtifact(version) {
+function findZipArtifact(label) {
   const outputDir = path.join(rootDir, ".output");
   if (!fs.existsSync(outputDir)) {
     return undefined;
@@ -266,9 +266,13 @@ function findZipArtifact(version) {
     }
   }
 
-  const versionedZip = zipFiles.find((file) => path.basename(file).includes(version));
-  if (versionedZip) {
-    return versionedZip;
+  const matching = zipFiles.filter((file) => path.basename(file).includes(label));
+  const firefoxZip = matching.find((file) => path.basename(file).endsWith("-firefox.zip"));
+  if (firefoxZip) {
+    return firefoxZip;
+  }
+  if (matching.length > 0) {
+    return matching[0];
   }
 
   return zipFiles
@@ -338,11 +342,11 @@ function main() {
   releaseStep = "build";
   run("Building extension", "npm", ["run", "build"]);
   releaseStep = "zip";
-  run("Creating extension zip", "npm", ["run", "zip"]);
+  run("Creating extension zip", "npm", ["run", "zip", "--", "--tag", tagName]);
 
-  const zipArtifact = findZipArtifact(newVersion);
+  const zipArtifact = findZipArtifact(tagName);
   if (!zipArtifact) {
-    fail("No zip artifact was found in .output after npm run zip.");
+    fail(`No zip artifact matching ${tagName} was found in .output after npm run zip.`);
   }
 
   releaseStep = "release commit";

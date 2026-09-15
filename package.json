@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node scripts/set-experiment-debug.mjs true && wxt -b firefox",
     "build": "node scripts/set-experiment-debug.mjs false && wxt build -b firefox",
-    "zip": "wxt zip -b firefox",
+    "zip": "node scripts/zip.mjs",
     "lint": "npm run lint:web-ext",
     "lint:web-ext": "node scripts/lint-web-ext.mjs",
     "lint:js": "eslint entrypoints scripts",

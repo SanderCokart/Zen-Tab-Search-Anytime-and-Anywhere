@@ -1,9 +1,15 @@
 import { defineConfig } from "wxt";
 
+const zipLabel = process.env.ZIP_ARTIFACT_LABEL?.trim() || "demo";
+
 export default defineConfig({
   srcDir: ".",
   outDir: ".output",
   browser: "firefox",
+  zip: {
+    artifactTemplate: `{{name}}-${zipLabel}-{{browser}}.zip`,
+    sourcesTemplate: `{{name}}-${zipLabel}-sources.zip`,
+  },
   manifest: {
     name: "Zen Tab Search",
     description: "Fuzzy search for tabs in Zen Browser with a modern omnibar overlay",

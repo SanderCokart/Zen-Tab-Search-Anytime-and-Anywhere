@@ -12,10 +12,18 @@ Run the package command immediately from the project root:
 npm run zip
 ```
 
-The command creates:
+By default this creates a demo zip:
 
-- `.output/zen-tab-search-<version>-firefox.zip`
-- `.output/zen-tab-search-<version>-sources.zip`
+- `.output/zen-tab-search-demo-firefox.zip`
+- `.output/zen-tab-search-demo-sources.zip`
+
+Optional naming:
+
+```bash
+npm run zip -- my-build
+npm run zip -- --name my-build
+npm run zip -- --tag v2.0.5
+```
 
 Report the Firefox zip path after the command succeeds. Do not bump the version, publish a release, or run unrelated validation unless the user asks.
 
