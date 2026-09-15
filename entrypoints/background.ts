@@ -527,7 +527,7 @@ async function setTabLabelSilent(label: string, tabId: number): Promise<void> {
 
 async function updateTimerIndicator(timer: TabTimer): Promise<void> {
   const remaining = Math.max(0, timer.endAt - Date.now());
-  const label = composeTimerLabel(remaining, timer.originalLabel);
+  const label = composeTimerLabel(remaining, timer.originalLabel, timer.title);
   if (lastTimerIndicators.get(timer.tabId) === label || updatingTimerTabs.has(timer.tabId)) {
     return;
   }
@@ -623,13 +623,11 @@ async function setTabTimer(tabId: number, endAt: number): Promise<TabTimer> {
 
   const labels = await getCustomTabLabels([tabId]);
   let title = existing?.title || "";
-  if (!title) {
-    try {
-      const tab = await browser.tabs.get(tabId);
-      title = stripTimerPrefix(tab.title || "") || tab.url || "Untitled tab";
-    } catch {
-      title = "Untitled tab";
-    }
+  try {
+    const tab = await browser.tabs.get(tabId);
+    title = stripTimerPrefix(tab.title || "") || tab.url || title || "Untitled tab";
+  } catch {
+    title = title || "Untitled tab";
   }
   const timer: TabTimer = {
     tabId,

@@ -28,6 +28,10 @@ describe("composeTimerLabel", () => {
     expect(composeTimerLabel(90_000, "My Label")).toBe("⏱ 1m 30s | My Label");
     expect(composeTimerLabel(2 * 60 * 60_000, "My Label")).toBe("⏱ 2h | My Label");
   });
+
+  it("falls back to the tab title when there is no custom label", () => {
+    expect(composeTimerLabel(90_000, "", "GitHub issue")).toBe("⏱ 1m 30s | GitHub issue");
+  });
 });
 
 describe("formatHumanDuration", () => {

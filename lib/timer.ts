@@ -75,9 +75,13 @@ export function formatTimerLabel(milliseconds: number): string {
   return `⏱ ${formatTimerClock(milliseconds)}`;
 }
 
-export function composeTimerLabel(milliseconds: number, originalLabel: string): string {
+export function composeTimerLabel(
+  milliseconds: number,
+  originalLabel: string,
+  fallbackTitle = "",
+): string {
   const clock = formatTimerLabel(milliseconds);
-  const base = stripTimerPrefix(originalLabel);
+  const base = stripTimerPrefix(originalLabel || fallbackTitle);
   return base ? `${clock} | ${base}` : clock;
 }
 
