@@ -3,8 +3,7 @@ import { buildForgeLabel, parseForgeUrl, type ForgePageInfo } from "../../forge-
 import { sendTabMessage } from "../../messaging/client";
 import { formatError, LOG_PREFIX } from "../log";
 import { isContentScriptInjectableUrl } from "../urls";
-import { resolveAnchorTabId, zenAnchorTabId } from "../zen/anchor";
-import { getZenTabsApi } from "../zen/api";
+import type { WorkspaceAdapter } from "../zen/adapter";
 
 async function getForgePageInfo(tabId?: number, url?: string): Promise<ForgePageInfo> {
   if (!Number.isInteger(tabId) || tabId! < 0 || !isContentScriptInjectableUrl(url)) {
@@ -20,25 +19,24 @@ async function getForgePageInfo(tabId?: number, url?: string): Promise<ForgePage
   return {};
 }
 
-export async function changeSelectedTabLabel(): Promise<void> {
-  const zenTabs = getZenTabsApi();
-  if (!zenTabs) {
+export async function changeSelectedTabLabel(workspace: WorkspaceAdapter): Promise<void> {
+  if (!workspace.isAvailable()) {
     console.error(`${LOG_PREFIX} change-tab-label: zenTabs API unavailable`);
     return;
   }
 
-  const tabId = await resolveAnchorTabId();
+  const tabId = await workspace.resolveAnchorTabId();
   const tab = Number.isInteger(tabId) && tabId! >= 0 ? await browser.tabs.get(tabId!) : undefined;
   const url = tab?.url || "";
 
-  if (parseForgeUrl(url) && zenTabs.setLabel) {
+  if (parseForgeUrl(url)) {
     const pageInfo = await getForgePageInfo(tabId, url);
     const label = buildForgeLabel(url, tab?.title || "", pageInfo);
     if (label) {
-      const set = await zenTabs.setLabel(label, zenAnchorTabId(tabId));
+      const set = await workspace.setLabel(label, tabId);
       if (set) {
         debugLog(`${LOG_PREFIX} change-tab-label: auto-set forge label`, { label, url });
-        const editorOpened = await zenTabs.changeLabel(zenAnchorTabId(tabId));
+        const editorOpened = await workspace.changeLabel(tabId);
         if (!editorOpened) {
           debugWarn(`${LOG_PREFIX} change-tab-label: could not open Zen label editor`);
         }
@@ -47,12 +45,7 @@ export async function changeSelectedTabLabel(): Promise<void> {
     }
   }
 
-  if (!zenTabs.changeLabel) {
-    console.error(`${LOG_PREFIX} change-tab-label: zenTabs.changeLabel unavailable`);
-    return;
-  }
-
-  const changed = await zenTabs.changeLabel(zenAnchorTabId(tabId));
+  const changed = await workspace.changeLabel(tabId);
   if (!changed) {
     debugWarn(
       `${LOG_PREFIX} change-tab-label: Zen did not start renaming (sidebar collapsed, essentials, or API unavailable)`,

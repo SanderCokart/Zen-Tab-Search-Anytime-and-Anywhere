@@ -1,35 +1,35 @@
 import { DEBUG, debugError, debugLog, debugWarn } from "../../debug";
 import { formatError, LOG_PREFIX } from "../log";
-import { getZenTabsApi } from "./api";
-import { resolveAnchorTabId } from "./anchor";
+import type { WorkspaceAdapter } from "./adapter";
 
-export async function logZenDebugInfo(context: string, anchorTabId?: number): Promise<void> {
+export async function logZenDebugInfo(
+  workspace: WorkspaceAdapter,
+  context: string,
+  anchorTabId?: number,
+): Promise<void> {
   if (!DEBUG) {
     return;
   }
 
-  const zenTabs = getZenTabsApi();
-  if (!zenTabs?.getDebugInfo) {
+  if (!workspace.isAvailable()) {
     debugWarn(`${LOG_PREFIX} ${context}: zenTabs.getDebugInfo unavailable`);
     return;
   }
 
-  const tabId = await resolveAnchorTabId(anchorTabId);
   try {
-    const info = await zenTabs.getDebugInfo(tabId);
+    const info = await workspace.getDebugInfo(anchorTabId);
     debugWarn(`${LOG_PREFIX} ${context} debug info:`, info);
   } catch (error) {
     debugWarn(`${LOG_PREFIX} ${context}: getDebugInfo failed:`, formatError(error));
   }
 }
 
-export async function warmUpZenTabsApi(): Promise<void> {
+export async function warmUpZenTabsApi(workspace: WorkspaceAdapter): Promise<void> {
   if (!DEBUG) {
     return;
   }
 
-  const zenTabs = getZenTabsApi();
-  if (!zenTabs) {
+  if (!workspace.isAvailable()) {
     debugWarn(
       `${LOG_PREFIX} warmUp: browser.zenTabs unavailable — Zen Browser experiment API required`,
     );
@@ -39,9 +39,9 @@ export async function warmUpZenTabsApi(): Promise<void> {
     return;
   }
 
-  const anchorTabId = await resolveAnchorTabId();
+  const anchorTabId = await workspace.resolveAnchorTabId();
   debugLog(`${LOG_PREFIX} warmUp: zenTabs available`, {
-    methods: Object.keys(zenTabs),
+    methods: workspace.apiMethodNames(),
     anchorTabId,
   });
 
@@ -51,22 +51,17 @@ export async function warmUpZenTabsApi(): Promise<void> {
   }
 
   try {
-    const info = await zenTabs.getDebugInfo(anchorTabId);
+    const info = await workspace.getDebugInfo(anchorTabId);
     debugLog(`${LOG_PREFIX} warmUp debug info:`, info);
   } catch (error) {
     debugError(`${LOG_PREFIX} warmUp getDebugInfo failed:`, formatError(error));
   }
 
   try {
-    const spaces = await zenTabs.getSpaces(anchorTabId);
+    const spaces = await workspace.listSpaces(anchorTabId);
     debugLog(`${LOG_PREFIX} warmUp getSpaces:`, { count: spaces.length, spaces });
   } catch (error) {
     debugError(`${LOG_PREFIX} warmUp getSpaces failed:`, formatError(error));
-    await logZenDebugInfo("warmUp getSpaces", anchorTabId);
+    await logZenDebugInfo(workspace, "warmUp getSpaces", anchorTabId);
   }
-}
-
-export async function getZenDebugInfoPayload(anchorTabId?: number): Promise<unknown> {
-  const tabId = await resolveAnchorTabId(anchorTabId);
-  return (await getZenTabsApi()?.getDebugInfo(tabId)) ?? { error: "zenTabs API unavailable" };
 }
