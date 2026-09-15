@@ -9,28 +9,15 @@ import {
   TIMER_PRESETS,
   toDatetimeLocalValue,
 } from "./timer";
+import { sendExtensionMessage } from "./messaging/client";
 import type { TabInfo, TabTimer } from "./types";
 import { formatTabDisplayTitle } from "./types";
-
-export interface TimerMessageResponse {
-  error?: string;
-  tabId?: number;
-  endAt?: number;
-  originalLabel?: string;
-  title?: string;
-  success?: boolean;
-  cleared?: boolean | number;
-}
 
 export interface TimerUiController {
   timers: Map<number, TabTimer>;
   openTimerTabs: Set<number>;
   timerDrafts: Map<number, number>;
   onChange: () => void;
-}
-
-export function sendTimerMessage(message: object): Promise<TimerMessageResponse> {
-  return browser.runtime.sendMessage(message) as Promise<TimerMessageResponse>;
 }
 
 function createSvgIcon(...pathData: string[]): SVGSVGElement {
@@ -68,25 +55,15 @@ function draftEndAt(controller: TimerUiController, tabId: number, timer?: TabTim
   return controller.timerDrafts.get(tabId) ?? timer?.endAt ?? Date.now() + 30 * 60_000;
 }
 
-export function applyTimerResponse(
-  controller: TimerUiController,
-  tabId: number,
-  response: TimerMessageResponse,
-): void {
-  if (response?.error) {
-    debugError("Could not update timer:", response.error);
-    return;
-  }
-  if (response.tabId !== undefined && response.endAt !== undefined) {
-    controller.timers.set(tabId, {
-      tabId: response.tabId,
-      endAt: response.endAt,
-      originalLabel: response.originalLabel ?? "",
-      title: response.title ?? "",
-    });
-  } else {
-    controller.timers.delete(tabId);
-  }
+export function applyTimerSet(controller: TimerUiController, timer: TabTimer): void {
+  controller.timers.set(timer.tabId, timer);
+  controller.openTimerTabs.delete(timer.tabId);
+  controller.timerDrafts.delete(timer.tabId);
+  controller.onChange();
+}
+
+export function applyTimerCleared(controller: TimerUiController, tabId: number): void {
+  controller.timers.delete(tabId);
   controller.openTimerTabs.delete(tabId);
   controller.timerDrafts.delete(tabId);
   controller.onChange();
@@ -225,9 +202,9 @@ export function renderTimerPanel(tab: TabInfo, controller: TimerUiController): H
       updatePreview();
       return;
     }
-    void sendTimerMessage({ type: "setTimer", tabId, endAt }).then((response) => {
-      applyTimerResponse(controller, tabId, response);
-    });
+    void sendExtensionMessage({ type: "setTimer", tabId, endAt })
+      .then((timer) => applyTimerSet(controller, timer))
+      .catch((error) => debugError("Could not update timer:", error));
   });
   actions.appendChild(set);
 
@@ -238,9 +215,9 @@ export function renderTimerPanel(tab: TabInfo, controller: TimerUiController): H
     clear.textContent = "Clear";
     clear.addEventListener("click", (event) => {
       event.stopPropagation();
-      void sendTimerMessage({ type: "clearTimer", tabId }).then((response) => {
-        applyTimerResponse(controller, tabId, response);
-      });
+      void sendExtensionMessage({ type: "clearTimer", tabId })
+        .then(() => applyTimerCleared(controller, tabId))
+        .catch((error) => debugError("Could not update timer:", error));
     });
     actions.appendChild(clear);
   }
@@ -316,16 +293,14 @@ export function renderActiveTimersPanel(
     clearAll.textContent = "Clear all";
     clearAll.addEventListener("click", (event) => {
       event.stopPropagation();
-      void sendTimerMessage({ type: "clearAllTimers" }).then((response) => {
-        if (response?.error) {
-          debugError("Could not clear timers:", response.error);
-          return;
-        }
-        controller.timers.clear();
-        controller.openTimerTabs.clear();
-        controller.timerDrafts.clear();
-        controller.onChange();
-      });
+      void sendExtensionMessage({ type: "clearAllTimers" })
+        .then(() => {
+          controller.timers.clear();
+          controller.openTimerTabs.clear();
+          controller.timerDrafts.clear();
+          controller.onChange();
+        })
+        .catch((error) => debugError("Could not clear timers:", error));
     });
     heading.appendChild(clearAll);
   }
@@ -369,9 +344,9 @@ export function renderActiveTimersPanel(
     clear.textContent = "Clear";
     clear.addEventListener("click", (event) => {
       event.stopPropagation();
-      void sendTimerMessage({ type: "clearTimer", tabId: timer.tabId }).then((response) => {
-        applyTimerResponse(controller, timer.tabId, response);
-      });
+      void sendExtensionMessage({ type: "clearTimer", tabId: timer.tabId })
+        .then(() => applyTimerCleared(controller, timer.tabId))
+        .catch((error) => debugError("Could not update timer:", error));
     });
 
     item.append(text, clear);

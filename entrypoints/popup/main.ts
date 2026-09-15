@@ -1,4 +1,5 @@
 import { debugError, debugLog } from "../../lib/debug";
+import { sendExtensionMessage } from "../../lib/messaging/client";
 import type { SearchItem, SpaceInfo, TabInfo, TabTimer } from "../../lib/types";
 import { formatSpaceDisplayTitle, isActivatableTab } from "../../lib/types";
 import { buildSearchItems, filterSearchItems, prioritizeCurrentTab } from "../../lib/search";
@@ -64,15 +65,6 @@ function focusSearchInput() {
   input.select();
 }
 
-function isErrorResponse(value: unknown): value is { error: string } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "error" in value &&
-    typeof (value as { error: unknown }).error === "string"
-  );
-}
-
 function updateSelection(scrollSelectedIntoView = false) {
   const items = list.querySelectorAll("li");
   items.forEach((item) => item.classList.remove("selected"));
@@ -94,33 +86,18 @@ function renderActiveTimers(): void {
   }
   renderActiveTimersPanel(activeTimersPanel, timerUi, {
     onActivateTab: (tabId) => {
-      void browser.runtime
-        .sendMessage({ type: "switchTab", tabId })
-        .then((response: { error?: string }) => {
-          if (response?.error) {
-            debugError("Error response from switchTab:", response.error);
-            return;
-          }
-          window.close();
-        });
+      void sendExtensionMessage({ type: "switchTab", tabId })
+        .then(() => window.close())
+        .catch((error) => debugError("Error response from switchTab:", error));
     },
   });
 }
 
 function activateItem(item: SearchItem) {
   if (item.kind === "space") {
-    browser.runtime
-      .sendMessage({ type: "switchSpace", spaceId: item.data.id })
-      .then((response: { error?: string }) => {
-        if (response?.error) {
-          debugError("Error response from switchSpace:", response.error);
-          return;
-        }
-        window.close();
-      })
-      .catch((error) => {
-        debugError("Error sending switchSpace message:", error);
-      });
+    void sendExtensionMessage({ type: "switchSpace", spaceId: item.data.id })
+      .then(() => window.close())
+      .catch((error) => debugError("Error sending switchSpace message:", error));
     return;
   }
 
@@ -128,22 +105,13 @@ function activateItem(item: SearchItem) {
     return;
   }
 
-  browser.runtime
-    .sendMessage({
-      type: "switchTab",
-      tabId: item.data.id ?? undefined,
-      domId: item.data.domId,
-    })
-    .then((response: { error?: string }) => {
-      if (response?.error) {
-        debugError("Error response from switchTab:", response.error);
-        return;
-      }
-      window.close();
-    })
-    .catch((error) => {
-      debugError("Error sending switchTab message:", error);
-    });
+  void sendExtensionMessage({
+    type: "switchTab",
+    tabId: Number.isInteger(item.data.id) && item.data.id! >= 0 ? item.data.id : undefined,
+    domId: item.data.domId || undefined,
+  })
+    .then(() => window.close())
+    .catch((error) => debugError("Error sending switchTab message:", error));
 }
 
 function renderItems(filteredItems: SearchItem[]) {
@@ -243,23 +211,16 @@ function refreshFilter() {
 emptyEl.textContent = "Loading tabs and spaces…";
 emptyEl.hidden = false;
 
-function applyTabs(tabs: unknown): void {
-  if (isErrorResponse(tabs)) {
-    throw new Error(tabs.error);
-  }
-  allTabs = Array.isArray(tabs) ? tabs.filter(isActivatableTab) : [];
+function applyTabs(tabs: TabInfo[]): void {
+  allTabs = tabs.filter(isActivatableTab);
 }
 
-function applySpaces(spaces: unknown): void {
-  if (isErrorResponse(spaces)) {
-    throw new Error(spaces.error);
-  }
-  allSpaces = Array.isArray(spaces) ? spaces : [];
+function applySpaces(spaces: SpaceInfo[]): void {
+  allSpaces = spaces;
 }
 
 // Initial data load — works without an active content tab; background uses Zen experiment fallbacks.
-browser.runtime
-  .sendMessage({ type: "getTabs" })
+void sendExtensionMessage({ type: "getTabs" })
   .then((tabs) => {
     applyTabs(tabs);
     visibleItems = visibleSearchItems(input.value);
@@ -271,8 +232,7 @@ browser.runtime
     emptyEl.hidden = false;
   });
 
-browser.runtime
-  .sendMessage({ type: "getSpaces" })
+void sendExtensionMessage({ type: "getSpaces" })
   .then((spaces) => {
     applySpaces(spaces);
     visibleItems = visibleSearchItems(input.value);
@@ -280,15 +240,11 @@ browser.runtime
   })
   .catch((error) => debugError("Error fetching spaces for popup:", error));
 
-void browser.runtime
-  .sendMessage({ type: "getTimers" })
-  .then((activeTimers: unknown) => {
-    if (Array.isArray(activeTimers)) {
-      const timerList = activeTimers as TabTimer[];
-      timers = new Map(timerList.map((timer) => [timer.tabId, timer]));
-      renderItems(visibleItems);
-      renderActiveTimers();
-    }
+void sendExtensionMessage({ type: "getTimers" })
+  .then((activeTimers) => {
+    timers = new Map(activeTimers.map((timer) => [timer.tabId, timer]));
+    renderItems(visibleItems);
+    renderActiveTimers();
   })
   .catch((error) => debugError("Error fetching timers for popup:", error));
 
