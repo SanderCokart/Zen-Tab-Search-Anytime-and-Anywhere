@@ -2,12 +2,8 @@ import { debugWarn } from "../debug";
 import type { TabTimer } from "../types";
 import { composeTimerLabel, isAllowedTimerEnd, MAX_TIMER_MS, stripTimerPrefix } from "../timer";
 
-export interface TimerZenTabsApi {
-  setLabel(label: string, anchorTabId?: number, silent?: boolean): Promise<boolean>;
-}
-
 export interface TimerServiceDependencies {
-  getZenTabsApi(): TimerZenTabsApi | undefined;
+  setLabel(label: string, tabId: number, silent?: boolean): Promise<boolean>;
   getCustomTabLabels(tabIds: number[]): Promise<Record<number, string>>;
 }
 
@@ -31,10 +27,7 @@ function formatError(error: unknown): string {
   return String(error);
 }
 
-export function createTimerService({
-  getZenTabsApi,
-  getCustomTabLabels,
-}: TimerServiceDependencies) {
+export function createTimerService({ setLabel, getCustomTabLabels }: TimerServiceDependencies) {
   const lastTimerIndicators = new Map<number, string>();
   const updatingTimerTabs = new Set<number>();
   const finishingTimerTabs = new Set<number>();
@@ -51,13 +44,8 @@ export function createTimerService({
   }
 
   async function setTabLabelSilent(label: string, tabId: number): Promise<void> {
-    const zenTabs = getZenTabsApi();
-    if (!zenTabs?.setLabel) {
-      return;
-    }
-
     try {
-      await zenTabs.setLabel(label, tabId, true);
+      await setLabel(label, tabId, true);
     } catch (error) {
       debugWarn(`${LOG_PREFIX} Could not update timer tab label:`, formatError(error));
     }

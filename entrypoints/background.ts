@@ -4,30 +4,34 @@ import { registerMessageRouter } from "../lib/background/message-router";
 import { registerTimerContextMenus } from "../lib/background/menus/timer-context";
 import { formatError, LOG_PREFIX } from "../lib/background/log";
 import { registerPopupWindowTracking } from "../lib/background/popups";
-import { getTabInfo, getSpaces, queryTabs } from "../lib/background/tabs/query";
-import { switchToSpace, switchToTab } from "../lib/background/tabs/switch";
+import { createTabQuery } from "../lib/background/tabs/query";
+import { createTabSwitcher } from "../lib/background/tabs/switch";
 import { createTimerService } from "../lib/background/timer-service";
-import { getZenTabsApi } from "../lib/background/zen/api";
-import { getCustomTabLabels } from "../lib/background/zen/labels";
-import { getZenDebugInfoPayload, warmUpZenTabsApi } from "../lib/background/zen/debug";
+import { createZenWorkspaceAdapter } from "../lib/background/zen/adapter";
+import { logZenDebugInfo, warmUpZenTabsApi } from "../lib/background/zen/debug";
 import { isAllowedTimerEnd } from "../lib/timer";
 
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());
+  const workspace = createZenWorkspaceAdapter({
+    logDebugInfo: (context, anchorTabId) => logZenDebugInfo(workspace, context, anchorTabId),
+  });
+  const { queryTabs, getTabInfo, getSpaces } = createTabQuery(workspace);
+  const { switchToTab, switchToSpace } = createTabSwitcher(workspace);
   const timerService = createTimerService({
-    getZenTabsApi,
-    getCustomTabLabels,
+    setLabel: (label, tabId, silent) => workspace.setLabel(label, tabId, silent),
+    getCustomTabLabels: (tabIds) => workspace.getCustomLabels(tabIds),
   });
 
   registerTimerContextMenus(timerService);
   registerPopupWindowTracking();
-  registerCommands();
+  registerCommands(workspace);
 
   if (DEBUG) {
     browser.tabs.onActivated.addListener(() => {
-      void warmUpZenTabsApi();
+      void warmUpZenTabsApi(workspace);
     });
-    void warmUpZenTabsApi();
+    void warmUpZenTabsApi(workspace);
   }
 
   void timerService.restorePersistedTimers().catch((error) => {
@@ -64,7 +68,7 @@ export default defineBackground(() => {
   registerMessageRouter({
     queryTabs,
     getSpaces,
-    getDebugInfo: getZenDebugInfoPayload,
+    getDebugInfo: (anchorTabId) => workspace.getDebugInfo(anchorTabId),
     switchTab: switchToTab,
     switchSpace: switchToSpace,
     getTab: getTabInfo,
