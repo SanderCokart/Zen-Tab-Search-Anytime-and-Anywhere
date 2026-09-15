@@ -30,7 +30,7 @@ function sanitizeLabel(value, optionName) {
   if (!label) {
     fail(`${optionName} must be a non-empty label.`);
   }
-  if (label.includes("..") || /[<>:"|?*\u0000]/.test(label)) {
+  if (label.includes("..") || /[<>:"|?*]/.test(label) || label.includes("\0")) {
     fail(`${optionName} contains invalid characters: ${label}`);
   }
   return label;
