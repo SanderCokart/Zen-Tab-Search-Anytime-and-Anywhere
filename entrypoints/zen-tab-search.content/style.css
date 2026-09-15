@@ -29,6 +29,21 @@
   overflow: hidden;
 }
 
+.zen-search-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.zen-search-row .zen-timer-icon-button {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
 .zen-input {
   background: #333;
   border: none;
@@ -36,8 +51,9 @@
   color: #fff;
   font-size: 18px;
   padding: 12px;
-  margin-bottom: 16px;
   outline: none;
+  flex: 1;
+  min-width: 0;
 }
 
 .zen-input::placeholder {
@@ -53,10 +69,9 @@
 }
 
 .zen-tab-item {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
   gap: 12px;
-  align-items: center;
+  align-items: flex-start;
   padding: 12px;
   border-radius: 8px;
   cursor: pointer;
@@ -88,13 +103,226 @@
   font-weight: 600;
 }
 
+.zen-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.zen-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .zen-title {
   color: #fff;
   font-size: 16px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-right: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.zen-tab-timer-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.zen-timer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: #b9aaff;
+  font-size: 12px;
+}
+
+.zen-timer-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #555;
+  border-radius: 6px;
+  background: #292929;
+  color: #fff;
+  font: inherit;
+  color-scheme: dark;
+}
+
+.zen-timer-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.zen-timer-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.zen-timer-preset {
+  padding: 4px 8px;
+  border: 1px solid #555;
+  border-radius: 999px;
+  background: #292929;
+  color: #ddd;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.zen-timer-preset:hover,
+.zen-timer-preset:focus-visible {
+  border-color: #6652b8;
+  background: #3d3270;
+  color: #fff;
+}
+
+.zen-timer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #bbb;
+  font-size: 12px;
+}
+
+.zen-timer-preview {
+  margin: 0;
+  color: #b9aaff;
+  font-size: 12px;
+}
+
+.zen-timer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.zen-timer-button {
+  padding: 6px 10px;
+  border: 1px solid #6652b8;
+  border-radius: 6px;
+  background: #3d3270;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.zen-timer-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+}
+
+.zen-timer-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.zen-timer-button:hover {
+  background: #51439a;
+}
+
+.zen-timer-clear {
+  border-color: #666;
+  background: transparent;
+  color: #bbb;
+}
+
+.zen-timer-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #7c5cff;
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.zen-active-timers {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #3d3270;
+  border-radius: 10px;
+  background: #252038;
+}
+
+.zen-active-timers-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #fff;
+  font-size: 14px;
+}
+
+.zen-active-timers-empty {
+  margin: 0;
+  color: #888;
+  font-size: 13px;
+}
+
+.zen-active-timers-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.zen-active-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zen-active-timer-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.zen-active-timer-title {
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .zen-url {

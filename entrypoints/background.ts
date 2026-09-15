@@ -597,6 +597,19 @@ async function clearTabTimer(tabId: number): Promise<boolean> {
   return true;
 }
 
+async function clearAllTimers(): Promise<number> {
+  const timers = await readTimers();
+  const list = Object.values(timers);
+  await writeTimers({});
+  await Promise.all(
+    list.flatMap((timer) => [
+      browser.alarms.clear(timerAlarmName(timer.tabId)),
+      clearTimerIndicators(timer),
+    ]),
+  );
+  return list.length;
+}
+
 async function setTabTimer(tabId: number, endAt: number): Promise<TabTimer> {
   if (!isAllowedTimerEnd(endAt)) {
     throw new Error("Timer duration must be between 1 minute and 31 days.");
@@ -939,6 +952,13 @@ export default defineBackground(() => {
     if (message.type === "clearTimer") {
       const tabId = Number(message.tabId);
       clearTabTimer(tabId)
+        .then((cleared) => sendResponse({ success: true, cleared }))
+        .catch((error) => sendResponse({ error: formatError(error) }));
+      return true;
+    }
+
+    if (message.type === "clearAllTimers") {
+      clearAllTimers()
         .then((cleared) => sendResponse({ success: true, cleared }))
         .catch((error) => sendResponse({ error: formatError(error) }));
       return true;

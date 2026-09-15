@@ -30,6 +30,13 @@
         flex-direction: column;
         height: 100%;
       }
+      .zen-search-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
       .zen-input {
         background: #333;
         border: none;
@@ -37,9 +44,10 @@
         color: #fff;
         font-size: 14px;
         padding: 8px 10px;
-        margin-bottom: 8px;
         outline: none;
         width: 100%;
+        flex: 1;
+        min-width: 0;
       }
       .zen-input::placeholder {
         color: #888;
@@ -62,13 +70,16 @@
   </head>
   <body>
     <div id="app" class="zen-popup">
-      <input
-        id="search-input"
-        type="text"
-        placeholder="Search tabs and spaces..."
-        class="zen-input"
-        autofocus
-      />
+      <div id="search-row" class="zen-search-row">
+        <input
+          id="search-input"
+          type="text"
+          placeholder="Search tabs and spaces..."
+          class="zen-input"
+          autofocus
+        />
+      </div>
+      <div id="active-timers-panel" class="zen-active-timers" hidden></div>
       <ul id="results" class="zen-list" role="listbox"></ul>
       <div id="empty" class="zen-empty" hidden>No tabs or spaces found.</div>
     </div>

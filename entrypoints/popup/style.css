@@ -28,6 +28,14 @@ body {
   height: 100%;
 }
 
+.zen-search-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 .zen-input {
   background: #333;
   border: none;
@@ -35,9 +43,10 @@ body {
   color: #fff;
   font-size: 14px;
   padding: 8px 10px;
-  margin-bottom: 8px;
   outline: none;
   width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .zen-input::placeholder {
@@ -242,11 +251,95 @@ body {
   text-overflow: ellipsis;
 }
 
-.zen-empty {
+.zen-search-row .zen-timer-icon-button {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.zen-timer-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #7c5cff;
+  color: #fff;
+  font-size: 9px;
+  line-height: 14px;
+  text-align: center;
+}
+
+.zen-active-timers {
+  margin-bottom: 8px;
+  padding: 8px;
+  border: 1px solid #3d3270;
+  border-radius: 8px;
+  background: #252038;
+}
+
+.zen-active-timers-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #fff;
+  font-size: 12px;
+}
+
+.zen-active-timers-empty {
+  margin: 0;
   color: #888;
   font-size: 12px;
-  padding: 12px 4px;
-  text-align: center;
+}
+
+.zen-active-timers-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.zen-active-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zen-active-timer-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.zen-active-timer-tab:disabled {
+  cursor: default;
+}
+
+.zen-active-timer-title {
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .zen-list::-webkit-scrollbar {

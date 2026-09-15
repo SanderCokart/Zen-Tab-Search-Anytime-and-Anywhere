@@ -1,21 +1,22 @@
 import { debugError, debugLog } from "../../lib/debug";
 import type { SearchItem, SpaceInfo, TabInfo, TabTimer } from "../../lib/types";
-import { formatSpaceDisplayTitle, formatTabDisplayTitle, isActivatableTab } from "../../lib/types";
+import { formatSpaceDisplayTitle, isActivatableTab } from "../../lib/types";
 import { buildSearchItems, filterSearchItems, prioritizeCurrentTab } from "../../lib/search";
 import {
-  formatTimerClock,
-  formatTimerCountdown,
-  fromDatetimeLocalValue,
-  isAllowedTimerEnd,
-  MAX_TIMER_MS,
-  stripTimerPrefix,
-  TIMER_PRESETS,
-  toDatetimeLocalValue,
-} from "../../lib/timer";
+  createIconButton,
+  createTimerIcon,
+  renderActiveTimersPanel,
+  renderTabTimerBlock,
+  syncActiveTimersButton,
+  tickTimerDisplays,
+  type TimerUiController,
+} from "../../lib/timer-ui";
 
 const input = document.getElementById("search-input") as HTMLInputElement;
 const list = document.getElementById("results") as HTMLUListElement;
 const emptyEl = document.getElementById("empty") as HTMLDivElement;
+const searchRow = document.getElementById("search-row") as HTMLDivElement;
+const activeTimersPanel = document.getElementById("active-timers-panel") as HTMLDivElement;
 let allTabs: TabInfo[] = [];
 let allSpaces: SpaceInfo[] = [];
 let visibleItems: SearchItem[] = [];
@@ -23,6 +24,30 @@ let selectedIndex = -1;
 let timers = new Map<number, TabTimer>();
 const openTimerTabs = new Set<number>();
 const timerDrafts = new Map<number, number>();
+let activeTimersOpen = false;
+
+const timerUi: TimerUiController = {
+  get timers() {
+    return timers;
+  },
+  openTimerTabs,
+  timerDrafts,
+  onChange() {
+    renderItems(visibleItems);
+    renderActiveTimers();
+  },
+};
+
+const activeTimersButton = createIconButton({
+  title: "Show active timers",
+  icon: createTimerIcon(),
+  onClick: () => {
+    activeTimersOpen = !activeTimersOpen;
+    renderActiveTimers();
+  },
+});
+searchRow.appendChild(activeTimersButton);
+renderActiveTimers();
 
 function currentTabId(): number | undefined {
   const active = allTabs.find((tab) => tab.active && Number.isInteger(tab.id) && tab.id! >= 0);
@@ -60,229 +85,26 @@ function updateSelection(scrollSelectedIntoView = false) {
   }
 }
 
-function formatRemaining(endAt: number): string {
-  return formatTimerClock(endAt - Date.now());
-}
-
-function timerForTab(tab: TabInfo): TabTimer | undefined {
-  return Number.isInteger(tab.id) && tab.id! >= 0 ? timers.get(tab.id!) : undefined;
-}
-
-function sendTimerMessage(message: object): Promise<{
-  error?: string;
-  tabId?: number;
-  endAt?: number;
-  originalLabel?: string;
-  title?: string;
-}> {
-  return browser.runtime.sendMessage(message) as Promise<{
-    error?: string;
-    tabId?: number;
-    endAt?: number;
-    originalLabel?: string;
-    title?: string;
-  }>;
-}
-
-function createSvgIcon(...pathData: string[]): SVGSVGElement {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("aria-hidden", "true");
-  svg.classList.add("zen-timer-icon");
-  for (const d of pathData) {
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", d);
-    svg.appendChild(path);
-  }
-  return svg;
-}
-
-function createTimerIcon(): SVGSVGElement {
-  const svg = createSvgIcon("M12 9v4l2.5 1.5", "M9 3h6M12 3v2");
-  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  circle.setAttribute("cx", "12");
-  circle.setAttribute("cy", "13");
-  circle.setAttribute("r", "8");
-  svg.insertBefore(circle, svg.firstChild);
-  return svg;
-}
-
-function createCloseIcon(): SVGSVGElement {
-  return createSvgIcon("M6 6l12 12M18 6L6 18");
-}
-
-function draftEndAt(tabId: number, timer?: TabTimer): number {
-  return timerDrafts.get(tabId) ?? timer?.endAt ?? Date.now() + 30 * 60_000;
-}
-
-function applyTimerResponse(tabId: number, response: { error?: string } & Partial<TabTimer>): void {
-  if (response?.error) {
-    debugError("Could not update timer:", response.error);
+function renderActiveTimers(): void {
+  syncActiveTimersButton(activeTimersButton, timers.size, activeTimersOpen);
+  activeTimersPanel.hidden = !activeTimersOpen;
+  if (!activeTimersOpen) {
+    activeTimersPanel.replaceChildren();
     return;
   }
-  if (response.tabId !== undefined && response.endAt !== undefined) {
-    timers.set(tabId, {
-      tabId: response.tabId,
-      endAt: response.endAt,
-      originalLabel: response.originalLabel ?? "",
-      title: response.title ?? "",
-    });
-  } else {
-    timers.delete(tabId);
-  }
-  openTimerTabs.delete(tabId);
-  timerDrafts.delete(tabId);
-  renderItems(visibleItems);
-}
-
-function renderTimerToggle(container: HTMLElement, tab: TabInfo): void {
-  if (!Number.isInteger(tab.id) || tab.id! < 0) {
-    return;
-  }
-
-  const tabId = tab.id!;
-  const timer = timerForTab(tab);
-  const open = openTimerTabs.has(tabId);
-  const timerEl = document.createElement("div");
-  timerEl.className = "zen-timer";
-  timerEl.addEventListener("click", (event) => event.stopPropagation());
-
-  if (timer) {
-    const countdown = document.createElement("span");
-    countdown.className = "zen-timer-countdown";
-    countdown.dataset.endAt = String(timer.endAt);
-    countdown.textContent = `⏱ ${formatRemaining(timer.endAt)}`;
-    timerEl.appendChild(countdown);
-  }
-
-  const toggle = document.createElement("button");
-  toggle.className = "zen-timer-button zen-timer-icon-button";
-  toggle.type = "button";
-  if (open) {
-    toggle.title = "Close timer settings";
-    toggle.setAttribute("aria-label", "Close timer settings");
-    toggle.appendChild(createCloseIcon());
-    toggle.addEventListener("click", (event) => {
-      event.stopPropagation();
-      openTimerTabs.delete(tabId);
-      renderItems(visibleItems);
-    });
-  } else {
-    toggle.title = "Set a timer for this tab";
-    toggle.setAttribute("aria-label", "Set a timer for this tab");
-    toggle.appendChild(createTimerIcon());
-    toggle.addEventListener("click", (event) => {
-      event.stopPropagation();
-      openTimerTabs.add(tabId);
-      if (!timerDrafts.has(tabId)) {
-        timerDrafts.set(tabId, draftEndAt(tabId, timer));
-      }
-      renderItems(visibleItems);
-    });
-  }
-  timerEl.appendChild(toggle);
-  container.appendChild(timerEl);
-}
-
-function renderTimerPanel(tab: TabInfo): HTMLElement {
-  const tabId = tab.id!;
-  const timer = timerForTab(tab);
-  const panel = document.createElement("div");
-  panel.className = "zen-timer-panel";
-  panel.addEventListener("click", (event) => event.stopPropagation());
-
-  const endsAt = document.createElement("input");
-  endsAt.className = "zen-timer-input";
-  endsAt.type = "datetime-local";
-  endsAt.step = "60";
-  endsAt.title = "Timer end time";
-  endsAt.setAttribute("aria-label", "Timer end time");
-  const now = Date.now();
-  endsAt.min = toDatetimeLocalValue(now + 60_000);
-  endsAt.max = toDatetimeLocalValue(now + MAX_TIMER_MS);
-  endsAt.value = toDatetimeLocalValue(draftEndAt(tabId, timer));
-
-  const preview = document.createElement("p");
-  preview.className = "zen-timer-preview";
-
-  function updatePreview(): void {
-    const endAt = fromDatetimeLocalValue(endsAt.value);
-    timerDrafts.set(tabId, endAt);
-    preview.textContent = isAllowedTimerEnd(endAt)
-      ? formatTimerCountdown(endAt)
-      : "Choose a time between 1 minute and 31 days from now.";
-  }
-
-  const presets = document.createElement("div");
-  presets.className = "zen-timer-presets";
-  for (const preset of TIMER_PRESETS) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "zen-timer-preset";
-    button.textContent = preset.label;
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      const endAt = preset.endAt(new Date());
-      timerDrafts.set(tabId, endAt);
-      endsAt.value = toDatetimeLocalValue(endAt);
-      updatePreview();
-    });
-    presets.appendChild(button);
-  }
-  panel.appendChild(presets);
-
-  endsAt.addEventListener("input", () => {
-    updatePreview();
+  renderActiveTimersPanel(activeTimersPanel, timerUi, {
+    onActivateTab: (tabId) => {
+      void browser.runtime
+        .sendMessage({ type: "switchTab", tabId })
+        .then((response: { error?: string }) => {
+          if (response?.error) {
+            debugError("Error response from switchTab:", response.error);
+            return;
+          }
+          window.close();
+        });
+    },
   });
-  updatePreview();
-
-  const field = document.createElement("label");
-  field.className = "zen-timer-field";
-  field.append("Ends at", endsAt);
-  panel.appendChild(field);
-  panel.appendChild(preview);
-
-  const actions = document.createElement("div");
-  actions.className = "zen-timer-actions";
-
-  const set = document.createElement("button");
-  set.className = "zen-timer-button";
-  set.type = "button";
-  set.textContent = "Set timer";
-  set.addEventListener("click", (event) => {
-    event.stopPropagation();
-    const endAt = fromDatetimeLocalValue(endsAt.value);
-    if (!isAllowedTimerEnd(endAt)) {
-      endsAt.focus();
-      updatePreview();
-      return;
-    }
-    void sendTimerMessage({ type: "setTimer", tabId, endAt }).then((response) => {
-      applyTimerResponse(tabId, response);
-    });
-  });
-  actions.appendChild(set);
-
-  if (timer) {
-    const clear = document.createElement("button");
-    clear.className = "zen-timer-button zen-timer-clear";
-    clear.type = "button";
-    clear.textContent = "Clear";
-    clear.addEventListener("click", (event) => {
-      event.stopPropagation();
-      void sendTimerMessage({ type: "clearTimer", tabId }).then((response) => {
-        if (response?.error) {
-          debugError("Could not clear timer:", response.error);
-          return;
-        }
-        applyTimerResponse(tabId, {});
-      });
-    });
-    actions.appendChild(clear);
-  }
-
-  panel.appendChild(actions);
-  return panel;
 }
 
 function activateItem(item: SearchItem) {
@@ -381,28 +203,7 @@ function renderItems(filteredItems: SearchItem[]) {
 
       const text = document.createElement("div");
       text.className = "zen-text";
-
-      const tabBlock = document.createElement("div");
-      tabBlock.className = "zen-tab-timer-block";
-
-      const titleRow = document.createElement("div");
-      titleRow.className = "zen-title-row";
-
-      const title = document.createElement("span");
-      title.textContent = formatTabDisplayTitle({
-        ...item.data,
-        customLabel: stripTimerPrefix(item.data.customLabel || ""),
-      });
-      title.className = "zen-title";
-      titleRow.appendChild(title);
-      renderTimerToggle(titleRow, item.data);
-      tabBlock.appendChild(titleRow);
-
-      if (Number.isInteger(item.data.id) && openTimerTabs.has(item.data.id!)) {
-        tabBlock.appendChild(renderTimerPanel(item.data));
-      }
-
-      text.appendChild(tabBlock);
+      text.appendChild(renderTabTimerBlock(item.data, timerUi));
 
       const url = document.createElement("span");
       if (item.data.workspaceName) {
@@ -486,6 +287,7 @@ void browser.runtime
       const timerList = activeTimers as TabTimer[];
       timers = new Map(timerList.map((timer) => [timer.tabId, timer]));
       renderItems(visibleItems);
+      renderActiveTimers();
     }
   })
   .catch((error) => debugError("Error fetching timers for popup:", error));
@@ -536,24 +338,6 @@ input.addEventListener("keydown", (e) => {
 // Let the popup finish opening before asking the browser to move focus.
 setTimeout(focusSearchInput, 100);
 
-setInterval(() => {
-  const now = Date.now();
-  list.querySelectorAll<HTMLElement>(".zen-timer-countdown").forEach((countdown) => {
-    const endAt = Number(countdown.dataset.endAt);
-    if (Number.isFinite(endAt)) {
-      countdown.textContent = `⏱ ${formatTimerClock(endAt - now)}`;
-    }
-  });
-  list.querySelectorAll<HTMLInputElement>("input[type='datetime-local']").forEach((field) => {
-    const preview = field.closest(".zen-timer-field")?.nextElementSibling;
-    if (!(preview instanceof HTMLElement) || !preview.classList.contains("zen-timer-preview")) {
-      return;
-    }
-    const endAt = fromDatetimeLocalValue(field.value);
-    preview.textContent = isAllowedTimerEnd(endAt, now)
-      ? formatTimerCountdown(endAt, now)
-      : "Choose a time between 1 minute and 31 days from now.";
-  });
-}, 1000);
+setInterval(() => tickTimerDisplays(document), 1000);
 
 debugLog("Zen Tab Search popup opened");
