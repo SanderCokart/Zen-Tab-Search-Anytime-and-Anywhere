@@ -162,7 +162,7 @@ export default defineContentScript({
       document.addEventListener("visibilitychange", visibilityListener);
 
       function currentId(): number | undefined {
-        return allTabs.find((tab) => tab.active)?.id;
+        return allTabs.find((tab) => tab.active)?.id ?? undefined;
       }
 
       function refreshVisibleItems(query: string): void {

@@ -4,6 +4,6 @@
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx"
   },
-  "include": ["./**/*"],
-  "exclude": ["node_modules", ".output", ".wxt"]
+  "include": ["./**/*", "./.wxt/**/*.d.ts"],
+  "exclude": ["node_modules", ".output"]
 }

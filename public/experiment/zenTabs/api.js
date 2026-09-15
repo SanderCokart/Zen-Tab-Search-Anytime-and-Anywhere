@@ -122,7 +122,7 @@ this.zenTabs = class extends ExtensionAPI {
       return windows;
     }
 
-    function getWin(anchorTabId) {
+    function resolveWindow(anchorTabId) {
       if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
         const anchored = getWinForTab(anchorTabId);
         if (anchored) {
@@ -130,34 +130,38 @@ this.zenTabs = class extends ExtensionAPI {
             anchorTabId,
             hasGZenWorkspaces: !!anchored.gZenWorkspaces,
           });
-          return anchored;
+          return { win: anchored, source: "anchorTab" };
         }
       }
 
       for (const win of enumerateZenBrowserWindows()) {
         if (win.gZenWorkspaces) {
           debugLog("getWin via tabManager", { hasGZenWorkspaces: true });
-          return win;
+          return { win, source: "tabManager" };
         }
       }
 
       for (const win of enumerateZenBrowserWindows()) {
         debugLog("getWin via tabManager (gBrowser only)");
-        return win;
+        return { win, source: "tabManager" };
       }
 
       try {
         const recent = getServices().wm.getMostRecentWindow("navigator:browser");
         if (recent && !recent.closed) {
           debugLog("getWin wm fallback", { hasGZenWorkspaces: !!recent.gZenWorkspaces });
-          return recent;
+          return { win: recent, source: "windowMediator" };
         }
       } catch (error) {
         debugLog("getWin wm fallback failed", { error: formatError(error) });
       }
 
       debugLog("getWin: no Zen browser window found", { anchorTabId });
-      return null;
+      return { win: null, source: "none" };
+    }
+
+    function getWin(anchorTabId) {
+      return resolveWindow(anchorTabId).win;
     }
 
     async function getZenWorkspaces(anchorTabId) {
@@ -292,6 +296,32 @@ this.zenTabs = class extends ExtensionAPI {
       return tabs;
     }
 
+    function getWorkspaceNameMap(zenWorkspaces) {
+      return new Map(
+        zenWorkspaces
+          .getWorkspaces()
+          .map((space) => [String(space.uuid || ""), String(space.name || "Untitled")]),
+      );
+    }
+
+    function mapNativeTab(tab, win, spaceNames) {
+      const workspaceId = String(tab.getAttribute("zen-workspace-id") || "");
+      const customLabel = tab.zenStaticLabel;
+      const extTabId = getExtTabId(tab);
+
+      return {
+        id: Number.isInteger(extTabId) && extTabId >= 0 ? extTabId : -1,
+        domId: String(tab.id || ""),
+        title: String(tab.label || "Untitled"),
+        customLabel: typeof customLabel === "string" && customLabel ? String(customLabel) : "",
+        url: String(tab.linkedBrowser?.currentURI?.spec || ""),
+        favIconUrl: String(unwrapFavicon(tab.image)),
+        windowId: Number(win.windowUtils?.outerWindowID ?? -1),
+        workspaceId,
+        workspaceName: String(spaceNames.get(workspaceId) || ""),
+      };
+    }
+
     async function activateNativeTab(tab, anchorTabId) {
       const win = getWin(anchorTabId);
       if (!win?.gBrowser || !win.gZenWorkspaces || !tab) {
@@ -365,29 +395,9 @@ this.zenTabs = class extends ExtensionAPI {
       info.tabManagerWindowCount = enumerateZenBrowserWindows().length;
 
       try {
-        let win = null;
-
-        if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
-          win = getWinForTab(anchorTabId);
-          if (win) {
-            info.windowSource = "anchorTab";
-          }
-        }
-
-        if (!win) {
-          const zenWindows = enumerateZenBrowserWindows();
-          win = zenWindows.find((candidate) => candidate.gZenWorkspaces) ?? zenWindows[0] ?? null;
-          if (win) {
-            info.windowSource = "tabManager";
-          }
-        }
-
-        if (!win) {
-          win = getServices().wm.getMostRecentWindow("navigator:browser");
-          if (win) {
-            info.windowSource = "windowMediator";
-          }
-        }
+        const resolved = resolveWindow(anchorTabId);
+        const win = resolved.win;
+        info.windowSource = resolved.source;
 
         info.windowFound = !!win;
         info.hasGZenWorkspaces = !!win?.gZenWorkspaces;
@@ -505,33 +515,8 @@ this.zenTabs = class extends ExtensionAPI {
               );
             }
 
-            const spaceNames = new Map(
-              zenWorkspaces
-                .getWorkspaces()
-                .map((space) => [String(space.uuid || ""), String(space.name || "Untitled")]),
-            );
-            const results = [];
-
-            for (const tab of collectTabs(win, zenWorkspaces)) {
-              const workspaceId = String(tab.getAttribute("zen-workspace-id") || "");
-              const customLabel = tab.zenStaticLabel;
-              const extTabId = getExtTabId(tab);
-
-              results.push({
-                id: Number.isInteger(extTabId) && extTabId >= 0 ? extTabId : -1,
-                domId: String(tab.id || ""),
-                title: String(tab.label || "Untitled"),
-                customLabel:
-                  typeof customLabel === "string" && customLabel ? String(customLabel) : "",
-                url: String(tab.linkedBrowser?.currentURI?.spec || ""),
-                favIconUrl: String(unwrapFavicon(tab.image)),
-                windowId: Number(win.windowUtils?.outerWindowID ?? -1),
-                workspaceId,
-                workspaceName: String(spaceNames.get(workspaceId) || ""),
-              });
-            }
-
-            return results;
+            const spaceNames = getWorkspaceNameMap(zenWorkspaces);
+            return collectTabs(win, zenWorkspaces).map((tab) => mapNativeTab(tab, win, spaceNames));
           } catch (error) {
             const details = formatError(error);
             debugLog("getAllTabs failed", () => ({

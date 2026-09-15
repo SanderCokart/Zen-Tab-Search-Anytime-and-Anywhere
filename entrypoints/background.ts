@@ -1,7 +1,9 @@
 import { DEBUG, debugError, debugLog, debugWarn } from "../lib/debug";
+import { registerMessageRouter } from "../lib/background/message-router";
+import { createTimerService } from "../lib/background/timer-service";
 import { buildForgeLabel, parseForgeUrl, type ForgePageInfo } from "../lib/forge-label";
-import type { SpaceInfo, TabInfo, TabTimer } from "../lib/types";
-import { composeTimerLabel, isAllowedTimerEnd, MAX_TIMER_MS, stripTimerPrefix } from "../lib/timer";
+import type { SpaceInfo, TabInfo } from "../lib/types";
+import { isAllowedTimerEnd } from "../lib/timer";
 
 interface ZenDebugInfo {
   timestamp: string;
@@ -35,8 +37,10 @@ interface ZenTabsApi {
 }
 
 const LOG_PREFIX = "[zen-tab-search]";
-const TIMER_STORAGE_KEY = "tabTimers";
-const TIMER_ALARM_PREFIX = "tab-timer:";
+type ContextMenuContext = NonNullable<
+  Parameters<typeof browser.contextMenus.create>[0]["contexts"]
+>[number];
+const TAB_CONTEXT = "tab" as unknown as ContextMenuContext;
 
 function getZenTabsApi(): ZenTabsApi | undefined {
   return (browser as typeof browser & { zenTabs?: ZenTabsApi }).zenTabs;
@@ -128,7 +132,7 @@ async function closeSearchPopup(): Promise<boolean> {
   let closed = false;
 
   for (const view of browser.extension.getViews({ type: "popup" })) {
-    view.close();
+    (view as unknown as { close(): void }).close();
     closed = true;
   }
 
@@ -147,7 +151,13 @@ async function closeSearchPopup(): Promise<boolean> {
 
 async function openSearchPopup(): Promise<void> {
   try {
-    await browser.browserAction.openPopup();
+    const browserAction = browser.browserAction as typeof browser.browserAction & {
+      openPopup?: () => Promise<void>;
+    };
+    if (!browserAction.openPopup) {
+      throw new Error("browserAction.openPopup unavailable");
+    }
+    await browserAction.openPopup();
     return;
   } catch (error) {
     debugWarn(
@@ -157,14 +167,15 @@ async function openSearchPopup(): Promise<void> {
   }
 
   try {
-    const window = await browser.windows.create({
-      url: browser.runtime.getURL("popup.html"),
+    const popupWindow = await browser.windows.create({
+      url: browser.runtime.getURL("/popup.html"),
       type: "popup",
       width: 400,
       height: 480,
     });
-    if (Number.isInteger(window.id)) {
-      fallbackPopupWindowId = window.id;
+    const popupWindowId = popupWindow?.id;
+    if (Number.isInteger(popupWindowId)) {
+      fallbackPopupWindowId = popupWindowId;
     }
   } catch (error) {
     console.error(`${LOG_PREFIX} Could not open search popup:`, formatError(error));
@@ -182,15 +193,16 @@ async function openCustomTimerPopup(tabId: number): Promise<void> {
   }
 
   try {
-    const window = await browser.windows.create({
-      url: `${browser.runtime.getURL("timer-popup.html")}?tabId=${tabId}`,
+    const popupWindow = await browser.windows.create({
+      url: `${browser.runtime.getURL("/timer-popup.html")}?tabId=${tabId}`,
       type: "popup",
       width: 420,
       height: 420,
       focused: true,
     });
-    if (Number.isInteger(window.id)) {
-      timerPopupWindowId = window.id;
+    const popupWindowId = popupWindow?.id;
+    if (Number.isInteger(popupWindowId)) {
+      timerPopupWindowId = popupWindowId;
     }
   } catch (error) {
     console.error(`${LOG_PREFIX} Could not open custom timer popup:`, formatError(error));
@@ -312,11 +324,22 @@ async function queryTabs(anchorTabId?: number): Promise<TabInfo[]> {
       const tabs = await zenTabs.getAllTabs(zenAnchorTabId(tabId));
       if (tabs) {
         const focusedTabId = await resolveAnchorTabId(tabId);
-        return tabs.map((tab) => ({
-          ...tab,
-          id: tab.id >= 0 ? tab.id : -1,
-          active: Number.isInteger(tab.id) && tab.id === focusedTabId,
-        }));
+        return tabs.map((tab) => {
+          const candidateTabId = tab.id;
+          return {
+            ...tab,
+            id:
+              typeof candidateTabId === "number" &&
+              Number.isInteger(candidateTabId) &&
+              candidateTabId >= 0
+                ? candidateTabId
+                : -1,
+            active:
+              typeof candidateTabId === "number" &&
+              Number.isInteger(candidateTabId) &&
+              candidateTabId === focusedTabId,
+          };
+        });
       }
     } catch (error) {
       console.error(`${LOG_PREFIX} Could not read tabs across Zen spaces:`, formatError(error));
@@ -327,7 +350,7 @@ async function queryTabs(anchorTabId?: number): Promise<TabInfo[]> {
   const tabs = await browser.tabs.query({});
   const tabIds = tabs
     .map((tab) => tab.id)
-    .filter((id): id is number => Number.isInteger(id) && id >= 0);
+    .filter((id): id is number => typeof id === "number" && Number.isInteger(id) && id >= 0);
   const customLabels = await getCustomTabLabels(tabIds);
 
   const focusedTabId = await resolveAnchorTabId(tabId);
@@ -490,235 +513,18 @@ async function switchToSpace(spaceId: string, anchorTabId?: number): Promise<voi
   }
 }
 
-const lastTimerIndicators = new Map<number, string>();
-const updatingTimerTabs = new Set<number>();
-const finishingTimerTabs = new Set<number>();
-
-function timerAlarmName(tabId: number): string {
-  return `${TIMER_ALARM_PREFIX}${tabId}`;
-}
-
-function timerNotificationId(tabId: number): string {
-  return `tab-timer-${tabId}`;
-}
-
-async function readTimers(): Promise<Record<string, TabTimer>> {
-  const stored = await browser.storage.local.get(TIMER_STORAGE_KEY);
-  const timers = stored[TIMER_STORAGE_KEY];
-  return timers && typeof timers === "object" ? (timers as Record<string, TabTimer>) : {};
-}
-
-async function writeTimers(timers: Record<string, TabTimer>): Promise<void> {
-  await browser.storage.local.set({ [TIMER_STORAGE_KEY]: timers });
-}
-
-async function setTabLabelSilent(label: string, tabId: number): Promise<void> {
-  const zenTabs = getZenTabsApi();
-  if (!zenTabs?.setLabel) {
-    return;
-  }
-
-  try {
-    await zenTabs.setLabel(label, tabId, true);
-  } catch (error) {
-    debugWarn(`${LOG_PREFIX} Could not update timer tab label:`, formatError(error));
-  }
-}
-
-async function updateTimerIndicator(timer: TabTimer): Promise<void> {
-  const remaining = Math.max(0, timer.endAt - Date.now());
-  const label = composeTimerLabel(remaining, timer.originalLabel, timer.title);
-  if (lastTimerIndicators.get(timer.tabId) === label || updatingTimerTabs.has(timer.tabId)) {
-    return;
-  }
-  lastTimerIndicators.set(timer.tabId, label);
-  updatingTimerTabs.add(timer.tabId);
-
-  try {
-    await setTabLabelSilent(label, timer.tabId);
-  } finally {
-    updatingTimerTabs.delete(timer.tabId);
-  }
-}
-
-async function clearTimerIndicators(timer: TabTimer): Promise<void> {
-  lastTimerIndicators.delete(timer.tabId);
-  await setTabLabelSilent(timer.originalLabel, timer.tabId);
-}
-
-async function finishTimer(tabId: number, notify: boolean): Promise<void> {
-  if (finishingTimerTabs.has(tabId)) {
-    return;
-  }
-  finishingTimerTabs.add(tabId);
-
-  try {
-    const timers = await readTimers();
-    const timer = timers[String(tabId)];
-    if (!timer) {
-      return;
-    }
-
-    delete timers[String(tabId)];
-    await writeTimers(timers);
-    await Promise.all([browser.alarms.clear(timerAlarmName(tabId)), clearTimerIndicators(timer)]);
-
-    if (!notify) {
-      return;
-    }
-
-    const tabName = timer.originalLabel || timer.title || "Untitled tab";
-    try {
-      await browser.notifications.create(timerNotificationId(tabId), {
-        type: "basic",
-        iconUrl: browser.runtime.getURL("icon/48.png"),
-        title: "Tab timer finished",
-        message: tabName,
-      });
-    } catch (error) {
-      debugWarn(`${LOG_PREFIX} Could not send timer notification:`, formatError(error));
-    }
-  } finally {
-    finishingTimerTabs.delete(tabId);
-  }
-}
-
-async function clearTabTimer(tabId: number): Promise<boolean> {
-  const timers = await readTimers();
-  const timer = timers[String(tabId)];
-  if (!timer) {
-    return false;
-  }
-
-  delete timers[String(tabId)];
-  await writeTimers(timers);
-  await browser.alarms.clear(timerAlarmName(tabId));
-  await clearTimerIndicators(timer);
-  return true;
-}
-
-async function clearAllTimers(): Promise<number> {
-  const timers = await readTimers();
-  const list = Object.values(timers);
-  await writeTimers({});
-  await Promise.all(
-    list.flatMap((timer) => [
-      browser.alarms.clear(timerAlarmName(timer.tabId)),
-      clearTimerIndicators(timer),
-    ]),
-  );
-  return list.length;
-}
-
-async function setTabTimer(tabId: number, endAt: number): Promise<TabTimer> {
-  if (!isAllowedTimerEnd(endAt)) {
-    throw new Error("Timer duration must be between 1 minute and 31 days.");
-  }
-
-  const existingTimers = await readTimers();
-  const existing = existingTimers[String(tabId)];
-  if (existing) {
-    await clearTimerIndicators(existing);
-  }
-
-  const labels = await getCustomTabLabels([tabId]);
-  let title = existing?.title || "";
-  try {
-    const tab = await browser.tabs.get(tabId);
-    title = stripTimerPrefix(tab.title || "") || tab.url || title || "Untitled tab";
-  } catch {
-    title = title || "Untitled tab";
-  }
-  const timer: TabTimer = {
-    tabId,
-    endAt,
-    originalLabel: stripTimerPrefix(existing?.originalLabel ?? labels[tabId] ?? ""),
-    title,
-  };
-  existingTimers[String(tabId)] = timer;
-  await writeTimers(existingTimers);
-  lastTimerIndicators.delete(tabId);
-  await browser.alarms.clear(timerAlarmName(tabId));
-  await browser.alarms.create(timerAlarmName(tabId), {
-    when: endAt,
-  });
-  await updateTimerIndicator(timer);
-  return timer;
-}
-
-let tickingTimers = false;
-
-async function tickActiveTimers(): Promise<void> {
-  if (tickingTimers) {
-    return;
-  }
-  tickingTimers = true;
-  try {
-    const timers = await readTimers();
-    for (const timer of Object.values(timers)) {
-      if (timer.endAt <= Date.now()) {
-        await finishTimer(timer.tabId, true);
-      } else {
-        void updateTimerIndicator(timer);
-      }
-    }
-  } finally {
-    tickingTimers = false;
-  }
-}
-
-async function restorePersistedTimers(): Promise<void> {
-  try {
-    await browser.browserAction.setBadgeText({ text: "" });
-  } catch {
-    // Badge APIs are optional; leftover text should never stay on the toolbar icon.
-  }
-
-  const timers = await readTimers();
-  let changed = false;
-  for (const timer of Object.values(timers)) {
-    const originalLabel = stripTimerPrefix(timer.originalLabel || "");
-    if (originalLabel !== timer.originalLabel) {
-      timer.originalLabel = originalLabel;
-      changed = true;
-    }
-  }
-  if (changed) {
-    await writeTimers(timers);
-  }
-
-  for (const timer of Object.values(timers)) {
-    if (timer.endAt <= Date.now() || timer.endAt - Date.now() > MAX_TIMER_MS) {
-      await finishTimer(timer.tabId, timer.endAt <= Date.now());
-      continue;
-    }
-    await browser.alarms.create(timerAlarmName(timer.tabId), { when: timer.endAt });
-    lastTimerIndicators.delete(timer.tabId);
-    await updateTimerIndicator(timer);
-  }
-}
-
-async function getActiveTimers(): Promise<TabTimer[]> {
-  const timers = await readTimers();
-  const active: TabTimer[] = [];
-  for (const timer of Object.values(timers)) {
-    if (timer.endAt <= Date.now()) {
-      await finishTimer(timer.tabId, true);
-    } else {
-      active.push(timer);
-    }
-  }
-  return active;
-}
-
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());
+  const timerService = createTimerService({
+    getZenTabsApi,
+    getCustomTabLabels,
+  });
 
   void browser.contextMenus.removeAll().then(() => {
     browser.contextMenus.create({
       id: "tab-timer",
       title: "Tab timer",
-      contexts: ["tab"],
+      contexts: [TAB_CONTEXT],
     });
     for (const [id, title] of [
       ["tab-timer-30-minutes", "30 minutes"],
@@ -730,20 +536,20 @@ export default defineBackground(() => {
         id,
         parentId: "tab-timer",
         title,
-        contexts: ["tab"],
+        contexts: [TAB_CONTEXT],
       });
     }
     browser.contextMenus.create({
       id: "tab-timer-custom",
       parentId: "tab-timer",
       title: "Custom…",
-      contexts: ["tab"],
+      contexts: [TAB_CONTEXT],
     });
     browser.contextMenus.create({
       id: "tab-timer-clear",
       parentId: "tab-timer",
       title: "Clear timer",
-      contexts: ["tab"],
+      contexts: [TAB_CONTEXT],
     });
   });
 
@@ -754,7 +560,7 @@ export default defineBackground(() => {
     }
 
     if (info.menuItemId === "tab-timer-clear") {
-      void clearTabTimer(tabId!).catch((error) => {
+      void timerService.clearTabTimer(tabId!).catch((error) => {
         console.error(`${LOG_PREFIX} Could not clear context-menu timer:`, formatError(error));
       });
       return;
@@ -768,7 +574,7 @@ export default defineBackground(() => {
     };
     const endAt = endAtByMenuId[info.menuItemId as string];
     if (endAt) {
-      void setTabTimer(tabId!, endAt).catch((error) => {
+      void timerService.setTabTimer(tabId!, endAt).catch((error) => {
         console.error(`${LOG_PREFIX} Could not set context-menu timer:`, formatError(error));
       });
       return;
@@ -795,11 +601,11 @@ export default defineBackground(() => {
     }
   });
 
-  void restorePersistedTimers().catch((error) => {
+  void timerService.restorePersistedTimers().catch((error) => {
     debugWarn(`${LOG_PREFIX} Could not restore persisted timers:`, formatError(error));
   });
   setInterval(() => {
-    void tickActiveTimers();
+    void timerService.tickActiveTimers();
   }, 1000);
 
   browser.notifications.onClicked.addListener((notificationId) => {
@@ -816,22 +622,14 @@ export default defineBackground(() => {
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name.startsWith(TIMER_ALARM_PREFIX)) {
-      const tabId = Number(alarm.name.slice(TIMER_ALARM_PREFIX.length));
-      void finishTimer(tabId, true);
+    if (alarm.name.startsWith("tab-timer:")) {
+      const tabId = Number(alarm.name.slice("tab-timer:".length));
+      void timerService.finishTimer(tabId, true);
     }
   });
 
   browser.tabs.onRemoved.addListener((tabId) => {
-    void readTimers().then(async (timers) => {
-      const timer = timers[String(tabId)];
-      if (timer) {
-        delete timers[String(tabId)];
-        lastTimerIndicators.delete(tabId);
-        await writeTimers(timers);
-        await browser.alarms.clear(timerAlarmName(tabId));
-      }
-    });
+    void timerService.removeTabTimer(tabId);
   });
 
   browser.commands.onCommand.addListener((command) => {
@@ -870,98 +668,20 @@ export default defineBackground(() => {
     }
   });
 
-  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    const senderTabId = isUsableBrowserTabId(sender.tab?.id, sender.tab?.url)
-      ? sender.tab?.id
-      : undefined;
-    const anchorTabId = Number.isInteger(message.anchorTabId) ? message.anchorTabId : senderTabId;
-
-    if (message.type === "getTabs") {
-      queryTabs(anchorTabId)
-        .then((tabs) => sendResponse(tabs))
-        .catch((error) => sendResponse({ error: formatError(error) }));
-      return true;
-    }
-
-    if (message.type === "getSpaces") {
-      getSpaces(anchorTabId)
-        .then((spaces) => sendResponse(spaces))
-        .catch((error) => sendResponse({ error: formatError(error) }));
-      return true;
-    }
-
-    if (message.type === "getDebugInfo") {
-      resolveAnchorTabId(anchorTabId)
-        .then((tabId) => getZenTabsApi()?.getDebugInfo(tabId))
-        .then((info) => sendResponse(info ?? { error: "zenTabs API unavailable" }))
-        .catch((error) => sendResponse({ error: formatError(error) }));
-      return true;
-    }
-
-    if (message.type === "switchTab") {
-      switchToTab(message.tabId, message.domId, anchorTabId)
-        .then(() => sendResponse({ success: true }))
-        .catch((error) => sendResponse({ error: formatError(error) }));
-      return true;
-    }
-
-    if (message.type === "switchSpace") {
-      switchToSpace(message.spaceId, anchorTabId)
-        .then(() => sendResponse({ success: true }))
-        .catch((error) => sendResponse({ error: formatError(error) }));
-      return true;
-    }
-
-    if (message.type === "getTab") {
-      const tabId = Number(message.tabId);
-      if (!Number.isInteger(tabId) || tabId < 0) {
-        sendResponse({ error: "No tab selected for the timer." });
-        return false;
-      }
-      getTabInfo(tabId)
-        .then((tab) => sendResponse(tab))
-        .catch((error) => sendResponse({ error: formatError(error) }));
-      return true;
-    }
-
-    if (message.type === "getTimers") {
-      getActiveTimers()
-        .then((timers) => sendResponse(timers))
-        .catch((error) => sendResponse({ error: formatError(error) }));
-      return true;
-    }
-
-    if (message.type === "setTimer") {
-      const tabId = Number(message.tabId);
-      const durationMinutes = Number(message.durationMinutes);
-      const endAt = Number.isFinite(Number(message.endAt))
-        ? Number(message.endAt)
-        : Date.now() + durationMinutes * 60_000;
-      if (!Number.isInteger(tabId) || tabId < 0 || !isAllowedTimerEnd(endAt)) {
-        sendResponse({ error: "Timer duration must be between 1 minute and 31 days." });
-        return false;
-      }
-      setTabTimer(tabId, endAt)
-        .then((timer) => sendResponse(timer))
-        .catch((error) => sendResponse({ error: formatError(error) }));
-      return true;
-    }
-
-    if (message.type === "clearTimer") {
-      const tabId = Number(message.tabId);
-      clearTabTimer(tabId)
-        .then((cleared) => sendResponse({ success: true, cleared }))
-        .catch((error) => sendResponse({ error: formatError(error) }));
-      return true;
-    }
-
-    if (message.type === "clearAllTimers") {
-      clearAllTimers()
-        .then((cleared) => sendResponse({ success: true, cleared }))
-        .catch((error) => sendResponse({ error: formatError(error) }));
-      return true;
-    }
-
-    return false;
+  registerMessageRouter({
+    queryTabs,
+    getSpaces,
+    getDebugInfo: async (anchorTabId) => {
+      const tabId = await resolveAnchorTabId(anchorTabId);
+      return (await getZenTabsApi()?.getDebugInfo(tabId)) ?? { error: "zenTabs API unavailable" };
+    },
+    switchTab: switchToTab,
+    switchSpace: switchToSpace,
+    getTab: getTabInfo,
+    getTimers: timerService.getActiveTimers,
+    setTimer: timerService.setTabTimer,
+    clearTimer: timerService.clearTabTimer,
+    clearAllTimers: timerService.clearAllTimers,
+    isAllowedTimerEnd: (endAt) => isAllowedTimerEnd(endAt),
   });
 });
