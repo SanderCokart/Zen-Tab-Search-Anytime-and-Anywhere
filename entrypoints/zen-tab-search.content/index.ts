@@ -1,5 +1,7 @@
 import "./style.css";
 import { debugError, debugLog } from "../../lib/debug";
+import { sendExtensionMessage } from "../../lib/messaging/client";
+import { parseContentCommand } from "../../lib/messaging/protocol";
 import type { SearchItem, SpaceInfo, TabInfo, TabTimer } from "../../lib/types";
 import { formatSpaceDisplayTitle, isActivatableTab } from "../../lib/types";
 import { buildSearchItems, filterSearchItems, prioritizeCurrentTab } from "../../lib/search";
@@ -111,15 +113,9 @@ export default defineContentScript({
         }
         renderActiveTimersPanel(activeTimersPanel, timerUi, {
           onActivateTab: (tabId) => {
-            void browser.runtime
-              .sendMessage({ type: "switchTab", tabId })
-              .then((response: { error?: string }) => {
-                if (response?.error) {
-                  debugError("Error response from switchTab:", response.error);
-                  return;
-                }
-                closeOmnibar();
-              });
+            void sendExtensionMessage({ type: "switchTab", tabId })
+              .then(() => closeOmnibar())
+              .catch((error) => debugError("Error response from switchTab:", error));
           },
         });
       }
@@ -183,18 +179,9 @@ export default defineContentScript({
 
       function activateItem(item: SearchItem) {
         if (item.kind === "space") {
-          browser.runtime
-            .sendMessage({ type: "switchSpace", spaceId: item.data.id })
-            .then((response: { error?: string }) => {
-              if (response?.error) {
-                debugError("Error response from switchSpace:", response.error);
-                return;
-              }
-              closeOmnibar();
-            })
-            .catch((error) => {
-              debugError("Error sending switchSpace message:", error);
-            });
+          void sendExtensionMessage({ type: "switchSpace", spaceId: item.data.id })
+            .then(() => closeOmnibar())
+            .catch((error) => debugError("Error sending switchSpace message:", error));
           return;
         }
 
@@ -202,22 +189,13 @@ export default defineContentScript({
           return;
         }
 
-        browser.runtime
-          .sendMessage({
-            type: "switchTab",
-            tabId: item.data.id ?? undefined,
-            domId: item.data.domId,
-          })
-          .then((response: { error?: string }) => {
-            if (response?.error) {
-              debugError("Error response from switchTab:", response.error);
-              return;
-            }
-            closeOmnibar();
-          })
-          .catch((error) => {
-            debugError("Error sending switchTab message:", error);
-          });
+        void sendExtensionMessage({
+          type: "switchTab",
+          tabId: Number.isInteger(item.data.id) && item.data.id! >= 0 ? item.data.id : undefined,
+          domId: item.data.domId || undefined,
+        })
+          .then(() => closeOmnibar())
+          .catch((error) => debugError("Error sending switchTab message:", error));
       }
 
       function renderItems(filteredItems: SearchItem[]) {
@@ -351,10 +329,9 @@ export default defineContentScript({
       tickId = window.setInterval(() => tickTimerDisplays(omnibar), 1000);
       renderActiveTimers();
 
-      void browser.runtime
-        .sendMessage({ type: "getTabs" })
-        .then((tabs: TabInfo[]) => {
-          allTabs = Array.isArray(tabs) ? tabs.filter(isActivatableTab) : [];
+      void sendExtensionMessage({ type: "getTabs" })
+        .then((tabs) => {
+          allTabs = tabs.filter(isActivatableTab);
           refreshVisibleItems(input.value);
           renderItems(visibleItems);
         })
@@ -362,10 +339,9 @@ export default defineContentScript({
           console.error("Error fetching tabs:", error);
         });
 
-      void browser.runtime
-        .sendMessage({ type: "getSpaces" })
-        .then((spaces: SpaceInfo[]) => {
-          allSpaces = Array.isArray(spaces) ? spaces : [];
+      void sendExtensionMessage({ type: "getSpaces" })
+        .then((spaces) => {
+          allSpaces = spaces;
           refreshVisibleItems(input.value);
           renderItems(visibleItems);
         })
@@ -373,14 +349,11 @@ export default defineContentScript({
           debugError("Error fetching spaces:", error);
         });
 
-      void browser.runtime
-        .sendMessage({ type: "getTimers" })
-        .then((activeTimers: unknown) => {
-          if (Array.isArray(activeTimers)) {
-            timers = new Map((activeTimers as TabTimer[]).map((timer) => [timer.tabId, timer]));
-            renderItems(visibleItems);
-            renderActiveTimers();
-          }
+      void sendExtensionMessage({ type: "getTimers" })
+        .then((activeTimers) => {
+          timers = new Map(activeTimers.map((timer) => [timer.tabId, timer]));
+          renderItems(visibleItems);
+          renderActiveTimers();
         })
         .catch((error) => debugError("Error fetching timers:", error));
     }
@@ -410,12 +383,17 @@ export default defineContentScript({
     }
 
     browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-      if (message.type === "getForgePageInfo") {
+      const command = parseContentCommand(message);
+      if (!command) {
+        return;
+      }
+
+      if (command.type === "getForgePageInfo") {
         sendResponse(collectForgePageInfo());
         return;
       }
 
-      if (message.type === "toggleOmnibar" || message.type === "showOmnibar") {
+      if (command.type === "toggleOmnibar" || command.type === "showOmnibar") {
         toggleOmnibar();
       }
     });

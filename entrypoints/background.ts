@@ -2,6 +2,7 @@ import { DEBUG, debugError, debugLog, debugWarn } from "../lib/debug";
 import { registerMessageRouter } from "../lib/background/message-router";
 import { createTimerService } from "../lib/background/timer-service";
 import { buildForgeLabel, parseForgeUrl, type ForgePageInfo } from "../lib/forge-label";
+import { sendTabMessage } from "../lib/messaging/client";
 import type { SpaceInfo, TabInfo } from "../lib/types";
 import { isAllowedTimerEnd } from "../lib/timer";
 
@@ -224,7 +225,7 @@ async function toggleOmnibar(): Promise<void> {
 
   if (Number.isInteger(tabId) && tabId! >= 0 && isContentScriptInjectableUrl(tab?.url)) {
     try {
-      await browser.tabs.sendMessage(tabId!, { type: "toggleOmnibar", anchorTabId: tabId });
+      await sendTabMessage(tabId!, { type: "toggleOmnibar", anchorTabId: tabId });
       return;
     } catch (error) {
       debugLog(
@@ -449,10 +450,7 @@ async function getForgePageInfo(tabId?: number, url?: string): Promise<ForgePage
   }
 
   try {
-    const info = await browser.tabs.sendMessage(tabId!, { type: "getForgePageInfo" });
-    if (info && typeof info === "object") {
-      return info as ForgePageInfo;
-    }
+    return await sendTabMessage(tabId!, { type: "getForgePageInfo" });
   } catch (error) {
     debugLog(`${LOG_PREFIX} getForgePageInfo unavailable:`, formatError(error));
   }

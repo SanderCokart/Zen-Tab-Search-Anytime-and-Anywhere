@@ -1,4 +1,5 @@
 import { debugError } from "../../lib/debug";
+import { sendExtensionMessage } from "../../lib/messaging/client";
 import {
   formatTimerCountdown,
   fromDatetimeLocalValue,
@@ -101,18 +102,11 @@ function submitTimer(endAt: number): void {
     return;
   }
 
-  void browser.runtime
-    .sendMessage({ type: "setTimer", tabId, endAt })
-    .then((response: { error?: string }) => {
-      if (response?.error) {
-        showError(response.error);
-        return;
-      }
-      window.close();
-    })
+  void sendExtensionMessage({ type: "setTimer", tabId, endAt })
+    .then(() => window.close())
     .catch((error) => {
       debugError("Could not set custom timer:", error);
-      showError("Could not set the timer.");
+      showError(error instanceof Error ? error.message : "Could not set the timer.");
     });
 }
 
@@ -127,18 +121,12 @@ async function load(): Promise<void> {
   }
 
   const [tabResponse, timersResponse] = await Promise.all([
-    browser.runtime.sendMessage({ type: "getTab", tabId }),
-    browser.runtime.sendMessage({ type: "getTimers" }),
+    sendExtensionMessage({ type: "getTab", tabId }),
+    sendExtensionMessage({ type: "getTimers" }),
   ]);
 
-  if (tabResponse && typeof tabResponse === "object" && "error" in tabResponse) {
-    throw new Error(String((tabResponse as { error: string }).error));
-  }
-
-  tab = tabResponse as TabInfo;
-  if (Array.isArray(timersResponse)) {
-    timer = (timersResponse as TabTimer[]).find((item) => item.tabId === tabId);
-  }
+  tab = tabResponse;
+  timer = timersResponse.find((item) => item.tabId === tabId);
 
   syncPickerBounds();
   applyEndAt(timer?.endAt ?? Date.now() + 30 * 60_000);
@@ -170,20 +158,15 @@ form.addEventListener("submit", (event) => {
 
 clearButton.addEventListener("click", () => {
   clearError();
-  void browser.runtime
-    .sendMessage({ type: "clearTimer", tabId })
-    .then((response: { error?: string }) => {
-      if (response?.error) {
-        showError(response.error);
-        return;
-      }
+  void sendExtensionMessage({ type: "clearTimer", tabId })
+    .then(() => {
       timer = undefined;
       applyEndAt(Date.now() + 30 * 60_000);
       render();
     })
     .catch((error) => {
       debugError("Could not clear custom timer:", error);
-      showError("Could not clear the timer.");
+      showError(error instanceof Error ? error.message : "Could not clear the timer.");
     });
 });
 
