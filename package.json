@@ -9,7 +9,7 @@
     "zip": "node scripts/zip.mjs",
     "lint": "npm run lint:web-ext",
     "lint:web-ext": "node scripts/lint-web-ext.mjs",
-    "lint:js": "eslint entrypoints lib scripts",
+    "lint:js": "eslint entrypoints lib scripts tests ui",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",

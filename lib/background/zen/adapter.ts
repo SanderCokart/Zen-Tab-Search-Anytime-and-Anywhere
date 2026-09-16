@@ -36,7 +36,11 @@ export interface WorkspaceAdapter {
 }
 
 export interface ZenWorkspaceAdapterOptions {
-  getZenTabsApi?: () => Partial<ZenTabsApi> | undefined;
+  getZenTabsApi?: () =>
+    | (Partial<Omit<ZenTabsApi, "getDebugInfo">> & {
+        getDebugInfo?: (anchorTabId?: number) => Promise<unknown>;
+      })
+    | undefined;
   resolveAnchorTabId?: (preferredTabId?: number) => Promise<number | undefined>;
   browser?: WorkspaceBrowserHost;
   logDebugInfo?: (context: string, anchorTabId?: number) => Promise<void>;
