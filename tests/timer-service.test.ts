@@ -193,6 +193,42 @@ describe("createTimerService", () => {
     });
   });
 
+  it("does not tick or list timers whose tabs are not open", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW);
+    const live = { tabId: 5, endAt: NOW + 60_000, originalLabel: "", title: "Live" };
+    const closed = { tabId: 6, endAt: NOW + 60_000, originalLabel: "", title: "Closed" };
+    const expiredClosed = { tabId: 7, endAt: NOW - 1, originalLabel: "", title: "Expired" };
+    const { service, storage, setLabel } = installBrowser(
+      { "5": live, "6": closed, "7": expiredClosed },
+      { openTabIds: [5] },
+    );
+
+    await expect(service.getActiveTimers()).resolves.toEqual([live]);
+    await service.tickActiveTimers();
+
+    expect(storage.tabTimers).toEqual({ "5": live, "6": closed, "7": expiredClosed });
+    expect(setLabel).toHaveBeenCalledTimes(1);
+    expect(setLabel).toHaveBeenCalledWith(expect.any(String), 5, true);
+    expect(browser.notifications.create).not.toHaveBeenCalled();
+  });
+
+  it("does not process stored timers when no tabs are open yet", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW);
+    const pending = { tabId: 8, endAt: NOW + 60_000, originalLabel: "", title: "Pending" };
+    const expired = { tabId: 9, endAt: NOW - 1, originalLabel: "", title: "Expired" };
+    const { service, storage, setLabel } = installBrowser(
+      { "8": pending, "9": expired },
+      { openTabIds: [] },
+    );
+
+    await expect(service.getActiveTimers()).resolves.toEqual([]);
+    await service.tickActiveTimers();
+
+    expect(storage.tabTimers).toEqual({ "8": pending, "9": expired });
+    expect(setLabel).not.toHaveBeenCalled();
+    expect(browser.notifications.create).not.toHaveBeenCalled();
+  });
+
   it("clears a stored timer", async () => {
     vi.spyOn(Date, "now").mockReturnValue(NOW);
     const endAt = NOW + 60_000;

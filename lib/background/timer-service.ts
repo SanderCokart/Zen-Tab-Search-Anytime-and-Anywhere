@@ -294,7 +294,7 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
       const timers = await readTimers();
       const openTabIds = new Set(await listOpenTabIds());
       for (const timer of Object.values(timers)) {
-        if (openTabIds.size > 0 && !openTabIds.has(timer.tabId)) {
+        if (!openTabIds.has(timer.tabId)) {
           continue;
         }
         if (timer.endAt <= Date.now()) {
@@ -449,7 +449,7 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
     const openTabIds = new Set(await listOpenTabIds());
     const active: TabTimer[] = [];
     for (const timer of Object.values(timers)) {
-      if (openTabIds.size > 0 && !openTabIds.has(timer.tabId)) {
+      if (!openTabIds.has(timer.tabId)) {
         continue;
       }
       if (timer.endAt <= Date.now()) {
