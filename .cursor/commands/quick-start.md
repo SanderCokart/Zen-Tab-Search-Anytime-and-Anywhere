@@ -59,4 +59,4 @@ Summarize:
 - Whether install and dev server succeeded
 - Path to load the extension
 - Test/build results
-- Next commands: `npm run lint:js`, `npm run format`, `npm run release -- patch --message "..."`
+- Next commands: `npm run lint:js`, `npm run format`, `npm run release -- patch --generate-notes`

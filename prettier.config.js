@@ -3,6 +3,6 @@ export default {
   singleQuote: false,
   trailingComma: "all",
   printWidth: 100,
-  endOfLine: "auto",
+  endOfLine: "lf",
   plugins: ["prettier-plugin-tailwindcss"],
 };
