@@ -1,16 +1,19 @@
-import "./style.css";
 import { render } from "preact";
 import { debugLog } from "../../lib/debug";
 import { parseContentCommand } from "../../lib/messaging/protocol";
 import { SearchApp } from "../../ui/search/SearchApp";
+import "../../ui/styles.css";
+
+const OMNIBAR_Z_INDEX = 2147483646;
 
 export default defineContentScript({
   matches: ["<all_urls>"],
   runAt: "document_end",
-  main() {
+  cssInjectionMode: "ui",
+  async main(ctx) {
     debugLog("Zen Tab Search content script loaded at", new Date().toISOString());
 
-    let closeOmnibar: (() => void) | undefined;
+    let omnibar: Awaited<ReturnType<typeof createShadowRootUi>> | undefined;
 
     function collectForgePageInfo() {
       const titleEl = document.querySelector(
@@ -38,41 +41,65 @@ export default defineContentScript({
       };
     }
 
-    function showOmnibar(): void {
-      if (document.getElementById("zen-tab-omnibar-overlay")) return;
+    const hideOmnibar = () => {
+      document.removeEventListener("keydown", escapeListener, true);
+      document.removeEventListener("visibilitychange", visibilityListener);
+      omnibar?.shadowHost.hidePopover();
+      omnibar?.remove();
+      omnibar = undefined;
+    };
 
-      const overlay = document.createElement("div");
-      overlay.id = "zen-tab-omnibar-overlay";
-      overlay.className = "zen-overlay";
-      const mount = document.createElement("div");
-      mount.className = "zen-omnibar";
-      overlay.appendChild(mount);
-      document.body.appendChild(overlay);
+    const escapeListener = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && omnibar) {
+        event.preventDefault();
+        event.stopPropagation();
+        hideOmnibar();
+      }
+    };
+    const visibilityListener = () => {
+      if (document.hidden) hideOmnibar();
+    };
 
-      const close = () => {
-        render(null, mount);
-        overlay.remove();
-        document.removeEventListener("keydown", escapeListener, true);
-        document.removeEventListener("visibilitychange", visibilityListener);
-        closeOmnibar = undefined;
-      };
-      const escapeListener = (event: KeyboardEvent) => {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          event.stopPropagation();
-          close();
-        }
-      };
-      const visibilityListener = () => {
-        if (document.hidden) close();
-      };
-      closeOmnibar = close;
-      overlay.addEventListener("click", (event) => {
-        if (event.target === overlay) close();
+    async function showOmnibar(): Promise<void> {
+      if (omnibar) return;
+
+      omnibar = await createShadowRootUi(ctx, {
+        name: "zen-tab-search",
+        position: "modal",
+        zIndex: OMNIBAR_Z_INDEX,
+        css: `
+          :host {
+            z-index: ${OMNIBAR_Z_INDEX} !important;
+            position: fixed !important;
+            inset: 0 !important;
+            display: block !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            overflow: hidden !important;
+            background: transparent !important;
+          }
+        `,
+        isolateEvents: true,
+        onMount(container) {
+          const app = document.createElement("div");
+          app.className = "h-full";
+          container.append(app);
+          render(<SearchApp onClose={hideOmnibar} pageJump={10} layout="overlay" />, app);
+          return app;
+        },
+        onRemove(app) {
+          if (app) render(null, app);
+        },
       });
+
       document.addEventListener("keydown", escapeListener, true);
       document.addEventListener("visibilitychange", visibilityListener);
-      render(<SearchApp onClose={close} pageJump={10} />, mount);
+      omnibar.shadowHost.setAttribute("popover", "manual");
+      omnibar.mount();
+      omnibar.shadowHost.showPopover();
     }
 
     browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -83,10 +110,10 @@ export default defineContentScript({
         return;
       }
       if (command.type === "toggleOmnibar") {
-        if (closeOmnibar) closeOmnibar();
-        else showOmnibar();
+        if (omnibar) hideOmnibar();
+        else void showOmnibar();
       }
-      if (command.type === "showOmnibar") showOmnibar();
+      if (command.type === "showOmnibar") void showOmnibar();
     });
   },
 });

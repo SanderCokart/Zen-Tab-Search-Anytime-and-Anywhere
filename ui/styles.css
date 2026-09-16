@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-zen-bg: #1e1e1e;
+  --color-zen-raised: #2a2a2a;
+  --color-zen-surface: #333333;
+  --color-zen-chip: #292929;
+  --color-zen-panel: #252038;
+  --color-zen-accent: #3d3270;
+  --color-zen-accent-hover: #51439a;
+  --color-zen-border: #6652b8;
+  --color-zen-line: #555555;
+  --color-zen-muted: #888888;
+  --color-zen-subtle: #aaaaaa;
+  --color-zen-faint: #bbbbbb;
+  --color-zen-lavender: #b9aaff;
+  --color-zen-badge: #7c5cff;
+  --color-zen-danger: #ff8a8a;
+  --color-zen-clear: #666666;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  /*
+    Rem still resolves against the page <html>, not :host. Overlay sizing uses
+    explicit px in SearchApp so Zen chrome pages with a small root font stay readable.
+  */
+  :host,
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    @apply bg-zen-bg m-0 font-sans text-[13px] leading-snug text-white;
+  }
+
+  /* Popover UA + WXT :host reset paint an opaque canvas; keep the overlay see-through. */
+  :host([popover]),
+  :host([popover])::backdrop {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+  }
+
+  :host([popover]) html,
+  :host([popover]) body {
+    @apply m-0 h-full w-full bg-transparent;
+    background: transparent !important;
+  }
+}
+
+@layer components {
+  .zen-icon {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .zen-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #555 transparent;
+  }
+
+  .zen-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .zen-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .zen-scroll::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+  }
+
+  .zen-scroll::-webkit-scrollbar-thumb:hover {
+    background: #777;
+  }
+}
