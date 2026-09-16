@@ -1,6 +1,6 @@
 import { debugWarn } from "../debug";
-import { parseStoredTimers } from "../messaging/protocol";
-import type { TabTimer } from "../types";
+import { parseStoredTimer, parseStoredTimers } from "../messaging/protocol";
+import { isUsableTabId, type TabTimer } from "../types";
 import { composeTimerLabel, isAllowedTimerEnd, MAX_TIMER_MS, stripTimerPrefix } from "../timer";
 
 export interface TimerServiceDependencies {
@@ -9,8 +9,15 @@ export interface TimerServiceDependencies {
 }
 
 const TIMER_STORAGE_KEY = "tabTimers";
+const TIMER_SESSION_KEY = "tabTimer";
 const TIMER_ALARM_PREFIX = "tab-timer:";
 const LOG_PREFIX = "[zen-tab-search]";
+
+interface TabSessionStore {
+  getTabValue(tabId: number, key: string): Promise<unknown>;
+  setTabValue(tabId: number, key: string, value: unknown): Promise<void>;
+  removeTabValue(tabId: number, key: string): Promise<void>;
+}
 
 function timerAlarmName(tabId: number): string {
   return `${TIMER_ALARM_PREFIX}${tabId}`;
@@ -28,11 +35,29 @@ function formatError(error: unknown): string {
   return String(error);
 }
 
+function isSameTimer(left: TabTimer, right: TabTimer): boolean {
+  return (
+    left.endAt === right.endAt &&
+    left.title === right.title &&
+    stripTimerPrefix(left.originalLabel) === stripTimerPrefix(right.originalLabel)
+  );
+}
+
+function getTabSessionStore(): TabSessionStore | undefined {
+  const sessions = (browser as typeof browser & { sessions?: Partial<TabSessionStore> }).sessions;
+  if (!sessions?.getTabValue || !sessions.setTabValue || !sessions.removeTabValue) {
+    return undefined;
+  }
+  return sessions as TabSessionStore;
+}
+
 export function createTimerService({ setLabel, getCustomTabLabels }: TimerServiceDependencies) {
   const lastTimerIndicators = new Map<number, string>();
   const updatingTimerTabs = new Set<number>();
   const finishingTimerTabs = new Set<number>();
   let tickingTimers = false;
+  let restoringTimers = false;
+  let restoreAgain = false;
 
   async function readTimers(): Promise<Record<string, TabTimer>> {
     const stored = await browser.storage.local.get(TIMER_STORAGE_KEY);
@@ -43,11 +68,62 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
     await browser.storage.local.set({ [TIMER_STORAGE_KEY]: timers });
   }
 
-  async function setTabLabelSilent(label: string, tabId: number): Promise<void> {
+  async function readSessionTimer(tabId: number): Promise<TabTimer | undefined> {
     try {
-      await setLabel(label, tabId, true);
+      const value = await getTabSessionStore()?.getTabValue(tabId, TIMER_SESSION_KEY);
+      return parseStoredTimer(value);
+    } catch {
+      return undefined;
+    }
+  }
+
+  async function writeSessionTimer(timer: TabTimer): Promise<void> {
+    try {
+      await getTabSessionStore()?.setTabValue(timer.tabId, TIMER_SESSION_KEY, timer);
+    } catch (error) {
+      debugWarn(
+        `${LOG_PREFIX} Could not persist timer to the restored tab session:`,
+        formatError(error),
+      );
+    }
+  }
+
+  async function clearSessionTimer(tabId: number): Promise<void> {
+    try {
+      await getTabSessionStore()?.removeTabValue(tabId, TIMER_SESSION_KEY);
+    } catch {
+      // The tab may already be gone.
+    }
+  }
+
+  async function listOpenTabIds(): Promise<number[]> {
+    try {
+      const tabs = await browser.tabs.query({});
+      return tabs.map((tab) => tab.id).filter((tabId): tabId is number => isUsableTabId(tabId));
+    } catch {
+      return [];
+    }
+  }
+
+  async function clearTimerAlarms(): Promise<void> {
+    try {
+      const alarms = await browser.alarms.getAll();
+      await Promise.all(
+        alarms
+          .filter((alarm) => alarm.name.startsWith(TIMER_ALARM_PREFIX))
+          .map((alarm) => browser.alarms.clear(alarm.name)),
+      );
+    } catch {
+      // Tests and some browsers may not expose getAll.
+    }
+  }
+
+  async function setTabLabelSilent(label: string, tabId: number): Promise<boolean> {
+    try {
+      return await setLabel(label, tabId, true);
     } catch (error) {
       debugWarn(`${LOG_PREFIX} Could not update timer tab label:`, formatError(error));
+      return false;
     }
   }
 
@@ -58,14 +134,25 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
       return;
     }
 
-    lastTimerIndicators.set(timer.tabId, label);
     updatingTimerTabs.add(timer.tabId);
 
     try {
-      await setTabLabelSilent(label, timer.tabId);
+      const updated = await setTabLabelSilent(label, timer.tabId);
+      if (updated) {
+        lastTimerIndicators.set(timer.tabId, label);
+      } else {
+        lastTimerIndicators.delete(timer.tabId);
+      }
     } finally {
       updatingTimerTabs.delete(timer.tabId);
     }
+  }
+
+  async function armTimer(timer: TabTimer): Promise<void> {
+    await browser.alarms.clear(timerAlarmName(timer.tabId));
+    await browser.alarms.create(timerAlarmName(timer.tabId), { when: timer.endAt });
+    lastTimerIndicators.delete(timer.tabId);
+    await updateTimerIndicator(timer);
   }
 
   async function clearTimerIndicators(timer: TabTimer): Promise<void> {
@@ -88,7 +175,11 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
 
       delete timers[String(tabId)];
       await writeTimers(timers);
-      await Promise.all([browser.alarms.clear(timerAlarmName(tabId)), clearTimerIndicators(timer)]);
+      await Promise.all([
+        browser.alarms.clear(timerAlarmName(tabId)),
+        clearSessionTimer(tabId),
+        clearTimerIndicators(timer),
+      ]);
 
       if (!notify) {
         return;
@@ -119,8 +210,11 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
 
     delete timers[String(tabId)];
     await writeTimers(timers);
-    await browser.alarms.clear(timerAlarmName(tabId));
-    await clearTimerIndicators(timer);
+    await Promise.all([
+      browser.alarms.clear(timerAlarmName(tabId)),
+      clearSessionTimer(tabId),
+      clearTimerIndicators(timer),
+    ]);
     return true;
   }
 
@@ -131,6 +225,7 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
     await Promise.all(
       list.flatMap((timer) => [
         browser.alarms.clear(timerAlarmName(timer.tabId)),
+        clearSessionTimer(timer.tabId),
         clearTimerIndicators(timer),
       ]),
     );
@@ -165,10 +260,8 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
     };
     existingTimers[String(tabId)] = timer;
     await writeTimers(existingTimers);
-    lastTimerIndicators.delete(tabId);
-    await browser.alarms.clear(timerAlarmName(tabId));
-    await browser.alarms.create(timerAlarmName(tabId), { when: endAt });
-    await updateTimerIndicator(timer);
+    await writeSessionTimer(timer);
+    await armTimer(timer);
     return timer;
   }
 
@@ -180,7 +273,11 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
 
     try {
       const timers = await readTimers();
+      const openTabIds = new Set(await listOpenTabIds());
       for (const timer of Object.values(timers)) {
+        if (openTabIds.size > 0 && !openTabIds.has(timer.tabId)) {
+          continue;
+        }
         if (timer.endAt <= Date.now()) {
           await finishTimer(timer.tabId, true);
         } else {
@@ -193,42 +290,141 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
   }
 
   async function restorePersistedTimers(): Promise<void> {
+    if (restoringTimers) {
+      restoreAgain = true;
+      return;
+    }
+    restoringTimers = true;
+
     try {
-      await browser.browserAction.setBadgeText({ text: "" });
-    } catch {
-      // Badge APIs are optional; leftover text should never stay on the toolbar icon.
+      try {
+        await browser.browserAction.setBadgeText({ text: "" });
+      } catch {
+        // Badge APIs are optional; leftover text should never stay on the toolbar icon.
+      }
+
+      do {
+        restoreAgain = false;
+
+        const stored = await readTimers();
+        const openTabIds = await listOpenTabIds();
+        const next: Record<string, TabTimer> = {};
+
+        for (const tabId of openTabIds) {
+          const sessionTimer = await readSessionTimer(tabId);
+          const localTimer = stored[String(tabId)];
+          const source = sessionTimer ?? localTimer;
+          if (!source) {
+            continue;
+          }
+
+          next[String(tabId)] = {
+            ...source,
+            tabId,
+            originalLabel: stripTimerPrefix(source.originalLabel || ""),
+          };
+        }
+
+        if (openTabIds.length === 0) {
+          // Session restore may not have created tabs yet. Keep storage intact.
+          continue;
+        }
+
+        for (const timer of Object.values(stored)) {
+          if (next[String(timer.tabId)]) {
+            continue;
+          }
+          const remapped = Object.values(next).some((restored) => isSameTimer(restored, timer));
+          if (!remapped) {
+            next[String(timer.tabId)] = {
+              ...timer,
+              originalLabel: stripTimerPrefix(timer.originalLabel || ""),
+            };
+          }
+        }
+
+        await writeTimers(next);
+        await clearTimerAlarms();
+
+        const liveTabIds = new Set(openTabIds);
+        for (const timer of Object.values(next)) {
+          if (!liveTabIds.has(timer.tabId)) {
+            continue;
+          }
+
+          const now = Date.now();
+          if (timer.endAt <= now || timer.endAt - now > MAX_TIMER_MS) {
+            await finishTimer(timer.tabId, timer.endAt <= now);
+            continue;
+          }
+
+          await writeSessionTimer(timer);
+          await armTimer(timer);
+        }
+      } while (restoreAgain);
+    } finally {
+      restoringTimers = false;
+    }
+  }
+
+  async function adoptRestoredTab(tabId: number): Promise<void> {
+    if (!isUsableTabId(tabId)) {
+      return;
     }
 
+    while (restoringTimers) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    const sessionTimer = await readSessionTimer(tabId);
+    if (!sessionTimer) {
+      return;
+    }
+
+    const timer: TabTimer = {
+      ...sessionTimer,
+      tabId,
+      originalLabel: stripTimerPrefix(sessionTimer.originalLabel || ""),
+    };
     const timers = await readTimers();
-    let changed = false;
-    for (const timer of Object.values(timers)) {
-      const originalLabel = stripTimerPrefix(timer.originalLabel || "");
-      if (originalLabel !== timer.originalLabel) {
-        timer.originalLabel = originalLabel;
-        changed = true;
+    for (const [key, existing] of Object.entries(timers)) {
+      if (existing.tabId !== tabId && isSameTimer(existing, timer)) {
+        delete timers[key];
+        lastTimerIndicators.delete(existing.tabId);
+        await browser.alarms.clear(timerAlarmName(existing.tabId));
       }
     }
-    if (changed) {
-      await writeTimers(timers);
+
+    timers[String(tabId)] = timer;
+    await writeTimers(timers);
+
+    if (timer.endAt <= Date.now() || timer.endAt - Date.now() > MAX_TIMER_MS) {
+      await finishTimer(tabId, timer.endAt <= Date.now());
+      return;
     }
 
-    for (const timer of Object.values(timers)) {
-      const now = Date.now();
-      if (timer.endAt <= now || timer.endAt - now > MAX_TIMER_MS) {
-        await finishTimer(timer.tabId, timer.endAt <= now);
-        continue;
-      }
+    await writeSessionTimer(timer);
+    await armTimer(timer);
+  }
 
-      await browser.alarms.create(timerAlarmName(timer.tabId), { when: timer.endAt });
-      lastTimerIndicators.delete(timer.tabId);
-      await updateTimerIndicator(timer);
+  async function handleTabRemoved(tabId: number, isWindowClosing: boolean): Promise<void> {
+    if (isWindowClosing) {
+      lastTimerIndicators.delete(tabId);
+      await browser.alarms.clear(timerAlarmName(tabId));
+      return;
     }
+
+    await removeTabTimer(tabId);
   }
 
   async function getActiveTimers(): Promise<TabTimer[]> {
     const timers = await readTimers();
+    const openTabIds = new Set(await listOpenTabIds());
     const active: TabTimer[] = [];
     for (const timer of Object.values(timers)) {
+      if (openTabIds.size > 0 && !openTabIds.has(timer.tabId)) {
+        continue;
+      }
       if (timer.endAt <= Date.now()) {
         await finishTimer(timer.tabId, true);
       } else {
@@ -248,14 +444,16 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
     delete timers[String(tabId)];
     lastTimerIndicators.delete(tabId);
     await writeTimers(timers);
-    await browser.alarms.clear(timerAlarmName(tabId));
+    await Promise.all([browser.alarms.clear(timerAlarmName(tabId)), clearSessionTimer(tabId)]);
   }
 
   return {
+    adoptRestoredTab,
     clearAllTimers,
     clearTabTimer,
     finishTimer,
     getActiveTimers,
+    handleTabRemoved,
     removeTabTimer,
     restorePersistedTimers,
     setTabTimer,

@@ -3,6 +3,7 @@ import {
   parseContentCommand,
   parseExtensionRequest,
   parseExtensionSuccess,
+  parseStoredTimer,
   parseStoredTimers,
 } from "../lib/messaging/protocol";
 
@@ -86,5 +87,15 @@ describe("parseStoredTimers", () => {
     ).toEqual({
       "1": { tabId: 1, endAt: 9, originalLabel: "A", title: "Tab" },
     });
+  });
+
+  it("parses a single stored timer", () => {
+    expect(parseStoredTimer({ tabId: 2, endAt: 11, originalLabel: "B", title: "Docs" })).toEqual({
+      tabId: 2,
+      endAt: 11,
+      originalLabel: "B",
+      title: "Docs",
+    });
+    expect(parseStoredTimer({ tabId: "nope" })).toBeUndefined();
   });
 });
