@@ -410,8 +410,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
       )}
       <ul
         class={cn(
-          "zen-scroll m-0 flex min-h-0 flex-1 list-none flex-col overflow-y-auto p-0",
-          compact ? "gap-1" : "gap-0",
+          "zen-scroll m-0 flex min-h-0 flex-1 list-none flex-col gap-1 overflow-y-auto p-0",
           compact && "min-h-[60px]",
         )}
         role="listbox"
