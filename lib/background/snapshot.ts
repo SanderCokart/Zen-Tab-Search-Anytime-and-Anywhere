@@ -1,5 +1,6 @@
 import type { SpaceInfo, TabInfo, TabTimer } from "../types";
 import { SNAPSHOT_CHANGED_TYPE } from "../messaging/protocol";
+import { mergeTabLastOpened, TAB_LAST_OPENED_STORAGE_KEY } from "./tab-last-opened";
 
 export interface SearchSnapshotPayload {
   tabs: TabInfo[];
@@ -11,14 +12,16 @@ export function createSnapshotReader(deps: {
   queryTabs(anchorTabId?: number): Promise<TabInfo[]>;
   getSpaces(anchorTabId?: number): Promise<SpaceInfo[]>;
   getTimers(): Promise<TabTimer[]>;
+  readLastOpened?(): Promise<Record<string, number>>;
 }): (anchorTabId?: number) => Promise<SearchSnapshotPayload> {
   return async (anchorTabId?: number): Promise<SearchSnapshotPayload> => {
-    const [tabs, spaces, timers] = await Promise.all([
+    const [tabs, spaces, timers, lastOpened] = await Promise.all([
       deps.queryTabs(anchorTabId),
       deps.getSpaces(anchorTabId),
       deps.getTimers(),
+      deps.readLastOpened?.() ?? Promise.resolve({}),
     ]);
-    return { tabs, spaces, timers };
+    return { tabs: mergeTabLastOpened(tabs, lastOpened), spaces, timers };
   };
 }
 
@@ -41,7 +44,7 @@ export function registerSnapshotChangeNotifications(debounceMs = 150): () => voi
   };
 
   const onStorageChanged = (changes: Record<string, unknown>, area: string) => {
-    if (area === "local" && "tabTimers" in changes) {
+    if (area === "local" && ("tabTimers" in changes || TAB_LAST_OPENED_STORAGE_KEY in changes)) {
       notify();
     }
   };

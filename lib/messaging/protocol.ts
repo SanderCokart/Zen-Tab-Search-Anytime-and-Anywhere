@@ -14,6 +14,7 @@ export const tabInfoSchema = v.object({
   windowId: v.fallback(v.number(), -1),
   workspaceId: v.optional(v.string()),
   workspaceName: v.optional(v.string()),
+  lastOpenedAt: v.optional(v.number()),
   score: v.optional(v.number()),
   active: v.optional(v.boolean()),
 });

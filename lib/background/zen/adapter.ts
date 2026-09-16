@@ -11,6 +11,7 @@ export interface BrowserTabSnapshot {
   favIconUrl?: string;
   windowId?: number;
   active?: boolean;
+  lastAccessed?: number;
 }
 
 export interface WorkspaceBrowserHost {
@@ -78,6 +79,7 @@ function mapBrowserTabs(
       url: tab.url || "",
       favIconUrl: tab.favIconUrl || "",
       windowId: tab.windowId ?? -1,
+      lastOpenedAt: tab.lastAccessed,
       active: tabId === focusedTabId,
     };
   });
@@ -118,11 +120,28 @@ export function createZenWorkspaceAdapter(
         return undefined;
       }
       const focusedTabId = await resolveAnchor(tabId);
+      let lastAccessedById = new Map<number, number>();
+      try {
+        lastAccessedById = new Map(
+          (await host.queryTabs({}))
+            .filter(
+              (tab): tab is BrowserTabSnapshot & { id: number; lastAccessed: number } =>
+                typeof tab.id === "number" &&
+                Number.isInteger(tab.id) &&
+                tab.id >= 0 &&
+                typeof tab.lastAccessed === "number",
+            )
+            .map((tab) => [tab.id, tab.lastAccessed]),
+        );
+      } catch {
+        // lastAccessed is optional when the browser fallback is unavailable.
+      }
       return tabs.map((tab) => {
         const candidateTabId = normalizeTabId(tab.id);
         return {
           ...tab,
           id: candidateTabId,
+          lastOpenedAt: lastAccessedById.get(candidateTabId) ?? tab.lastOpenedAt,
           active: candidateTabId >= 0 && candidateTabId === focusedTabId,
         };
       });
@@ -165,6 +184,7 @@ export function createZenWorkspaceAdapter(
       url: tab.url || "",
       favIconUrl: tab.favIconUrl || "",
       windowId: tab.windowId ?? -1,
+      lastOpenedAt: tab.lastAccessed,
       active: tab.active,
     };
   }

@@ -3,6 +3,7 @@ import {
   buildForgeLabel,
   detectForgePlatform,
   extractRelatedIssueId,
+  forgeTitleIncludesRefId,
   parseForgeUrl,
 } from "../lib/forge-label";
 
@@ -27,6 +28,9 @@ describe("parseForgeUrl", () => {
         platform: "gitlab",
         kind: "issue",
         id: "999991",
+        host: "gitlab.com",
+        projectPath: "SanderCokart/zen-tab-search",
+        url: "https://gitlab.com/SanderCokart/zen-tab-search/-/issues/999991",
       },
     );
   });
@@ -38,6 +42,9 @@ describe("parseForgeUrl", () => {
       platform: "gitlab",
       kind: "merge_request",
       id: "999992",
+      host: "gitlab.com",
+      projectPath: "SanderCokart/zen-tab-search",
+      url: "https://gitlab.com/SanderCokart/zen-tab-search/-/merge_requests/999992/diffs",
     });
   });
 
@@ -46,12 +53,27 @@ describe("parseForgeUrl", () => {
       platform: "github",
       kind: "issue",
       id: "999993",
+      host: "github.com",
+      projectPath: "SanderCokart/zen-tab-search",
+      url: "https://github.com/SanderCokart/zen-tab-search/issues/999993",
     });
     expect(parseForgeUrl("https://github.com/SanderCokart/zen-tab-search/pull/999994")).toEqual({
       platform: "github",
       kind: "pull_request",
       id: "999994",
+      host: "github.com",
+      projectPath: "SanderCokart/zen-tab-search",
+      url: "https://github.com/SanderCokart/zen-tab-search/pull/999994",
     });
+  });
+});
+
+describe("forgeTitleIncludesRefId", () => {
+  it("detects issue and MR ids already present in the tab title", () => {
+    expect(forgeTitleIncludesRefId("MR: !19824 - Two-column checkout", "19824")).toBe(true);
+    expect(forgeTitleIncludesRefId("ISSUE: #383 SalesPOS homepage", "383")).toBe(true);
+    expect(forgeTitleIncludesRefId("Fix search", "42")).toBe(false);
+    expect(forgeTitleIncludesRefId("Issue 421", "42")).toBe(false);
   });
 });
 

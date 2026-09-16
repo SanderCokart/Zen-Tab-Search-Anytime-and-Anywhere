@@ -5,6 +5,9 @@ export interface ForgeRef {
   platform: ForgePlatform;
   kind: ForgeKind;
   id: string;
+  host: string;
+  projectPath: string;
+  url: string;
 }
 
 export interface ForgePageInfo {
@@ -40,22 +43,38 @@ export function parseForgeUrl(urlString: string): ForgeRef | null {
     return null;
   }
 
-  let pathname: string;
+  let parsedUrl: URL;
   try {
-    pathname = new URL(urlString).pathname;
+    parsedUrl = new URL(urlString);
   } catch {
     return null;
   }
+  const pathname = parsedUrl.pathname;
+  const normalizedPathname = pathname.replace(/^\/+|\/+$/g, "");
 
   if (platform === "gitlab") {
     const issue = pathname.match(/\/(?:-\/)?(?:issues|work_items)\/(\d+)/);
     if (issue?.[1]) {
-      return { platform, kind: "issue", id: issue[1] };
+      return {
+        platform,
+        kind: "issue",
+        id: issue[1],
+        host: parsedUrl.hostname,
+        projectPath: normalizedPathname.split(/\/(?:-\/)?(?:issues|work_items)\//)[0] || "",
+        url: parsedUrl.href,
+      };
     }
 
     const mergeRequest = pathname.match(/\/(?:-\/)?merge_requests\/(\d+)/);
     if (mergeRequest?.[1]) {
-      return { platform, kind: "merge_request", id: mergeRequest[1] };
+      return {
+        platform,
+        kind: "merge_request",
+        id: mergeRequest[1],
+        host: parsedUrl.hostname,
+        projectPath: normalizedPathname.split(/\/(?:-\/)?merge_requests\//)[0] || "",
+        url: parsedUrl.href,
+      };
     }
 
     return null;
@@ -63,12 +82,26 @@ export function parseForgeUrl(urlString: string): ForgeRef | null {
 
   const issue = pathname.match(/\/issues\/(\d+)/);
   if (issue?.[1]) {
-    return { platform, kind: "issue", id: issue[1] };
+    return {
+      platform,
+      kind: "issue",
+      id: issue[1],
+      host: parsedUrl.hostname,
+      projectPath: normalizedPathname.split("/issues/")[0] || "",
+      url: parsedUrl.href,
+    };
   }
 
   const pullRequest = pathname.match(/\/pull\/(\d+)/);
   if (pullRequest?.[1]) {
-    return { platform, kind: "pull_request", id: pullRequest[1] };
+    return {
+      platform,
+      kind: "pull_request",
+      id: pullRequest[1],
+      host: parsedUrl.hostname,
+      projectPath: normalizedPathname.split("/pull/")[0] || "",
+      url: parsedUrl.href,
+    };
   }
 
   return null;
@@ -90,6 +123,15 @@ export function extractRelatedIssueId(text: string, selfId?: string): string | u
   }
 
   return undefined;
+}
+
+export function forgeTitleIncludesRefId(title: string, id: string): boolean {
+  if (!title || !id) {
+    return false;
+  }
+
+  const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[^\\dA-Za-z])(?:#|!)?${escapedId}(?!\\d)`).test(title);
 }
 
 export function cleanForgeTitle(title: string, ref: ForgeRef): string {

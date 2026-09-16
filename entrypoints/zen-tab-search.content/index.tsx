@@ -87,7 +87,7 @@ export default defineContentScript({
           const app = document.createElement("div");
           app.className = "h-full";
           container.append(app);
-          render(<SearchApp onClose={hideOmnibar} pageJump={10} layout="overlay" />, app);
+          render(<SearchApp onClose={hideOmnibar} pageJump={5} layout="overlay" />, app);
           return app;
         },
         onRemove(app) {
