@@ -20,6 +20,7 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
       favIconUrl: "",
       windowId: 1,
     })),
+    getSnapshot: vi.fn(async () => ({ tabs: [], spaces: [], timers: [] })),
     getTimers: vi.fn(async () => []),
     setTimer: vi.fn(async (tabId, endAt) => ({
       tabId,
@@ -83,6 +84,20 @@ describe("dispatchExtensionMessage", () => {
     }
     await result.promise;
     expect(api.getSpaces).toHaveBeenCalledWith(9);
+  });
+
+  it("dispatches getSnapshot with the sender tab as the anchor", async () => {
+    const api = handlers();
+    const result = dispatchExtensionMessage(
+      api,
+      { type: "getSnapshot" },
+      { tab: { id: 8, url: "https://example.com" } },
+    );
+    if (!result.handled || !result.async) {
+      throw new Error("expected async dispatch");
+    }
+    await result.promise;
+    expect(api.getSnapshot).toHaveBeenCalledWith(8);
   });
 
   it("rejects an out-of-range timer before calling the handler", async () => {

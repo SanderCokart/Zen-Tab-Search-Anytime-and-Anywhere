@@ -6,6 +6,7 @@ import {
   type ExtensionSuccessMap,
   forgePageInfoSchema,
   isErrorResponse,
+  isSnapshotChangedMessage,
   parseExtensionSuccess,
 } from "./protocol";
 import * as v from "valibot";
@@ -38,4 +39,16 @@ export async function sendTabMessage<T extends ContentCommand["type"]>(
       : void;
   }
   return undefined as T extends "getForgePageInfo" ? ForgePageInfo : void;
+}
+
+export function subscribeToSnapshotChanged(onChanged: () => void): () => void {
+  const listener = (message: unknown) => {
+    if (isSnapshotChangedMessage(message)) {
+      onChanged();
+    }
+  };
+  browser.runtime.onMessage.addListener(listener);
+  return () => {
+    browser.runtime.onMessage.removeListener(listener);
+  };
 }

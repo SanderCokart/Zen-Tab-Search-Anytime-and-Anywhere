@@ -14,11 +14,19 @@ const tab = {
 describe("SearchApp", () => {
   it("renders results and activates the selected tab with Enter", async () => {
     const sendMessage = vi.fn(async ({ type }: { type: string }) => {
-      if (type === "getTabs") return [tab];
-      if (type === "getSpaces" || type === "getTimers") return [];
+      if (type === "getSnapshot") {
+        return { tabs: [tab], spaces: [], timers: [] };
+      }
       return undefined;
     });
-    Object.assign(globalThis, { browser: { runtime: { sendMessage } } });
+    Object.assign(globalThis, {
+      browser: {
+        runtime: {
+          sendMessage,
+          onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
     const onClose = vi.fn();
     const root = document.createElement("div");
     document.body.appendChild(root);

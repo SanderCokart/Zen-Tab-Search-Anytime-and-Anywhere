@@ -12,6 +12,7 @@ export interface MessageRouterHandlers {
   switchTab(tabId?: number, domId?: string, anchorTabId?: number): Promise<void>;
   switchSpace(spaceId: string, anchorTabId?: number): Promise<void>;
   getTab(tabId: number): Promise<unknown>;
+  getSnapshot(anchorTabId?: number): Promise<unknown>;
   getTimers(): Promise<unknown>;
   setTimer(tabId: number, endAt: number): Promise<unknown>;
   clearTimer(tabId: number): Promise<boolean>;
@@ -88,6 +89,8 @@ function handleParsedRequest(
       return handlers.switchSpace(message.spaceId, anchorTabId);
     case "getTab":
       return handlers.getTab(message.tabId);
+    case "getSnapshot":
+      return handlers.getSnapshot(anchorTabId);
     case "getTimers":
       return handlers.getTimers();
     case "setTimer": {
