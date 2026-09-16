@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import {
   fromDatetimeLocalValue,
   isAllowedTimerEnd,
@@ -34,12 +34,19 @@ export function TimerForm({
   onSet,
   onClear,
 }: TimerFormProps) {
+  const whenInputRef = useRef<HTMLInputElement>(null);
   const [endAt, setEndAt] = useState(timer?.endAt ?? Date.now() + 30 * 60_000);
   const [naturalInput, setNaturalInput] = useState("");
   const [localError, setLocalError] = useState<string>();
   const parsedNaturalInput = naturalInput.trim() ? parseTimerInput(naturalInput) : endAt;
   const valid = parsedNaturalInput !== null && isAllowedTimerEnd(parsedNaturalInput);
   const message = error || localError;
+
+  useEffect(() => {
+    if (!disabled) {
+      whenInputRef.current?.focus();
+    }
+  }, [disabled]);
 
   const submit = () => {
     const nextEndAt = naturalInput.trim() ? parseTimerInput(naturalInput) : endAt;
@@ -97,6 +104,7 @@ export function TimerForm({
       >
         When
         <input
+          ref={whenInputRef}
           class={cn(
             "border-zen-line bg-zen-chip w-full rounded-md border font-[inherit] text-white [color-scheme:dark] placeholder:text-white/40",
             compact ? "h-6 px-1.5" : "h-8 px-2",
