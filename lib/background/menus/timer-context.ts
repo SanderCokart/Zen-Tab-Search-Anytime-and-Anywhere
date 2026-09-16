@@ -1,6 +1,7 @@
 import { formatError, LOG_PREFIX } from "../log";
 import { openCustomTimerPopup } from "../popups/timer";
 import type { createTimerService } from "../timer-service";
+import { isUsableTabId } from "../../types";
 
 type TimerService = ReturnType<typeof createTimerService>;
 
@@ -45,12 +46,12 @@ export function registerTimerContextMenus(timerService: TimerService): void {
 
   browser.contextMenus.onClicked.addListener((info, tab) => {
     const tabId = tab?.id;
-    if (!Number.isInteger(tabId) || tabId! < 0) {
+    if (!isUsableTabId(tabId)) {
       return;
     }
 
     if (info.menuItemId === "tab-timer-clear") {
-      void timerService.clearTabTimer(tabId!).catch((error) => {
+      void timerService.clearTabTimer(tabId).catch((error) => {
         console.error(`${LOG_PREFIX} Could not clear context-menu timer:`, formatError(error));
       });
       return;
@@ -62,16 +63,16 @@ export function registerTimerContextMenus(timerService: TimerService): void {
       "tab-timer-7-hours": Date.now() + 7 * 60 * 60_000,
       "tab-timer-8-hours": Date.now() + 8 * 60 * 60_000,
     };
-    const endAt = endAtByMenuId[info.menuItemId as string];
+    const endAt = endAtByMenuId[String(info.menuItemId)];
     if (endAt) {
-      void timerService.setTabTimer(tabId!, endAt).catch((error) => {
+      void timerService.setTabTimer(tabId, endAt).catch((error) => {
         console.error(`${LOG_PREFIX} Could not set context-menu timer:`, formatError(error));
       });
       return;
     }
 
     if (info.menuItemId === "tab-timer-custom") {
-      void openCustomTimerPopup(tabId!);
+      void openCustomTimerPopup(tabId);
     }
   });
 }

@@ -1,4 +1,5 @@
 import { formatError, LOG_PREFIX } from "../log";
+import { isUsableTabId } from "../../types";
 
 let timerPopupWindowId: number | undefined;
 
@@ -9,9 +10,9 @@ export function forgetTimerPopupWindow(windowId: number): void {
 }
 
 export async function openCustomTimerPopup(tabId: number): Promise<void> {
-  if (Number.isInteger(timerPopupWindowId)) {
+  if (isUsableTabId(timerPopupWindowId)) {
     try {
-      await browser.windows.remove(timerPopupWindowId!);
+      await browser.windows.remove(timerPopupWindowId);
     } catch {
       // Window was already closed.
     }
@@ -27,7 +28,7 @@ export async function openCustomTimerPopup(tabId: number): Promise<void> {
       focused: true,
     });
     const popupWindowId = popupWindow?.id;
-    if (Number.isInteger(popupWindowId)) {
+    if (isUsableTabId(popupWindowId)) {
       timerPopupWindowId = popupWindowId;
     }
   } catch (error) {

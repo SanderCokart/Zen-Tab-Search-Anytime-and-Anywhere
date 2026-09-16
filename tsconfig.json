@@ -3,7 +3,8 @@
   "compilerOptions": {
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "preact"
+    "jsxImportSource": "preact",
+    "noUncheckedIndexedAccess": true
   },
   "include": ["./**/*", "./.wxt/**/*.d.ts"],
   "exclude": ["node_modules", ".output"]

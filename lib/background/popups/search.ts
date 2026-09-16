@@ -1,4 +1,5 @@
 import { debugWarn } from "../../debug";
+import { isUsableTabId } from "../../types";
 import { formatError, LOG_PREFIX } from "../log";
 
 let fallbackPopupWindowId: number | undefined;
@@ -17,9 +18,9 @@ export async function closeSearchPopup(): Promise<boolean> {
     closed = true;
   }
 
-  if (Number.isInteger(fallbackPopupWindowId)) {
+  if (isUsableTabId(fallbackPopupWindowId)) {
     try {
-      await browser.windows.remove(fallbackPopupWindowId!);
+      await browser.windows.remove(fallbackPopupWindowId);
       closed = true;
     } catch {
       // Window was already closed.
@@ -55,7 +56,7 @@ export async function openSearchPopup(): Promise<void> {
       height: 480,
     });
     const popupWindowId = popupWindow?.id;
-    if (Number.isInteger(popupWindowId)) {
+    if (isUsableTabId(popupWindowId)) {
       fallbackPopupWindowId = popupWindowId;
     }
   } catch (error) {

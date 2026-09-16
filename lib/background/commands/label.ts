@@ -1,17 +1,18 @@
 import { debugLog, debugWarn } from "../../debug";
 import { buildForgeLabel, parseForgeUrl, type ForgePageInfo } from "../../forge-label";
 import { sendTabMessage } from "../../messaging/client";
+import { isUsableTabId } from "../../types";
 import { formatError, LOG_PREFIX } from "../log";
 import { isContentScriptInjectableUrl } from "../urls";
 import type { WorkspaceAdapter } from "../zen/adapter";
 
 async function getForgePageInfo(tabId?: number, url?: string): Promise<ForgePageInfo> {
-  if (!Number.isInteger(tabId) || tabId! < 0 || !isContentScriptInjectableUrl(url)) {
+  if (!isUsableTabId(tabId) || !isContentScriptInjectableUrl(url)) {
     return {};
   }
 
   try {
-    return await sendTabMessage(tabId!, { type: "getForgePageInfo" });
+    return await sendTabMessage(tabId, { type: "getForgePageInfo" });
   } catch (error) {
     debugLog(`${LOG_PREFIX} getForgePageInfo unavailable:`, formatError(error));
   }
@@ -26,7 +27,7 @@ export async function changeSelectedTabLabel(workspace: WorkspaceAdapter): Promi
   }
 
   const tabId = await workspace.resolveAnchorTabId();
-  const tab = Number.isInteger(tabId) && tabId! >= 0 ? await browser.tabs.get(tabId!) : undefined;
+  const tab = isUsableTabId(tabId) ? await browser.tabs.get(tabId) : undefined;
   const url = tab?.url || "";
 
   if (parseForgeUrl(url)) {

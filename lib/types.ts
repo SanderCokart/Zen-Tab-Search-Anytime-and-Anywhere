@@ -29,6 +29,10 @@ export interface SpaceInfo {
 
 export type SearchItem = { kind: "tab"; data: TabInfo } | { kind: "space"; data: SpaceInfo };
 
+export function isUsableTabId(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
 export function formatTabDisplayTitle(tab: TabInfo): string {
   const title = tab.title || "Untitled";
   const customLabel = tab.customLabel?.trim();
@@ -43,8 +47,9 @@ export function formatSpaceDisplayTitle(space: SpaceInfo): string {
 }
 
 export function isActivatableTab(tab: TabInfo): boolean {
-  return (
-    (Number.isInteger(tab.id) && tab.id! >= 0) ||
-    (typeof tab.domId === "string" && tab.domId.length > 0)
-  );
+  return tabBrowserId(tab) !== undefined || (typeof tab.domId === "string" && tab.domId.length > 0);
+}
+
+export function tabBrowserId(tab: TabInfo): number | undefined {
+  return isUsableTabId(tab.id) ? tab.id : undefined;
 }

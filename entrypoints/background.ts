@@ -14,6 +14,7 @@ import { createTimerService } from "../lib/background/timer-service";
 import { createZenWorkspaceAdapter } from "../lib/background/zen/adapter";
 import { logZenDebugInfo, warmUpZenTabsApi } from "../lib/background/zen/debug";
 import { isAllowedTimerEnd } from "../lib/timer";
+import { isUsableTabId } from "../lib/types";
 
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());
@@ -57,7 +58,7 @@ export default defineBackground(() => {
       return;
     }
     const tabId = Number(notificationId.slice("tab-timer-".length));
-    if (!Number.isInteger(tabId) || tabId < 0) {
+    if (!isUsableTabId(tabId)) {
       return;
     }
     void switchToTab(tabId, undefined, tabId).catch((error) => {
@@ -68,7 +69,9 @@ export default defineBackground(() => {
   browser.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name.startsWith("tab-timer:")) {
       const tabId = Number(alarm.name.slice("tab-timer:".length));
-      void timerService.finishTimer(tabId, true);
+      if (isUsableTabId(tabId)) {
+        void timerService.finishTimer(tabId, true);
+      }
     }
   });
 

@@ -1,21 +1,19 @@
 import { isExtensionPageUrl } from "../urls";
+import { isUsableTabId } from "../../types";
 
 export function isUsableBrowserTabId(tabId: number | undefined, url?: string): boolean {
-  return Number.isInteger(tabId) && tabId! >= 0 && !isExtensionPageUrl(url);
+  return isUsableTabId(tabId) && !isExtensionPageUrl(url);
 }
 
 /** Zen experiment APIs accept -1 when no extension tab can anchor the browser window lookup. */
 export function zenAnchorTabId(tabId?: number): number {
-  if (Number.isInteger(tabId) && tabId! >= 0) {
-    return tabId!;
-  }
-  return -1;
+  return isUsableTabId(tabId) ? tabId : -1;
 }
 
 export async function resolveAnchorTabId(preferredTabId?: number): Promise<number | undefined> {
-  if (Number.isInteger(preferredTabId) && preferredTabId! >= 0) {
+  if (isUsableTabId(preferredTabId)) {
     try {
-      const preferred = await browser.tabs.get(preferredTabId!);
+      const preferred = await browser.tabs.get(preferredTabId);
       if (isUsableBrowserTabId(preferred.id, preferred.url)) {
         return preferred.id;
       }
