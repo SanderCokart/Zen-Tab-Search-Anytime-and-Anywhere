@@ -4,6 +4,10 @@ import { registerMessageRouter } from "../lib/background/message-router";
 import { registerTimerContextMenus } from "../lib/background/menus/timer-context";
 import { formatError, LOG_PREFIX } from "../lib/background/log";
 import { registerPopupWindowTracking } from "../lib/background/popups";
+import {
+  createSnapshotReader,
+  registerSnapshotChangeNotifications,
+} from "../lib/background/snapshot";
 import { createTabQuery } from "../lib/background/tabs/query";
 import { createTabSwitcher } from "../lib/background/tabs/switch";
 import { createTimerService } from "../lib/background/timer-service";
@@ -23,9 +27,16 @@ export default defineBackground(() => {
     getCustomTabLabels: (tabIds) => workspace.getCustomLabels(tabIds),
   });
 
+  const getSnapshot = createSnapshotReader({
+    queryTabs,
+    getSpaces,
+    getTimers: timerService.getActiveTimers,
+  });
+
   registerTimerContextMenus(timerService);
   registerPopupWindowTracking();
   registerCommands(workspace);
+  registerSnapshotChangeNotifications();
 
   if (DEBUG) {
     browser.tabs.onActivated.addListener(() => {
@@ -72,6 +83,7 @@ export default defineBackground(() => {
     switchTab: switchToTab,
     switchSpace: switchToSpace,
     getTab: getTabInfo,
+    getSnapshot,
     getTimers: timerService.getActiveTimers,
     setTimer: timerService.setTabTimer,
     clearTimer: timerService.clearTabTimer,

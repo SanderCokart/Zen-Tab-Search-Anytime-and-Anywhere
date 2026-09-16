@@ -71,6 +71,10 @@ export const extensionRequestSchema = v.variant("type", [
     tabId: tabIdSchema,
   }),
   v.object({
+    type: v.literal("getSnapshot"),
+    anchorTabId: optionalTabIdSchema,
+  }),
+  v.object({
     type: v.literal("getTimers"),
   }),
   v.object({
@@ -101,6 +105,18 @@ export const contentCommandSchema = v.variant("type", [
   }),
 ]);
 
+export const SNAPSHOT_CHANGED_TYPE = "snapshotChanged" as const;
+
+export const snapshotChangedSchema = v.object({
+  type: v.literal(SNAPSHOT_CHANGED_TYPE),
+});
+
+export const searchSnapshotSchema = v.object({
+  tabs: v.array(tabInfoSchema),
+  spaces: v.array(spaceInfoSchema),
+  timers: v.array(tabTimerSchema),
+});
+
 export const EXTENSION_REQUEST_TYPES = [
   "getTabs",
   "getSpaces",
@@ -108,6 +124,7 @@ export const EXTENSION_REQUEST_TYPES = [
   "switchTab",
   "switchSpace",
   "getTab",
+  "getSnapshot",
   "getTimers",
   "setTimer",
   "clearTimer",
@@ -121,6 +138,7 @@ export type ErrorResponse = v.InferOutput<typeof errorResponseSchema>;
 
 export type ClearTimerResponse = { success: true; cleared: boolean };
 export type ClearAllTimersResponse = { success: true; cleared: number };
+export type SearchSnapshot = v.InferOutput<typeof searchSnapshotSchema>;
 
 export type ExtensionSuccessMap = {
   getTabs: v.InferOutput<typeof tabInfoSchema>[];
@@ -129,6 +147,7 @@ export type ExtensionSuccessMap = {
   switchTab: void;
   switchSpace: void;
   getTab: v.InferOutput<typeof tabInfoSchema>;
+  getSnapshot: SearchSnapshot;
   getTimers: v.InferOutput<typeof tabTimerSchema>[];
   setTimer: v.InferOutput<typeof tabTimerSchema>;
   clearTimer: ClearTimerResponse;
@@ -164,6 +183,28 @@ export function parseContentCommand(value: unknown): ContentCommand | undefined 
   return parsed.success ? parsed.output : undefined;
 }
 
+export function isSnapshotChangedMessage(value: unknown): boolean {
+  return v.is(snapshotChangedSchema, value);
+}
+
+export function parseStoredTimers(
+  value: unknown,
+): Record<string, v.InferOutput<typeof tabTimerSchema>> {
+  if (!value || typeof value !== "object") {
+    return {};
+  }
+
+  const timers: Record<string, v.InferOutput<typeof tabTimerSchema>> = {};
+  for (const entry of Object.values(value as Record<string, unknown>)) {
+    const parsed = v.safeParse(tabTimerSchema, entry);
+    if (!parsed.success) {
+      continue;
+    }
+    timers[String(parsed.output.tabId)] = parsed.output;
+  }
+  return timers;
+}
+
 export function parseExtensionSuccess<T extends ExtensionRequestType>(
   type: T,
   value: unknown,
@@ -180,6 +221,8 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
       return undefined as ExtensionSuccessMap[T];
     case "getTab":
       return v.parse(tabInfoSchema, value) as ExtensionSuccessMap[T];
+    case "getSnapshot":
+      return v.parse(searchSnapshotSchema, value) as ExtensionSuccessMap[T];
     case "getTimers":
       return v.parse(v.array(tabTimerSchema), value) as ExtensionSuccessMap[T];
     case "setTimer":

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { debugError } from "../../lib/debug";
-import { sendExtensionMessage } from "../../lib/messaging/client";
+import { sendExtensionMessage, subscribeToSnapshotChanged } from "../../lib/messaging/client";
 import { buildSearchItems, filterSearchItems, prioritizeCurrentTab } from "../../lib/search";
 import {
   formatTimerCountdown,
@@ -120,22 +120,41 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    const applySnapshot = (snapshot: {
+      tabs: TabInfo[];
+      spaces: SpaceInfo[];
+      timers: TabTimer[];
+    }) => {
+      setTabs(snapshot.tabs.filter(isActivatableTab));
+      setSpaces(snapshot.spaces);
+      setTimers(new Map(snapshot.timers.map((item) => [item.tabId, item])));
+      setLoadError(null);
+    };
+    const load = () =>
+      sendExtensionMessage({ type: "getSnapshot" })
+        .then((snapshot) => {
+          if (!cancelled) {
+            applySnapshot(snapshot);
+          }
+        })
+        .catch((error) => {
+          debugError("Could not load search data:", error);
+          if (!cancelled) {
+            setLoadError("Unable to load tabs. Make sure the extension is enabled in Zen Browser.");
+          }
+        });
+
     const timer = window.setTimeout(() => inputRef.current?.focus(), 100);
-    void Promise.all([
-      sendExtensionMessage({ type: "getTabs" }),
-      sendExtensionMessage({ type: "getSpaces" }),
-      sendExtensionMessage({ type: "getTimers" }),
-    ])
-      .then(([nextTabs, nextSpaces, nextTimers]) => {
-        setTabs(nextTabs.filter(isActivatableTab));
-        setSpaces(nextSpaces);
-        setTimers(new Map(nextTimers.map((item) => [item.tabId, item])));
-      })
-      .catch((error) => {
-        debugError("Could not load search data:", error);
-        setLoadError("Unable to load tabs. Make sure the extension is enabled in Zen Browser.");
-      });
-    return () => window.clearTimeout(timer);
+    void load();
+    const unsubscribe = subscribeToSnapshotChanged(() => {
+      void load();
+    });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -153,8 +172,13 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
   }, [query, spaces, tabs]);
 
   useEffect(() => {
-    setSelectedIndex(items.length ? 0 : -1);
     optionRefs.current = [];
+    setSelectedIndex((current) => {
+      if (!items.length) {
+        return -1;
+      }
+      return current >= 0 && current < items.length ? current : 0;
+    });
   }, [items]);
 
   useEffect(() => {
@@ -217,8 +241,11 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
             if (event.key === "Escape") {
               onClose();
               event.preventDefault();
-            } else if (event.key === "Enter" && selectedIndex >= 0) {
-              activateItem(items[selectedIndex]!);
+            } else if (event.key === "Enter") {
+              const selected = items[selectedIndex];
+              if (selected) {
+                activateItem(selected);
+              }
               event.preventDefault();
             } else if (event.key === "ArrowDown") {
               setSelectedIndex(count ? (selectedIndex + 1) % count : -1);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import { debugError } from "../../lib/debug";
-import { sendExtensionMessage } from "../../lib/messaging/client";
+import { sendExtensionMessage, subscribeToSnapshotChanged } from "../../lib/messaging/client";
 import {
   formatTimerCountdown,
   fromDatetimeLocalValue,
@@ -32,20 +32,39 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
       setError("Open this window from a tab to set a timer.");
       return;
     }
-    void Promise.all([
-      sendExtensionMessage({ type: "getTab", tabId }),
-      sendExtensionMessage({ type: "getTimers" }),
-    ])
-      .then(([nextTab, timers]) => {
-        const nextTimer = timers.find((item) => item.tabId === tabId);
-        setTab(nextTab);
-        setTimer(nextTimer);
-        setEndAt(nextTimer?.endAt ?? Date.now() + 30 * 60_000);
-      })
-      .catch((reason) => {
-        debugError("Could not load custom timer popup:", reason);
-        setError("Make sure the extension is enabled in Zen Browser.");
-      });
+
+    let cancelled = false;
+    const load = (preserveEndAt: boolean) =>
+      Promise.all([
+        sendExtensionMessage({ type: "getTab", tabId }),
+        sendExtensionMessage({ type: "getSnapshot" }),
+      ])
+        .then(([nextTab, snapshot]) => {
+          if (cancelled) {
+            return;
+          }
+          const nextTimer = snapshot.timers.find((item) => item.tabId === tabId);
+          setTab(nextTab);
+          setTimer(nextTimer);
+          if (!preserveEndAt) {
+            setEndAt(nextTimer?.endAt ?? Date.now() + 30 * 60_000);
+          }
+        })
+        .catch((reason) => {
+          debugError("Could not load custom timer popup:", reason);
+          if (!cancelled) {
+            setError("Make sure the extension is enabled in Zen Browser.");
+          }
+        });
+
+    void load(false);
+    const unsubscribe = subscribeToSnapshotChanged(() => {
+      void load(true);
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [tabId]);
 
   useEffect(() => {
