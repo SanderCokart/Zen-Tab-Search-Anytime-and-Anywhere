@@ -12,6 +12,8 @@ const TIMER_STORAGE_KEY = "tabTimers";
 const TIMER_SESSION_KEY = "tabTimer";
 const TIMER_ALARM_PREFIX = "tab-timer:";
 const LOG_PREFIX = "[zen-tab-search]";
+const EMPTY_TAB_RESTORE_DELAY_MS = 100;
+const EMPTY_TAB_RESTORE_MAX_RETRIES = 50;
 
 interface TabSessionStore {
   getTabValue(tabId: number, key: string): Promise<unknown>;
@@ -58,6 +60,23 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
   let tickingTimers = false;
   let restoringTimers = false;
   let restoreAgain = false;
+  let emptyTabRestoreRetries = 0;
+  let emptyTabRestoreTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function scheduleEmptyTabRestoreRetry() {
+    if (
+      emptyTabRestoreTimer !== undefined ||
+      emptyTabRestoreRetries >= EMPTY_TAB_RESTORE_MAX_RETRIES
+    ) {
+      return;
+    }
+
+    emptyTabRestoreRetries += 1;
+    emptyTabRestoreTimer = setTimeout(() => {
+      emptyTabRestoreTimer = undefined;
+      void restorePersistedTimers();
+    }, EMPTY_TAB_RESTORE_DELAY_MS);
+  }
 
   async function readTimers(): Promise<Record<string, TabTimer>> {
     const stored = await browser.storage.local.get(TIMER_STORAGE_KEY);
@@ -326,8 +345,16 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
         }
 
         if (openTabIds.length === 0) {
-          // Session restore may not have created tabs yet. Keep storage intact.
+          // Session restore may not have created tabs yet. Keep storage intact
+          // and retry after the lock is released so tab adoption is not blocked.
+          scheduleEmptyTabRestoreRetry();
           continue;
+        }
+
+        emptyTabRestoreRetries = 0;
+        if (emptyTabRestoreTimer !== undefined) {
+          clearTimeout(emptyTabRestoreTimer);
+          emptyTabRestoreTimer = undefined;
         }
 
         for (const timer of Object.values(stored)) {

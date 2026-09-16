@@ -70,6 +70,7 @@ function installBrowser(
 
 describe("createTimerService", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -124,12 +125,31 @@ describe("createTimerService", () => {
   });
 
   it("does not wipe stored timers if restore runs before tabs exist", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(NOW);
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
     const timer = { tabId: 8, endAt: NOW + 60_000, originalLabel: "", title: "Tab" };
     const { service, storage } = installBrowser({ "8": timer }, { openTabIds: [] });
 
     await service.restorePersistedTimers();
     expect(storage.tabTimers).toEqual({ "8": timer });
+  });
+
+  it("retries restore until session tabs exist", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+    const timer = { tabId: 8, endAt: NOW + 60_000, originalLabel: "", title: "Tab" };
+    const { service, storage } = installBrowser({ "8": timer }, { openTabIds: [] });
+    vi.mocked(browser.tabs.query)
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([{ id: 8 }]);
+
+    await service.restorePersistedTimers();
+    expect(browser.alarms.create).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(storage.tabTimers).toEqual({ "8": timer });
+    expect(browser.alarms.create).toHaveBeenCalledWith("tab-timer:8", { when: NOW + 60_000 });
   });
 
   it("rebinds a session timer onto a restored tab id", async () => {
@@ -155,7 +175,8 @@ describe("createTimerService", () => {
   });
 
   it("adopts a restored tab after startup when session restore is delayed", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(NOW);
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
     const endAt = NOW + 60_000;
     const stored = { tabId: 1, endAt, originalLabel: "Note", title: "Docs" };
     const { service, storage, openTabIds } = installBrowser(
