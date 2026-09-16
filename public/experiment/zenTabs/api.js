@@ -1,6 +1,6 @@
 /* global ExtensionAPI, ChromeUtils, Cu, Services */
 
-const DEBUG = true;
+const DEBUG = false;
 
 this.zenTabs = class extends ExtensionAPI {
   getAPI(context) {

@@ -25,8 +25,12 @@
     color-scheme: dark;
   }
 
-  /* Keep rem-based Tailwind utilities stable inside content-script shadow roots. */
-  :host {
+  /*
+    Rem still resolves against the page <html>, not :host. Overlay sizing uses
+    explicit px in SearchApp so Zen chrome pages with a small root font stay readable.
+  */
+  :host,
+  html {
     font-size: 16px;
   }
 

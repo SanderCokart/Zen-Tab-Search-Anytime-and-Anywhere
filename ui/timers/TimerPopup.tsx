@@ -133,47 +133,44 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
           </button>
         ))}
       </div>
-      <label class="text-zen-faint flex flex-col gap-1 text-xs">
-        Ends at
-        <input
-          class="border-zen-line bg-zen-chip w-full rounded-md border px-2 py-1.5 font-[inherit] text-white [color-scheme:dark] disabled:opacity-60"
-          type="datetime-local"
-          step="60"
-          required
-          disabled={!tab}
-          min={toDatetimeLocalValue(Date.now() + 60_000)}
-          max={toDatetimeLocalValue(Date.now() + MAX_TIMER_MS)}
-          value={toDatetimeLocalValue(endAt)}
-          onInput={(event) => {
-            setError(undefined);
-            setEndAt(fromDatetimeLocalValue(event.currentTarget.value));
-          }}
-        />
-      </label>
-      <p class="text-zen-lavender m-0 text-xs">
-        {Number.isFinite(endAt)
-          ? valid
-            ? formatTimerCountdown(endAt)
-            : "Choose a time between 1 minute and 31 days from now."
-          : "Pick a time to count down to."}
-      </p>
-      <div class="flex gap-2">
-        <button
-          class="border-zen-border bg-zen-accent hover:bg-zen-accent-hover cursor-pointer rounded-md border px-2.5 py-1.5 font-[inherit] text-white disabled:cursor-not-allowed disabled:opacity-50"
-          type="submit"
-          disabled={!tab || !valid}
-        >
-          Set timer
-        </button>
-        {timer && (
+      <div class="flex items-end gap-3">
+        <div class="flex-1">
+          <label class="text-zen-faint flex flex-col gap-1 text-xs">
+            Ends at
+            <input
+              class="border-zen-line bg-zen-chip h-8 w-full rounded-md border px-2 font-[inherit] text-white [color-scheme:dark] disabled:opacity-60"
+              type="datetime-local"
+              step="60"
+              required
+              disabled={!tab}
+              min={toDatetimeLocalValue(Date.now() + 60_000)}
+              max={toDatetimeLocalValue(Date.now() + MAX_TIMER_MS)}
+              value={toDatetimeLocalValue(endAt)}
+              onInput={(event) => {
+                setError(undefined);
+                setEndAt(fromDatetimeLocalValue(event.currentTarget.value));
+              }}
+            />
+          </label>
+        </div>
+        <div class="flex gap-2">
           <button
-            class="border-zen-clear text-zen-faint cursor-pointer rounded-md border bg-transparent px-2.5 py-1.5 font-[inherit] hover:bg-white/5"
-            type="button"
-            onClick={clear}
+            class="border-zen-border bg-zen-accent hover:bg-zen-accent-hover h-8 cursor-pointer rounded-md border px-2.5 font-[inherit] text-white disabled:cursor-not-allowed disabled:opacity-50"
+            type="submit"
+            disabled={!tab || !valid}
           >
-            Clear
+            Set
           </button>
-        )}
+          {timer && (
+            <button
+              class="border-zen-clear text-zen-faint h-8 cursor-pointer rounded-md border bg-transparent px-2.5 font-[inherit] hover:bg-white/5"
+              type="button"
+              onClick={clear}
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
       {error && <p class="text-zen-danger m-0 text-xs">{error}</p>}
     </form>

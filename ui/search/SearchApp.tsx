@@ -86,7 +86,7 @@ function TimerPanel({
             type="button"
             class={cn(
               presetButtonClass,
-              compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-1 text-xs",
+              compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-1 text-[12px]",
             )}
             onClick={() => setEndAt(preset.endAt(new Date()))}
           >
@@ -94,46 +94,46 @@ function TimerPanel({
           </button>
         ))}
       </div>
-      <label
-        class={cn(
-          "text-zen-faint flex flex-col",
-          compact ? "gap-0.5 text-[11px]" : "gap-1 text-xs",
-        )}
-      >
-        Ends at
-        <input
-          class="border-zen-line bg-zen-chip w-full rounded-md border font-[inherit] text-white [color-scheme:dark]"
-          type="datetime-local"
-          step="60"
-          min={toDatetimeLocalValue(Date.now() + 60_000)}
-          max={toDatetimeLocalValue(Date.now() + MAX_TIMER_MS)}
-          value={toDatetimeLocalValue(endAt)}
-          onInput={(event) => setEndAt(fromDatetimeLocalValue(event.currentTarget.value))}
-        />
-      </label>
-      <p class={cn("text-zen-lavender m-0", compact ? "text-[11px]" : "text-xs")}>
-        {valid
-          ? formatTimerCountdown(endAt)
-          : "Choose a time between 1 minute and 31 days from now."}
-      </p>
-      <div class={cn("flex", compact ? "gap-1.5" : "gap-2")}>
-        <button
-          type="button"
-          class={cn(primaryButtonClass, compact ? "px-1.5 py-0.5" : "px-2.5 py-1.5")}
-          disabled={!valid}
-          onClick={() => onSet(endAt)}
+      <div class={cn("flex items-end", compact ? "gap-1.5" : "gap-2")}>
+        <label
+          class={cn(
+            "text-zen-faint flex flex-1 flex-col",
+            compact ? "gap-0.5 text-[11px]" : "gap-1 text-[12px]",
+          )}
         >
-          Set timer
-        </button>
-        {timer && (
+          Ends at
+          <input
+            class={cn(
+              "border-zen-line bg-zen-chip w-full rounded-md border font-[inherit] text-white [color-scheme:dark]",
+              compact ? "h-6 px-1.5" : "h-8 px-2",
+            )}
+            type="datetime-local"
+            step="60"
+            min={toDatetimeLocalValue(Date.now() + 60_000)}
+            max={toDatetimeLocalValue(Date.now() + MAX_TIMER_MS)}
+            value={toDatetimeLocalValue(endAt)}
+            onInput={(event) => setEndAt(fromDatetimeLocalValue(event.currentTarget.value))}
+          />
+        </label>
+        <div class={cn("flex", compact ? "gap-1.5" : "gap-2")}>
           <button
             type="button"
-            class={cn(clearButtonClass, compact ? "px-1.5 py-0.5" : "px-2.5 py-1.5")}
-            onClick={onClear}
+            class={cn(primaryButtonClass, compact ? "h-6 px-1.5" : "h-8 px-2.5")}
+            disabled={!valid}
+            onClick={() => onSet(endAt)}
           >
-            Clear
+            Set
           </button>
-        )}
+          {timer && (
+            <button
+              type="button"
+              class={cn(clearButtonClass, compact ? "h-6 px-1.5" : "h-8 px-2.5")}
+              onClick={onClear}
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
       <input type="hidden" value={tabId} />
     </div>
@@ -164,19 +164,24 @@ function TabSearchRow({
       {tab.favIconUrl && (
         <img
           src={tab.favIconUrl}
-          class={cn("shrink-0 rounded-sm", compact ? "mt-px size-4" : "size-6 rounded")}
+          class={cn("shrink-0 rounded-sm", compact ? "mt-px size-4" : "size-[24px] rounded")}
         />
       )}
       <div class="flex min-w-0 flex-1 flex-col gap-px">
         <div class={cn("flex min-w-0 flex-col", compact ? "gap-1.5" : "gap-2")}>
           <div class="flex min-w-0 items-center gap-2">
-            <span class="min-w-0 flex-1 truncate text-white">
+            <span class={cn("min-w-0 flex-1 truncate text-white", !compact && "text-[16px]")}>
               {formatTabDisplayTitle({
                 ...tab,
                 customLabel: stripTimerPrefix(tab.customLabel || ""),
               })}
             </span>
-            <span class="text-zen-lavender ml-auto flex shrink-0 items-center justify-end gap-1 text-[11px]">
+            <span
+              class={cn(
+                "text-zen-lavender ml-auto flex shrink-0 items-center justify-end gap-1",
+                compact ? "text-[11px]" : "text-[12px]",
+              )}
+            >
               {timer && <span>⏱ {formatTimerCountdown(timer.endAt)}</span>}
               {tabId !== undefined && (
                 <button
@@ -184,7 +189,7 @@ function TabSearchRow({
                   class={cn(
                     primaryButtonClass,
                     "inline-flex items-center justify-center p-0",
-                    compact ? "size-6" : "size-7",
+                    compact ? "size-6" : "size-[28px]",
                   )}
                   title="Set a timer for this tab"
                   onClick={(event) => {
@@ -192,7 +197,7 @@ function TabSearchRow({
                     onToggleTimer();
                   }}
                 >
-                  <TimerIcon close={timerOpen} class={compact ? "size-3.5" : "size-4"} />
+                  <TimerIcon close={timerOpen} class={compact ? "size-3.5" : "size-[16px]"} />
                 </button>
               )}
             </span>
@@ -207,7 +212,7 @@ function TabSearchRow({
             />
           )}
         </div>
-        <span class={cn("text-zen-subtle truncate", compact ? "text-[11px]" : "text-sm")}>
+        <span class={cn("text-zen-subtle truncate", compact ? "text-[11px]" : "text-[14px]")}>
           {tab.active
             ? `${tab.workspaceName || hostname(tab.url)} · Current tab`
             : tab.workspaceName || hostname(tab.url)}
@@ -236,7 +241,7 @@ function SearchShell({
       onClick={onClose}
     >
       <div
-        class="from-zen-bg to-zen-raised flex max-h-[600px] min-h-[200px] w-[60vw] max-w-[600px] flex-col overflow-hidden rounded-2xl bg-linear-to-br p-4 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+        class="from-zen-bg to-zen-raised flex max-h-[600px] min-h-[200px] w-[60vw] max-w-[600px] flex-col overflow-hidden rounded-2xl bg-linear-to-br p-[16px] text-[16px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
         onClick={(event) => event.stopPropagation()}
         data-omnibar
       >
@@ -362,7 +367,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
 
   return (
     <SearchShell layout={layout} onClose={onClose}>
-      <div class={cn("flex items-center", compact ? "mb-2 gap-2" : "mb-4 gap-2")}>
+      <div class={cn("flex items-center", compact ? "mb-2 gap-2" : "mb-[16px] gap-2")}>
         <input
           ref={inputRef}
           data-testid="zen-search-input"
@@ -370,7 +375,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           placeholder="Search tabs and spaces..."
           class={cn(
             "bg-zen-surface placeholder:text-zen-muted min-w-0 flex-1 rounded-lg border-0 text-white outline-none",
-            compact ? "w-full px-2.5 py-2 text-sm" : "p-3 text-lg",
+            compact ? "w-full px-2.5 py-2 text-sm" : "p-[12px] text-[18px]",
           )}
           value={query}
           onInput={(event) => setQuery(event.currentTarget.value)}
@@ -405,14 +410,21 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           class={cn(
             primaryButtonClass,
             "relative inline-flex shrink-0 items-center justify-center p-0",
-            compact ? "size-8" : "size-11",
+            compact ? "size-8" : "size-[44px]",
           )}
           title={showTimers ? "Close active timers" : "Show active timers"}
           onClick={() => setShowTimers(!showTimers)}
         >
-          <TimerIcon close={showTimers} class={compact ? "size-3.5" : "size-4"} />
+          <TimerIcon close={showTimers} class={compact ? "size-3.5" : "size-[16px]"} />
           {!showTimers && timers.size > 0 && (
-            <span class="bg-zen-badge absolute -top-1 -right-1 min-w-3.5 rounded-full px-0.5 text-center text-[9px] leading-[14px] text-white">
+            <span
+              class={cn(
+                "bg-zen-badge absolute -top-1 -right-1 rounded-full text-center text-white",
+                compact
+                  ? "min-w-3.5 px-0.5 text-[9px] leading-[14px]"
+                  : "min-w-4 px-1 text-[10px] leading-4",
+              )}
+            >
               {timers.size}
             </span>
           )}
@@ -422,13 +434,13 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
         <div
           class={cn(
             "border-zen-accent bg-zen-panel rounded-lg border",
-            compact ? "mb-2 p-2" : "mb-3 rounded-[10px] p-3",
+            compact ? "mb-2 p-2" : "mb-[12px] rounded-[10px] p-[12px]",
           )}
         >
           <div
             class={cn(
               "mb-2 flex items-center justify-between gap-2 text-white",
-              compact ? "text-xs" : "text-sm",
+              compact ? "text-xs" : "text-[14px]",
             )}
           >
             <strong>Active timers</strong>
@@ -454,7 +466,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             <ul
               class={cn(
                 "zen-scroll m-0 flex list-none flex-col overflow-y-auto p-0",
-                compact ? "max-h-[180px] gap-1.5" : "max-h-[220px] gap-2",
+                compact ? "max-h-[180px] gap-1.5" : "max-h-[220px] gap-[8px]",
               )}
             >
               {[...timers.values()]
@@ -473,7 +485,9 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
                       <span class="max-w-full truncate text-white">
                         {timer.title || timer.originalLabel || `Tab ${timer.tabId}`}
                       </span>
-                      <span class="text-zen-lavender text-[11px]">
+                      <span
+                        class={cn("text-zen-lavender", compact ? "text-[11px]" : "text-[12px]")}
+                      >
                         ⏱ {formatTimerCountdown(timer.endAt)}
                       </span>
                     </button>
@@ -492,7 +506,8 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
       )}
       <ul
         class={cn(
-          "zen-scroll m-0 flex min-h-0 flex-1 list-none flex-col gap-1 overflow-y-auto p-0",
+          "zen-scroll m-0 flex min-h-0 flex-1 list-none flex-col overflow-y-auto p-0",
+          compact ? "gap-1" : "gap-0",
           compact && "min-h-[60px]",
         )}
         role="listbox"
@@ -506,7 +521,9 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             data-selected={selectedIndex === index ? "true" : undefined}
             class={cn(
               "flex cursor-pointer items-start transition-colors",
-              compact ? "gap-2 rounded-md px-2 py-1.5 text-[13px]" : "gap-3 rounded-lg p-2",
+              compact
+                ? "gap-2 rounded-md px-2 py-1.5 text-[13px]"
+                : "gap-[12px] rounded-lg p-[12px]",
               selectedIndex === index ? "bg-white/10" : "hover:bg-white/10",
             )}
             role="option"
@@ -518,16 +535,23 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
                 <span
                   class={cn(
                     "mt-px flex shrink-0 items-center justify-center leading-none",
-                    compact ? "size-4 text-xs" : "size-6 text-base",
+                    compact ? "size-4 text-xs" : "size-[24px] text-[16px]",
                   )}
                 >
                   {item.data.icon?.trim() || "◆"}
                 </span>
                 <div class="flex min-w-0 flex-1 flex-col gap-px">
-                  <span class="min-w-0 flex-1 truncate font-semibold text-white">
+                  <span
+                    class={cn(
+                      "min-w-0 flex-1 truncate font-semibold text-white",
+                      !compact && "text-[16px]",
+                    )}
+                  >
                     {formatSpaceDisplayTitle(item.data)}
                   </span>
-                  <span class={cn("text-zen-subtle truncate", compact ? "text-[11px]" : "text-sm")}>
+                  <span
+                    class={cn("text-zen-subtle truncate", compact ? "text-[11px]" : "text-[14px]")}
+                  >
                     {item.data.isActive ? "Current space" : "Space"}
                   </span>
                 </div>
