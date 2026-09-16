@@ -1,3 +1,5 @@
+import type { ForgeKind, ForgePlatform, ForgeRef } from "./forge-label";
+
 export interface TabInfo {
   id: number | null;
   domId?: string;
@@ -8,6 +10,7 @@ export interface TabInfo {
   windowId: number;
   workspaceId?: string;
   workspaceName?: string;
+  lastOpenedAt?: number;
   score?: number;
   active?: boolean;
 }
@@ -27,7 +30,24 @@ export interface SpaceInfo {
   score?: number;
 }
 
+export interface ForgeIssueEntry {
+  ref: ForgeRef;
+  tab: TabInfo;
+  title: string;
+  projectLabel: string;
+}
+
 export type SearchItem = { kind: "tab"; data: TabInfo } | { kind: "space"; data: SpaceInfo };
+
+export function formatForgeKind(kind: ForgeKind): string {
+  if (kind === "merge_request") return "Merge request";
+  if (kind === "pull_request") return "Pull request";
+  return "Issue";
+}
+
+export function formatForgePlatform(platform: ForgePlatform): string {
+  return platform === "github" ? "GitHub" : "GitLab";
+}
 
 export function isUsableTabId(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;

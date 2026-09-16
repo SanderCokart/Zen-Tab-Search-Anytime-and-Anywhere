@@ -17,4 +17,26 @@ describe("createSnapshotReader", () => {
       timers: [{ tabId: 1, endAt: 99, originalLabel: "", title: "Tab" }],
     });
   });
+
+  it("merges stored last-opened times onto tabs", async () => {
+    const getSnapshot = createSnapshotReader({
+      queryTabs: vi.fn(async () => [
+        {
+          id: 2,
+          title: "Issue",
+          url: "https://x.test",
+          favIconUrl: "",
+          windowId: 1,
+          lastOpenedAt: 50,
+        },
+      ]),
+      getSpaces: vi.fn(async () => []),
+      getTimers: vi.fn(async () => []),
+      readLastOpened: vi.fn(async () => ({ "2": 200 })),
+    });
+
+    await expect(getSnapshot()).resolves.toMatchObject({
+      tabs: [{ id: 2, lastOpenedAt: 200 }],
+    });
+  });
 });

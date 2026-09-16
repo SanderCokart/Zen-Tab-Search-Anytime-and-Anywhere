@@ -15,6 +15,11 @@ import { createZenWorkspaceAdapter } from "../lib/background/zen/adapter";
 import { logZenDebugInfo, warmUpZenTabsApi } from "../lib/background/zen/debug";
 import { isAllowedTimerEnd } from "../lib/timer";
 import { isUsableTabId } from "../lib/types";
+import {
+  readTabLastOpened,
+  recordTabLastOpened,
+  registerTabLastOpenedTracking,
+} from "../lib/background/tab-last-opened";
 
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());
@@ -32,12 +37,14 @@ export default defineBackground(() => {
     queryTabs,
     getSpaces,
     getTimers: timerService.getActiveTimers,
+    readLastOpened: readTabLastOpened,
   });
 
   registerTimerContextMenus(timerService);
   registerPopupWindowTracking();
   registerCommands(workspace);
   registerSnapshotChangeNotifications();
+  registerTabLastOpenedTracking();
 
   if (DEBUG) {
     browser.tabs.onActivated.addListener(() => {
@@ -94,7 +101,12 @@ export default defineBackground(() => {
     queryTabs,
     getSpaces,
     getDebugInfo: (anchorTabId) => workspace.getDebugInfo(anchorTabId),
-    switchTab: switchToTab,
+    switchTab: async (tabId, domId, anchorTabId) => {
+      await switchToTab(tabId, domId, anchorTabId);
+      if (isUsableTabId(tabId)) {
+        await recordTabLastOpened(tabId);
+      }
+    },
     switchSpace: switchToSpace,
     getTab: getTabInfo,
     getSnapshot,
