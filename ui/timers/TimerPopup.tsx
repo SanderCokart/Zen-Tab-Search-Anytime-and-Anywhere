@@ -61,6 +61,19 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
     return () => window.clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [onClose]);
+
   const clear = () => {
     void sendExtensionMessage({ type: "clearTimer", tabId })
       .then(() => {
