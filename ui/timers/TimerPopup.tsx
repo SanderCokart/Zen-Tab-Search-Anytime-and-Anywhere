@@ -98,28 +98,32 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
 
   return (
     <form
-      class="zen-timer-popup"
+      class="flex flex-col gap-2.5"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
       }}
     >
-      <h1>
+      <h1 class="m-0 truncate text-sm font-semibold">
         {tab
           ? formatTabDisplayTitle({ ...tab, customLabel: stripTimerPrefix(tab.customLabel || "") })
           : "Loading tab…"}
       </h1>
       {tab && (
-        <p class="zen-timer-meta">
+        <p class="text-zen-subtle m-0 text-xs">
           {tab.workspaceName || hostname(tab.url) || tab.url || "No URL"}
         </p>
       )}
-      {timer && <p class="zen-timer-status">Current timer {formatTimerCountdown(timer.endAt)}</p>}
-      <div class="zen-timer-presets">
+      {timer && (
+        <p class="text-zen-lavender m-0 text-xs">
+          Current timer {formatTimerCountdown(timer.endAt)}
+        </p>
+      )}
+      <div class="flex flex-wrap gap-1.5">
         {TIMER_PRESETS.map((preset) => (
           <button
             type="button"
-            class="zen-timer-preset"
+            class="border-zen-line bg-zen-chip text-zen-subtle hover:border-zen-border hover:bg-zen-accent focus-visible:border-zen-border focus-visible:bg-zen-accent cursor-pointer rounded-full border px-2 py-1 font-[inherit] text-xs hover:text-white focus-visible:text-white"
             onClick={() => {
               setError(undefined);
               setEndAt(preset.endAt(new Date()));
@@ -129,10 +133,10 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
           </button>
         ))}
       </div>
-      <label class="zen-timer-field">
+      <label class="text-zen-faint flex flex-col gap-1 text-xs">
         Ends at
         <input
-          class="zen-timer-input"
+          class="border-zen-line bg-zen-chip w-full rounded-md border px-2 py-1.5 font-[inherit] text-white [color-scheme:dark] disabled:opacity-60"
           type="datetime-local"
           step="60"
           required
@@ -146,24 +150,32 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
           }}
         />
       </label>
-      <p class="zen-timer-preview">
+      <p class="text-zen-lavender m-0 text-xs">
         {Number.isFinite(endAt)
           ? valid
             ? formatTimerCountdown(endAt)
             : "Choose a time between 1 minute and 31 days from now."
           : "Pick a time to count down to."}
       </p>
-      <div class="zen-timer-actions">
-        <button class="zen-timer-button" type="submit" disabled={!tab || !valid}>
+      <div class="flex gap-2">
+        <button
+          class="border-zen-border bg-zen-accent hover:bg-zen-accent-hover cursor-pointer rounded-md border px-2.5 py-1.5 font-[inherit] text-white disabled:cursor-not-allowed disabled:opacity-50"
+          type="submit"
+          disabled={!tab || !valid}
+        >
           Set timer
         </button>
         {timer && (
-          <button class="zen-timer-button zen-timer-clear" type="button" onClick={clear}>
+          <button
+            class="border-zen-clear text-zen-faint cursor-pointer rounded-md border bg-transparent px-2.5 py-1.5 font-[inherit] hover:bg-white/5"
+            type="button"
+            onClick={clear}
+          >
             Clear
           </button>
         )}
       </div>
-      {error && <p class="zen-timer-error">{error}</p>}
+      {error && <p class="text-zen-danger m-0 text-xs">{error}</p>}
     </form>
   );
 }

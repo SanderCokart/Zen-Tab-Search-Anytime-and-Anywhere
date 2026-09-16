@@ -1,3 +1,4 @@
+import type { ComponentChildren } from "preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { debugError } from "../../lib/debug";
 import { sendExtensionMessage, subscribeToSnapshotChanged } from "../../lib/messaging/client";
@@ -18,15 +19,19 @@ import {
   isActivatableTab,
   tabBrowserId,
 } from "../../lib/types";
+import { cn } from "../cn";
+
+export type SearchLayout = "popup" | "overlay";
 
 export interface SearchAppProps {
   onClose: () => void;
   pageJump?: number;
+  layout?: SearchLayout;
 }
 
-function TimerIcon({ close = false }: { close?: boolean }) {
+function TimerIcon({ close = false, class: className }: { close?: boolean; class?: string }) {
   return (
-    <svg class="zen-timer-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <svg class={cn("zen-icon", className)} viewBox="0 0 24 24" aria-hidden="true">
       {close ? (
         <path d="M6 6l12 12M18 6L6 18" />
       ) : (
@@ -47,14 +52,23 @@ function hostname(url: string): string {
   }
 }
 
+const presetButtonClass =
+  "cursor-pointer rounded-full border border-zen-line bg-zen-chip font-[inherit] text-zen-subtle hover:border-zen-border hover:bg-zen-accent hover:text-white focus-visible:border-zen-border focus-visible:bg-zen-accent focus-visible:text-white";
+const primaryButtonClass =
+  "cursor-pointer rounded-md border border-zen-border bg-zen-accent font-[inherit] text-white hover:bg-zen-accent-hover disabled:cursor-not-allowed disabled:opacity-50";
+const clearButtonClass =
+  "cursor-pointer rounded-md border border-zen-clear bg-transparent font-[inherit] text-zen-faint hover:bg-white/5";
+
 function TimerPanel({
   tabId,
   timer,
+  compact,
   onSet,
   onClear,
 }: {
   tabId: number;
   timer?: TabTimer;
+  compact: boolean;
   onSet: (endAt: number) => void;
   onClear: () => void;
 }) {
@@ -62,22 +76,33 @@ function TimerPanel({
   const valid = isAllowedTimerEnd(endAt);
 
   return (
-    <div class="zen-timer-panel" onClick={(event) => event.stopPropagation()}>
-      <div class="zen-timer-presets">
+    <div
+      class={cn("flex flex-col", compact ? "gap-1.5" : "gap-2")}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <div class={cn("flex flex-wrap", compact ? "gap-1" : "gap-1.5")}>
         {TIMER_PRESETS.map((preset) => (
           <button
             type="button"
-            class="zen-timer-preset"
+            class={cn(
+              presetButtonClass,
+              compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-1 text-xs",
+            )}
             onClick={() => setEndAt(preset.endAt(new Date()))}
           >
             {preset.label}
           </button>
         ))}
       </div>
-      <label class="zen-timer-field">
+      <label
+        class={cn(
+          "text-zen-faint flex flex-col",
+          compact ? "gap-0.5 text-[11px]" : "gap-1 text-xs",
+        )}
+      >
         Ends at
         <input
-          class="zen-timer-input"
+          class="border-zen-line bg-zen-chip w-full rounded-md border font-[inherit] text-white [color-scheme:dark]"
           type="datetime-local"
           step="60"
           min={toDatetimeLocalValue(Date.now() + 60_000)}
@@ -86,22 +111,26 @@ function TimerPanel({
           onInput={(event) => setEndAt(fromDatetimeLocalValue(event.currentTarget.value))}
         />
       </label>
-      <p class="zen-timer-preview">
+      <p class={cn("text-zen-lavender m-0", compact ? "text-[11px]" : "text-xs")}>
         {valid
           ? formatTimerCountdown(endAt)
           : "Choose a time between 1 minute and 31 days from now."}
       </p>
-      <div class="zen-timer-actions">
+      <div class={cn("flex", compact ? "gap-1.5" : "gap-2")}>
         <button
           type="button"
-          class="zen-timer-button"
+          class={cn(primaryButtonClass, compact ? "px-1.5 py-0.5" : "px-2.5 py-1.5")}
           disabled={!valid}
           onClick={() => onSet(endAt)}
         >
           Set timer
         </button>
         {timer && (
-          <button type="button" class="zen-timer-button zen-timer-clear" onClick={onClear}>
+          <button
+            type="button"
+            class={cn(clearButtonClass, compact ? "px-1.5 py-0.5" : "px-2.5 py-1.5")}
+            onClick={onClear}
+          >
             Clear
           </button>
         )}
@@ -115,6 +144,7 @@ function TabSearchRow({
   tab,
   timer,
   timerOpen,
+  compact,
   onToggleTimer,
   onSetTimer,
   onClearTimer,
@@ -122,6 +152,7 @@ function TabSearchRow({
   tab: TabInfo;
   timer?: TabTimer;
   timerOpen: boolean;
+  compact: boolean;
   onToggleTimer: () => void;
   onSetTimer: (endAt: number) => void;
   onClearTimer: () => void;
@@ -130,40 +161,53 @@ function TabSearchRow({
 
   return (
     <>
-      {tab.favIconUrl && <img src={tab.favIconUrl} class="zen-favicon" />}
-      <div class="zen-text">
-        <div class="zen-tab-timer-block">
-          <div class="zen-title-row">
-            <span class="zen-title">
+      {tab.favIconUrl && (
+        <img
+          src={tab.favIconUrl}
+          class={cn("shrink-0 rounded-sm", compact ? "mt-px size-4" : "size-6 rounded")}
+        />
+      )}
+      <div class="flex min-w-0 flex-1 flex-col gap-px">
+        <div class={cn("flex min-w-0 flex-col", compact ? "gap-1.5" : "gap-2")}>
+          <div class="flex min-w-0 items-center gap-2">
+            <span class="min-w-0 flex-1 truncate text-white">
               {formatTabDisplayTitle({
                 ...tab,
                 customLabel: stripTimerPrefix(tab.customLabel || ""),
               })}
             </span>
-            <span class="zen-timer">
-              {timer && (
-                <span class="zen-timer-countdown">⏱ {formatTimerCountdown(timer.endAt)}</span>
-              )}
+            <span class="text-zen-lavender ml-auto flex shrink-0 items-center justify-end gap-1 text-[11px]">
+              {timer && <span>⏱ {formatTimerCountdown(timer.endAt)}</span>}
               {tabId !== undefined && (
                 <button
                   type="button"
-                  class="zen-timer-button zen-timer-icon-button"
+                  class={cn(
+                    primaryButtonClass,
+                    "inline-flex items-center justify-center p-0",
+                    compact ? "size-6" : "size-7",
+                  )}
                   title="Set a timer for this tab"
                   onClick={(event) => {
                     event.stopPropagation();
                     onToggleTimer();
                   }}
                 >
-                  <TimerIcon close={timerOpen} />
+                  <TimerIcon close={timerOpen} class={compact ? "size-3.5" : "size-4"} />
                 </button>
               )}
             </span>
           </div>
           {timerOpen && tabId !== undefined && (
-            <TimerPanel tabId={tabId} timer={timer} onSet={onSetTimer} onClear={onClearTimer} />
+            <TimerPanel
+              tabId={tabId}
+              timer={timer}
+              compact={compact}
+              onSet={onSetTimer}
+              onClear={onClearTimer}
+            />
           )}
         </div>
-        <span class="zen-url">
+        <span class={cn("text-zen-subtle truncate", compact ? "text-[11px]" : "text-sm")}>
           {tab.active
             ? `${tab.workspaceName || hostname(tab.url)} · Current tab`
             : tab.workspaceName || hostname(tab.url)}
@@ -173,7 +217,37 @@ function TabSearchRow({
   );
 }
 
-export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
+function SearchShell({
+  layout,
+  onClose,
+  children,
+}: {
+  layout: SearchLayout;
+  onClose: () => void;
+  children: ComponentChildren;
+}) {
+  if (layout === "popup") {
+    return <div class="flex h-full flex-col">{children}</div>;
+  }
+
+  return (
+    <div
+      class="flex h-full w-full items-center justify-center bg-black/60 backdrop-blur-[8px]"
+      onClick={onClose}
+    >
+      <div
+        class="from-zen-bg to-zen-raised flex max-h-[600px] min-h-[200px] w-[60vw] max-w-[600px] flex-col overflow-hidden rounded-2xl bg-linear-to-br p-4 shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+        onClick={(event) => event.stopPropagation()}
+        data-omnibar
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchAppProps) {
+  const compact = layout === "popup";
   const inputRef = useRef<HTMLInputElement>(null);
   const optionRefs = useRef<Array<HTMLLIElement | null>>([]);
   const [tabs, setTabs] = useState<TabInfo[]>([]);
@@ -232,7 +306,6 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
     const matches = filterSearchItems(buildSearchItems(tabs, spaces), query);
     const activeId = tabs.find((tab) => tab.active === true && tabBrowserId(tab) !== undefined)?.id;
     return query.trim() ? matches : prioritizeCurrentTab(matches, activeId);
-    return query.trim() ? matches : prioritizeCurrentTab(matches, activeId);
   }, [query, spaces, tabs]);
 
   useEffect(() => {
@@ -288,13 +361,17 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
   };
 
   return (
-    <div class="zen-popup">
-      <div class="zen-search-row">
+    <SearchShell layout={layout} onClose={onClose}>
+      <div class={cn("flex items-center", compact ? "mb-2 gap-2" : "mb-4 gap-2")}>
         <input
           ref={inputRef}
+          data-testid="zen-search-input"
           type="text"
           placeholder="Search tabs and spaces..."
-          class="zen-input"
+          class={cn(
+            "bg-zen-surface placeholder:text-zen-muted min-w-0 flex-1 rounded-lg border-0 text-white outline-none",
+            compact ? "w-full px-2.5 py-2 text-sm" : "p-3 text-lg",
+          )}
           value={query}
           onInput={(event) => setQuery(event.currentTarget.value)}
           onKeyDown={(event) => {
@@ -325,22 +402,40 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
         />
         <button
           type="button"
-          class="zen-timer-button zen-timer-icon-button"
+          class={cn(
+            primaryButtonClass,
+            "relative inline-flex shrink-0 items-center justify-center p-0",
+            compact ? "size-8" : "size-11",
+          )}
           title={showTimers ? "Close active timers" : "Show active timers"}
           onClick={() => setShowTimers(!showTimers)}
         >
-          <TimerIcon close={showTimers} />
-          {!showTimers && timers.size > 0 && <span class="zen-timer-badge">{timers.size}</span>}
+          <TimerIcon close={showTimers} class={compact ? "size-3.5" : "size-4"} />
+          {!showTimers && timers.size > 0 && (
+            <span class="bg-zen-badge absolute -top-1 -right-1 min-w-3.5 rounded-full px-0.5 text-center text-[9px] leading-[14px] text-white">
+              {timers.size}
+            </span>
+          )}
         </button>
       </div>
       {showTimers && (
-        <div class="zen-active-timers">
-          <div class="zen-active-timers-header">
+        <div
+          class={cn(
+            "border-zen-accent bg-zen-panel rounded-lg border",
+            compact ? "mb-2 p-2" : "mb-3 rounded-[10px] p-3",
+          )}
+        >
+          <div
+            class={cn(
+              "mb-2 flex items-center justify-between gap-2 text-white",
+              compact ? "text-xs" : "text-sm",
+            )}
+          >
             <strong>Active timers</strong>
             {timers.size > 0 && (
               <button
                 type="button"
-                class="zen-timer-button zen-timer-clear"
+                class={cn(clearButtonClass, compact ? "px-1.5 py-0.5" : "px-2.5 py-1.5")}
                 onClick={() =>
                   void sendExtensionMessage({ type: "clearAllTimers" })
                     .then(() => setTimers(new Map()))
@@ -352,30 +447,39 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
             )}
           </div>
           {timers.size === 0 ? (
-            <p class="zen-active-timers-empty">No active timers.</p>
+            <p class={cn("text-zen-muted m-0", compact ? "text-xs" : "text-[13px]")}>
+              No active timers.
+            </p>
           ) : (
-            <ul class="zen-active-timers-list">
+            <ul
+              class={cn(
+                "zen-scroll m-0 flex list-none flex-col overflow-y-auto p-0",
+                compact ? "max-h-[180px] gap-1.5" : "max-h-[220px] gap-2",
+              )}
+            >
               {[...timers.values()]
                 .sort((a, b) => a.endAt - b.endAt)
                 .map((timer) => (
-                  <li class="zen-active-timer">
+                  <li class="flex items-center gap-2">
                     <button
                       type="button"
-                      class="zen-active-timer-tab"
+                      class="flex min-w-0 flex-1 cursor-pointer flex-col items-start gap-0.5 border-0 bg-transparent p-0 text-left font-[inherit] text-inherit"
                       onClick={() =>
                         void sendExtensionMessage({ type: "switchTab", tabId: timer.tabId }).then(
                           onClose,
                         )
                       }
                     >
-                      <span class="zen-active-timer-title">
+                      <span class="max-w-full truncate text-white">
                         {timer.title || timer.originalLabel || `Tab ${timer.tabId}`}
                       </span>
-                      <span class="zen-timer-countdown">⏱ {formatTimerCountdown(timer.endAt)}</span>
+                      <span class="text-zen-lavender text-[11px]">
+                        ⏱ {formatTimerCountdown(timer.endAt)}
+                      </span>
                     </button>
                     <button
                       type="button"
-                      class="zen-timer-button zen-timer-clear"
+                      class={cn(clearButtonClass, compact ? "px-1.5 py-0.5" : "px-2.5 py-1.5")}
                       onClick={() => clearTimer(timer.tabId)}
                     >
                       Clear
@@ -386,23 +490,46 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
           )}
         </div>
       )}
-      <ul class="zen-list" role="listbox">
+      <ul
+        class={cn(
+          "zen-scroll m-0 flex min-h-0 flex-1 list-none flex-col gap-1 overflow-y-auto p-0",
+          compact && "min-h-[60px]",
+        )}
+        role="listbox"
+      >
         {items.map((item, index) => (
           <li
             ref={(element) => {
               optionRefs.current[index] = element;
             }}
-            class={`zen-tab-item ${item.kind === "space" ? "zen-space-item" : ""} ${selectedIndex === index ? "selected" : ""}`}
+            data-testid="zen-search-item"
+            data-selected={selectedIndex === index ? "true" : undefined}
+            class={cn(
+              "flex cursor-pointer items-start transition-colors",
+              compact ? "gap-2 rounded-md px-2 py-1.5 text-[13px]" : "gap-3 rounded-lg p-2",
+              selectedIndex === index ? "bg-white/10" : "hover:bg-white/10",
+            )}
             role="option"
             aria-selected={selectedIndex === index}
             onClick={() => activateItem(item)}
           >
             {item.kind === "space" ? (
               <>
-                <span class="zen-space-icon">{item.data.icon?.trim() || "◆"}</span>
-                <div class="zen-text">
-                  <span class="zen-title">{formatSpaceDisplayTitle(item.data)}</span>
-                  <span class="zen-url">{item.data.isActive ? "Current space" : "Space"}</span>
+                <span
+                  class={cn(
+                    "mt-px flex shrink-0 items-center justify-center leading-none",
+                    compact ? "size-4 text-xs" : "size-6 text-base",
+                  )}
+                >
+                  {item.data.icon?.trim() || "◆"}
+                </span>
+                <div class="flex min-w-0 flex-1 flex-col gap-px">
+                  <span class="min-w-0 flex-1 truncate font-semibold text-white">
+                    {formatSpaceDisplayTitle(item.data)}
+                  </span>
+                  <span class={cn("text-zen-subtle truncate", compact ? "text-[11px]" : "text-sm")}>
+                    {item.data.isActive ? "Current space" : "Space"}
+                  </span>
                 </div>
               </>
             ) : (
@@ -410,6 +537,7 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
                 tab={item.data}
                 timer={timers.get(tabBrowserId(item.data) ?? -1)}
                 timerOpen={timerTabId !== null && timerTabId === tabBrowserId(item.data)}
+                compact={compact}
                 onToggleTimer={() => {
                   const tabId = tabBrowserId(item.data);
                   if (tabId !== undefined) {
@@ -434,11 +562,13 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
         ))}
       </ul>
       {(loadError || (items.length === 0 && tabs.length + spaces.length > 0)) && (
-        <div class="zen-empty">{loadError || "No tabs or spaces found."}</div>
+        <div class="text-zen-muted px-1 py-3 text-center text-xs">
+          {loadError || "No tabs or spaces found."}
+        </div>
       )}
       {!loadError && tabs.length + spaces.length === 0 && (
-        <div class="zen-empty">Loading tabs and spaces…</div>
+        <div class="text-zen-muted px-1 py-3 text-center text-xs">Loading tabs and spaces…</div>
       )}
-    </div>
+    </SearchShell>
   );
 }

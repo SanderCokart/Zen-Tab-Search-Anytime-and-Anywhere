@@ -47,7 +47,7 @@ describe("SearchApp", () => {
     await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
 
     root
-      .querySelector<HTMLInputElement>(".zen-input")!
+      .querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!
       .dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     await vi.waitFor(() =>
       expect(sendMessage).toHaveBeenCalledWith({ type: "switchTab", tabId: 1, domId: undefined }),
@@ -62,13 +62,13 @@ describe("SearchApp", () => {
     const { root, onClose, sendMessage } = mountSearchApp();
     await vi.waitFor(() => expect(root.textContent).toContain("Second tab"));
 
-    const input = root.querySelector<HTMLInputElement>(".zen-input")!;
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
     await vi.waitFor(() =>
-      expect(root.querySelector(".zen-tab-item.selected")?.textContent).toContain("First tab"),
+      expect(root.querySelector("[data-selected='true']")?.textContent).toContain("First tab"),
     );
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
     await vi.waitFor(() =>
-      expect(root.querySelector(".zen-tab-item.selected")?.textContent).toContain("Second tab"),
+      expect(root.querySelector("[data-selected='true']")?.textContent).toContain("Second tab"),
     );
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 

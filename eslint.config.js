@@ -8,7 +8,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["entrypoints/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+    files: ["entrypoints/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "ui/**/*.{ts,tsx}"],
     languageOptions: {
       globals: {
         browser: "readonly",
@@ -16,6 +16,7 @@ export default tseslint.config(
         defineBackground: "readonly",
         defineContentScript: "readonly",
         defineUnlistedScript: "readonly",
+        createShadowRootUi: "readonly",
         injectScript: "readonly",
       },
     },

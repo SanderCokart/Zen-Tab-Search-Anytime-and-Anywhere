@@ -1,6 +1,6 @@
 /* global ExtensionAPI, ChromeUtils, Cu, Services */
 
-const DEBUG = false;
+const DEBUG = true;
 
 this.zenTabs = class extends ExtensionAPI {
   getAPI(context) {
@@ -492,6 +492,7 @@ this.zenTabs = class extends ExtensionAPI {
               id: String(space.uuid || ""),
               name: String(space.name || "Untitled"),
               icon: formatSpaceIcon(space.icon, space.name),
+              color: typeof space.color === "string" ? space.color : undefined,
               isActive: String(space.uuid || "") === activeSpaceId,
             }));
           } catch (error) {

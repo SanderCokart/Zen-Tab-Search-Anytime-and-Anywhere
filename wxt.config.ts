@@ -1,4 +1,5 @@
 import preact from "@preact/preset-vite";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "wxt";
 
 const zipLabel = process.env.ZIP_ARTIFACT_LABEL?.trim() || "demo";
@@ -84,6 +85,6 @@ export default defineConfig({
   },
   // WXT has no official Preact module; this is the documented Vite-plugin path.
   vite: () => ({
-    plugins: [preact({ reactAliasesEnabled: false })],
+    plugins: [preact({ reactAliasesEnabled: false }), tailwindcss()],
   }),
 });
