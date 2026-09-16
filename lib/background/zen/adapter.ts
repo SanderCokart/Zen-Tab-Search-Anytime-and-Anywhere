@@ -1,5 +1,5 @@
 import { debugLog, debugWarn } from "../../debug";
-import type { SpaceInfo, TabInfo } from "../../types";
+import { isUsableTabId, type SpaceInfo, type TabInfo } from "../../types";
 import { formatError, LOG_PREFIX } from "../log";
 import { resolveAnchorTabId as resolveBrowserAnchorTabId, zenAnchorTabId } from "./anchor";
 import { getZenTabsApi, type ZenTabsApi } from "./api";
@@ -68,15 +68,19 @@ function mapBrowserTabs(
   labels: Record<number, string>,
   focusedTabId?: number,
 ): TabInfo[] {
-  return tabs.map((tab) => ({
-    id: tab.id!,
-    title: tab.title || "Untitled",
-    customLabel: labels[tab.id ?? -1] ?? "",
-    url: tab.url || "",
-    favIconUrl: tab.favIconUrl || "",
-    windowId: tab.windowId ?? -1,
-    active: tab.id === focusedTabId,
-  }));
+  return tabs.map((tab) => {
+    const tabId =
+      typeof tab.id === "number" && Number.isInteger(tab.id) && tab.id >= 0 ? tab.id : -1;
+    return {
+      id: tabId,
+      title: tab.title || "Untitled",
+      customLabel: labels[tabId] ?? "",
+      url: tab.url || "",
+      favIconUrl: tab.favIconUrl || "",
+      windowId: tab.windowId ?? -1,
+      active: tabId === focusedTabId,
+    };
+  });
 }
 
 export function createZenWorkspaceAdapter(
@@ -219,9 +223,9 @@ export function createZenWorkspaceAdapter(
         }
       }
 
-      if (zenTabs?.activateTab && Number.isInteger(tabId) && tabId! >= 0) {
+      if (zenTabs?.activateTab && isUsableTabId(tabId)) {
         try {
-          const activated = await zenTabs.activateTab(tabId!, anchorId);
+          const activated = await zenTabs.activateTab(tabId, anchorId);
           if (activated) {
             return;
           }
@@ -230,17 +234,17 @@ export function createZenWorkspaceAdapter(
         }
       }
 
-      if (!Number.isInteger(tabId) || tabId! < 0) {
+      if (!isUsableTabId(tabId)) {
         throw new Error("Tab not found");
       }
 
-      const tab = await host.getTab(tabId!);
-      if (!tab || !Number.isInteger(tab.windowId)) {
+      const tab = await host.getTab(tabId);
+      if (!tab || !Number.isInteger(tab.windowId) || tab.windowId === undefined) {
         throw new Error("Tab or window not found");
       }
 
-      await host.focusWindow(tab.windowId!);
-      await host.activateTab(tabId!);
+      await host.focusWindow(tab.windowId);
+      await host.activateTab(tabId);
     },
 
     async switchSpace(spaceId: string, anchorTabId?: number) {

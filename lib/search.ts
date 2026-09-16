@@ -1,4 +1,4 @@
-import type { SearchItem, SpaceInfo, TabInfo } from "./types";
+import { isUsableTabId, type SearchItem, type SpaceInfo, type TabInfo } from "./types";
 
 interface FuzzyMatch {
   matches: boolean;
@@ -12,6 +12,9 @@ export function fuzzyMatchWithScore(str: string, queryLowerCase: string): FuzzyM
 
   for (let queryIndex = 0; queryIndex < queryLowerCase.length; queryIndex++) {
     const char = queryLowerCase[queryIndex];
+    if (char === undefined) {
+      return { matches: false, score: 0 };
+    }
     const found = normalized.indexOf(char, strIndex);
 
     if (found === -1) {
@@ -43,7 +46,9 @@ export function fuzzyMatchWithScore(str: string, queryLowerCase: string): FuzzyM
 
   let consecutiveBonus = 0;
   for (let i = 1; i < matchPositions.length; i++) {
-    if (matchPositions[i] === matchPositions[i - 1]! + 1) {
+    const current = matchPositions[i];
+    const previous = matchPositions[i - 1];
+    if (current !== undefined && previous !== undefined && current === previous + 1) {
       consecutiveBonus += 50;
     }
   }
@@ -53,7 +58,8 @@ export function fuzzyMatchWithScore(str: string, queryLowerCase: string): FuzzyM
   score += Math.max(0, 100 - firstMatchPosition * 2);
   score += Math.max(0, 200 - normalized.length);
 
-  const matchSpan = matchPositions[matchPositions.length - 1]! - matchPositions[0]! + 1;
+  const lastMatchPosition = matchPositions[matchPositions.length - 1] ?? firstMatchPosition;
+  const matchSpan = lastMatchPosition - firstMatchPosition + 1;
   score += Math.max(0, 100 - matchSpan);
 
   return { matches: true, score };
@@ -71,7 +77,7 @@ export function prioritizeCurrentTab(
   items: SearchItem[],
   currentTabId?: number | null,
 ): SearchItem[] {
-  if (!Number.isInteger(currentTabId) || currentTabId! < 0) {
+  if (!isUsableTabId(currentTabId)) {
     const current = items.find((item) => item.kind === "tab" && item.data.active);
     if (!current) {
       return items;
@@ -84,7 +90,10 @@ export function prioritizeCurrentTab(
     return items;
   }
 
-  const current = items[index]!;
+  const current = items[index];
+  if (!current) {
+    return items;
+  }
   return [current, ...items.slice(0, index), ...items.slice(index + 1)];
 }
 

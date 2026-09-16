@@ -1,4 +1,5 @@
 import { debugWarn } from "../debug";
+import { parseStoredTimers } from "../messaging/protocol";
 import type { TabTimer } from "../types";
 import { composeTimerLabel, isAllowedTimerEnd, MAX_TIMER_MS, stripTimerPrefix } from "../timer";
 
@@ -35,8 +36,7 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
 
   async function readTimers(): Promise<Record<string, TabTimer>> {
     const stored = await browser.storage.local.get(TIMER_STORAGE_KEY);
-    const timers = stored[TIMER_STORAGE_KEY];
-    return timers && typeof timers === "object" ? (timers as Record<string, TabTimer>) : {};
+    return parseStoredTimers(stored[TIMER_STORAGE_KEY]);
   }
 
   async function writeTimers(timers: Record<string, TabTimer>): Promise<void> {

@@ -12,7 +12,12 @@ import {
   toDatetimeLocalValue,
 } from "../../lib/timer";
 import type { SearchItem, SpaceInfo, TabInfo, TabTimer } from "../../lib/types";
-import { formatSpaceDisplayTitle, formatTabDisplayTitle, isActivatableTab } from "../../lib/types";
+import {
+  formatSpaceDisplayTitle,
+  formatTabDisplayTitle,
+  isActivatableTab,
+  tabBrowserId,
+} from "../../lib/types";
 
 export interface SearchAppProps {
   onClose: () => void;
@@ -43,19 +48,18 @@ function hostname(url: string): string {
 }
 
 function TimerPanel({
-  tab,
+  tabId,
   timer,
   onSet,
   onClear,
 }: {
-  tab: TabInfo;
+  tabId: number;
   timer?: TabTimer;
   onSet: (endAt: number) => void;
   onClear: () => void;
 }) {
   const [endAt, setEndAt] = useState(timer?.endAt ?? Date.now() + 30 * 60_000);
   const valid = isAllowedTimerEnd(endAt);
-  const tabId = tab.id!;
 
   return (
     <div class="zen-timer-panel" onClick={(event) => event.stopPropagation()}>
@@ -104,6 +108,68 @@ function TimerPanel({
       </div>
       <input type="hidden" value={tabId} />
     </div>
+  );
+}
+
+function TabSearchRow({
+  tab,
+  timer,
+  timerOpen,
+  onToggleTimer,
+  onSetTimer,
+  onClearTimer,
+}: {
+  tab: TabInfo;
+  timer?: TabTimer;
+  timerOpen: boolean;
+  onToggleTimer: () => void;
+  onSetTimer: (endAt: number) => void;
+  onClearTimer: () => void;
+}) {
+  const tabId = tabBrowserId(tab);
+
+  return (
+    <>
+      {tab.favIconUrl && <img src={tab.favIconUrl} class="zen-favicon" />}
+      <div class="zen-text">
+        <div class="zen-tab-timer-block">
+          <div class="zen-title-row">
+            <span class="zen-title">
+              {formatTabDisplayTitle({
+                ...tab,
+                customLabel: stripTimerPrefix(tab.customLabel || ""),
+              })}
+            </span>
+            <span class="zen-timer">
+              {timer && (
+                <span class="zen-timer-countdown">⏱ {formatTimerCountdown(timer.endAt)}</span>
+              )}
+              {tabId !== undefined && (
+                <button
+                  type="button"
+                  class="zen-timer-button zen-timer-icon-button"
+                  title="Set a timer for this tab"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleTimer();
+                  }}
+                >
+                  <TimerIcon close={timerOpen} />
+                </button>
+              )}
+            </span>
+          </div>
+          {timerOpen && tabId !== undefined && (
+            <TimerPanel tabId={tabId} timer={timer} onSet={onSetTimer} onClear={onClearTimer} />
+          )}
+        </div>
+        <span class="zen-url">
+          {tab.active
+            ? `${tab.workspaceName || hostname(tab.url)} · Current tab`
+            : tab.workspaceName || hostname(tab.url)}
+        </span>
+      </div>
+    </>
   );
 }
 
@@ -164,10 +230,8 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
 
   const items = useMemo(() => {
     const matches = filterSearchItems(buildSearchItems(tabs, spaces), query);
-    const activeId = tabs.find(
-      (tab): tab is TabInfo & { id: number } =>
-        tab.active === true && tab.id !== null && Number.isInteger(tab.id) && tab.id >= 0,
-    )?.id;
+    const activeId = tabs.find((tab) => tab.active === true && tabBrowserId(tab) !== undefined)?.id;
+    return query.trim() ? matches : prioritizeCurrentTab(matches, activeId);
     return query.trim() ? matches : prioritizeCurrentTab(matches, activeId);
   }, [query, spaces, tabs]);
 
@@ -195,10 +259,7 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
     if (!isActivatableTab(item.data)) return;
     void sendExtensionMessage({
       type: "switchTab",
-      tabId:
-        Number.isInteger(item.data.id) && item.data.id !== null && item.data.id >= 0
-          ? item.data.id
-          : undefined,
+      tabId: tabBrowserId(item.data),
       domId: item.data.domId || undefined,
     })
       .then(onClose)
@@ -345,54 +406,29 @@ export function SearchApp({ onClose, pageJump = 5 }: SearchAppProps) {
                 </div>
               </>
             ) : (
-              <>
-                {item.data.favIconUrl && <img src={item.data.favIconUrl} class="zen-favicon" />}
-                <div class="zen-text">
-                  <div class="zen-tab-timer-block">
-                    <div class="zen-title-row">
-                      <span class="zen-title">
-                        {formatTabDisplayTitle({
-                          ...item.data,
-                          customLabel: stripTimerPrefix(item.data.customLabel || ""),
-                        })}
-                      </span>
-                      <span class="zen-timer">
-                        {timers.get(item.data.id ?? -1) && (
-                          <span class="zen-timer-countdown">
-                            ⏱ {formatTimerCountdown(timers.get(item.data.id ?? -1)!.endAt)}
-                          </span>
-                        )}
-                        {Number.isInteger(item.data.id) && item.data.id! >= 0 && (
-                          <button
-                            type="button"
-                            class="zen-timer-button zen-timer-icon-button"
-                            title="Set a timer for this tab"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setTimerTabId(timerTabId === item.data.id ? null : item.data.id);
-                            }}
-                          >
-                            <TimerIcon close={timerTabId === item.data.id} />
-                          </button>
-                        )}
-                      </span>
-                    </div>
-                    {timerTabId === item.data.id && (
-                      <TimerPanel
-                        tab={item.data}
-                        timer={timers.get(item.data.id!)}
-                        onSet={(endAt) => setTimer(item.data.id!, endAt)}
-                        onClear={() => clearTimer(item.data.id!)}
-                      />
-                    )}
-                  </div>
-                  <span class="zen-url">
-                    {item.data.active
-                      ? `${item.data.workspaceName || hostname(item.data.url)} · Current tab`
-                      : item.data.workspaceName || hostname(item.data.url)}
-                  </span>
-                </div>
-              </>
+              <TabSearchRow
+                tab={item.data}
+                timer={timers.get(tabBrowserId(item.data) ?? -1)}
+                timerOpen={timerTabId !== null && timerTabId === tabBrowserId(item.data)}
+                onToggleTimer={() => {
+                  const tabId = tabBrowserId(item.data);
+                  if (tabId !== undefined) {
+                    setTimerTabId(timerTabId === tabId ? null : tabId);
+                  }
+                }}
+                onSetTimer={(endAt) => {
+                  const tabId = tabBrowserId(item.data);
+                  if (tabId !== undefined) {
+                    setTimer(tabId, endAt);
+                  }
+                }}
+                onClearTimer={() => {
+                  const tabId = tabBrowserId(item.data);
+                  if (tabId !== undefined) {
+                    clearTimer(tabId);
+                  }
+                }}
+              />
             )}
           </li>
         ))}

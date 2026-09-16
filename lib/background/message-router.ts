@@ -1,3 +1,4 @@
+import { isUsableTabId } from "../types";
 import {
   type ExtensionRequest,
   invalidRequestMessage,
@@ -37,7 +38,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isValidTabId(value: unknown): value is number {
-  return Number.isInteger(value) && (value as number) >= 0;
+  return isUsableTabId(value);
 }
 
 function isUsableSenderTab(tab: MessageSender["tab"]): boolean {
