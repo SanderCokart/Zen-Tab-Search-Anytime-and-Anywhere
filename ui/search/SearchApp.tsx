@@ -3,16 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { debugError } from "../../lib/debug";
 import { sendExtensionMessage, subscribeToSnapshotChanged } from "../../lib/messaging/client";
 import { buildSearchItems, filterSearchItems, prioritizeCurrentTab } from "../../lib/search";
-import {
-  formatTimerCountdown,
-  fromDatetimeLocalValue,
-  isAllowedTimerEnd,
-  MAX_TIMER_MS,
-  parseTimerInput,
-  stripTimerPrefix,
-  TIMER_PRESETS,
-  toDatetimeLocalValue,
-} from "../../lib/timer";
+import { formatTimerCountdown, stripTimerPrefix } from "../../lib/timer";
 import type { SearchItem, SpaceInfo, TabInfo, TabTimer } from "../../lib/types";
 import {
   formatSpaceDisplayTitle,
@@ -21,6 +12,7 @@ import {
   tabBrowserId,
 } from "../../lib/types";
 import { cn } from "../cn";
+import { TimerForm } from "../timers/TimerForm";
 
 export type SearchLayout = "popup" | "overlay";
 
@@ -53,136 +45,10 @@ function hostname(url: string): string {
   }
 }
 
-const presetButtonClass =
-  "cursor-pointer rounded-full border border-zen-line bg-zen-chip font-[inherit] text-zen-subtle hover:border-zen-border hover:bg-zen-accent hover:text-white focus-visible:border-zen-border focus-visible:bg-zen-accent focus-visible:text-white";
 const primaryButtonClass =
   "cursor-pointer rounded-md border border-zen-border bg-zen-accent font-[inherit] text-white hover:bg-zen-accent-hover disabled:cursor-not-allowed disabled:opacity-50";
 const clearButtonClass =
   "cursor-pointer rounded-md border border-zen-clear bg-transparent font-[inherit] text-zen-faint hover:bg-white/5";
-
-function TimerPanel({
-  tabId,
-  timer,
-  compact,
-  onSet,
-  onClear,
-}: {
-  tabId: number;
-  timer?: TabTimer;
-  compact: boolean;
-  onSet: (endAt: number) => void;
-  onClear: () => void;
-}) {
-  const [endAt, setEndAt] = useState(timer?.endAt ?? Date.now() + 30 * 60_000);
-  const [naturalInput, setNaturalInput] = useState("");
-  const parsedNaturalInput = naturalInput.trim() ? parseTimerInput(naturalInput) : endAt;
-  const valid = parsedNaturalInput !== null && isAllowedTimerEnd(parsedNaturalInput);
-
-  return (
-    <div
-      class={cn("flex flex-col", compact ? "gap-1.5" : "gap-2")}
-      onClick={(event) => event.stopPropagation()}
-    >
-      <div class="flex flex-col gap-1">
-        <span class={cn("text-zen-faint", compact ? "text-[11px]" : "text-[12px]")}>Presets</span>
-        <div class={cn("flex flex-wrap", compact ? "gap-1" : "gap-1.5")}>
-          {TIMER_PRESETS.map((preset) => (
-            <button
-              type="button"
-              class={cn(
-                presetButtonClass,
-                compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-1 text-[12px]",
-              )}
-              onClick={() => {
-                setNaturalInput(preset.label);
-                setEndAt(preset.endAt(new Date()));
-              }}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <label
-        class={cn(
-          "text-zen-faint flex flex-col",
-          compact ? "gap-0.5 text-[11px]" : "gap-1 text-[12px]",
-        )}
-      >
-        When
-        <input
-          class={cn(
-            "border-zen-line bg-zen-chip w-full rounded-md border font-[inherit] text-white [color-scheme:dark] placeholder:text-white/40",
-            compact ? "h-6 px-1.5" : "h-8 px-2",
-          )}
-          type="text"
-          placeholder="tomorrow at 9am or 1d 30m"
-          value={naturalInput}
-          onInput={(event) => {
-            const value = event.currentTarget.value;
-            setNaturalInput(value);
-            const parsed = parseTimerInput(value);
-            if (parsed !== null) {
-              setEndAt(parsed);
-            }
-          }}
-        />
-      </label>
-      {naturalInput.trim() && parsedNaturalInput === null && (
-        <p class="text-zen-danger m-0 text-xs">Use a time like “tomorrow at 9am” or “1d 30m”.</p>
-      )}
-      <div class={cn("flex items-end", compact ? "gap-1.5" : "gap-2")}>
-        <label
-          class={cn(
-            "text-zen-faint flex flex-1 flex-col",
-            compact ? "gap-0.5 text-[11px]" : "gap-1 text-[12px]",
-          )}
-        >
-          Ends at
-          <input
-            class={cn(
-              "border-zen-line bg-zen-chip w-full rounded-md border font-[inherit] text-white [color-scheme:dark]",
-              compact ? "h-6 px-1.5" : "h-8 px-2",
-            )}
-            type="datetime-local"
-            step="60"
-            min={toDatetimeLocalValue(Date.now() + 60_000)}
-            max={toDatetimeLocalValue(Date.now() + MAX_TIMER_MS)}
-            value={toDatetimeLocalValue(endAt)}
-            onInput={(event) => {
-              setNaturalInput("");
-              setEndAt(fromDatetimeLocalValue(event.currentTarget.value));
-            }}
-          />
-        </label>
-        <div class={cn("flex", compact ? "gap-1.5" : "gap-2")}>
-          <button
-            type="button"
-            class={cn(primaryButtonClass, compact ? "h-6 px-1.5" : "h-8 px-2.5")}
-            disabled={!valid}
-            onClick={() => {
-              if (parsedNaturalInput !== null) {
-                onSet(parsedNaturalInput);
-              }
-            }}
-          >
-            Set
-          </button>
-          {timer && (
-            <button
-              type="button"
-              class={cn(clearButtonClass, compact ? "h-6 px-1.5" : "h-8 px-2.5")}
-              onClick={onClear}
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </div>
-      <input type="hidden" value={tabId} />
-    </div>
-  );
-}
 
 function TabSearchRow({
   tab,
@@ -247,13 +113,7 @@ function TabSearchRow({
             </span>
           </div>
           {timerOpen && tabId !== undefined && (
-            <TimerPanel
-              tabId={tabId}
-              timer={timer}
-              compact={compact}
-              onSet={onSetTimer}
-              onClear={onClearTimer}
-            />
+            <TimerForm timer={timer} compact={compact} onSet={onSetTimer} onClear={onClearTimer} />
           )}
         </div>
         <span class={cn("text-zen-subtle truncate", compact ? "text-[11px]" : "text-[14px]")}>
