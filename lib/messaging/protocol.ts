@@ -187,6 +187,11 @@ export function isSnapshotChangedMessage(value: unknown): boolean {
   return v.is(snapshotChangedSchema, value);
 }
 
+export function parseStoredTimer(value: unknown): v.InferOutput<typeof tabTimerSchema> | undefined {
+  const parsed = v.safeParse(tabTimerSchema, value);
+  return parsed.success ? parsed.output : undefined;
+}
+
 export function parseStoredTimers(
   value: unknown,
 ): Record<string, v.InferOutput<typeof tabTimerSchema>> {
@@ -196,11 +201,11 @@ export function parseStoredTimers(
 
   const timers: Record<string, v.InferOutput<typeof tabTimerSchema>> = {};
   for (const entry of Object.values(value as Record<string, unknown>)) {
-    const parsed = v.safeParse(tabTimerSchema, entry);
-    if (!parsed.success) {
+    const parsed = parseStoredTimer(entry);
+    if (!parsed) {
       continue;
     }
-    timers[String(parsed.output.tabId)] = parsed.output;
+    timers[String(parsed.tabId)] = parsed;
   }
   return timers;
 }

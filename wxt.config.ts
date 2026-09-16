@@ -14,7 +14,15 @@ export default defineConfig({
   manifest: {
     name: "Zen Tab Search",
     description: "Fuzzy search for tabs in Zen Browser with a modern omnibar overlay",
-    permissions: ["tabs", "<all_urls>", "alarms", "notifications", "storage", "contextMenus"],
+    permissions: [
+      "tabs",
+      "<all_urls>",
+      "alarms",
+      "notifications",
+      "storage",
+      "sessions",
+      "contextMenus",
+    ],
     commands: {
       "show-omnibar": {
         suggested_key: {

@@ -49,6 +49,11 @@ export default defineBackground(() => {
   void timerService.restorePersistedTimers().catch((error) => {
     debugWarn(`${LOG_PREFIX} Could not restore persisted timers:`, formatError(error));
   });
+  browser.windows.onCreated.addListener(() => {
+    void timerService.restorePersistedTimers().catch((error) => {
+      debugWarn(`${LOG_PREFIX} Could not restore persisted timers:`, formatError(error));
+    });
+  });
   setInterval(() => {
     void timerService.tickActiveTimers();
   }, 1000);
@@ -75,8 +80,14 @@ export default defineBackground(() => {
     }
   });
 
-  browser.tabs.onRemoved.addListener((tabId) => {
-    void timerService.removeTabTimer(tabId);
+  browser.tabs.onCreated.addListener((tab) => {
+    if (isUsableTabId(tab.id)) {
+      void timerService.adoptRestoredTab(tab.id);
+    }
+  });
+
+  browser.tabs.onRemoved.addListener((tabId, removeInfo) => {
+    void timerService.handleTabRemoved(tabId, removeInfo.isWindowClosing);
   });
 
   registerMessageRouter({
