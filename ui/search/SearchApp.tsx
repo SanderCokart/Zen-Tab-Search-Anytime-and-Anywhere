@@ -204,7 +204,7 @@ function SearchShell({
       onClick={onClose}
     >
       <div
-        class="from-zen-bg to-zen-raised flex h-auto w-[min(80vw,calc(90dvh*3/2))] shrink-0 aspect-[3/2] flex-col overflow-hidden rounded-2xl bg-linear-to-br p-[16px] text-[16px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+        class="from-zen-bg to-zen-raised flex aspect-[3/2] h-auto w-[min(80vw,calc(90dvh*3/2))] shrink-0 flex-col overflow-hidden rounded-2xl bg-linear-to-br p-[16px] text-[16px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
         onClick={(event) => event.stopPropagation()}
         data-omnibar
       >
@@ -240,7 +240,7 @@ function ForgeIssueNavigator({
           key={`${entry.ref.url}:${entry.tab.id ?? entry.tab.domId ?? entry.title}`}
           type="button"
           class={cn(
-            "flex w-full min-w-0 max-w-full cursor-pointer flex-col items-stretch overflow-hidden rounded-lg border-0 bg-transparent p-[12px] text-left font-[inherit] text-inherit hover:bg-white/10",
+            "flex w-full max-w-full min-w-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-lg border-0 bg-transparent p-[12px] text-left font-[inherit] text-inherit hover:bg-white/10",
             selectedIndex === entryIndex && "bg-white/10",
           )}
           data-issue-selected={selectedIndex === entryIndex ? "true" : undefined}
@@ -557,9 +557,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               event.preventDefault();
               if (navigateForge) {
                 setFocusPane("tabs");
-                setSelectedIndex((current) =>
-                  current >= 0 && current < count ? current : 0,
-                );
+                setSelectedIndex((current) => (current >= 0 && current < count ? current : 0));
               } else {
                 setFocusPane("forge");
                 setSelectedForgeIndex((current) =>

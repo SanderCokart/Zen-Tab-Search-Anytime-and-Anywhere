@@ -162,14 +162,18 @@ describe("SearchApp", () => {
     const { root, onClose, sendMessage } = mountSearchApp(vi.fn(), mixedTabs, "overlay");
 
     await vi.waitFor(() => expect(root.textContent).toContain("Docs"));
-    await vi.waitFor(() => expect(root.querySelector("[data-selected='true']")?.textContent).toContain("Docs"));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-selected='true']")?.textContent).toContain("Docs"),
+    );
 
     const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
     input.value = "#";
     input.dispatchEvent(new InputEvent("input", { bubbles: true }));
 
     await vi.waitFor(() =>
-      expect(root.querySelector("[data-issue-selected='true']")?.textContent).toContain("Fix search"),
+      expect(root.querySelector("[data-issue-selected='true']")?.textContent).toContain(
+        "Fix search",
+      ),
     );
     expect(root.querySelector("[data-selected='true']")).toBeNull();
 
@@ -181,7 +185,9 @@ describe("SearchApp", () => {
 
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
     await vi.waitFor(() =>
-      expect(root.querySelector("[data-issue-selected='true']")?.textContent).toContain("Fix search"),
+      expect(root.querySelector("[data-issue-selected='true']")?.textContent).toContain(
+        "Fix search",
+      ),
     );
 
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
