@@ -6,6 +6,7 @@ import {
   fromDatetimeLocalValue,
   isAllowedTimerEnd,
   MAX_TIMER_MS,
+  parseTimerInput,
   stripTimerPrefix,
   TIMER_PRESETS,
   toDatetimeLocalValue,
@@ -48,6 +49,25 @@ describe("datetime local conversion", () => {
     const stamp = new Date(2026, 8, 15, 17, 30, 0, 0).getTime();
     expect(toDatetimeLocalValue(stamp)).toBe("2026-09-15T17:30");
     expect(fromDatetimeLocalValue("2026-09-15T17:30")).toBe(stamp);
+  });
+});
+
+describe("parseTimerInput", () => {
+  const now = new Date(2026, 8, 15, 10, 0, 0, 0);
+
+  it("parses natural language dates", () => {
+    expect(parseTimerInput("tomorrow at 9 am", now)).toBe(
+      new Date(2026, 8, 16, 9, 0, 0, 0).getTime(),
+    );
+  });
+
+  it("parses relative durations from the reference time", () => {
+    expect(parseTimerInput("1d 30m", now)).toBe(now.getTime() + 24.5 * 60 * 60_000);
+  });
+
+  it("returns null for blank or unsupported input", () => {
+    expect(parseTimerInput(" ", now)).toBeNull();
+    expect(parseTimerInput("sometime maybe", now)).toBeNull();
   });
 });
 

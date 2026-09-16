@@ -8,6 +8,7 @@ import {
   fromDatetimeLocalValue,
   isAllowedTimerEnd,
   MAX_TIMER_MS,
+  parseTimerInput,
   stripTimerPrefix,
   TIMER_PRESETS,
   toDatetimeLocalValue,
@@ -73,27 +74,63 @@ function TimerPanel({
   onClear: () => void;
 }) {
   const [endAt, setEndAt] = useState(timer?.endAt ?? Date.now() + 30 * 60_000);
-  const valid = isAllowedTimerEnd(endAt);
+  const [naturalInput, setNaturalInput] = useState("");
+  const parsedNaturalInput = naturalInput.trim() ? parseTimerInput(naturalInput) : endAt;
+  const valid = parsedNaturalInput !== null && isAllowedTimerEnd(parsedNaturalInput);
 
   return (
     <div
       class={cn("flex flex-col", compact ? "gap-1.5" : "gap-2")}
       onClick={(event) => event.stopPropagation()}
     >
-      <div class={cn("flex flex-wrap", compact ? "gap-1" : "gap-1.5")}>
-        {TIMER_PRESETS.map((preset) => (
-          <button
-            type="button"
-            class={cn(
-              presetButtonClass,
-              compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-1 text-[12px]",
-            )}
-            onClick={() => setEndAt(preset.endAt(new Date()))}
-          >
-            {preset.label}
-          </button>
-        ))}
+      <div class="flex flex-col gap-1">
+        <span class={cn("text-zen-faint", compact ? "text-[11px]" : "text-[12px]")}>Presets</span>
+        <div class={cn("flex flex-wrap", compact ? "gap-1" : "gap-1.5")}>
+          {TIMER_PRESETS.map((preset) => (
+            <button
+              type="button"
+              class={cn(
+                presetButtonClass,
+                compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-1 text-[12px]",
+              )}
+              onClick={() => {
+                setNaturalInput(preset.label);
+                setEndAt(preset.endAt(new Date()));
+              }}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
       </div>
+      <label
+        class={cn(
+          "text-zen-faint flex flex-col",
+          compact ? "gap-0.5 text-[11px]" : "gap-1 text-[12px]",
+        )}
+      >
+        When
+        <input
+          class={cn(
+            "border-zen-line bg-zen-chip w-full rounded-md border font-[inherit] text-white [color-scheme:dark] placeholder:text-white/40",
+            compact ? "h-6 px-1.5" : "h-8 px-2",
+          )}
+          type="text"
+          placeholder="tomorrow at 9am or 1d 30m"
+          value={naturalInput}
+          onInput={(event) => {
+            const value = event.currentTarget.value;
+            setNaturalInput(value);
+            const parsed = parseTimerInput(value);
+            if (parsed !== null) {
+              setEndAt(parsed);
+            }
+          }}
+        />
+      </label>
+      {naturalInput.trim() && parsedNaturalInput === null && (
+        <p class="text-zen-danger m-0 text-xs">Use a time like “tomorrow at 9am” or “1d 30m”.</p>
+      )}
       <div class={cn("flex items-end", compact ? "gap-1.5" : "gap-2")}>
         <label
           class={cn(
@@ -112,7 +149,10 @@ function TimerPanel({
             min={toDatetimeLocalValue(Date.now() + 60_000)}
             max={toDatetimeLocalValue(Date.now() + MAX_TIMER_MS)}
             value={toDatetimeLocalValue(endAt)}
-            onInput={(event) => setEndAt(fromDatetimeLocalValue(event.currentTarget.value))}
+            onInput={(event) => {
+              setNaturalInput("");
+              setEndAt(fromDatetimeLocalValue(event.currentTarget.value));
+            }}
           />
         </label>
         <div class={cn("flex", compact ? "gap-1.5" : "gap-2")}>
@@ -120,7 +160,11 @@ function TimerPanel({
             type="button"
             class={cn(primaryButtonClass, compact ? "h-6 px-1.5" : "h-8 px-2.5")}
             disabled={!valid}
-            onClick={() => onSet(endAt)}
+            onClick={() => {
+              if (parsedNaturalInput !== null) {
+                onSet(parsedNaturalInput);
+              }
+            }}
           >
             Set
           </button>

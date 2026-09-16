@@ -6,6 +6,7 @@ import {
   fromDatetimeLocalValue,
   isAllowedTimerEnd,
   MAX_TIMER_MS,
+  parseTimerInput,
   stripTimerPrefix,
   TIMER_PRESETS,
   toDatetimeLocalValue,
@@ -25,6 +26,7 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
   const [tab, setTab] = useState<TabInfo>();
   const [timer, setTimer] = useState<TabTimer>();
   const [endAt, setEndAt] = useState(Date.now() + 30 * 60_000);
+  const [naturalInput, setNaturalInput] = useState("");
   const [error, setError] = useState<string>();
 
   useEffect(() => {
@@ -72,13 +74,19 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
     return () => window.clearInterval(id);
   }, []);
 
-  const valid = isAllowedTimerEnd(endAt);
+  const parsedNaturalInput = naturalInput.trim() ? parseTimerInput(naturalInput) : endAt;
+  const valid = parsedNaturalInput !== null && isAllowedTimerEnd(parsedNaturalInput);
   const submit = () => {
-    if (!valid) {
+    const nextEndAt = naturalInput.trim() ? parseTimerInput(naturalInput) : endAt;
+    if (nextEndAt === null) {
+      setError("Enter a time like “tomorrow at 9am” or “1d 30m”.");
+      return;
+    }
+    if (!isAllowedTimerEnd(nextEndAt)) {
       setError("Choose a time between 1 minute and 31 days from now.");
       return;
     }
-    void sendExtensionMessage({ type: "setTimer", tabId, endAt })
+    void sendExtensionMessage({ type: "setTimer", tabId, endAt: nextEndAt })
       .then(onClose)
       .catch((reason) => {
         debugError("Could not set custom timer:", reason);
@@ -119,20 +127,43 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
           Current timer {formatTimerCountdown(timer.endAt)}
         </p>
       )}
-      <div class="flex flex-wrap gap-1.5">
-        {TIMER_PRESETS.map((preset) => (
-          <button
-            type="button"
-            class="border-zen-line bg-zen-chip text-zen-subtle hover:border-zen-border hover:bg-zen-accent focus-visible:border-zen-border focus-visible:bg-zen-accent cursor-pointer rounded-full border px-2 py-1 font-[inherit] text-xs hover:text-white focus-visible:text-white"
-            onClick={() => {
-              setError(undefined);
-              setEndAt(preset.endAt(new Date()));
-            }}
-          >
-            {preset.label}
-          </button>
-        ))}
+      <div class="flex flex-col gap-1">
+        <span class="text-zen-faint text-xs">Presets</span>
+        <div class="flex flex-wrap gap-1.5">
+          {TIMER_PRESETS.map((preset) => (
+            <button
+              type="button"
+              class="border-zen-line bg-zen-chip text-zen-subtle hover:border-zen-border hover:bg-zen-accent focus-visible:border-zen-border focus-visible:bg-zen-accent cursor-pointer rounded-full border px-2 py-1 font-[inherit] text-xs hover:text-white focus-visible:text-white"
+              onClick={() => {
+                setError(undefined);
+                setNaturalInput(preset.label);
+                setEndAt(preset.endAt(new Date()));
+              }}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
       </div>
+      <label class="text-zen-faint flex flex-col gap-1 text-xs">
+        When
+        <input
+          class="border-zen-line bg-zen-chip h-8 rounded-md border px-2 font-[inherit] text-white [color-scheme:dark] placeholder:text-white/40"
+          type="text"
+          placeholder="tomorrow at 9am or 1d 30m"
+          disabled={!tab}
+          value={naturalInput}
+          onInput={(event) => {
+            const value = event.currentTarget.value;
+            setError(undefined);
+            setNaturalInput(value);
+            const parsed = parseTimerInput(value);
+            if (parsed !== null) {
+              setEndAt(parsed);
+            }
+          }}
+        />
+      </label>
       <div class="flex items-end gap-3">
         <div class="flex-1">
           <label class="text-zen-faint flex flex-col gap-1 text-xs">
@@ -148,6 +179,7 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
               value={toDatetimeLocalValue(endAt)}
               onInput={(event) => {
                 setError(undefined);
+                setNaturalInput("");
                 setEndAt(fromDatetimeLocalValue(event.currentTarget.value));
               }}
             />

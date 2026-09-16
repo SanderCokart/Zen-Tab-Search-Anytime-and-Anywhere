@@ -1,3 +1,5 @@
+import { parseDate, parseDuration } from "@timelang/parse";
+
 export const MAX_TIMER_MS = 31 * 24 * 60 * 60_000;
 export const TIMER_PREFIX_RE =
   /^⏱\s+(?:(?:\d+d(?:\s+\d+h)?(?:\s+\d+m)?)|(?:\d+h(?:\s+\d+m)?)|(?:\d+m(?:\s+\d+s)?)|\d+s|\d+:\d+(?::\d+)?)(?:\s*\|\s*)?/;
@@ -125,6 +127,35 @@ export function fromDatetimeLocalValue(value: string): number {
 
 export function isAllowedTimerEnd(endAt: number, now = Date.now()): boolean {
   return Number.isFinite(endAt) && endAt > now && endAt - now <= MAX_TIMER_MS;
+}
+
+export function parseTimerInput(input: string, now = new Date()): number | null {
+  const value = input.trim();
+  if (!value) {
+    return null;
+  }
+
+  const duration = parseDuration(value, { referenceDate: now });
+  if (duration !== null) {
+    return now.getTime() + duration;
+  }
+
+  const date = parseDate(value, { referenceDate: now });
+  if (!date) {
+    return null;
+  }
+
+  // timelang represents parsed calendar values in UTC. Convert those wall-clock
+  // components to the browser's local timezone before storing the timestamp.
+  return new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+    date.getUTCMilliseconds(),
+  ).getTime();
 }
 
 function atTimeOnDay(base: Date, daysAhead: number, hours: number, minutes: number): Date {
