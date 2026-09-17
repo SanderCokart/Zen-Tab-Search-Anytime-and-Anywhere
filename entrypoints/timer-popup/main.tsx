@@ -1,5 +1,6 @@
 import { render } from "preact";
 import { TimerPopup } from "../../ui/timers/TimerPopup";
+import { ThemeRoot } from "../../ui/theme/ThemeRoot";
 import "../../ui/styles.css";
 
 const root = document.getElementById("app");
@@ -8,4 +9,9 @@ if (!root) {
 }
 
 const tabId = Number(new URLSearchParams(window.location.search).get("tabId"));
-render(<TimerPopup tabId={tabId} onClose={() => window.close()} />, root);
+render(
+  <ThemeRoot>
+    <TimerPopup tabId={tabId} onClose={() => window.close()} />
+  </ThemeRoot>,
+  root,
+);

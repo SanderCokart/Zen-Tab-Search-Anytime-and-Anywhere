@@ -1,8 +1,10 @@
 import { useEffect, useState } from "preact/hooks";
 import {
   DEFAULT_DISPLAY_SETTINGS,
+  DISPLAY_THEMES,
   readDisplaySettings,
   saveDisplaySettings,
+  type DisplayTheme,
   type DisplaySettings,
 } from "../../lib/display-settings";
 import { cn } from "../cn";
@@ -39,11 +41,29 @@ export function DisplaySettingsApp() {
   };
 
   return (
-    <main class="bg-zen-bg min-h-screen p-5 text-white">
+    <main class="bg-zen-bg text-zen-text min-h-screen p-5">
       <div class="mx-auto flex max-w-xl flex-col gap-4">
         <header>
           <h1 class="m-0 text-xl font-semibold">Display options</h1>
         </header>
+        <label class="flex flex-col gap-2 text-sm">
+          <span class="font-medium">Color theme</span>
+          <select
+            class="border-zen-line bg-zen-chip text-zen-text h-9 rounded-md border px-2 font-[inherit]"
+            value={settings.theme}
+            disabled={!loaded}
+            onChange={(event) =>
+              updateSettings({ theme: event.currentTarget.value as DisplayTheme })
+            }
+          >
+            {DISPLAY_THEMES.map((theme) => (
+              <option value={theme}>{theme[0].toUpperCase() + theme.slice(1)}</option>
+            ))}
+          </select>
+          <span class="text-zen-subtle text-xs">
+            Applies to the search popup, overlay, timer controls, and this page.
+          </span>
+        </label>
         <ul class="m-0 flex list-none flex-col gap-4 p-0" aria-label="Display options">
           <li>
             <label class="flex cursor-pointer items-start gap-3">
@@ -118,7 +138,7 @@ export function DisplaySettingsApp() {
         </ul>
         <button
           type="button"
-          class="border-zen-border bg-zen-accent hover:bg-zen-accent-hover cursor-pointer self-end rounded-md border px-4 py-2 font-[inherit] text-sm text-white"
+          class="border-zen-border bg-zen-accent hover:bg-zen-accent-hover text-zen-text cursor-pointer self-end rounded-md border px-4 py-2 font-[inherit] text-sm"
           onClick={() => window.close()}
         >
           Done

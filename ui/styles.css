@@ -18,6 +18,132 @@
   --color-zen-badge: #7c5cff;
   --color-zen-danger: #ff8a8a;
   --color-zen-clear: #666666;
+  --color-zen-text: #f8f7ff;
+  --color-zen-overlay: rgb(0 0 0 / 60%);
+  --color-zen-overlay-soft: rgb(0 0 0 / 40%);
+  --color-zen-tooltip: rgb(0 0 0 / 90%);
+  --color-zen-surface-soft: rgb(255 255 255 / 6%);
+  --color-zen-surface-softer: rgb(255 255 255 / 4.5%);
+  --color-zen-surface-faint: rgb(255 255 255 / 3%);
+  --color-zen-line-soft: rgb(255 255 255 / 10%);
+  --color-zen-line-medium: rgb(255 255 255 / 15%);
+  --color-zen-line-strong: rgb(255 255 255 / 20%);
+}
+
+@layer base {
+  .zen-theme[data-theme="ocean"] {
+    --color-zen-bg: #0d1b2a;
+    --color-zen-raised: #142a3d;
+    --color-zen-surface: #1e3a52;
+    --color-zen-chip: #163247;
+    --color-zen-panel: #102b42;
+    --color-zen-accent: #176b87;
+    --color-zen-accent-hover: #218ca8;
+    --color-zen-border: #42b8d4;
+    --color-zen-line: #3d6075;
+    --color-zen-muted: #84a4b5;
+    --color-zen-subtle: #b3d0dc;
+    --color-zen-faint: #c9e0e8;
+    --color-zen-lavender: #8ddcf0;
+    --color-zen-badge: #2db7d5;
+    --color-zen-clear: #527488;
+    --color-zen-text: #effcff;
+    --color-zen-overlay: rgb(2 15 25 / 68%);
+    --color-zen-overlay-soft: rgb(2 15 25 / 48%);
+    --color-zen-tooltip: rgb(2 15 25 / 94%);
+    --color-zen-surface-soft: rgb(141 220 240 / 8%);
+    --color-zen-surface-softer: rgb(141 220 240 / 6%);
+    --color-zen-surface-faint: rgb(141 220 240 / 4%);
+    --color-zen-line-soft: rgb(141 220 240 / 16%);
+    --color-zen-line-medium: rgb(141 220 240 / 22%);
+    --color-zen-line-strong: rgb(141 220 240 / 30%);
+  }
+
+  .zen-theme[data-theme="forest"] {
+    --color-zen-bg: #122019;
+    --color-zen-raised: #1a2e22;
+    --color-zen-surface: #24402e;
+    --color-zen-chip: #1d3726;
+    --color-zen-panel: #193326;
+    --color-zen-accent: #286342;
+    --color-zen-accent-hover: #368957;
+    --color-zen-border: #62bd7d;
+    --color-zen-line: #4a7256;
+    --color-zen-muted: #88a991;
+    --color-zen-subtle: #b6d0bb;
+    --color-zen-faint: #d0e2d2;
+    --color-zen-lavender: #a5d99f;
+    --color-zen-badge: #4cae68;
+    --color-zen-clear: #62806a;
+    --color-zen-text: #f3fff4;
+    --color-zen-overlay: rgb(5 20 10 / 68%);
+    --color-zen-overlay-soft: rgb(5 20 10 / 48%);
+    --color-zen-tooltip: rgb(5 20 10 / 94%);
+    --color-zen-surface-soft: rgb(165 217 159 / 8%);
+    --color-zen-surface-softer: rgb(165 217 159 / 6%);
+    --color-zen-surface-faint: rgb(165 217 159 / 4%);
+    --color-zen-line-soft: rgb(165 217 159 / 16%);
+    --color-zen-line-medium: rgb(165 217 159 / 22%);
+    --color-zen-line-strong: rgb(165 217 159 / 30%);
+  }
+
+  .zen-theme[data-theme="rose"] {
+    --color-zen-bg: #281821;
+    --color-zen-raised: #38202d;
+    --color-zen-surface: #4a293b;
+    --color-zen-chip: #402334;
+    --color-zen-panel: #392034;
+    --color-zen-accent: #8b3f6d;
+    --color-zen-accent-hover: #b04f88;
+    --color-zen-border: #e07db0;
+    --color-zen-line: #875770;
+    --color-zen-muted: #b892a5;
+    --color-zen-subtle: #d7b6c7;
+    --color-zen-faint: #e8ceda;
+    --color-zen-lavender: #f0a9ca;
+    --color-zen-badge: #d45b9a;
+    --color-zen-clear: #95677e;
+    --color-zen-text: #fff5fa;
+    --color-zen-overlay: rgb(25 5 15 / 68%);
+    --color-zen-overlay-soft: rgb(25 5 15 / 48%);
+    --color-zen-tooltip: rgb(25 5 15 / 94%);
+    --color-zen-surface-soft: rgb(240 169 202 / 8%);
+    --color-zen-surface-softer: rgb(240 169 202 / 6%);
+    --color-zen-surface-faint: rgb(240 169 202 / 4%);
+    --color-zen-line-soft: rgb(240 169 202 / 16%);
+    --color-zen-line-medium: rgb(240 169 202 / 22%);
+    --color-zen-line-strong: rgb(240 169 202 / 30%);
+  }
+
+  .zen-theme[data-theme="light"] {
+    color-scheme: light;
+    --color-zen-bg: #f4f5f8;
+    --color-zen-raised: #ffffff;
+    --color-zen-surface: #e4e7ee;
+    --color-zen-chip: #e9ebf1;
+    --color-zen-panel: #ffffff;
+    --color-zen-accent: #5846a8;
+    --color-zen-accent-hover: #6e5ac5;
+    --color-zen-border: #7564c4;
+    --color-zen-line: #aeb4c2;
+    --color-zen-muted: #667080;
+    --color-zen-subtle: #4d5666;
+    --color-zen-faint: #3f4858;
+    --color-zen-lavender: #5d4eaa;
+    --color-zen-badge: #6d57d2;
+    --color-zen-danger: #c4384d;
+    --color-zen-clear: #9299a8;
+    --color-zen-text: #202532;
+    --color-zen-overlay: rgb(30 35 48 / 35%);
+    --color-zen-overlay-soft: rgb(30 35 48 / 22%);
+    --color-zen-tooltip: rgb(30 35 48 / 90%);
+    --color-zen-surface-soft: rgb(32 37 50 / 6%);
+    --color-zen-surface-softer: rgb(32 37 50 / 4.5%);
+    --color-zen-surface-faint: rgb(32 37 50 / 3%);
+    --color-zen-line-soft: rgb(32 37 50 / 10%);
+    --color-zen-line-medium: rgb(32 37 50 / 15%);
+    --color-zen-line-strong: rgb(32 37 50 / 20%);
+  }
 }
 
 @layer base {
@@ -35,7 +161,7 @@
   }
 
   body {
-    @apply bg-zen-bg m-0 font-sans text-[13px] leading-snug text-white;
+    @apply bg-zen-bg text-zen-text m-0 font-sans text-[13px] leading-snug;
   }
 
   /* Popover UA + WXT :host reset paint an opaque canvas; keep the overlay see-through. */
@@ -66,7 +192,7 @@
 
   .zen-scroll {
     scrollbar-width: thin;
-    scrollbar-color: #555 transparent;
+    scrollbar-color: var(--color-zen-line) transparent;
   }
 
   .zen-scroll::-webkit-scrollbar {
@@ -78,11 +204,11 @@
   }
 
   .zen-scroll::-webkit-scrollbar-thumb {
-    background: #555;
+    background: var(--color-zen-line);
     border-radius: 4px;
   }
 
   .zen-scroll::-webkit-scrollbar-thumb:hover {
-    background: #777;
+    background: var(--color-zen-subtle);
   }
 }

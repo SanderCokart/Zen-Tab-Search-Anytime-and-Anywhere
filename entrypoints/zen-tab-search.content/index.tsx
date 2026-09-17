@@ -2,6 +2,7 @@ import { render } from "preact";
 import { debugLog } from "../../lib/debug";
 import { parseContentCommand } from "../../lib/messaging/protocol";
 import { SearchApp } from "../../ui/search/SearchApp";
+import { ThemeRoot } from "../../ui/theme/ThemeRoot";
 import "../../ui/styles.css";
 
 const OMNIBAR_Z_INDEX = 2147483646;
@@ -87,7 +88,12 @@ export default defineContentScript({
           const app = document.createElement("div");
           app.className = "h-full";
           container.append(app);
-          render(<SearchApp onClose={hideOmnibar} pageJump={5} layout="overlay" />, app);
+          render(
+            <ThemeRoot>
+              <SearchApp onClose={hideOmnibar} pageJump={5} layout="overlay" />
+            </ThemeRoot>,
+            app,
+          );
           return app;
         },
         onRemove(app) {

@@ -38,6 +38,7 @@ describe("DisplaySettingsApp", () => {
         filterIssuesInOverlay: true,
         groupFolders: false,
         groupSubfolders: false,
+        theme: "midnight",
       },
     });
 

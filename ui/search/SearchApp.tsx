@@ -71,9 +71,9 @@ function hostname(url: string): string {
 }
 
 const primaryButtonClass =
-  "cursor-pointer rounded-md border border-zen-border bg-zen-accent font-[inherit] text-white hover:bg-zen-accent-hover disabled:cursor-not-allowed disabled:opacity-50";
+  "cursor-pointer rounded-md border border-zen-border bg-zen-accent font-[inherit] text-zen-text hover:bg-zen-accent-hover disabled:cursor-not-allowed disabled:opacity-50";
 const clearButtonClass =
-  "cursor-pointer rounded-md border border-zen-clear bg-transparent font-[inherit] text-zen-faint hover:bg-white/5";
+  "cursor-pointer rounded-md border border-zen-clear bg-transparent font-[inherit] text-zen-faint hover:bg-zen-surface-faint";
 const projectBorderColors = [
   "border-red-400",
   "border-orange-400",
@@ -83,7 +83,11 @@ const projectBorderColors = [
   "border-purple-400",
   "border-pink-400",
 ];
-const folderBackgroundColors = ["bg-white/[0.06]", "bg-white/[0.045]", "bg-white/[0.03]"];
+const folderBackgroundColors = [
+  "bg-zen-surface-soft",
+  "bg-zen-surface-softer",
+  "bg-zen-surface-faint",
+];
 
 interface ForgeEntryDate {
   label: string;
@@ -157,7 +161,7 @@ function TabSearchRow({
       <div class="flex min-w-0 flex-1 flex-col gap-px">
         <div class={cn("flex min-w-0 flex-col", compact ? "gap-1.5" : "gap-2")}>
           <div class="flex min-w-0 items-center gap-2">
-            <span class={cn("min-w-0 flex-1 truncate text-white", !compact && "text-[16px]")}>
+            <span class={cn("text-zen-text min-w-0 flex-1 truncate", !compact && "text-[16px]")}>
               {displayTitle ??
                 formatTabDisplayTitle({
                   ...tab,
@@ -197,7 +201,7 @@ function TabSearchRow({
               <button
                 type="button"
                 aria-label={isEssentialTab(tab) ? "Open timer popup" : "Open timer controls"}
-                class="inline-flex cursor-pointer items-center border-0 bg-transparent p-0 text-inherit hover:text-white"
+                class="hover:text-zen-text inline-flex cursor-pointer items-center border-0 bg-transparent p-0 text-inherit"
                 onClick={(event) => {
                   event.stopPropagation();
                   setTooltipSuppressed(true);
@@ -215,7 +219,7 @@ function TabSearchRow({
               </button>
               <span
                 class={cn(
-                  "pointer-events-none absolute right-0 bottom-full z-10 mb-1 w-max max-w-[220px] rounded bg-black/90 px-2 py-1 text-xs text-white opacity-0 shadow transition-opacity",
+                  "bg-zen-tooltip text-zen-text pointer-events-none absolute right-0 bottom-full z-10 mb-1 w-max max-w-[220px] rounded px-2 py-1 text-xs opacity-0 shadow transition-opacity",
                   !tooltipSuppressed && "opacity-0 group-hover:opacity-100",
                 )}
                 role="tooltip"
@@ -251,7 +255,7 @@ function SearchShell({
 
   return (
     <div
-      class="flex h-full w-full items-center justify-center bg-black/60 backdrop-blur-[8px]"
+      class="bg-zen-overlay flex h-full w-full items-center justify-center backdrop-blur-[8px]"
       onClick={onClose}
     >
       <div
@@ -291,8 +295,8 @@ function ForgeIssueNavigator({
           key={`${entry.ref.url}:${entry.tab.id ?? entry.tab.domId ?? entry.title}`}
           type="button"
           class={cn(
-            "flex w-full max-w-full min-w-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-lg border-0 bg-transparent p-[12px] text-left font-[inherit] text-inherit hover:bg-white/10",
-            selectedIndex === entryIndex && "bg-white/10",
+            "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-lg border-0 bg-transparent p-[12px] text-left font-[inherit] text-inherit",
+            selectedIndex === entryIndex && "bg-zen-line-soft",
           )}
           data-issue-selected={selectedIndex === entryIndex ? "true" : undefined}
           ref={(element) => {
@@ -304,7 +308,7 @@ function ForgeIssueNavigator({
           onFocus={() => onSelect(entryIndex)}
           title={entry.ref.url}
         >
-          <span class="block min-w-0 truncate text-[16px] text-white">{entry.title}</span>
+          <span class="text-zen-text block min-w-0 truncate text-[16px]">{entry.title}</span>
           {(() => {
             const entryDate = formatForgeEntryDate(entry);
             const tabTitle = `${entry.tab.customLabel || ""} ${entry.tab.title || ""}`;
@@ -331,7 +335,7 @@ function ForgeIssueNavigator({
   return (
     <aside class="border-zen-border bg-zen-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border p-[12px]">
       <div class="mb-3 flex min-w-0 items-center justify-between gap-2">
-        <strong class="min-w-0 truncate text-[16px] text-white">Issues and requests</strong>
+        <strong class="text-zen-text min-w-0 truncate text-[16px]">Issues and requests</strong>
         <button
           type="button"
           class="text-zen-lavender shrink-0 cursor-pointer border-0 bg-transparent p-0 text-[14px]"
@@ -347,7 +351,7 @@ function ForgeIssueNavigator({
             No matching issues or requests.
           </p>
         ) : (
-          <div class="flex min-w-0 flex-col divide-y divide-white/10">
+          <div class="divide-zen-line-soft flex min-w-0 flex-col divide-y">
             {providers.map(({ platform, projects }) => {
               return (
                 <section key={platform} class="min-w-0 py-3 first:pt-0 last:pb-0">
@@ -379,7 +383,7 @@ function ForgeIssueNavigator({
                             <div
                               class={cn(
                                 "min-w-0",
-                                project.issues.length > 0 && "border-t border-white/10 pt-2",
+                                project.issues.length > 0 && "border-zen-line-soft border-t pt-2",
                               )}
                             >
                               <div class="text-zen-muted mb-1 px-[12px] text-[14px] font-semibold uppercase">
@@ -678,7 +682,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           "flex min-w-0 cursor-pointer items-start transition-colors",
           item.kind === "space" && "items-center justify-center text-center",
           compact ? "gap-2 rounded-md px-2 py-1.5 text-[13px]" : "gap-[12px] rounded-lg p-[12px]",
-          selectedIndex === index ? "bg-white/10" : "hover:bg-white/10",
+          selectedIndex === index ? "bg-zen-line-soft" : "hover:bg-zen-line-soft",
           item.kind === "space" && item.data.isActive && "bg-zen-accent",
         )}
         role="option"
@@ -710,7 +714,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               class={cn(
                 "flex min-w-0 flex-col gap-px",
                 item.kind === "space" ? "w-auto items-center" : "flex-1",
-                "text-white",
+                "text-zen-text",
               )}
             >
               <span
@@ -781,10 +785,13 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           <section key={`ungrouped-${level}-${groupIndex}`} class="contents">
             {spaces.length > 0 && (
               <li
-                class={cn("rounded-md bg-white/[0.03] p-1", essentialTabs.length > 0 && "mb-2")}
+                class={cn(
+                  "bg-zen-surface-faint rounded-md p-1",
+                  essentialTabs.length > 0 && "mb-2",
+                )}
                 data-testid="zen-space-section"
               >
-                <div class="text-zen-subtle border-b border-white/10 px-2 py-1 text-xs font-semibold uppercase">
+                <div class="text-zen-subtle border-zen-line-soft border-b px-2 py-1 text-xs font-semibold uppercase">
                   Spaces
                 </div>
                 <ul
@@ -801,8 +808,8 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               </li>
             )}
             {essentialTabs.length > 0 && (
-              <li class="rounded-md bg-white/[0.03] p-1" data-testid="zen-essential-section">
-                <div class="text-zen-subtle border-b border-white/10 px-2 py-1 text-xs font-semibold uppercase">
+              <li class="bg-zen-surface-faint rounded-md p-1" data-testid="zen-essential-section">
+                <div class="text-zen-subtle border-zen-line-soft border-b px-2 py-1 text-xs font-semibold uppercase">
                   Essential tabs
                 </div>
                 <ul
@@ -863,7 +870,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           type="text"
           placeholder="Search tabs and spaces..."
           class={cn(
-            "bg-zen-surface placeholder:text-zen-muted min-w-0 flex-1 rounded-lg border-0 text-white outline-none",
+            "bg-zen-surface placeholder:text-zen-muted text-zen-text min-w-0 flex-1 rounded-lg border-0 outline-none",
             compact ? "w-full px-2.5 py-2 text-sm" : "p-[12px] text-[18px]",
           )}
           value={query}
@@ -955,7 +962,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           {!showTimers && timers.size > 0 && (
             <span
               class={cn(
-                "bg-zen-badge absolute -top-1 -right-1 rounded-full text-center text-white",
+                "bg-zen-badge text-zen-text absolute -top-1 -right-1 rounded-full text-center",
                 compact
                   ? "min-w-3.5 px-0.5 text-[9px] leading-[14px]"
                   : "min-w-4 px-1 text-[10px] leading-4",
@@ -994,7 +1001,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
         >
           <div
             class={cn(
-              "mb-2 flex items-center justify-between gap-2 text-white",
+              "text-zen-text mb-2 flex items-center justify-between gap-2",
               compact ? "text-xs" : "text-[14px]",
             )}
           >
@@ -1037,7 +1044,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
                         )
                       }
                     >
-                      <span class="max-w-full truncate text-white">
+                      <span class="text-zen-text max-w-full truncate">
                         {timer.title || timer.originalLabel || `Tab ${timer.tabId}`}
                       </span>
                       <span
@@ -1092,7 +1099,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
       </div>
       {contextMenu?.item.kind === "tab" && (
         <div
-          class="bg-zen-panel fixed z-50 min-w-[180px] rounded-md border border-white/15 p-1 shadow-lg"
+          class="bg-zen-panel border-zen-line-medium fixed z-50 min-w-[180px] rounded-md border p-1 shadow-lg"
           style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
           data-testid="zen-tab-context-menu"
           role="menu"
@@ -1101,7 +1108,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           {isEssentialTab(contextMenu.item.data) && (
             <button
               type="button"
-              class="flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left font-[inherit] text-sm text-white hover:bg-white/10"
+              class="text-zen-text hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left font-[inherit] text-sm"
               role="menuitem"
               onClick={() => {
                 setContextMenu(null);
@@ -1119,7 +1126,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           {tabBrowserId(contextMenu.item.data) !== undefined && (
             <button
               type="button"
-              class="flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left font-[inherit] text-sm text-white hover:bg-white/10"
+              class="text-zen-text hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left font-[inherit] text-sm"
               role="menuitem"
               onClick={() => {
                 const tabId = tabBrowserId(contextMenu.item.data);
@@ -1138,7 +1145,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
         </div>
       )}
       {renameDialog && (
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div class="bg-zen-overlay-soft fixed inset-0 z-50 flex items-center justify-center p-4">
           <form
             class="border-zen-accent bg-zen-panel w-full max-w-sm rounded-lg border p-4 shadow-xl"
             onSubmit={(event) => {
@@ -1167,11 +1174,11 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
                 });
             }}
           >
-            <label class="flex flex-col gap-2 text-sm text-white">
+            <label class="text-zen-text flex flex-col gap-2 text-sm">
               Rename essential tab
               <input
                 ref={renameInputRef}
-                class="focus:border-zen-accent rounded border border-white/20 bg-black/20 px-2 py-1.5 text-white outline-none"
+                class="focus:border-zen-accent border-zen-line-strong bg-zen-overlay-soft text-zen-text rounded border px-2 py-1.5 outline-none"
                 value={renameDialog.value}
                 onInput={(event) =>
                   setRenameDialog((current) =>

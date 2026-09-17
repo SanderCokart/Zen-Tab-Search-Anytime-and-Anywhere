@@ -11,11 +11,11 @@ import type { TabTimer } from "../../lib/types";
 import { cn } from "../cn";
 
 const presetButtonClass =
-  "cursor-pointer rounded-full border border-zen-line bg-zen-chip font-[inherit] text-zen-subtle hover:border-zen-border hover:bg-zen-accent hover:text-white focus-visible:border-zen-border focus-visible:bg-zen-accent focus-visible:text-white";
+  "cursor-pointer rounded-full border border-zen-line bg-zen-chip font-[inherit] text-zen-subtle hover:border-zen-border hover:bg-zen-accent hover:text-zen-text focus-visible:border-zen-border focus-visible:bg-zen-accent focus-visible:text-zen-text";
 const primaryButtonClass =
-  "cursor-pointer rounded-md border border-zen-border bg-zen-accent font-[inherit] text-white hover:bg-zen-accent-hover disabled:cursor-not-allowed disabled:opacity-50";
+  "cursor-pointer rounded-md border border-zen-border bg-zen-accent font-[inherit] text-zen-text hover:bg-zen-accent-hover disabled:cursor-not-allowed disabled:opacity-50";
 const clearButtonClass =
-  "cursor-pointer rounded-md border border-zen-clear bg-transparent font-[inherit] text-zen-faint hover:bg-white/5";
+  "cursor-pointer rounded-md border border-zen-clear bg-transparent font-[inherit] text-zen-faint hover:bg-zen-surface-faint";
 
 export interface TimerFormProps {
   timer?: TabTimer;
@@ -106,7 +106,7 @@ export function TimerForm({
         <input
           ref={whenInputRef}
           class={cn(
-            "border-zen-line bg-zen-chip w-full rounded-md border font-[inherit] text-white [color-scheme:dark] placeholder:text-white/40",
+            "border-zen-line bg-zen-chip text-zen-text placeholder:text-zen-muted w-full rounded-md border font-[inherit]",
             compact ? "h-6 px-1.5" : "h-8 px-2",
           )}
           type="text"
@@ -137,7 +137,7 @@ export function TimerForm({
           Ends at
           <input
             class={cn(
-              "border-zen-line bg-zen-chip w-full rounded-md border font-[inherit] text-white [color-scheme:dark] disabled:opacity-60",
+              "border-zen-line bg-zen-chip text-zen-text w-full rounded-md border font-[inherit] disabled:opacity-60",
               compact ? "h-6 px-1.5" : "h-8 px-2",
             )}
             type="datetime-local"

@@ -1,19 +1,28 @@
 export const DISPLAY_SETTINGS_STORAGE_KEY = "displaySettings";
 
+export const DISPLAY_THEMES = ["midnight", "ocean", "forest", "rose", "light"] as const;
+export type DisplayTheme = (typeof DISPLAY_THEMES)[number];
+
 export interface DisplaySettings {
   filterIssuesInOverlay: boolean;
   groupFolders: boolean;
   groupSubfolders: boolean;
+  theme: DisplayTheme;
 }
 
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   filterIssuesInOverlay: true,
   groupFolders: true,
   groupSubfolders: true,
+  theme: "midnight",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object";
+}
+
+function isDisplayTheme(value: unknown): value is DisplayTheme {
+  return typeof value === "string" && DISPLAY_THEMES.includes(value as DisplayTheme);
 }
 
 function normalizeDisplaySettings(value: unknown): DisplaySettings {
@@ -35,6 +44,7 @@ function normalizeDisplaySettings(value: unknown): DisplaySettings {
       groupFolders && typeof value.groupSubfolders === "boolean"
         ? value.groupSubfolders
         : DEFAULT_DISPLAY_SETTINGS.groupSubfolders && groupFolders,
+    theme: isDisplayTheme(value.theme) ? value.theme : DEFAULT_DISPLAY_SETTINGS.theme,
   };
 }
 
