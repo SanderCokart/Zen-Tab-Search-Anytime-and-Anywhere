@@ -4,6 +4,8 @@ import { registerMessageRouter } from "../lib/background/message-router";
 import { registerTimerContextMenus } from "../lib/background/menus/timer-context";
 import { formatError, LOG_PREFIX } from "../lib/background/log";
 import { registerPopupWindowTracking } from "../lib/background/popups";
+import { openSettingsPopup } from "../lib/background/popups/settings";
+import { openCustomTimerPopup } from "../lib/background/popups/timer";
 import {
   createSnapshotReader,
   registerSnapshotChangeNotifications,
@@ -111,9 +113,11 @@ export default defineBackground(() => {
     getTab: getTabInfo,
     getSnapshot,
     getTimers: timerService.getActiveTimers,
+    openTimerPopup: (tabId) => openCustomTimerPopup(tabId),
     setTimer: timerService.setTabTimer,
     clearTimer: timerService.clearTabTimer,
     clearAllTimers: timerService.clearAllTimers,
+    openSettings: openSettingsPopup,
     isAllowedTimerEnd: (endAt) => isAllowedTimerEnd(endAt),
   });
 });

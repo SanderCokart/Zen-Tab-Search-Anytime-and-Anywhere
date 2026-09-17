@@ -1,5 +1,10 @@
 import type { ForgeKind, ForgePlatform, ForgeRef } from "./forge-label";
 
+export interface FolderInfo {
+  id: string;
+  name: string;
+}
+
 export interface TabInfo {
   id: number | null;
   domId?: string;
@@ -10,6 +15,10 @@ export interface TabInfo {
   windowId: number;
   workspaceId?: string;
   workspaceName?: string;
+  folderId?: string;
+  folderName?: string;
+  folderPath?: FolderInfo[];
+  essential?: boolean;
   lastOpenedAt?: number;
   score?: number;
   active?: boolean;
@@ -68,6 +77,10 @@ export function formatSpaceDisplayTitle(space: SpaceInfo): string {
 
 export function isActivatableTab(tab: TabInfo): boolean {
   return tabBrowserId(tab) !== undefined || (typeof tab.domId === "string" && tab.domId.length > 0);
+}
+
+export function isEssentialTab(tab: TabInfo): boolean {
+  return tab.essential === true;
 }
 
 export function tabBrowserId(tab: TabInfo): number | undefined {

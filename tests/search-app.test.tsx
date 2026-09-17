@@ -37,6 +37,13 @@ function mountSearchApp(
         sendMessage,
         onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
       },
+      storage: {
+        local: {
+          get: vi.fn(async () => ({})),
+          set: vi.fn(async () => undefined),
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
     },
   });
   const root = document.createElement("div");
@@ -62,6 +69,17 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("opens display settings directly from the gear button", async () => {
+    const { root, sendMessage } = mountSearchApp();
+    await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
+
+    root.querySelector<HTMLButtonElement>("button[title='Open display settings']")?.click();
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: "openSettings" }));
+
+    render(null, root);
+    root.remove();
+  });
+
   it("moves the selection with ArrowDown before activating", async () => {
     const { root, onClose, sendMessage } = mountSearchApp();
     await vi.waitFor(() => expect(root.textContent).toContain("Second tab"));
@@ -80,6 +98,21 @@ describe("SearchApp", () => {
       expect(sendMessage).toHaveBeenCalledWith({ type: "switchTab", tabId: 2, domId: undefined }),
     );
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("groups tabs under their Zen folder headings", async () => {
+    const folderTabs = [
+      { ...tabs[0], folderId: "folder-a", folderName: "Projects" },
+      { ...tabs[1], folderId: "folder-a", folderName: "Projects" },
+    ];
+    const { root } = mountSearchApp(vi.fn(), folderTabs);
+
+    await vi.waitFor(() => expect(root.textContent).toContain("Projects"));
+    expect(root.querySelectorAll("[data-testid='zen-folder-group']")).toHaveLength(1);
+    expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(2);
 
     render(null, root);
     root.remove();

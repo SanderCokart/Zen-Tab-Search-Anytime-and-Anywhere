@@ -1,4 +1,5 @@
 import type { ForgePageInfo } from "../forge-label";
+import { subscribeToDisplaySettingsChanged as subscribeToStoredDisplaySettingsChanged } from "../display-settings";
 import {
   type ContentCommand,
   type ExtensionRequest,
@@ -51,4 +52,10 @@ export function subscribeToSnapshotChanged(onChanged: () => void): () => void {
   return () => {
     browser.runtime.onMessage.removeListener(listener);
   };
+}
+
+export function subscribeToDisplaySettingsChanged(
+  onChanged: (settings: import("../display-settings").DisplaySettings) => void,
+): () => void {
+  return subscribeToStoredDisplaySettingsChanged(onChanged);
 }

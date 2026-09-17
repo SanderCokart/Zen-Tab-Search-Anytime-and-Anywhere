@@ -15,9 +15,11 @@ export interface MessageRouterHandlers {
   getTab(tabId: number): Promise<unknown>;
   getSnapshot(anchorTabId?: number): Promise<unknown>;
   getTimers(): Promise<unknown>;
+  openTimerPopup(tabId: number): Promise<void>;
   setTimer(tabId: number, endAt: number): Promise<unknown>;
   clearTimer(tabId: number): Promise<boolean>;
   clearAllTimers(): Promise<number>;
+  openSettings(): Promise<void>;
   isAllowedTimerEnd(endAt: number): boolean;
 }
 
@@ -94,6 +96,8 @@ function handleParsedRequest(
       return handlers.getSnapshot(anchorTabId);
     case "getTimers":
       return handlers.getTimers();
+    case "openTimerPopup":
+      return handlers.openTimerPopup(message.tabId);
     case "setTimer": {
       const endAt = resolveEndAt(message);
       if (!handlers.isAllowedTimerEnd(endAt)) {
@@ -107,6 +111,8 @@ function handleParsedRequest(
       return handlers.clearTimer(message.tabId).then((cleared) => ({ success: true, cleared }));
     case "clearAllTimers":
       return handlers.clearAllTimers().then((cleared) => ({ success: true, cleared }));
+    case "openSettings":
+      return handlers.openSettings();
   }
 }
 

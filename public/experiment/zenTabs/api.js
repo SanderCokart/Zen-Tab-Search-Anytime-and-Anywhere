@@ -1,6 +1,6 @@
 /* global ExtensionAPI, ChromeUtils, Cu, Services */
 
-const DEBUG = true;
+const DEBUG = false;
 
 this.zenTabs = class extends ExtensionAPI {
   getAPI(context) {
@@ -304,9 +304,26 @@ this.zenTabs = class extends ExtensionAPI {
       );
     }
 
+    function getFolderPath(tab) {
+      let group = tab?.group;
+      const folders = [];
+      while (group) {
+        if (group.isZenFolder) {
+          folders.push({
+            id: String(group.id || ""),
+            name: String(group.label || "Folder"),
+          });
+        }
+        group = group.group;
+      }
+      return folders.reverse();
+    }
+
     function mapNativeTab(tab, win, spaceNames) {
       const workspaceId = String(tab.getAttribute("zen-workspace-id") || "");
       const customLabel = tab.zenStaticLabel;
+      const folderPath = getFolderPath(tab);
+      const folder = folderPath[folderPath.length - 1];
       const extTabId = getExtTabId(tab);
 
       return {
@@ -319,6 +336,10 @@ this.zenTabs = class extends ExtensionAPI {
         windowId: Number(win.windowUtils?.outerWindowID ?? -1),
         workspaceId,
         workspaceName: String(spaceNames.get(workspaceId) || ""),
+        folderId: folder?.id || undefined,
+        folderName: folder?.name || undefined,
+        folderPath: folderPath.length ? folderPath : undefined,
+        essential: tab.getAttribute("zen-essential") === "true",
       };
     }
 

@@ -1,6 +1,8 @@
 import { parseForgeUrl, cleanForgeTitle } from "./forge-label";
 import {
+  isEssentialTab,
   isUsableTabId,
+  type FolderInfo,
   type ForgeIssueEntry,
   type SearchItem,
   type SpaceInfo,
@@ -80,6 +82,92 @@ export function buildSearchItems(allTabs: TabInfo[], allSpaces: SpaceInfo[]): Se
     items.push({ kind: "tab", data: tab });
   }
   return items;
+}
+
+export interface SearchItemGroup {
+  folderId?: string;
+  folderName?: string;
+  items: SearchItem[];
+  children: SearchItemGroup[];
+}
+
+export function groupSearchItems(
+  items: SearchItem[],
+  options: { groupFolders?: boolean; groupSubfolders?: boolean } = {},
+): SearchItemGroup[] {
+  if (options.groupFolders === false) {
+    return items.length ? [{ items, children: [] }] : [];
+  }
+  const groupSubfolders = options.groupSubfolders !== false;
+  const groups: SearchItemGroup[] = [];
+
+  for (const item of items) {
+    const folderPath: FolderInfo[] =
+      item.kind === "tab" && !isEssentialTab(item.data)
+        ? (item.data.folderPath ??
+          (item.data.folderId || item.data.folderName
+            ? [
+                {
+                  id: item.data.folderId || `name:${item.data.folderName}`,
+                  name: item.data.folderName || "Folder",
+                },
+              ]
+            : []))
+        : [];
+    const visibleFolderPath = groupSubfolders ? folderPath : folderPath.slice(0, 1);
+    let currentGroups = groups;
+    let currentGroup: SearchItemGroup | undefined;
+
+    for (const folder of visibleFolderPath) {
+      let group = currentGroups.find((candidate) => candidate.folderId === folder.id);
+      if (!group) {
+        group = { folderId: folder.id, folderName: folder.name, items: [], children: [] };
+        currentGroups.push(group);
+      }
+      currentGroup = group;
+      currentGroups = group.children;
+    }
+
+    if (currentGroup) {
+      currentGroup.items.push(item);
+    } else {
+      const ungrouped = groups.find((group) => group.folderId === undefined);
+      if (ungrouped) {
+        ungrouped.items.push(item);
+      } else {
+        groups.push({ items: [item], children: [] });
+      }
+    }
+  }
+
+  return groups;
+}
+
+export type SearchItemGroupEntry =
+  | { kind: "folder"; id: string; name: string; level: number }
+  | { kind: "item"; item: SearchItem; folderLevel?: number };
+
+export function flattenSearchItemGroups(groups: SearchItemGroup[]): SearchItemGroupEntry[] {
+  const entries: SearchItemGroupEntry[] = [];
+
+  const visit = (items: SearchItemGroup[], level: number) => {
+    for (const group of items) {
+      if (group.folderId !== undefined && group.folderName) {
+        entries.push({ kind: "folder", id: group.folderId, name: group.folderName, level });
+      }
+      entries.push(
+        ...group.items.map((item) => ({
+          kind: "item" as const,
+          item,
+          folderLevel: group.folderId === undefined ? undefined : level,
+        })),
+      );
+      visit(group.children, level + (group.folderId === undefined ? 0 : 1));
+    }
+  };
+
+  visit(groups, 0);
+  return entries;
 }
 
 export function buildForgeIssueEntries(allTabs: TabInfo[]): ForgeIssueEntry[] {
@@ -268,11 +356,13 @@ export function filterSearchItems(items: SearchItem[], query: string): SearchIte
     const titleMatch = fuzzyMatchWithScore(item.data.title || "", queryLowerCase);
     const urlMatch = fuzzyMatchWithScore(item.data.url || "", queryLowerCase);
     const workspaceMatch = fuzzyMatchWithScore(item.data.workspaceName || "", queryLowerCase);
+    const folderMatch = fuzzyMatchWithScore(item.data.folderName || "", queryLowerCase);
     if (
       !labelMatch.matches &&
       !titleMatch.matches &&
       !urlMatch.matches &&
-      !workspaceMatch.matches
+      !workspaceMatch.matches &&
+      !folderMatch.matches
     ) {
       continue;
     }
@@ -281,7 +371,13 @@ export function filterSearchItems(items: SearchItem[], query: string): SearchIte
       kind: "tab",
       data: {
         ...item.data,
-        score: Math.max(labelMatch.score, titleMatch.score, urlMatch.score, workspaceMatch.score),
+        score: Math.max(
+          labelMatch.score,
+          titleMatch.score,
+          urlMatch.score,
+          workspaceMatch.score,
+          folderMatch.score,
+        ),
       },
     });
   }

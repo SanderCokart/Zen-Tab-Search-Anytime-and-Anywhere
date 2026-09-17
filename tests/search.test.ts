@@ -4,6 +4,7 @@ import {
   buildSearchItems,
   filterForgeIssueEntries,
   flattenForgeNavigatorEntries,
+  groupSearchItems,
   parseForgeNavigatorQuery,
   prioritizeCurrentTab,
   sortForgeIssueEntries,
@@ -35,6 +36,64 @@ describe("prioritizeCurrentTab", () => {
     const items = buildSearchItems([tab(1), tab(2, true), tab(3)], []);
     const ordered = prioritizeCurrentTab(items);
     expect(ordered[0]).toMatchObject({ kind: "tab", data: { id: 2 } });
+  });
+});
+
+describe("groupSearchItems", () => {
+  it("groups folder tabs by folder without changing group order", () => {
+    const items = buildSearchItems(
+      [
+        { ...tab(1), folderId: "folder-a", folderName: "Projects" },
+        { ...tab(2) },
+        { ...tab(3), folderId: "folder-a", folderName: "Projects" },
+      ],
+      [],
+    );
+
+    expect(groupSearchItems(items).map((group) => [group.folderName, group.items.length])).toEqual([
+      ["Projects", 2],
+      [undefined, 1],
+    ]);
+  });
+
+  it("keeps nested folder levels in the group tree", () => {
+    const items = buildSearchItems(
+      [
+        {
+          ...tab(1),
+          folderPath: [
+            { id: "folder-a", name: "Projects" },
+            { id: "folder-b", name: "Client A" },
+          ],
+        },
+      ],
+      [],
+    );
+
+    const groups = groupSearchItems(items);
+    expect(groups[0]).toMatchObject({
+      folderName: "Projects",
+      items: [],
+      children: [{ folderName: "Client A", items: [{ data: { id: 1 } }] }],
+    });
+  });
+
+  it("can flatten folders or keep only top-level folders", () => {
+    const items = buildSearchItems(
+      [
+        {
+          ...tab(1),
+          folderPath: [
+            { id: "folder-a", name: "Projects" },
+            { id: "folder-b", name: "Client A" },
+          ],
+        },
+      ],
+      [],
+    );
+
+    expect(groupSearchItems(items, { groupFolders: false })[0]?.folderId).toBeUndefined();
+    expect(groupSearchItems(items, { groupSubfolders: false })[0]?.children).toEqual([]);
   });
 });
 

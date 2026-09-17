@@ -14,6 +14,17 @@ export const tabInfoSchema = v.object({
   windowId: v.fallback(v.number(), -1),
   workspaceId: v.optional(v.string()),
   workspaceName: v.optional(v.string()),
+  folderId: v.optional(v.string()),
+  folderName: v.optional(v.string()),
+  folderPath: v.optional(
+    v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+      }),
+    ),
+  ),
+  essential: v.optional(v.boolean()),
   lastOpenedAt: v.optional(v.number()),
   score: v.optional(v.number()),
   active: v.optional(v.boolean()),
@@ -79,6 +90,10 @@ export const extensionRequestSchema = v.variant("type", [
     type: v.literal("getTimers"),
   }),
   v.object({
+    type: v.literal("openTimerPopup"),
+    tabId: tabIdSchema,
+  }),
+  v.object({
     type: v.literal("setTimer"),
     tabId: tabIdSchema,
     endAt: v.optional(v.number()),
@@ -90,6 +105,9 @@ export const extensionRequestSchema = v.variant("type", [
   }),
   v.object({
     type: v.literal("clearAllTimers"),
+  }),
+  v.object({
+    type: v.literal("openSettings"),
   }),
 ]);
 
@@ -127,9 +145,11 @@ export const EXTENSION_REQUEST_TYPES = [
   "getTab",
   "getSnapshot",
   "getTimers",
+  "openTimerPopup",
   "setTimer",
   "clearTimer",
   "clearAllTimers",
+  "openSettings",
 ] as const;
 
 export type ExtensionRequestType = (typeof EXTENSION_REQUEST_TYPES)[number];
@@ -150,9 +170,11 @@ export type ExtensionSuccessMap = {
   getTab: v.InferOutput<typeof tabInfoSchema>;
   getSnapshot: SearchSnapshot;
   getTimers: v.InferOutput<typeof tabTimerSchema>[];
+  openTimerPopup: void;
   setTimer: v.InferOutput<typeof tabTimerSchema>;
   clearTimer: ClearTimerResponse;
   clearAllTimers: ClearAllTimersResponse;
+  openSettings: void;
 };
 
 const clearTimerResponseSchema = v.object({
@@ -231,12 +253,16 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
       return v.parse(searchSnapshotSchema, value) as ExtensionSuccessMap[T];
     case "getTimers":
       return v.parse(v.array(tabTimerSchema), value) as ExtensionSuccessMap[T];
+    case "openTimerPopup":
+      return undefined as ExtensionSuccessMap[T];
     case "setTimer":
       return v.parse(tabTimerSchema, value) as ExtensionSuccessMap[T];
     case "clearTimer":
       return v.parse(clearTimerResponseSchema, value) as ExtensionSuccessMap[T];
     case "clearAllTimers":
       return v.parse(clearAllTimersResponseSchema, value) as ExtensionSuccessMap[T];
+    case "openSettings":
+      return undefined as ExtensionSuccessMap[T];
     default: {
       const exhaustive: never = type;
       throw new Error(`Unhandled message type: ${String(exhaustive)}`);

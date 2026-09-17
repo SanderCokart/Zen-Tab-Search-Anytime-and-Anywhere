@@ -30,6 +30,7 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
     })),
     clearTimer: vi.fn(async () => true),
     clearAllTimers: vi.fn(async () => 0),
+    openSettings: vi.fn(async () => undefined),
     isAllowedTimerEnd: vi.fn(() => true),
     ...overrides,
   };
@@ -123,5 +124,15 @@ describe("dispatchExtensionMessage", () => {
       throw new Error("expected async dispatch");
     }
     await expect(result.promise).resolves.toEqual({ success: true, cleared: true });
+  });
+
+  it("dispatches openSettings", async () => {
+    const api = handlers();
+    const result = dispatchExtensionMessage(api, { type: "openSettings" });
+    if (!result.handled || !result.async) {
+      throw new Error("expected async dispatch");
+    }
+    await expect(result.promise).resolves.toBeUndefined();
+    expect(api.openSettings).toHaveBeenCalled();
   });
 });
