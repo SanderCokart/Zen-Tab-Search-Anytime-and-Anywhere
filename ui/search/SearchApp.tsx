@@ -71,7 +71,7 @@ function hostname(url: string): string {
 }
 
 const primaryButtonClass =
-  "cursor-pointer rounded-md border border-zen-border bg-zen-accent font-[inherit] text-zen-text hover:bg-zen-accent-hover disabled:cursor-not-allowed disabled:opacity-50";
+  "cursor-pointer rounded-md border border-zen-border bg-zen-accent font-[inherit] text-inherit hover:bg-zen-accent-hover disabled:cursor-not-allowed disabled:opacity-50";
 const clearButtonClass =
   "cursor-pointer rounded-md border border-zen-clear bg-transparent font-[inherit] text-zen-faint hover:bg-zen-surface-faint";
 const projectBorderColors = [
@@ -83,12 +83,6 @@ const projectBorderColors = [
   "border-purple-400",
   "border-pink-400",
 ];
-const folderBackgroundColors = [
-  "bg-zen-surface-soft",
-  "bg-zen-surface-softer",
-  "bg-zen-surface-faint",
-];
-
 interface ForgeEntryDate {
   label: string;
   relative: string;
@@ -161,7 +155,7 @@ function TabSearchRow({
       <div class="flex min-w-0 flex-1 flex-col gap-px">
         <div class={cn("flex min-w-0 flex-col", compact ? "gap-1.5" : "gap-2")}>
           <div class="flex min-w-0 items-center gap-2">
-            <span class={cn("text-zen-text min-w-0 flex-1 truncate", !compact && "text-[16px]")}>
+            <span class={cn("min-w-0 flex-1 truncate", !compact && "text-[16px]")}>
               {displayTitle ??
                 formatTabDisplayTitle({
                   ...tab,
@@ -201,7 +195,7 @@ function TabSearchRow({
               <button
                 type="button"
                 aria-label={isEssentialTab(tab) ? "Open timer popup" : "Open timer controls"}
-                class="hover:text-zen-text inline-flex cursor-pointer items-center border-0 bg-transparent p-0 text-inherit"
+                class="inline-flex cursor-pointer items-center border-0 bg-transparent p-0 text-inherit hover:text-inherit"
                 onClick={(event) => {
                   event.stopPropagation();
                   setTooltipSuppressed(true);
@@ -219,7 +213,7 @@ function TabSearchRow({
               </button>
               <span
                 class={cn(
-                  "bg-zen-tooltip text-zen-text pointer-events-none absolute right-0 bottom-full z-10 mb-1 w-max max-w-[220px] rounded px-2 py-1 text-xs opacity-0 shadow transition-opacity",
+                  "bg-zen-tooltip pointer-events-none absolute right-0 bottom-full z-10 mb-1 w-max max-w-[220px] rounded px-2 py-1 text-xs opacity-0 shadow transition-opacity",
                   !tooltipSuppressed && "opacity-0 group-hover:opacity-100",
                 )}
                 role="tooltip"
@@ -243,20 +237,27 @@ function TabSearchRow({
 function SearchShell({
   layout,
   onClose,
+  textColor,
   children,
 }: {
   layout: SearchLayout;
   onClose: () => void;
+  textColor: string;
   children: ComponentChildren;
 }) {
   if (layout === "popup") {
-    return <div class="flex h-full flex-col">{children}</div>;
+    return (
+      <div class="flex h-full flex-col" style={{ color: textColor }}>
+        {children}
+      </div>
+    );
   }
 
   return (
     <div
       class="bg-zen-overlay flex h-full w-full items-center justify-center backdrop-blur-[8px]"
       onClick={onClose}
+      style={{ color: textColor }}
     >
       <div
         class="from-zen-bg to-zen-raised flex aspect-[3/2] h-auto w-[min(80vw,calc(90dvh*3/2))] shrink-0 flex-col overflow-hidden rounded-2xl bg-linear-to-br p-[16px] text-[16px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
@@ -271,6 +272,7 @@ function SearchShell({
 
 function ForgeIssueNavigator({
   entries,
+  backgroundColor,
   sortMode,
   selectedIndex,
   onActivate,
@@ -278,6 +280,7 @@ function ForgeIssueNavigator({
   onToggleSort,
 }: {
   entries: ForgeIssueEntry[];
+  backgroundColor: string;
   sortMode: ForgeIssueSortMode;
   selectedIndex: number;
   onActivate: (entry: ForgeIssueEntry) => void;
@@ -308,7 +311,7 @@ function ForgeIssueNavigator({
           onFocus={() => onSelect(entryIndex)}
           title={entry.ref.url}
         >
-          <span class="text-zen-text block min-w-0 truncate text-[16px]">{entry.title}</span>
+          <span class="block min-w-0 truncate text-[16px]">{entry.title}</span>
           {(() => {
             const entryDate = formatForgeEntryDate(entry);
             const tabTitle = `${entry.tab.customLabel || ""} ${entry.tab.title || ""}`;
@@ -333,9 +336,12 @@ function ForgeIssueNavigator({
   let projectBorderIndex = 0;
 
   return (
-    <aside class="border-zen-border bg-zen-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border p-[12px]">
+    <aside
+      class="border-zen-border flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border p-[12px]"
+      style={{ backgroundColor }}
+    >
       <div class="mb-3 flex min-w-0 items-center justify-between gap-2">
-        <strong class="text-zen-text min-w-0 truncate text-[16px]">Issues and requests</strong>
+        <strong class="min-w-0 truncate text-[16px]">Issues and requests</strong>
         <button
           type="button"
           class="text-zen-lavender shrink-0 cursor-pointer border-0 bg-transparent p-0 text-[14px]"
@@ -714,7 +720,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               class={cn(
                 "flex min-w-0 flex-col gap-px",
                 item.kind === "space" ? "w-auto items-center" : "flex-1",
-                "text-zen-text",
+                "text-inherit",
               )}
             >
               <span
@@ -785,10 +791,8 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           <section key={`ungrouped-${level}-${groupIndex}`} class="contents">
             {spaces.length > 0 && (
               <li
-                class={cn(
-                  "bg-zen-surface-faint rounded-md p-1",
-                  essentialTabs.length > 0 && "mb-2",
-                )}
+                class="rounded-md p-1"
+                style={{ backgroundColor: displaySettings.spaceBackgroundColor }}
                 data-testid="zen-space-section"
               >
                 <div class="text-zen-subtle border-zen-line-soft border-b px-2 py-1 text-xs font-semibold uppercase">
@@ -808,7 +812,11 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               </li>
             )}
             {essentialTabs.length > 0 && (
-              <li class="bg-zen-surface-faint rounded-md p-1" data-testid="zen-essential-section">
+              <li
+                class="rounded-md p-1"
+                style={{ backgroundColor: displaySettings.spaceBackgroundColor }}
+                data-testid="zen-essential-section"
+              >
                 <div class="text-zen-subtle border-zen-line-soft border-b px-2 py-1 text-xs font-semibold uppercase">
                   Essential tabs
                 </div>
@@ -829,12 +837,11 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           </section>
         );
       }
-      const backgroundClass =
-        folderBackgroundColors[Math.min(level, folderBackgroundColors.length - 1)];
       return (
         <li
           key={`${group.folderId}-${level}-${groupIndex}`}
-          class={cn(level > 0 ? "mx-1 my-2" : "mt-3 first:mt-0", "rounded-md p-1", backgroundClass)}
+          class={cn(level > 0 ? "mx-1 my-2" : "mt-3 first:mt-0", "rounded-md p-1")}
+          style={{ backgroundColor: displaySettings.folderBackgroundColor }}
           data-testid="zen-folder-section"
         >
           <div
@@ -862,7 +869,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     });
 
   return (
-    <SearchShell layout={layout} onClose={onClose}>
+    <SearchShell layout={layout} onClose={onClose} textColor={displaySettings.textColor}>
       <div class={cn("flex items-center", compact ? "mb-2 gap-2" : "mb-[16px] gap-2")}>
         <input
           ref={inputRef}
@@ -870,7 +877,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           type="text"
           placeholder="Search tabs and spaces..."
           class={cn(
-            "bg-zen-surface placeholder:text-zen-muted text-zen-text min-w-0 flex-1 rounded-lg border-0 outline-none",
+            "bg-zen-surface placeholder:text-zen-muted min-w-0 flex-1 rounded-lg border-0 outline-none",
             compact ? "w-full px-2.5 py-2 text-sm" : "p-[12px] text-[18px]",
           )}
           value={query}
@@ -962,7 +969,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           {!showTimers && timers.size > 0 && (
             <span
               class={cn(
-                "bg-zen-badge text-zen-text absolute -top-1 -right-1 rounded-full text-center",
+                "bg-zen-badge absolute -top-1 -right-1 rounded-full text-center",
                 compact
                   ? "min-w-3.5 px-0.5 text-[9px] leading-[14px]"
                   : "min-w-4 px-1 text-[10px] leading-4",
@@ -1001,7 +1008,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
         >
           <div
             class={cn(
-              "text-zen-text mb-2 flex items-center justify-between gap-2",
+              "mb-2 flex items-center justify-between gap-2",
               compact ? "text-xs" : "text-[14px]",
             )}
           >
@@ -1044,7 +1051,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
                         )
                       }
                     >
-                      <span class="text-zen-text max-w-full truncate">
+                      <span class="max-w-full truncate">
                         {timer.title || timer.originalLabel || `Tab ${timer.tabId}`}
                       </span>
                       <span
@@ -1089,6 +1096,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
         {layout === "overlay" && forgeIssueEntries.length > 0 && (
           <ForgeIssueNavigator
             entries={filteredForgeIssueEntries}
+            backgroundColor={displaySettings.issueBackgroundColor}
             sortMode={forgeSortMode}
             selectedIndex={navigateForge ? selectedForgeIndex : -1}
             onActivate={activateForgeEntry}
@@ -1108,7 +1116,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           {isEssentialTab(contextMenu.item.data) && (
             <button
               type="button"
-              class="text-zen-text hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left font-[inherit] text-sm"
+              class="hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left font-[inherit] text-sm"
               role="menuitem"
               onClick={() => {
                 setContextMenu(null);
@@ -1126,7 +1134,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           {tabBrowserId(contextMenu.item.data) !== undefined && (
             <button
               type="button"
-              class="text-zen-text hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left font-[inherit] text-sm"
+              class="hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left font-[inherit] text-sm"
               role="menuitem"
               onClick={() => {
                 const tabId = tabBrowserId(contextMenu.item.data);
@@ -1174,11 +1182,11 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
                 });
             }}
           >
-            <label class="text-zen-text flex flex-col gap-2 text-sm">
+            <label class="flex flex-col gap-2 text-sm">
               Rename essential tab
               <input
                 ref={renameInputRef}
-                class="focus:border-zen-accent border-zen-line-strong bg-zen-overlay-soft text-zen-text rounded border px-2 py-1.5 outline-none"
+                class="focus:border-zen-accent border-zen-line-strong bg-zen-overlay-soft rounded border px-2 py-1.5 outline-none"
                 value={renameDialog.value}
                 onInput={(event) =>
                   setRenameDialog((current) =>

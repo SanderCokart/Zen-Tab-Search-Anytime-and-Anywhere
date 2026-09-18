@@ -1,5 +1,10 @@
 import { useEffect, useState } from "preact/hooks";
 import { debugError } from "../../lib/debug";
+import {
+  DEFAULT_DISPLAY_SETTINGS,
+  readDisplaySettings,
+  subscribeToDisplaySettingsChanged,
+} from "../../lib/display-settings";
 import { sendExtensionMessage, subscribeToSnapshotChanged } from "../../lib/messaging/client";
 import { formatTimerCountdown, stripTimerPrefix } from "../../lib/timer";
 import type { TabInfo, TabTimer } from "../../lib/types";
@@ -19,6 +24,17 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
   const [timer, setTimer] = useState<TabTimer>();
   const [now, setNow] = useState(Date.now());
   const [error, setError] = useState<string>();
+  const [textColor, setTextColor] = useState(DEFAULT_DISPLAY_SETTINGS.textColor);
+
+  useEffect(() => {
+    if (!browser.storage?.local) {
+      return;
+    }
+    void readDisplaySettings()
+      .then((settings) => setTextColor(settings.textColor))
+      .catch(() => undefined);
+    return subscribeToDisplaySettingsChanged((settings) => setTextColor(settings.textColor));
+  }, []);
 
   useEffect(() => {
     if (!Number.isInteger(tabId) || tabId < 0) {
@@ -85,7 +101,7 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
   };
 
   return (
-    <div class="flex flex-col gap-2.5">
+    <div class="flex flex-col gap-2.5" style={{ color: textColor }}>
       <h1 class="m-0 truncate text-sm font-semibold">
         {tab
           ? formatTabDisplayTitle({ ...tab, customLabel: stripTimerPrefix(tab.customLabel || "") })

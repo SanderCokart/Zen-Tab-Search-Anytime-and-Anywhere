@@ -1,28 +1,31 @@
 export const DISPLAY_SETTINGS_STORAGE_KEY = "displaySettings";
 
-export const DISPLAY_THEMES = ["midnight", "ocean", "forest", "rose", "light"] as const;
-export type DisplayTheme = (typeof DISPLAY_THEMES)[number];
-
 export interface DisplaySettings {
   filterIssuesInOverlay: boolean;
   groupFolders: boolean;
   groupSubfolders: boolean;
-  theme: DisplayTheme;
+  textColor: string;
+  issueBackgroundColor: string;
+  folderBackgroundColor: string;
+  spaceBackgroundColor: string;
 }
 
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   filterIssuesInOverlay: true,
   groupFolders: true,
   groupSubfolders: true,
-  theme: "midnight",
+  textColor: "#f5f5f5",
+  issueBackgroundColor: "#252525",
+  folderBackgroundColor: "#2d2d2d",
+  spaceBackgroundColor: "#292929",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object";
 }
 
-function isDisplayTheme(value: unknown): value is DisplayTheme {
-  return typeof value === "string" && DISPLAY_THEMES.includes(value as DisplayTheme);
+function isColor(value: unknown): value is string {
+  return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value);
 }
 
 function normalizeDisplaySettings(value: unknown): DisplaySettings {
@@ -44,7 +47,16 @@ function normalizeDisplaySettings(value: unknown): DisplaySettings {
       groupFolders && typeof value.groupSubfolders === "boolean"
         ? value.groupSubfolders
         : DEFAULT_DISPLAY_SETTINGS.groupSubfolders && groupFolders,
-    theme: isDisplayTheme(value.theme) ? value.theme : DEFAULT_DISPLAY_SETTINGS.theme,
+    textColor: isColor(value.textColor) ? value.textColor : DEFAULT_DISPLAY_SETTINGS.textColor,
+    issueBackgroundColor: isColor(value.issueBackgroundColor)
+      ? value.issueBackgroundColor
+      : DEFAULT_DISPLAY_SETTINGS.issueBackgroundColor,
+    folderBackgroundColor: isColor(value.folderBackgroundColor)
+      ? value.folderBackgroundColor
+      : DEFAULT_DISPLAY_SETTINGS.folderBackgroundColor,
+    spaceBackgroundColor: isColor(value.spaceBackgroundColor)
+      ? value.spaceBackgroundColor
+      : DEFAULT_DISPLAY_SETTINGS.spaceBackgroundColor,
   };
 }
 

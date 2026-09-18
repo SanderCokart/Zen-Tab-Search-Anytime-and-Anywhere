@@ -66,6 +66,7 @@
     "wxt": "^0.20.7"
   },
   "dependencies": {
+    "@simonwep/pickr": "^1.10.2",
     "@timelang/parse": "^0.1.1",
     "cn": "^0.3.0",
     "preact": "^10.29.8",

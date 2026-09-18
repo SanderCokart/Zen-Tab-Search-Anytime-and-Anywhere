@@ -1,13 +1,28 @@
 import { useEffect, useState } from "preact/hooks";
 import {
   DEFAULT_DISPLAY_SETTINGS,
-  DISPLAY_THEMES,
   readDisplaySettings,
   saveDisplaySettings,
-  type DisplayTheme,
   type DisplaySettings,
 } from "../../lib/display-settings";
 import { cn } from "../cn";
+import { ColorPickerField } from "./ColorPickerField";
+
+const COLOR_SETTINGS = [
+  ["textColor", "Text color"],
+  ["issueBackgroundColor", "Issues background"],
+  ["folderBackgroundColor", "Folders background"],
+  ["spaceBackgroundColor", "Spaces background"],
+] as const;
+
+function ResetIcon({ class: className }: { class?: string }) {
+  return (
+    <svg class={cn("zen-icon", className)} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 12a9 9 0 1 0 3-6.7" />
+      <path d="M3 4v5h5" />
+    </svg>
+  );
+}
 
 export function DisplaySettingsApp() {
   const [settings, setSettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
@@ -41,29 +56,40 @@ export function DisplaySettingsApp() {
   };
 
   return (
-    <main class="bg-zen-bg text-zen-text min-h-screen p-5">
+    <main class="bg-zen-bg min-h-screen p-5" style={{ color: settings.textColor }}>
       <div class="mx-auto flex max-w-xl flex-col gap-4">
         <header>
           <h1 class="m-0 text-xl font-semibold">Display options</h1>
         </header>
-        <label class="flex flex-col gap-2 text-sm">
-          <span class="font-medium">Color theme</span>
-          <select
-            class="border-zen-line bg-zen-chip text-zen-text h-9 rounded-md border px-2 font-[inherit]"
-            value={settings.theme}
-            disabled={!loaded}
-            onChange={(event) =>
-              updateSettings({ theme: event.currentTarget.value as DisplayTheme })
-            }
-          >
-            {DISPLAY_THEMES.map((theme) => (
-              <option value={theme}>{theme[0].toUpperCase() + theme.slice(1)}</option>
-            ))}
-          </select>
-          <span class="text-zen-subtle text-xs">
-            Applies to the search popup, overlay, timer controls, and this page.
-          </span>
-        </label>
+        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
+          <legend class="px-1 text-sm font-medium">Colors</legend>
+          {COLOR_SETTINGS.map(([key, label]) => {
+            const isDefault = settings[key].toLowerCase() === DEFAULT_DISPLAY_SETTINGS[key];
+            return (
+              <div class="flex items-center justify-between gap-4 text-sm" key={key}>
+                <span>{label}</span>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="inline-flex cursor-pointer items-center border-0 bg-transparent p-0 text-inherit hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={!loaded || isDefault}
+                    aria-label={`Reset ${label.toLowerCase()}`}
+                    title="Reset to default"
+                    onClick={() => updateSettings({ [key]: DEFAULT_DISPLAY_SETTINGS[key] })}
+                  >
+                    <ResetIcon class="size-4" />
+                  </button>
+                  <ColorPickerField
+                    disabled={!loaded}
+                    label={label}
+                    color={settings[key]}
+                    onChange={(color) => updateSettings({ [key]: color })}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </fieldset>
         <ul class="m-0 flex list-none flex-col gap-4 p-0" aria-label="Display options">
           <li>
             <label class="flex cursor-pointer items-start gap-3">
@@ -138,7 +164,7 @@ export function DisplaySettingsApp() {
         </ul>
         <button
           type="button"
-          class="border-zen-border bg-zen-accent hover:bg-zen-accent-hover text-zen-text cursor-pointer self-end rounded-md border px-4 py-2 font-[inherit] text-sm"
+          class="border-zen-border bg-zen-accent hover:bg-zen-accent-hover cursor-pointer self-end rounded-md border px-4 py-2 font-[inherit] text-sm"
           onClick={() => window.close()}
         >
           Done
