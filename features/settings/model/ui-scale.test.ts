@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_DISPLAY_SETTINGS } from "@/features/settings/model/display-settings";
 import {
   MAX_FONT_SIZE,
+  MAX_SPACING,
+  SPACING_SETTINGS,
+  clampSpacing,
   MAX_UI_SCALE,
   MIN_FONT_SIZE,
   MIN_UI_SCALE,
@@ -56,12 +59,32 @@ describe("ui scale", () => {
     );
   });
 
-  it("exposes exactly the two custom properties the CSS tokens derive from", () => {
-    expect(
-      uiScaleStyle(settings({ fontSize: 12, uiScale: 1.25, respectZoom: true }), "overlay"),
-    ).toEqual({
-      "--zen-font-size": "12px",
-      "--zen-scale": "1.25",
-    });
+  it("clamps spacing to 0-2, falling back to 1 rather than to the minimum", () => {
+    expect(clampSpacing(9)).toBe(MAX_SPACING);
+    expect(clampSpacing(-1)).toBe(0);
+    expect(clampSpacing(0)).toBe(0);
+    // 0 is a legitimate setting, so a corrupt value must not collapse every gap.
+    expect(clampSpacing(Number.NaN)).toBe(1);
+  });
+
+  it("emits the base properties plus one per spacing setting", () => {
+    const style = uiScaleStyle(
+      settings({ fontSize: 12, uiScale: 1.25, respectZoom: true, tabGap: 0, issuePadding: 1.5 }),
+      "overlay",
+    );
+
+    expect(style["--zen-font-size"]).toBe("12px");
+    expect(style["--zen-scale"]).toBe("1.25");
+    expect(style["--zen-row-gap-scale"]).toBe("0");
+    expect(style["--zen-issue-padding-scale"]).toBe("1.5");
+    expect(Object.keys(style)).toHaveLength(2 + SPACING_SETTINGS.length);
+  });
+
+  it("gives every spacing setting a distinct custom property", () => {
+    const keys = SPACING_SETTINGS.map(([key]) => key);
+    const properties = SPACING_SETTINGS.map(([, property]) => property);
+
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(new Set(properties).size).toBe(properties.length);
   });
 });

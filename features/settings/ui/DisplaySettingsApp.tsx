@@ -7,9 +7,12 @@ import {
 } from "@/features/settings/model/display-settings";
 import {
   MAX_FONT_SIZE,
+  MAX_SPACING,
   MAX_UI_SCALE,
   MIN_FONT_SIZE,
+  MIN_SPACING,
   MIN_UI_SCALE,
+  type SpacingSettingKey,
 } from "@/features/settings/model/ui-scale";
 import { cn } from "@/shared/ui/cn";
 import { ColorPickerField } from "@/features/settings/ui/ColorPickerField";
@@ -33,6 +36,15 @@ const TRUNCATE_SETTINGS = [
     "Cuts each title in the issue navigator to one line. Off, long titles wrap onto as many lines as they need.",
   ],
 ] as const;
+
+const SPACING_CONTROLS: readonly (readonly [SpacingSettingKey, string, string])[] = [
+  ["tabGap", "Between tabs", "Vertical space separating one tab row from the next."],
+  ["tabPadding", "Inside tabs", "Space between a tab row's edge and its text."],
+  ["tileGap", "Between tiles", "Space separating the space and essential-tab tiles."],
+  ["tilePadding", "Inside tiles", "Space between a tile's edge and its text."],
+  ["issueGap", "Between issues", "Space separating one issue-navigator entry from the next."],
+  ["issuePadding", "Inside issues", "Space between an issue entry's edge and its text."],
+];
 
 const rangeClass =
   "accent-zen-accent h-1 w-40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50";
@@ -193,6 +205,52 @@ export function DisplaySettingsApp() {
             }
           >
             Reset sizes
+          </button>
+        </fieldset>
+        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
+          <legend class="px-1 text-sm font-medium">Spacing</legend>
+          <p class="text-zen-subtle m-0 text-xs">
+            Each one scales the spacing that the density slider produces, so these stay in
+            proportion when you change the font size or density. 0% removes the spacing entirely.
+          </p>
+          {SPACING_CONTROLS.map(([key, label, hint]) => (
+            <label class="flex items-center justify-between gap-4 text-sm" key={key}>
+              <span>
+                <span class="block font-medium">{label}</span>
+                <span class="text-zen-subtle block text-xs">{hint}</span>
+              </span>
+              <span class="flex shrink-0 items-center gap-2">
+                <input
+                  type="range"
+                  class={rangeClass}
+                  data-testid={`zen-${key}`}
+                  min={MIN_SPACING}
+                  max={MAX_SPACING}
+                  step={0.05}
+                  disabled={!loaded}
+                  value={settings[key]}
+                  onInput={(event) => updateSettings({ [key]: Number(event.currentTarget.value) })}
+                />
+                <span class="w-12 text-right tabular-nums">{Math.round(settings[key] * 100)}%</span>
+              </span>
+            </label>
+          ))}
+          <button
+            type="button"
+            class="border-zen-clear text-zen-faint hover:bg-zen-surface cursor-pointer self-start rounded-md border bg-transparent px-2 py-1 font-[inherit] text-xs disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={
+              !loaded ||
+              SPACING_CONTROLS.every(([key]) => settings[key] === DEFAULT_DISPLAY_SETTINGS[key])
+            }
+            onClick={() =>
+              updateSettings(
+                Object.fromEntries(
+                  SPACING_CONTROLS.map(([key]) => [key, DEFAULT_DISPLAY_SETTINGS[key]]),
+                ),
+              )
+            }
+          >
+            Reset spacing
           </button>
         </fieldset>
         <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">

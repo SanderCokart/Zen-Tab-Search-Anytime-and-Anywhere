@@ -398,9 +398,10 @@ durations at 31 days.
 
 ### `settings/` — display preferences
 
-[display-settings.ts](features/settings/model/display-settings.ts) holds thirteen
+[display-settings.ts](features/settings/model/display-settings.ts) holds nineteen
 preferences: four booleans for grouping and issue detection, four hex colours, three
-that size the UI, and two that decide whether tab and issue text is cut to one line. `DisplaySettingsApp` writes them, every surface subscribes
+that size the UI, two that decide whether tab and issue text is cut to one line, and
+six per-element spacing multipliers. `DisplaySettingsApp` writes them, every surface subscribes
 via `storage.onChanged`, so changing a colour or a size updates an open overlay live.
 
 #### The size system
@@ -416,6 +417,18 @@ the results. Components reference the tokens
 (`p-[var(--zen-space-2)]`, `text-[length:var(--zen-text-base)]`) and never a literal
 size. This replaced a `compact` boolean that every component threaded through to pick
 between two hard-coded pixel scales.
+
+Spacing is a second layer on top of that. Six settings — a gap and a padding each for
+tab rows, tiles and issue entries — are emitted as their own multiplier properties and
+multiply a step of the spacing ramp: `--zen-row-gap` is
+`calc(var(--zen-space-1) * var(--zen-row-gap-scale))`. They are multipliers rather than
+pixel values so that tightening the gap between tabs survives a change of font size or
+density. `SPACING_SETTINGS` in `ui-scale.ts` is the single list tying each setting key
+to its custom property; the options page renders a slider per entry and `uiScaleStyle`
+emits them, so adding a seventh means touching that list and the CSS, not the UI.
+
+Note that tiles and tab rows are the same `<li>` rendered by the same function, so
+`renderItem` takes a `"row" | "tile"` variant to pick the right padding token.
 
 [ui-scale.ts](features/settings/model/ui-scale.ts) turns the settings into those two
 properties, and `SearchShell` puts `data-zen-ui` plus the resulting style on the root

@@ -41,56 +41,62 @@ export function ForgeIssueNavigator({
     [entries, sortMode],
   );
 
-  const renderEntries = (groupEntries: ForgeIssueEntry[]) =>
-    groupEntries.map((entry) => {
-      const entryIndex = entryIndices.get(entry) ?? -1;
-      return (
-        <button
-          key={`${entry.ref.url}:${entry.tab.id ?? entry.tab.domId ?? entry.title}`}
-          type="button"
-          class={cn(
-            "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-[var(--zen-radius)] border-0 bg-transparent p-[var(--zen-space-2)] text-left font-[inherit] text-inherit",
-            selectedIndex === entryIndex && "bg-zen-line-soft",
-          )}
-          data-issue-selected={selectedIndex === entryIndex ? "true" : undefined}
-          ref={(element) => {
-            if (selectedIndex === entryIndex) {
-              element?.scrollIntoView({ block: "nearest", inline: "nearest" });
-            }
-          }}
-          onClick={() => onActivate(entry)}
-          onFocus={() => onSelect(entryIndex)}
-          title={entry.ref.url}
-        >
-          <span
-            class={cn("block min-w-0 text-[length:var(--zen-text-base)]", entryTextClass(truncate))}
+  const renderEntries = (groupEntries: ForgeIssueEntry[]) => (
+    <div class="flex min-w-0 flex-col gap-[var(--zen-issue-gap)]">
+      {groupEntries.map((entry) => {
+        const entryIndex = entryIndices.get(entry) ?? -1;
+        return (
+          <button
+            key={`${entry.ref.url}:${entry.tab.id ?? entry.tab.domId ?? entry.title}`}
+            type="button"
+            class={cn(
+              "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-[var(--zen-radius)] border-0 bg-transparent p-[var(--zen-issue-padding)] text-left font-[inherit] text-inherit",
+              selectedIndex === entryIndex && "bg-zen-line-soft",
+            )}
+            data-issue-selected={selectedIndex === entryIndex ? "true" : undefined}
+            ref={(element) => {
+              if (selectedIndex === entryIndex) {
+                element?.scrollIntoView({ block: "nearest", inline: "nearest" });
+              }
+            }}
+            onClick={() => onActivate(entry)}
+            onFocus={() => onSelect(entryIndex)}
+            title={entry.ref.url}
           >
-            {forgeEntryDisplayTitle(entry)}
-          </span>
-          {(() => {
-            const entryDate = formatForgeEntryDate(entry);
-            const tabTitle = `${entry.tab.customLabel || ""} ${entry.tab.title || ""}`;
-            const showRef = !forgeTitleIncludesRefId(tabTitle, entry.ref.id);
-            if (!showRef && !entryDate) {
-              return null;
-            }
-            return (
-              <span
-                class={cn(
-                  "text-zen-subtle block min-w-0 text-[length:var(--zen-text-sm)]",
-                  entryTextClass(truncate),
-                )}
-                title={entryDate ? `${entryDate.label}: ${entryDate.absolute}` : undefined}
-              >
-                {showRef ? `${formatForgeKind(entry.ref.kind)} #${entry.ref.id}` : ""}
-                {showRef && entryDate ? " · " : ""}
-                {entryDate ? `${entryDate.label}: ${entryDate.relative}` : ""}
-              </span>
-            );
-          })()}
-        </button>
-      );
-    });
+            <span
+              class={cn(
+                "block min-w-0 text-[length:var(--zen-text-base)]",
+                entryTextClass(truncate),
+              )}
+            >
+              {forgeEntryDisplayTitle(entry)}
+            </span>
+            {(() => {
+              const entryDate = formatForgeEntryDate(entry);
+              const tabTitle = `${entry.tab.customLabel || ""} ${entry.tab.title || ""}`;
+              const showRef = !forgeTitleIncludesRefId(tabTitle, entry.ref.id);
+              if (!showRef && !entryDate) {
+                return null;
+              }
+              return (
+                <span
+                  class={cn(
+                    "text-zen-subtle block min-w-0 text-[length:var(--zen-text-sm)]",
+                    entryTextClass(truncate),
+                  )}
+                  title={entryDate ? `${entryDate.label}: ${entryDate.absolute}` : undefined}
+                >
+                  {showRef ? `${formatForgeKind(entry.ref.kind)} #${entry.ref.id}` : ""}
+                  {showRef && entryDate ? " · " : ""}
+                  {entryDate ? `${entryDate.label}: ${entryDate.relative}` : ""}
+                </span>
+              );
+            })()}
+          </button>
+        );
+      })}
+    </div>
+  );
   let projectBorderIndex = 0;
 
   return (

@@ -59,10 +59,10 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
             >
               <div class={sectionHeaderClass}>Spaces</div>
               <ul
-                class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,var(--zen-tile-space)),1fr))] gap-[var(--zen-space-2)] p-[var(--zen-space-2)]"
+                class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,var(--zen-tile-space)),1fr))] gap-[var(--zen-tile-gap)] p-[var(--zen-space-2)]"
                 data-testid="zen-space-grid"
               >
-                {spaces.map((item) => renderItem(props, item))}
+                {spaces.map((item) => renderItem(props, item, "tile"))}
               </ul>
             </li>
           )}
@@ -74,10 +74,10 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
             >
               <div class={sectionHeaderClass}>Essential tabs</div>
               <ul
-                class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,var(--zen-tile-essential)),1fr))] gap-[var(--zen-space-2)] p-[var(--zen-space-2)]"
+                class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,var(--zen-tile-essential)),1fr))] gap-[var(--zen-tile-gap)] p-[var(--zen-space-2)]"
                 data-testid="zen-essential-grid"
               >
-                {essentialTabs.map((item) => renderItem(props, item))}
+                {essentialTabs.map((item) => renderItem(props, item, "tile"))}
               </ul>
             </li>
           )}
@@ -114,7 +114,7 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
         >
           {group.folderName}
         </div>
-        <ul class="m-0 flex list-none flex-col gap-[var(--zen-space-1)] p-0">
+        <ul class="m-0 flex list-none flex-col gap-[var(--zen-row-gap)] p-0">
           {group.items.map((item) => renderItem(props, item))}
           {renderGroups(props, group.children, level + 1)}
         </ul>
@@ -123,7 +123,11 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
   });
 }
 
-function renderItem(props: SearchResultsListProps, item: SearchItem) {
+function renderItem(
+  props: SearchResultsListProps,
+  item: SearchItem,
+  variant: "row" | "tile" = "row",
+) {
   const {
     itemIndices,
     selectedIndex,
@@ -151,7 +155,8 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
       class={cn(
         "flex min-w-0 cursor-pointer items-start transition-colors",
         item.kind === "space" && "items-center justify-center text-center",
-        "gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] p-[var(--zen-space-2)] text-[length:var(--zen-text-md)]",
+        "gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] text-[length:var(--zen-text-md)]",
+        variant === "tile" ? "p-[var(--zen-tile-padding)]" : "p-[var(--zen-row-padding)]",
         selected ? "bg-zen-line-soft" : "hover:bg-zen-line-soft",
         item.kind === "space" && item.data.isActive && "bg-zen-accent",
       )}
