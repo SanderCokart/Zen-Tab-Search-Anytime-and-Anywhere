@@ -50,7 +50,7 @@ export function ForgeIssueNavigator({
             key={`${entry.ref.url}:${entry.tab.id ?? entry.tab.domId ?? entry.title}`}
             type="button"
             class={cn(
-              "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-[var(--zen-radius)] border-0 bg-transparent p-[var(--zen-issue-padding)] text-left font-[inherit] text-inherit",
+              "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-[var(--zen-radius)] border-0 bg-transparent p-[var(--zen-space-2)] text-left font-[inherit] text-inherit",
               selectedIndex === entryIndex && "bg-zen-line-soft",
             )}
             data-issue-selected={selectedIndex === entryIndex ? "true" : undefined}

@@ -1,4 +1,4 @@
-import { clampFontSize, clampSpacing, clampUiScale } from "@/features/settings/model/ui-scale";
+import { clampFontSize, clampGap, clampUiScale } from "@/features/settings/model/ui-scale";
 
 export const DISPLAY_SETTINGS_STORAGE_KEY = "displaySettings";
 
@@ -18,15 +18,15 @@ export interface DisplaySettings {
   /** Cut issue and pull-request titles to one line instead of wrapping them. */
   truncateIssueTitles: boolean;
   /**
-   * Per-element spacing multipliers, applied on top of the density-derived
-   * spacing. 1 leaves it as `uiScale` set it; 0 removes it entirely.
+   * Gaps, in pixels at the default font size, snapped to 4. Padding is not
+   * configurable — it follows `uiScale`, so the two cannot fight each other.
    */
+  sectionGap: number;
   tabGap: number;
-  tabPadding: number;
-  tileGap: number;
-  tilePadding: number;
+  folderGap: number;
+  essentialGap: number;
+  spaceGap: number;
   issueGap: number;
-  issuePadding: number;
   textColor: string;
   issueBackgroundColor: string;
   folderBackgroundColor: string;
@@ -43,12 +43,12 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   respectZoom: false,
   truncateTabTitles: true,
   truncateIssueTitles: true,
-  tabGap: 1,
-  tabPadding: 1,
-  tileGap: 1,
-  tilePadding: 1,
-  issueGap: 1,
-  issuePadding: 1,
+  sectionGap: 4,
+  tabGap: 4,
+  folderGap: 12,
+  essentialGap: 8,
+  spaceGap: 8,
+  issueGap: 4,
   textColor: "#f5f5f5",
   issueBackgroundColor: "#252525",
   folderBackgroundColor: "#2d2d2d",
@@ -63,8 +63,8 @@ function isNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-function spacing(value: unknown, fallback: number): number {
-  return clampSpacing(isNumber(value) ? value : fallback);
+function gap(value: unknown, fallback: number): number {
+  return clampGap(isNumber(value) ? value : fallback, fallback);
 }
 
 function isColor(value: unknown): value is string {
@@ -113,12 +113,12 @@ function normalizeDisplaySettings(value: unknown): DisplaySettings {
       typeof value.truncateIssueTitles === "boolean"
         ? value.truncateIssueTitles
         : DEFAULT_DISPLAY_SETTINGS.truncateIssueTitles,
-    tabGap: spacing(value.tabGap, DEFAULT_DISPLAY_SETTINGS.tabGap),
-    tabPadding: spacing(value.tabPadding, DEFAULT_DISPLAY_SETTINGS.tabPadding),
-    tileGap: spacing(value.tileGap, DEFAULT_DISPLAY_SETTINGS.tileGap),
-    tilePadding: spacing(value.tilePadding, DEFAULT_DISPLAY_SETTINGS.tilePadding),
-    issueGap: spacing(value.issueGap, DEFAULT_DISPLAY_SETTINGS.issueGap),
-    issuePadding: spacing(value.issuePadding, DEFAULT_DISPLAY_SETTINGS.issuePadding),
+    sectionGap: gap(value.sectionGap, DEFAULT_DISPLAY_SETTINGS.sectionGap),
+    tabGap: gap(value.tabGap, DEFAULT_DISPLAY_SETTINGS.tabGap),
+    folderGap: gap(value.folderGap, DEFAULT_DISPLAY_SETTINGS.folderGap),
+    essentialGap: gap(value.essentialGap, DEFAULT_DISPLAY_SETTINGS.essentialGap),
+    spaceGap: gap(value.spaceGap, DEFAULT_DISPLAY_SETTINGS.spaceGap),
+    issueGap: gap(value.issueGap, DEFAULT_DISPLAY_SETTINGS.issueGap),
     textColor: isColor(value.textColor) ? value.textColor : DEFAULT_DISPLAY_SETTINGS.textColor,
     issueBackgroundColor: isColor(value.issueBackgroundColor)
       ? value.issueBackgroundColor

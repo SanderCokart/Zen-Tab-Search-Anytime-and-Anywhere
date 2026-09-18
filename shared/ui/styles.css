@@ -106,17 +106,18 @@
     --zen-tile-essential: calc(var(--zen-font-size) * 12 * var(--zen-scale));
 
     /*
-     * Per-element spacing. Each one multiplies a step of the spacing ramp above by
-     * its own setting, so tightening the gap between tabs does not touch the issue
-     * navigator, and all of them still follow the font size and the density knob.
-     * The `, 1` fallbacks keep these sane on a surface that has not set them.
+     * The configurable gaps. Each is picked in pixels and stored as a ratio of a
+     * 16px reference, so at the default font size the number the user chose is the
+     * gap in pixels, and it scales with the UI from there. Each one drives exactly
+     * one `gap` or margin in one place; the fallbacks are the defaults, for a
+     * surface that has not set them.
      */
-    --zen-row-gap: calc(var(--zen-space-1) * var(--zen-row-gap-scale, 1));
-    --zen-row-padding: calc(var(--zen-space-2) * var(--zen-row-padding-scale, 1));
-    --zen-tile-gap: calc(var(--zen-space-2) * var(--zen-tile-gap-scale, 1));
-    --zen-tile-padding: calc(var(--zen-space-2) * var(--zen-tile-padding-scale, 1));
-    --zen-issue-gap: calc(var(--zen-space-1) * var(--zen-issue-gap-scale, 1));
-    --zen-issue-padding: calc(var(--zen-space-2) * var(--zen-issue-padding-scale, 1));
+    --zen-section-gap: calc(var(--zen-font-size) * var(--zen-section-gap-ratio, 0.25));
+    --zen-tab-gap: calc(var(--zen-font-size) * var(--zen-tab-gap-ratio, 0.25));
+    --zen-folder-gap: calc(var(--zen-font-size) * var(--zen-folder-gap-ratio, 0.75));
+    --zen-essential-gap: calc(var(--zen-font-size) * var(--zen-essential-gap-ratio, 0.5));
+    --zen-space-gap: calc(var(--zen-font-size) * var(--zen-space-gap-ratio, 0.5));
+    --zen-issue-gap: calc(var(--zen-font-size) * var(--zen-issue-gap-ratio, 0.25));
   }
 
   .zen-icon {
