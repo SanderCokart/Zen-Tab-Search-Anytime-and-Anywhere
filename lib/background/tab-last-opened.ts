@@ -1,4 +1,4 @@
-import { isUsableTabId, tabBrowserId, type TabInfo } from "../types";
+import { isUsableTabId, tabBrowserId, type TabInfo } from "@/lib/types";
 
 export const TAB_LAST_OPENED_STORAGE_KEY = "tabLastOpened";
 

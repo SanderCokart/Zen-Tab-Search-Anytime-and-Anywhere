@@ -4,7 +4,7 @@ import {
   readDisplaySettings,
   saveDisplaySettings,
   subscribeToDisplaySettingsChanged,
-} from "../lib/display-settings";
+} from "@/lib/display-settings";
 
 describe("display settings", () => {
   it("uses defaults and disables nested options when their parent setting is off", async () => {

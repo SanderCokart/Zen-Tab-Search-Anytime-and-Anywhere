@@ -1,6 +1,6 @@
-import { forgetSearchPopupWindow } from "./search";
-import { forgetSettingsPopupWindow } from "./settings";
-import { forgetTimerPopupWindow } from "./timer";
+import { forgetSearchPopupWindow } from "@/lib/background/popups/search";
+import { forgetSettingsPopupWindow } from "@/lib/background/popups/settings";
+import { forgetTimerPopupWindow } from "@/lib/background/popups/timer";
 
 export function registerPopupWindowTracking(): void {
   browser.windows.onRemoved.addListener((windowId) => {

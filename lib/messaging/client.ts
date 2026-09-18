@@ -1,5 +1,5 @@
-import type { ForgePageInfo } from "../forge-label";
-import { subscribeToDisplaySettingsChanged as subscribeToStoredDisplaySettingsChanged } from "../display-settings";
+import type { ForgePageInfo } from "@/lib/forge-label";
+import { subscribeToDisplaySettingsChanged as subscribeToStoredDisplaySettingsChanged } from "@/lib/display-settings";
 import {
   type ContentCommand,
   type ExtensionRequest,
@@ -9,7 +9,7 @@ import {
   isErrorResponse,
   isSnapshotChangedMessage,
   parseExtensionSuccess,
-} from "./protocol";
+} from "@/lib/messaging/protocol";
 import * as v from "valibot";
 
 export class ExtensionMessageError extends Error {
@@ -55,7 +55,7 @@ export function subscribeToSnapshotChanged(onChanged: () => void): () => void {
 }
 
 export function subscribeToDisplaySettingsChanged(
-  onChanged: (settings: import("../display-settings").DisplaySettings) => void,
+  onChanged: (settings: import("@/lib/display-settings").DisplaySettings) => void,
 ): () => void {
   return subscribeToStoredDisplaySettingsChanged(onChanged);
 }

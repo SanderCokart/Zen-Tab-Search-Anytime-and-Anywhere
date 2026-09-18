@@ -1,6 +1,6 @@
 import { render } from "preact";
-import { DisplaySettingsApp } from "../../ui/settings/DisplaySettingsApp";
-import "../../ui/styles.css";
+import { DisplaySettingsApp } from "@/ui/settings/DisplaySettingsApp";
+import "@/ui/styles.css";
 
 const root = document.getElementById("app");
 if (!root) {

@@ -1,5 +1,5 @@
-import { isExtensionPageUrl } from "../urls";
-import { isUsableTabId } from "../../types";
+import { isExtensionPageUrl } from "@/lib/background/urls";
+import { isUsableTabId } from "@/lib/types";
 
 export function isUsableBrowserTabId(tabId: number | undefined, url?: string): boolean {
   return isUsableTabId(tabId) && !isExtensionPageUrl(url);

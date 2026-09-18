@@ -1,4 +1,4 @@
-import type { SpaceInfo, TabInfo } from "../../types";
+import type { SpaceInfo, TabInfo } from "@/lib/types";
 
 export interface ZenDebugInfo {
   timestamp: string;

@@ -1,4 +1,4 @@
-import { parseForgeUrl, cleanForgeTitle } from "./forge-label";
+import { parseForgeUrl, cleanForgeTitle } from "@/lib/forge-label";
 import {
   isEssentialTab,
   isUsableTabId,
@@ -7,7 +7,7 @@ import {
   type SearchItem,
   type SpaceInfo,
   type TabInfo,
-} from "./types";
+} from "@/lib/types";
 
 export type ForgeIssueSortMode = "recent" | "old";
 

@@ -1,9 +1,9 @@
-import { formatError, LOG_PREFIX } from "../log";
-import { openCustomTimerPopup } from "../popups/timer";
-import { toggleSearchPopup } from "../popups/search";
-import type { WorkspaceAdapter } from "../zen/adapter";
-import { changeSelectedTabLabel } from "./label";
-import { toggleOmnibar } from "./omnibar";
+import { formatError, LOG_PREFIX } from "@/lib/background/log";
+import { openCustomTimerPopup } from "@/lib/background/popups/timer";
+import { toggleSearchPopup } from "@/lib/background/popups/search";
+import type { WorkspaceAdapter } from "@/lib/background/zen/adapter";
+import { changeSelectedTabLabel } from "@/lib/background/commands/label";
+import { toggleOmnibar } from "@/lib/background/commands/omnibar";
 
 export function registerCommands(workspace: WorkspaceAdapter): void {
   browser.commands.onCommand.addListener((command) => {

@@ -1,10 +1,10 @@
-import { debugLog, debugWarn } from "../../debug";
-import { buildForgeLabel, parseForgeUrl, type ForgePageInfo } from "../../forge-label";
-import { sendTabMessage } from "../../messaging/client";
-import { isUsableTabId } from "../../types";
-import { formatError, LOG_PREFIX } from "../log";
-import { isContentScriptInjectableUrl } from "../urls";
-import type { WorkspaceAdapter } from "../zen/adapter";
+import { debugLog, debugWarn } from "@/lib/debug";
+import { buildForgeLabel, parseForgeUrl, type ForgePageInfo } from "@/lib/forge-label";
+import { sendTabMessage } from "@/lib/messaging/client";
+import { isUsableTabId } from "@/lib/types";
+import { formatError, LOG_PREFIX } from "@/lib/background/log";
+import { isContentScriptInjectableUrl } from "@/lib/background/urls";
+import type { WorkspaceAdapter } from "@/lib/background/zen/adapter";
 
 async function getForgePageInfo(tabId?: number, url?: string): Promise<ForgePageInfo> {
   if (!isUsableTabId(tabId) || !isContentScriptInjectableUrl(url)) {

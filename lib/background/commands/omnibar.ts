@@ -1,9 +1,9 @@
-import { debugLog } from "../../debug";
-import { sendTabMessage } from "../../messaging/client";
-import { isUsableTabId } from "../../types";
-import { formatError, LOG_PREFIX } from "../log";
-import { toggleSearchPopup } from "../popups/search";
-import { isContentScriptInjectableUrl } from "../urls";
+import { debugLog } from "@/lib/debug";
+import { sendTabMessage } from "@/lib/messaging/client";
+import { isUsableTabId } from "@/lib/types";
+import { formatError, LOG_PREFIX } from "@/lib/background/log";
+import { toggleSearchPopup } from "@/lib/background/popups/search";
+import { isContentScriptInjectableUrl } from "@/lib/background/urls";
 
 export async function toggleOmnibar(): Promise<void> {
   const tabs = await browser.tabs.query({ active: true, currentWindow: true });

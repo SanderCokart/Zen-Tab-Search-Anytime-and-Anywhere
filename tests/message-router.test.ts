@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   dispatchExtensionMessage,
   type MessageRouterHandlers,
-} from "../lib/background/message-router";
+} from "@/lib/background/message-router";
 
 function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouterHandlers {
   return {

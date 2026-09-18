@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { describe, expect, it, vi } from "vitest";
-import { TimerForm } from "../ui/timers/TimerForm";
+import { TimerForm } from "@/ui/timers/TimerForm";
 
 function mountTimerForm(onSet = vi.fn(), onClear = vi.fn()) {
   const root = document.createElement("div");

@@ -1,28 +1,28 @@
-import { DEBUG, debugLog, debugWarn } from "../lib/debug";
-import { registerCommands } from "../lib/background/commands";
-import { registerMessageRouter } from "../lib/background/message-router";
-import { registerTimerContextMenus } from "../lib/background/menus/timer-context";
-import { formatError, LOG_PREFIX } from "../lib/background/log";
-import { registerPopupWindowTracking } from "../lib/background/popups";
-import { openSettingsPopup } from "../lib/background/popups/settings";
-import { openCustomTimerPopup } from "../lib/background/popups/timer";
+import { DEBUG, debugLog, debugWarn } from "@/lib/debug";
+import { registerCommands } from "@/lib/background/commands";
+import { registerMessageRouter } from "@/lib/background/message-router";
+import { registerTimerContextMenus } from "@/lib/background/menus/timer-context";
+import { formatError, LOG_PREFIX } from "@/lib/background/log";
+import { registerPopupWindowTracking } from "@/lib/background/popups";
+import { openSettingsPopup } from "@/lib/background/popups/settings";
+import { openCustomTimerPopup } from "@/lib/background/popups/timer";
 import {
   createSnapshotReader,
   notifySnapshotChanged,
   registerSnapshotChangeNotifications,
-} from "../lib/background/snapshot";
-import { createTabQuery } from "../lib/background/tabs/query";
-import { createTabSwitcher } from "../lib/background/tabs/switch";
-import { createTimerService } from "../lib/background/timer-service";
-import { createZenWorkspaceAdapter } from "../lib/background/zen/adapter";
-import { logZenDebugInfo, warmUpZenTabsApi } from "../lib/background/zen/debug";
-import { isAllowedTimerEnd } from "../lib/timer";
-import { isUsableTabId } from "../lib/types";
+} from "@/lib/background/snapshot";
+import { createTabQuery } from "@/lib/background/tabs/query";
+import { createTabSwitcher } from "@/lib/background/tabs/switch";
+import { createTimerService } from "@/lib/background/timer-service";
+import { createZenWorkspaceAdapter } from "@/lib/background/zen/adapter";
+import { logZenDebugInfo, warmUpZenTabsApi } from "@/lib/background/zen/debug";
+import { isAllowedTimerEnd } from "@/lib/timer";
+import { isUsableTabId } from "@/lib/types";
 import {
   readTabLastOpened,
   recordTabLastOpened,
   registerTabLastOpenedTracking,
-} from "../lib/background/tab-last-opened";
+} from "@/lib/background/tab-last-opened";
 
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());

@@ -1,10 +1,10 @@
-import { isUsableTabId } from "../types";
+import { isUsableTabId } from "@/lib/types";
 import {
   type ExtensionRequest,
   invalidRequestMessage,
   isExtensionRequestType,
   parseExtensionRequest,
-} from "../messaging/protocol";
+} from "@/lib/messaging/protocol";
 
 export interface MessageRouterHandlers {
   queryTabs(anchorTabId?: number): Promise<unknown>;

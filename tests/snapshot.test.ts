@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createSnapshotReader } from "../lib/background/snapshot";
+import { createSnapshotReader } from "@/lib/background/snapshot";
 
 describe("createSnapshotReader", () => {
   it("loads tabs, spaces, and timers in one payload", async () => {

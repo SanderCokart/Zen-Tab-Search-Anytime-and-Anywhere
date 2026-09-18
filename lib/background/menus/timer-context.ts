@@ -1,7 +1,7 @@
-import { formatError, LOG_PREFIX } from "../log";
-import { openCustomTimerPopup } from "../popups/timer";
-import type { createTimerService } from "../timer-service";
-import { isUsableTabId } from "../../types";
+import { formatError, LOG_PREFIX } from "@/lib/background/log";
+import { openCustomTimerPopup } from "@/lib/background/popups/timer";
+import type { createTimerService } from "@/lib/background/timer-service";
+import { isUsableTabId } from "@/lib/types";
 
 type TimerService = ReturnType<typeof createTimerService>;
 

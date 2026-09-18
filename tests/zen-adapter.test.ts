@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { createZenWorkspaceAdapter } from "../lib/background/zen/adapter";
-import type { TabInfo } from "../lib/types";
-import { createTabQuery } from "../lib/background/tabs/query";
-import { createTabSwitcher } from "../lib/background/tabs/switch";
+import { createZenWorkspaceAdapter } from "@/lib/background/zen/adapter";
+import type { TabInfo } from "@/lib/types";
+import { createTabQuery } from "@/lib/background/tabs/query";
+import { createTabSwitcher } from "@/lib/background/tabs/switch";
 
 function tab(partial: Partial<TabInfo> & Pick<TabInfo, "id" | "title">): TabInfo {
   return {

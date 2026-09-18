@@ -6,9 +6,9 @@ import {
   parseTimerInput,
   TIMER_PRESETS,
   toDatetimeLocalValue,
-} from "../../lib/timer";
-import type { TabTimer } from "../../lib/types";
-import { cn } from "../cn";
+} from "@/lib/timer";
+import type { TabTimer } from "@/lib/types";
+import { cn } from "@/ui/cn";
 
 const presetButtonClass =
   "cursor-pointer rounded-full border border-zen-line bg-zen-chip font-[inherit] text-zen-subtle hover:border-zen-border hover:bg-zen-accent hover:text-inherit focus-visible:border-zen-border focus-visible:bg-zen-accent focus-visible:text-inherit";

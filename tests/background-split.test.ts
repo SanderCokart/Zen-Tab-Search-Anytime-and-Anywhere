@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { isContentScriptInjectableUrl, isExtensionPageUrl } from "../lib/background/urls";
-import { isUsableBrowserTabId, zenAnchorTabId } from "../lib/background/zen/anchor";
+import { isContentScriptInjectableUrl, isExtensionPageUrl } from "@/lib/background/urls";
+import { isUsableBrowserTabId, zenAnchorTabId } from "@/lib/background/zen/anchor";
 
 describe("isContentScriptInjectableUrl", () => {
   it("allows http(s) and file URLs", () => {

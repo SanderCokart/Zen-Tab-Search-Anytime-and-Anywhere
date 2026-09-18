@@ -5,7 +5,7 @@ import {
   parseExtensionSuccess,
   parseStoredTimer,
   parseStoredTimers,
-} from "../lib/messaging/protocol";
+} from "@/lib/messaging/protocol";
 
 describe("parseExtensionRequest", () => {
   it("accepts a getTabs request", () => {

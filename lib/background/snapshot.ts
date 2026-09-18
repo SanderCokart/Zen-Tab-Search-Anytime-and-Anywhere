@@ -1,6 +1,6 @@
-import type { SpaceInfo, TabInfo, TabTimer } from "../types";
-import { SNAPSHOT_CHANGED_TYPE } from "../messaging/protocol";
-import { mergeTabLastOpened, TAB_LAST_OPENED_STORAGE_KEY } from "./tab-last-opened";
+import type { SpaceInfo, TabInfo, TabTimer } from "@/lib/types";
+import { SNAPSHOT_CHANGED_TYPE } from "@/lib/messaging/protocol";
+import { mergeTabLastOpened, TAB_LAST_OPENED_STORAGE_KEY } from "@/lib/background/tab-last-opened";
 
 export interface SearchSnapshotPayload {
   tabs: TabInfo[];

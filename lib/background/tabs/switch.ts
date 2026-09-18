@@ -1,4 +1,4 @@
-import type { WorkspaceAdapter } from "../zen/adapter";
+import type { WorkspaceAdapter } from "@/lib/background/zen/adapter";
 
 export function createTabSwitcher(workspace: WorkspaceAdapter): {
   switchToTab(tabId?: number, domId?: string, anchorTabId?: number): Promise<void>;

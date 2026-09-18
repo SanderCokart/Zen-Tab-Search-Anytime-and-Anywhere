@@ -1,15 +1,15 @@
 import { useEffect, useState } from "preact/hooks";
-import { debugError } from "../../lib/debug";
+import { debugError } from "@/lib/debug";
 import {
   DEFAULT_DISPLAY_SETTINGS,
   readDisplaySettings,
   subscribeToDisplaySettingsChanged,
-} from "../../lib/display-settings";
-import { sendExtensionMessage, subscribeToSnapshotChanged } from "../../lib/messaging/client";
-import { formatTimerCountdown, stripTimerPrefix } from "../../lib/timer";
-import type { TabInfo, TabTimer } from "../../lib/types";
-import { formatTabDisplayTitle } from "../../lib/types";
-import { TimerForm } from "./TimerForm";
+} from "@/lib/display-settings";
+import { sendExtensionMessage, subscribeToSnapshotChanged } from "@/lib/messaging/client";
+import { formatTimerCountdown, stripTimerPrefix } from "@/lib/timer";
+import type { TabInfo, TabTimer } from "@/lib/types";
+import { formatTabDisplayTitle } from "@/lib/types";
+import { TimerForm } from "@/ui/timers/TimerForm";
 
 function hostname(url: string): string {
   try {

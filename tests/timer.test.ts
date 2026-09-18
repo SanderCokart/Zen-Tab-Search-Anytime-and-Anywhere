@@ -10,7 +10,7 @@ import {
   stripTimerPrefix,
   TIMER_PRESETS,
   toDatetimeLocalValue,
-} from "../lib/timer";
+} from "@/lib/timer";
 
 describe("stripTimerPrefix", () => {
   it("restores the original custom label", () => {

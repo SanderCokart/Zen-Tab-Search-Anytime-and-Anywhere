@@ -1,16 +1,16 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
-import { debugError } from "../../lib/debug";
+import { debugError } from "@/lib/debug";
 import {
   sendExtensionMessage,
   subscribeToDisplaySettingsChanged,
   subscribeToSnapshotChanged,
-} from "../../lib/messaging/client";
+} from "@/lib/messaging/client";
 import {
   DEFAULT_DISPLAY_SETTINGS,
   readDisplaySettings,
   type DisplaySettings,
-} from "../../lib/display-settings";
+} from "@/lib/display-settings";
 import {
   bestForgeNavigatorIndex,
   buildForgeIssueEntries,
@@ -26,10 +26,10 @@ import {
   rankForgeIssueEntries,
   searchItemExactWordCount,
   type ForgeIssueSortMode,
-} from "../../lib/search";
-import { forgeTitleIncludesRefId } from "../../lib/forge-label";
-import { formatTimerCountdown, stripTimerPrefix } from "../../lib/timer";
-import type { ForgeIssueEntry, SearchItem, SpaceInfo, TabInfo, TabTimer } from "../../lib/types";
+} from "@/lib/search";
+import { forgeTitleIncludesRefId } from "@/lib/forge-label";
+import { formatTimerCountdown, stripTimerPrefix } from "@/lib/timer";
+import type { ForgeIssueEntry, SearchItem, SpaceInfo, TabInfo, TabTimer } from "@/lib/types";
 import {
   formatSpaceDisplayTitle,
   formatForgeKind,
@@ -39,9 +39,9 @@ import {
   isEssentialTab,
   isActivatableTab,
   tabBrowserId,
-} from "../../lib/types";
-import { cn } from "../cn";
-import { TimerForm } from "../timers/TimerForm";
+} from "@/lib/types";
+import { cn } from "@/ui/cn";
+import { TimerForm } from "@/ui/timers/TimerForm";
 
 export type SearchLayout = "popup" | "overlay";
 const ESSENTIAL_TAB_NAMES_KEY = "essentialTabNames";

@@ -1,8 +1,8 @@
-import { debugLog, debugWarn } from "../../debug";
-import { isUsableTabId, type SpaceInfo, type TabInfo } from "../../types";
-import { formatError, LOG_PREFIX } from "../log";
-import { resolveAnchorTabId as resolveBrowserAnchorTabId, zenAnchorTabId } from "./anchor";
-import { getZenTabsApi, type ZenTabsApi } from "./api";
+import { debugLog, debugWarn } from "@/lib/debug";
+import { isUsableTabId, type SpaceInfo, type TabInfo } from "@/lib/types";
+import { formatError, LOG_PREFIX } from "@/lib/background/log";
+import { resolveAnchorTabId as resolveBrowserAnchorTabId, zenAnchorTabId } from "@/lib/background/zen/anchor";
+import { getZenTabsApi, type ZenTabsApi } from "@/lib/background/zen/api";
 
 export interface BrowserTabSnapshot {
   id?: number;

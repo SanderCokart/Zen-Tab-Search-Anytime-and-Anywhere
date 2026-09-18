@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { mergeTabLastOpened, parseStoredLastOpened } from "../lib/background/tab-last-opened";
-import type { TabInfo } from "../lib/types";
+import { mergeTabLastOpened, parseStoredLastOpened } from "@/lib/background/tab-last-opened";
+import type { TabInfo } from "@/lib/types";
 
 function tab(id: number, lastOpenedAt?: number): TabInfo {
   return {

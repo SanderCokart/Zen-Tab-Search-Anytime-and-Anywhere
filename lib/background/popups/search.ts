@@ -1,6 +1,6 @@
-import { debugWarn } from "../../debug";
-import { isUsableTabId } from "../../types";
-import { formatError, LOG_PREFIX } from "../log";
+import { debugWarn } from "@/lib/debug";
+import { isUsableTabId } from "@/lib/types";
+import { formatError, LOG_PREFIX } from "@/lib/background/log";
 
 let fallbackPopupWindowId: number | undefined;
 

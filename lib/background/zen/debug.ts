@@ -1,6 +1,6 @@
-import { DEBUG, debugError, debugLog, debugWarn } from "../../debug";
-import { formatError, LOG_PREFIX } from "../log";
-import type { WorkspaceAdapter } from "./adapter";
+import { DEBUG, debugError, debugLog, debugWarn } from "@/lib/debug";
+import { formatError, LOG_PREFIX } from "@/lib/background/log";
+import type { WorkspaceAdapter } from "@/lib/background/zen/adapter";
 
 export async function logZenDebugInfo(
   workspace: WorkspaceAdapter,

@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { describe, expect, it, vi } from "vitest";
-import { DisplaySettingsApp } from "../ui/settings/DisplaySettingsApp";
+import { DisplaySettingsApp } from "@/ui/settings/DisplaySettingsApp";
 
 describe("DisplaySettingsApp", () => {
   it("disables subfolder grouping when folder grouping is disabled", async () => {

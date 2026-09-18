@@ -13,8 +13,8 @@ import {
   prioritizeCurrentTab,
   rankForgeIssueEntries,
   sortForgeIssueEntries,
-} from "../lib/search";
-import type { SearchItem, TabInfo } from "../lib/types";
+} from "@/lib/search";
+import type { SearchItem, TabInfo } from "@/lib/types";
 
 function tab(id: number, active = false): TabInfo {
   return {

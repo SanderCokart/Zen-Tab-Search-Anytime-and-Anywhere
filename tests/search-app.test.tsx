@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { describe, expect, it, vi } from "vitest";
-import { SearchApp } from "../ui/search/SearchApp";
+import { SearchApp } from "@/ui/search/SearchApp";
 
 const tabs = [
   {

@@ -1,5 +1,5 @@
-import { isUsableTabId } from "../../types";
-import { formatError, LOG_PREFIX } from "../log";
+import { isUsableTabId } from "@/lib/types";
+import { formatError, LOG_PREFIX } from "@/lib/background/log";
 
 let settingsPopupWindowId: number | undefined;
 

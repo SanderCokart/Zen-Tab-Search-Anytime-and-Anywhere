@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTimerService } from "../lib/background/timer-service";
+import { createTimerService } from "@/lib/background/timer-service";
 
 const NOW = 1_700_000_000_000;
 

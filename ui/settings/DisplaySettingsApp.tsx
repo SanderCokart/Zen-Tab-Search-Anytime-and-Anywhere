@@ -4,9 +4,9 @@ import {
   readDisplaySettings,
   saveDisplaySettings,
   type DisplaySettings,
-} from "../../lib/display-settings";
-import { cn } from "../cn";
-import { ColorPickerField } from "./ColorPickerField";
+} from "@/lib/display-settings";
+import { cn } from "@/ui/cn";
+import { ColorPickerField } from "@/ui/settings/ColorPickerField";
 
 const COLOR_SETTINGS = [
   ["textColor", "Text color"],

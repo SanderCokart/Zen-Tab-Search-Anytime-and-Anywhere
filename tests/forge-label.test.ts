@@ -5,7 +5,7 @@ import {
   extractRelatedIssueId,
   forgeTitleIncludesRefId,
   parseForgeUrl,
-} from "../lib/forge-label";
+} from "@/lib/forge-label";
 
 describe("detectForgePlatform", () => {
   it("detects GitLab from the hostname", () => {

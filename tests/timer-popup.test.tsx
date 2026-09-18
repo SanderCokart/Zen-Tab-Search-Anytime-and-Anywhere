@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { describe, expect, it, vi } from "vitest";
-import { TimerPopup } from "../ui/timers/TimerPopup";
+import { TimerPopup } from "@/ui/timers/TimerPopup";
 
 function mountTimerPopup(onClose = vi.fn()) {
   const sendMessage = vi.fn(async ({ type }: { type: string }) => {

@@ -1,8 +1,8 @@
 import { render } from "preact";
-import { debugLog } from "../../lib/debug";
-import { parseContentCommand } from "../../lib/messaging/protocol";
-import { SearchApp } from "../../ui/search/SearchApp";
-import "../../ui/styles.css";
+import { debugLog } from "@/lib/debug";
+import { parseContentCommand } from "@/lib/messaging/protocol";
+import { SearchApp } from "@/ui/search/SearchApp";
+import "@/ui/styles.css";
 
 const OMNIBAR_Z_INDEX = 2147483646;
 

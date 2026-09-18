@@ -1,4 +1,4 @@
-import type { ForgeKind, ForgePlatform, ForgeRef } from "./forge-label";
+import type { ForgeKind, ForgePlatform, ForgeRef } from "@/lib/forge-label";
 
 export interface FolderInfo {
   id: string;

@@ -1,5 +1,5 @@
-import type { SpaceInfo, TabInfo } from "../../types";
-import type { WorkspaceAdapter } from "../zen/adapter";
+import type { SpaceInfo, TabInfo } from "@/lib/types";
+import type { WorkspaceAdapter } from "@/lib/background/zen/adapter";
 
 export function createTabQuery(workspace: WorkspaceAdapter): {
   queryTabs(anchorTabId?: number): Promise<TabInfo[]>;
