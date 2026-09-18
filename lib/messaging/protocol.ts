@@ -4,6 +4,11 @@ const tabIdSchema = v.pipe(v.number(), v.integer(), v.minValue(0));
 const optionalTabIdSchema = v.optional(tabIdSchema);
 const optionalDomIdSchema = v.optional(v.pipe(v.string(), v.minLength(1)));
 
+export const folderInfoSchema = v.object({
+  id: v.string(),
+  name: v.string(),
+});
+
 export const tabInfoSchema = v.object({
   id: v.union([v.number(), v.null()]),
   domId: v.optional(v.string()),
@@ -16,14 +21,7 @@ export const tabInfoSchema = v.object({
   workspaceName: v.optional(v.string()),
   folderId: v.optional(v.string()),
   folderName: v.optional(v.string()),
-  folderPath: v.optional(
-    v.array(
-      v.object({
-        id: v.string(),
-        name: v.string(),
-      }),
-    ),
-  ),
+  folderPath: v.optional(v.array(folderInfoSchema)),
   essential: v.optional(v.boolean()),
   lastOpenedAt: v.optional(v.number()),
   score: v.optional(v.number()),
@@ -158,6 +156,16 @@ export const EXTENSION_REQUEST_TYPES = [
   "setTabLabel",
 ] as const;
 
+/**
+ * Domain types inferred from the schemas above. These are the single source of
+ * truth for the wire format and the in-memory shape alike; `@/lib/types`
+ * re-exports them so feature code does not have to reach into the protocol.
+ */
+export type FolderInfo = v.InferOutput<typeof folderInfoSchema>;
+export type TabInfo = v.InferOutput<typeof tabInfoSchema>;
+export type TabTimer = v.InferOutput<typeof tabTimerSchema>;
+export type SpaceInfo = v.InferOutput<typeof spaceInfoSchema>;
+
 export type ExtensionRequestType = (typeof EXTENSION_REQUEST_TYPES)[number];
 export type ExtensionRequest = v.InferOutput<typeof extensionRequestSchema>;
 export type ContentCommand = v.InferOutput<typeof contentCommandSchema>;
@@ -168,16 +176,16 @@ export type ClearAllTimersResponse = { success: true; cleared: number };
 export type SearchSnapshot = v.InferOutput<typeof searchSnapshotSchema>;
 
 export type ExtensionSuccessMap = {
-  getTabs: v.InferOutput<typeof tabInfoSchema>[];
-  getSpaces: v.InferOutput<typeof spaceInfoSchema>[];
+  getTabs: TabInfo[];
+  getSpaces: SpaceInfo[];
   getDebugInfo: unknown;
   switchTab: void;
   switchSpace: void;
-  getTab: v.InferOutput<typeof tabInfoSchema>;
+  getTab: TabInfo;
   getSnapshot: SearchSnapshot;
-  getTimers: v.InferOutput<typeof tabTimerSchema>[];
+  getTimers: TabTimer[];
   openTimerPopup: void;
-  setTimer: v.InferOutput<typeof tabTimerSchema>;
+  setTimer: TabTimer;
   clearTimer: ClearTimerResponse;
   clearAllTimers: ClearAllTimersResponse;
   openSettings: void;
@@ -217,19 +225,19 @@ export function isSnapshotChangedMessage(value: unknown): boolean {
   return v.is(snapshotChangedSchema, value);
 }
 
-export function parseStoredTimer(value: unknown): v.InferOutput<typeof tabTimerSchema> | undefined {
+export function parseStoredTimer(value: unknown): TabTimer | undefined {
   const parsed = v.safeParse(tabTimerSchema, value);
   return parsed.success ? parsed.output : undefined;
 }
 
 export function parseStoredTimers(
   value: unknown,
-): Record<string, v.InferOutput<typeof tabTimerSchema>> {
+): Record<string, TabTimer> {
   if (!value || typeof value !== "object") {
     return {};
   }
 
-  const timers: Record<string, v.InferOutput<typeof tabTimerSchema>> = {};
+  const timers: Record<string, TabTimer> = {};
   for (const entry of Object.values(value as Record<string, unknown>)) {
     const parsed = parseStoredTimer(entry);
     if (!parsed) {

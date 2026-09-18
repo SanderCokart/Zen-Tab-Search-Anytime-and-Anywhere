@@ -1,43 +1,12 @@
 import type { ForgeKind, ForgePlatform, ForgeRef } from "@/lib/forge-label";
+import type { SpaceInfo, TabInfo } from "@/lib/messaging/protocol";
 
-export interface FolderInfo {
-  id: string;
-  name: string;
-}
-
-export interface TabInfo {
-  id: number | null;
-  domId?: string;
-  title: string;
-  customLabel?: string;
-  url: string;
-  favIconUrl: string;
-  windowId: number;
-  workspaceId?: string;
-  workspaceName?: string;
-  folderId?: string;
-  folderName?: string;
-  folderPath?: FolderInfo[];
-  essential?: boolean;
-  lastOpenedAt?: number;
-  score?: number;
-  active?: boolean;
-}
-
-export interface TabTimer {
-  tabId: number;
-  endAt: number;
-  originalLabel: string;
-  title: string;
-}
-
-export interface SpaceInfo {
-  id: string;
-  name: string;
-  icon?: string;
-  isActive: boolean;
-  score?: number;
-}
+/**
+ * The wire schemas in `messaging/protocol.ts` are the single source of truth for
+ * these shapes; they are re-exported here so feature code keeps importing domain
+ * types from one place.
+ */
+export type { FolderInfo, SpaceInfo, TabInfo, TabTimer } from "@/lib/messaging/protocol";
 
 export interface ForgeIssueEntry {
   ref: ForgeRef;
