@@ -1,25 +1,28 @@
-import { DEBUG, debugLog, debugWarn } from "../lib/debug";
-import { registerCommands } from "../lib/background/commands";
-import { registerMessageRouter } from "../lib/background/message-router";
-import { registerTimerContextMenus } from "../lib/background/menus/timer-context";
-import { formatError, LOG_PREFIX } from "../lib/background/log";
-import { registerPopupWindowTracking } from "../lib/background/popups";
+import { DEBUG, debugLog, debugWarn } from "@/shared/debug";
+import { registerCommands } from "@/app/background/commands";
+import { registerMessageRouter } from "@/app/background/message-router";
+import { registerTimerContextMenus } from "@/features/timers/background/context-menu";
+import { formatError, LOG_PREFIX } from "@/shared/log";
+import { registerPopupWindowTracking } from "@/app/background/popup-tracking";
+import { openSettingsPopup } from "@/features/settings/background/popup";
+import { openCustomTimerPopup } from "@/features/timers/background/popup";
 import {
   createSnapshotReader,
+  notifySnapshotChanged,
   registerSnapshotChangeNotifications,
-} from "../lib/background/snapshot";
-import { createTabQuery } from "../lib/background/tabs/query";
-import { createTabSwitcher } from "../lib/background/tabs/switch";
-import { createTimerService } from "../lib/background/timer-service";
-import { createZenWorkspaceAdapter } from "../lib/background/zen/adapter";
-import { logZenDebugInfo, warmUpZenTabsApi } from "../lib/background/zen/debug";
-import { isAllowedTimerEnd } from "../lib/timer";
-import { isUsableTabId } from "../lib/types";
+} from "@/features/search/background/snapshot";
+import { createTabQuery } from "@/features/zen/tabs-query";
+import { createTabSwitcher } from "@/features/zen/tabs-switch";
+import { createTimerService } from "@/features/timers/background/timer-service";
+import { createZenWorkspaceAdapter } from "@/features/zen/adapter";
+import { logZenDebugInfo, warmUpZenTabsApi } from "@/features/zen/debug";
+import { isAllowedTimerEnd } from "@/features/timers/model/timer";
+import { isUsableTabId } from "@/shared/types";
 import {
   readTabLastOpened,
   recordTabLastOpened,
   registerTabLastOpenedTracking,
-} from "../lib/background/tab-last-opened";
+} from "@/features/zen/tab-last-opened";
 
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());
@@ -111,9 +114,18 @@ export default defineBackground(() => {
     getTab: getTabInfo,
     getSnapshot,
     getTimers: timerService.getActiveTimers,
+    openTimerPopup: (tabId) => openCustomTimerPopup(tabId),
     setTimer: timerService.setTabTimer,
     clearTimer: timerService.clearTabTimer,
     clearAllTimers: timerService.clearAllTimers,
+    openSettings: openSettingsPopup,
+    setTabLabel: async (tabId, label) => {
+      const renamed = await timerService.renameTab(tabId, label);
+      if (!renamed) {
+        throw new Error("Could not rename this tab.");
+      }
+      notifySnapshotChanged();
+    },
     isAllowedTimerEnd: (endAt) => isAllowedTimerEnd(endAt),
   });
 });

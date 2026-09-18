@@ -8,7 +8,12 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["entrypoints/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "ui/**/*.{ts,tsx}"],
+    files: [
+      "app/**/*.{ts,tsx}",
+      "entrypoints/**/*.{ts,tsx}",
+      "features/**/*.{ts,tsx}",
+      "shared/**/*.{ts,tsx}",
+    ],
     languageOptions: {
       globals: {
         browser: "readonly",
@@ -28,8 +33,45 @@ export default tseslint.config(
       ],
     },
   },
+  // Architectural boundaries. Dependencies point one way:
+  //   entrypoints -> app -> features -> shared
+  // so a feature can be read, moved or deleted without chasing back-references.
   {
-    files: ["tests/**/*.{ts,tsx}"],
+    files: ["shared/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/features/*", "@/app/*", "@/entrypoints/*"],
+              message:
+                "shared/ is the bottom layer: it must not import from features/, app/ or entrypoints/.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["features/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/app/*", "@/entrypoints/*"],
+              message:
+                "features/ must not import from app/ or entrypoints/; those wire features together, not the other way round.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["**/*.test.{ts,tsx}"],
     languageOptions: {
       globals: {
         describe: "readonly",
