@@ -96,22 +96,52 @@ export function DisplaySettingsApp() {
               <input
                 type="checkbox"
                 class="accent-zen-accent mt-1 size-4"
-                checked={settings.filterIssuesInOverlay}
+                checked={settings.detectForgeIssues}
                 disabled={!loaded}
                 onChange={(event) =>
-                  updateSettings({ filterIssuesInOverlay: event.currentTarget.checked })
+                  updateSettings({
+                    detectForgeIssues: event.currentTarget.checked,
+                    filterIssuesInOverlay:
+                      event.currentTarget.checked && settings.filterIssuesInOverlay,
+                  })
                 }
               />
               <span>
-                <span class="block text-sm font-medium">
-                  Show issues only in the issue navigator
-                </span>
+                <span class="block text-sm font-medium">Auto-detect GitHub and GitLab issues</span>
                 <span class="text-zen-subtle block text-xs">
-                  Removes issue and pull-request tabs from the overlay tab results. They remain
-                  available in the issue navigator.
+                  Finds issue and pull-request tabs and shows them in the issue navigator.
                 </span>
               </span>
             </label>
+            <ul class="border-zen-border mt-3 ml-7 list-none border-l pl-4">
+              <li>
+                <label
+                  class={cn(
+                    "flex items-start gap-3",
+                    settings.detectForgeIssues ? "cursor-pointer" : "cursor-not-allowed opacity-50",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    class="accent-zen-accent mt-1 size-4"
+                    checked={settings.filterIssuesInOverlay}
+                    disabled={!loaded || !settings.detectForgeIssues}
+                    onChange={(event) =>
+                      updateSettings({ filterIssuesInOverlay: event.currentTarget.checked })
+                    }
+                  />
+                  <span>
+                    <span class="block text-sm font-medium">
+                      Show issues only in the issue navigator
+                    </span>
+                    <span class="text-zen-subtle block text-xs">
+                      Removes issue and pull-request tabs from the overlay tab results. They remain
+                      available in the issue navigator.
+                    </span>
+                  </span>
+                </label>
+              </li>
+            </ul>
           </li>
           <li>
             <label class="flex cursor-pointer items-start gap-3">

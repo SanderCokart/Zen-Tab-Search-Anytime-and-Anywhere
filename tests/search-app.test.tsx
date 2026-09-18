@@ -24,6 +24,7 @@ function mountSearchApp(
   onClose = vi.fn(),
   snapshotTabs = tabs,
   layout: "popup" | "overlay" = "popup",
+  displaySettings?: Record<string, unknown>,
 ) {
   const sendMessage = vi.fn(async ({ type }: { type: string }) => {
     if (type === "getSnapshot") {
@@ -39,7 +40,7 @@ function mountSearchApp(
       },
       storage: {
         local: {
-          get: vi.fn(async () => ({})),
+          get: vi.fn(async () => (displaySettings ? { displaySettings } : {})),
           set: vi.fn(async () => undefined),
         },
         onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
@@ -64,6 +65,27 @@ describe("SearchApp", () => {
       expect(sendMessage).toHaveBeenCalledWith({ type: "switchTab", tabId: 1, domId: undefined }),
     );
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("selects an exact whole-word match when the query changes", async () => {
+    const { root } = mountSearchApp(vi.fn(), [
+      { ...tabs[0], title: "Epic browser tab" },
+      { ...tabs[1], title: "Ephemeral notes" },
+    ]);
+    await vi.waitFor(() => expect(root.textContent).toContain("Epic browser tab"));
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.value = "Epic";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-selected='true']")?.textContent).toContain(
+        "Epic browser tab",
+      ),
+    );
 
     render(null, root);
     root.remove();
@@ -168,6 +190,53 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("keeps forge tabs in overlay results when issue detection is off", async () => {
+    const forgeTabs = [
+      {
+        ...tabs[0],
+        title: "Fix search",
+        url: "https://github.com/acme/project/issues/42",
+      },
+      {
+        ...tabs[1],
+        title: "Docs",
+        url: "https://example.com",
+      },
+    ];
+    const { root } = mountSearchApp(vi.fn(), forgeTabs, "overlay", {
+      detectForgeIssues: false,
+      filterIssuesInOverlay: true,
+    });
+
+    await vi.waitFor(() => expect(root.textContent).toContain("Fix search"));
+    expect(root.textContent).not.toContain("Issues and requests");
+    expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(2);
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("shows forge tabs in both overlay results and the issue navigator when the nested filter is off", async () => {
+    const forgeTabs = [
+      {
+        ...tabs[0],
+        title: "Fix search",
+        url: "https://github.com/acme/project/issues/42",
+      },
+    ];
+    const { root } = mountSearchApp(vi.fn(), forgeTabs, "overlay", {
+      detectForgeIssues: true,
+      filterIssuesInOverlay: false,
+    });
+
+    await vi.waitFor(() => expect(root.textContent).toContain("Issues and requests"));
+    expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(1);
+    expect(root.textContent).toContain("Fix search");
+
+    render(null, root);
+    root.remove();
+  });
+
   it("moves arrow navigation to the issue navigator when the query starts with # or !", async () => {
     const mixedTabs = [
       {
@@ -239,6 +308,172 @@ describe("SearchApp", () => {
       }),
     );
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("prefers a direct issue match over a direct normal-tab match", async () => {
+    const mixedTabs = [
+      {
+        ...tabs[0],
+        title: "Fix search notes",
+        url: "https://example.com/fix-search",
+      },
+      {
+        id: 3,
+        title: "Fix search",
+        url: "https://github.com/acme/project/issues/42",
+        favIconUrl: "",
+        windowId: 1,
+      },
+    ];
+    const { root } = mountSearchApp(vi.fn(), mixedTabs, "overlay");
+    await vi.waitFor(() => expect(root.textContent).toContain("Fix search notes"));
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.value = "Fix search";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-issue-selected='true']")?.textContent).toContain(
+        "Fix search",
+      ),
+    );
+    expect(root.querySelector("[data-selected='true']")).toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("selects a GitLab issue whose visible name is EPIC", async () => {
+    const mixedTabs = [
+      {
+        ...tabs[0],
+        title: "Acceptatie - CCV Shop",
+        url: "https://example.com/docs",
+        folderName: "Docs",
+        workspaceName: "Bug Shift",
+      },
+      {
+        id: 3,
+        title: "EPIC",
+        url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/issues/11732",
+        favIconUrl: "",
+        windowId: 1,
+        lastOpenedAt: Date.now() - 2 * 60 * 60 * 1000,
+      },
+      {
+        id: 4,
+        title: "ISSUE: #12118 - Bedankpagina two-column checkout",
+        url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/issues/12118",
+        favIconUrl: "",
+        windowId: 1,
+        lastOpenedAt: Date.now() - 24 * 60 * 60 * 1000,
+      },
+    ];
+    const { root } = mountSearchApp(vi.fn(), mixedTabs, "overlay");
+    await vi.waitFor(() => expect(root.textContent).toContain("Acceptatie - CCV Shop"));
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    for (const value of ["E", "EP", "EPI", "EPIC"]) {
+      input.value = value;
+      input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    }
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-issue-selected='true']")?.textContent).toMatch(/EPIC/),
+    );
+    expect(root.querySelector("[data-selected='true']")).toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("selects an exact issue name even when a more recent issue is listed first", async () => {
+    const mixedTabs = [
+      {
+        ...tabs[0],
+        title: "Notes",
+        url: "https://example.com/notes",
+      },
+      {
+        id: 3,
+        title: "Unrelated GitHub title · Issue #10 · acme/project",
+        customLabel: "Epic",
+        url: "https://github.com/acme/project/issues/10",
+        favIconUrl: "",
+        windowId: 1,
+        lastOpenedAt: 100,
+      },
+      {
+        id: 4,
+        title: "Newer issue · Issue #2 · acme/project",
+        url: "https://github.com/acme/project/issues/2",
+        favIconUrl: "",
+        windowId: 1,
+        lastOpenedAt: 500,
+      },
+    ];
+    const { root } = mountSearchApp(vi.fn(), mixedTabs, "overlay");
+    await vi.waitFor(() => expect(root.textContent).toContain("Notes"));
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.value = "Epic";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-issue-selected='true']")?.textContent).toContain("Epic"),
+    );
+    expect(root.querySelector("[data-issue-selected='true']")?.textContent).not.toContain(
+      "Newer issue",
+    );
+    expect(root.querySelector("[data-selected='true']")).toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("selects the issue with the most matching words", async () => {
+    const mixedTabs = [
+      {
+        ...tabs[0],
+        title: "Notes",
+        url: "https://example.com/notes",
+      },
+      {
+        id: 3,
+        title: "Two column",
+        url: "https://github.com/acme/project/issues/1",
+        favIconUrl: "",
+        windowId: 1,
+        lastOpenedAt: 500,
+      },
+      {
+        id: 4,
+        title: "Bedankpagina two-column checkout",
+        url: "https://github.com/acme/project/issues/2",
+        favIconUrl: "",
+        windowId: 1,
+        lastOpenedAt: 100,
+      },
+    ];
+    const { root } = mountSearchApp(vi.fn(), mixedTabs, "overlay");
+    await vi.waitFor(() => expect(root.textContent).toContain("Notes"));
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.value = "two column checkout";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-issue-selected='true']")?.textContent).toContain(
+        "Bedankpagina two-column checkout",
+      ),
+    );
+    expect(root.querySelector("[data-issue-selected='true']")?.textContent).not.toContain(
+      "Two column",
+    );
+    expect(root.querySelector("[data-selected='true']")).toBeNull();
 
     render(null, root);
     root.remove();

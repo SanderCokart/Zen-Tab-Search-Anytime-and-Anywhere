@@ -1,15 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
+  bestForgeNavigatorIndex,
   buildForgeIssueEntries,
   buildSearchItems,
+  countExactQueryWords,
   filterForgeIssueEntries,
+  filterSearchItems,
   flattenForgeNavigatorEntries,
+  fuzzyMatchWithScore,
   groupSearchItems,
   parseForgeNavigatorQuery,
   prioritizeCurrentTab,
+  rankForgeIssueEntries,
   sortForgeIssueEntries,
 } from "../lib/search";
-import type { TabInfo } from "../lib/types";
+import type { SearchItem, TabInfo } from "../lib/types";
 
 function tab(id: number, active = false): TabInfo {
   return {
@@ -36,6 +41,69 @@ describe("prioritizeCurrentTab", () => {
     const items = buildSearchItems([tab(1), tab(2, true), tab(3)], []);
     const ordered = prioritizeCurrentTab(items);
     expect(ordered[0]).toMatchObject({ kind: "tab", data: { id: 2 } });
+  });
+});
+
+describe("filterSearchItems", () => {
+  it("ranks exact whole-word matches before fuzzy matches", () => {
+    const items: SearchItem[] = buildSearchItems(
+      [
+        { ...tab(1), title: "Epic browser tab" },
+        { ...tab(2), title: "Ephemeral notes" },
+      ],
+      [],
+    );
+
+    const filtered = filterSearchItems(items, "Epic");
+
+    expect(filtered.map((item) => (item.kind === "tab" ? item.data.id : item.data.id))).toEqual([
+      1,
+    ]);
+  });
+
+  it("does not keep unrelated tabs for a follow-up query", () => {
+    const items: SearchItem[] = buildSearchItems(
+      [
+        {
+          ...tab(1),
+          title: "Free, collaborative whiteboard · Hand-drawn look",
+          url: "https://excalidraw.com",
+        },
+        {
+          ...tab(2),
+          title: "In Progress",
+          customLabel: "In Progress",
+          url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/merge_requests/19800",
+          workspaceName: "MR",
+          folderName: "SHOP",
+        },
+        {
+          ...tab(3),
+          title: 'ISSUE: #12161 - Follow-up of "Velden horen niet bij elkaar"',
+          url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/issues/12161",
+        },
+      ],
+      [],
+    );
+
+    const filtered = filterSearchItems(items, "Follow");
+
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]).toMatchObject({ kind: "tab", data: { id: 3 } });
+  });
+});
+
+describe("fuzzyMatchWithScore", () => {
+  it("matches word prefixes and rejects letter-subsequence hits", () => {
+    expect(fuzzyMatchWithScore("Follow-up of Velden", "follow").matches).toBe(true);
+    expect(fuzzyMatchWithScore("In Progress", "follow").matches).toBe(false);
+    expect(fuzzyMatchWithScore("Free, collaborative whiteboard", "follow").matches).toBe(false);
+    expect(
+      fuzzyMatchWithScore(
+        "https://gitlab.biedmeer.nl/ccv/shop/shop/-/merge_requests/19800",
+        "follow",
+      ).matches,
+    ).toBe(false);
   });
 });
 
@@ -143,6 +211,84 @@ describe("forge issue entries", () => {
     expect(filterForgeIssueEntries(entries, "42")).toHaveLength(1);
     expect(filterForgeIssueEntries(entries, "merge request")[0]?.ref.id).toBe("7");
     expect(filterForgeIssueEntries(entries, "gitlab")[0]?.ref.id).toBe("7");
+  });
+
+  it("ranks a custom-labeled exact issue match above a more recently opened issue", () => {
+    const entries = buildForgeIssueEntries([
+      {
+        ...tab(1),
+        title: "Unrelated GitHub title · Issue #10 · acme/project",
+        customLabel: "Epic",
+        url: "https://github.com/acme/project/issues/10",
+        lastOpenedAt: 100,
+      },
+      {
+        ...tab(2),
+        title: "Newer issue · Issue #2 · acme/project",
+        url: "https://github.com/acme/project/issues/2",
+        lastOpenedAt: 500,
+      },
+    ]);
+
+    const ranked = rankForgeIssueEntries(entries, "Epic");
+    expect(ranked[0]?.entry.ref.id).toBe("10");
+    expect(ranked[0]?.direct).toBe(true);
+
+    const visual = flattenForgeNavigatorEntries(entries, "recent");
+    expect(visual[0]?.ref.id).toBe("2");
+    expect(bestForgeNavigatorIndex(visual, ranked)).toBe(
+      visual.findIndex((entry) => entry.ref.id === "10"),
+    );
+    expect(bestForgeNavigatorIndex(visual, ranked, "Epic")).toBe(
+      visual.findIndex((entry) => entry.ref.id === "10"),
+    );
+  });
+
+  it("selects the issue that matches the most query words", () => {
+    const entries = buildForgeIssueEntries([
+      {
+        ...tab(1),
+        title: "Two column",
+        url: "https://github.com/acme/project/issues/1",
+        lastOpenedAt: 500,
+      },
+      {
+        ...tab(2),
+        title: "Bedankpagina two-column checkout",
+        url: "https://github.com/acme/project/issues/2",
+        lastOpenedAt: 100,
+      },
+    ]);
+
+    expect(
+      countExactQueryWords("EPIC (#11732) · Issues · ccv / shop / shop · GitLab", "EPIC"),
+    ).toBe(1);
+    expect(countExactQueryWords("Two column", "two column checkout")).toBe(2);
+
+    const ranked = rankForgeIssueEntries(entries, "two column checkout");
+    const visual = flattenForgeNavigatorEntries(entries, "recent");
+    expect(bestForgeNavigatorIndex(visual, ranked, "two column checkout")).toBe(
+      visual.findIndex((entry) => entry.ref.id === "2"),
+    );
+  });
+
+  it("treats a renamed ISSUE: prefix title as a direct match", () => {
+    const entries = buildForgeIssueEntries([
+      {
+        ...tab(1),
+        title: "ISSUE: #11732 - EPIC",
+        url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/issues/11732",
+      },
+      {
+        ...tab(2),
+        title: "ISSUE: #12118 - Bedankpagina two-column checkout",
+        url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/issues/12118",
+      },
+    ]);
+
+    const ranked = rankForgeIssueEntries(entries, "EPIC");
+    expect(ranked[0]?.direct).toBe(true);
+    expect(ranked[0]?.entry.ref.id).toBe("11732");
   });
 
   it("sorts issue entries from recently opened to oldest", () => {

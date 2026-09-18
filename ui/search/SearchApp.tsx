@@ -1,5 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import { debugError } from "../../lib/debug";
 import {
   sendExtensionMessage,
@@ -12,15 +12,19 @@ import {
   type DisplaySettings,
 } from "../../lib/display-settings";
 import {
+  bestForgeNavigatorIndex,
   buildForgeIssueEntries,
   buildSearchItems,
-  filterForgeIssueEntries,
   filterSearchItems,
   flattenForgeNavigatorEntries,
+  forgeEntryDisplayTitle,
+  forgeEntryExactWordCount,
   groupSearchItems,
   groupForgeIssueEntries,
   parseForgeNavigatorQuery,
   prioritizeCurrentTab,
+  rankForgeIssueEntries,
+  searchItemExactWordCount,
   type ForgeIssueSortMode,
 } from "../../lib/search";
 import { forgeTitleIncludesRefId } from "../../lib/forge-label";
@@ -311,7 +315,7 @@ function ForgeIssueNavigator({
           onFocus={() => onSelect(entryIndex)}
           title={entry.ref.url}
         >
-          <span class="block min-w-0 truncate text-[16px]">{entry.title}</span>
+          <span class="block min-w-0 truncate text-[16px]">{forgeEntryDisplayTitle(entry)}</span>
           {(() => {
             const entryDate = formatForgeEntryDate(entry);
             const tabTitle = `${entry.tab.customLabel || ""} ${entry.tab.title || ""}`;
@@ -423,9 +427,9 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [selectedForgeIndex, setSelectedForgeIndex] = useState(0);
-  const [focusPane, setFocusPane] = useState<"tabs" | "forge">("tabs");
+  const [userPane, setUserPane] = useState<"tabs" | "forge" | null>(null);
   const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("recent");
-  const prefixedForgeQuery = useRef(false);
+  const autoQueryRef = useRef(query);
   const [timerTabId, setTimerTabId] = useState<number | null>(null);
   const [showTimers, setShowTimers] = useState(false);
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
@@ -524,16 +528,23 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     return () => window.clearInterval(id);
   }, []);
 
-  const forgeIssueEntries = useMemo(() => buildForgeIssueEntries(tabs), [tabs]);
   const labeledTabs = useMemo(
     () =>
       tabs.map((tab) => {
-        if (!isEssentialTab(tab) || !tab.domId) {
+        if (!tab.domId) {
           return tab;
         }
-        return { ...tab, customLabel: essentialNames[tab.domId] || "" };
+        const essentialName = essentialNames[tab.domId];
+        if (!essentialName) {
+          return tab;
+        }
+        return { ...tab, customLabel: essentialName };
       }),
     [essentialNames, tabs],
+  );
+  const forgeIssueEntries = useMemo(
+    () => (displaySettings.detectForgeIssues ? buildForgeIssueEntries(labeledTabs) : []),
+    [displaySettings.detectForgeIssues, labeledTabs],
   );
   const visibleTabs = useMemo(
     () =>
@@ -543,13 +554,29 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     [displaySettings.filterIssuesInOverlay, labeledTabs, layout],
   );
   const forgeNavigatorQuery = useMemo(() => parseForgeNavigatorQuery(query), [query]);
-  const filteredForgeIssueEntries = useMemo(
-    () => filterForgeIssueEntries(forgeIssueEntries, forgeNavigatorQuery.filterQuery),
+  const rankedForgeIssueEntries = useMemo(
+    () => rankForgeIssueEntries(forgeIssueEntries, forgeNavigatorQuery.filterQuery),
     [forgeIssueEntries, forgeNavigatorQuery.filterQuery],
+  );
+  const filteredForgeIssueEntries = useMemo(
+    () =>
+      forgeNavigatorQuery.filterQuery.trim()
+        ? rankedForgeIssueEntries.map(({ entry }) => entry)
+        : forgeIssueEntries,
+    [forgeIssueEntries, forgeNavigatorQuery.filterQuery, rankedForgeIssueEntries],
   );
   const navigatorEntries = useMemo(
     () => flattenForgeNavigatorEntries(filteredForgeIssueEntries, forgeSortMode),
     [filteredForgeIssueEntries, forgeSortMode],
+  );
+  const bestForgeIndex = useMemo(
+    () =>
+      bestForgeNavigatorIndex(
+        navigatorEntries,
+        rankedForgeIssueEntries,
+        forgeNavigatorQuery.filterQuery,
+      ),
+    [forgeNavigatorQuery.filterQuery, navigatorEntries, rankedForgeIssueEntries],
   );
   const items = useMemo(() => {
     const matches = filterSearchItems(
@@ -573,17 +600,77 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
   );
   const canFocusForge = layout === "overlay" && navigatorEntries.length > 0;
   const canFocusTabs = items.length > 0;
-  const navigateForge = focusPane === "forge" ? canFocusForge : !canFocusTabs && canFocusForge;
+  const searchQuery = forgeNavigatorQuery.filterQuery.trim();
+  const bestForgeWordCount = searchQuery
+    ? Math.max(0, ...navigatorEntries.map((entry) => forgeEntryExactWordCount(entry, searchQuery)))
+    : 0;
+  const bestTabWordCount = searchQuery
+    ? Math.max(0, ...items.map((item) => searchItemExactWordCount(item, searchQuery)))
+    : 0;
+  const shouldFocusForge =
+    canFocusForge &&
+    (forgeNavigatorQuery.active ||
+      (Boolean(searchQuery) && bestForgeWordCount > 0 && bestForgeWordCount >= bestTabWordCount));
+  const navigateForge =
+    userPane === "tabs"
+      ? false
+      : userPane === "forge"
+        ? canFocusForge
+        : shouldFocusForge || (!canFocusTabs && canFocusForge);
+
+  const focusForgePane = (index: number) => {
+    setUserPane("forge");
+    setSelectedForgeIndex(index);
+    setSelectedIndex(-1);
+  };
+  const focusTabsPane = (index: number) => {
+    setUserPane("tabs");
+    setSelectedIndex(index);
+  };
+
+  useLayoutEffect(() => {
+    const queryChanged = autoQueryRef.current !== query;
+    if (queryChanged) {
+      autoQueryRef.current = query;
+      if (userPane !== null) {
+        setUserPane(null);
+      }
+    }
+    if (!queryChanged && userPane !== null) {
+      return;
+    }
+    if (!searchQuery && !forgeNavigatorQuery.active) {
+      return;
+    }
+    if (shouldFocusForge) {
+      focusForgePane(searchQuery ? bestForgeIndex : 0);
+      return;
+    }
+    if (queryChanged && canFocusTabs) {
+      setSelectedIndex(0);
+    }
+  }, [
+    bestForgeIndex,
+    canFocusTabs,
+    forgeNavigatorQuery.active,
+    query,
+    searchQuery,
+    shouldFocusForge,
+    userPane,
+  ]);
 
   useEffect(() => {
     optionRefs.current = [];
+    if (query.trim()) {
+      return;
+    }
     setSelectedIndex((current) => {
       if (navigateForge || !items.length) {
         return -1;
       }
       return current >= 0 && current < items.length ? current : 0;
     });
-  }, [items, navigateForge]);
+  }, [items, navigateForge, query]);
 
   useEffect(() => {
     if (renameDialog) {
@@ -591,31 +678,6 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
       renameInputRef.current?.select();
     }
   }, [renameDialog?.tab.domId]);
-
-  useEffect(() => {
-    setSelectedForgeIndex((current) =>
-      navigatorEntries.length ? Math.min(current, navigatorEntries.length - 1) : 0,
-    );
-  }, [navigatorEntries]);
-
-  useEffect(() => {
-    const prefixed = forgeNavigatorQuery.active;
-    if (prefixed && canFocusForge && !prefixedForgeQuery.current) {
-      setFocusPane("forge");
-      setSelectedForgeIndex(0);
-    } else if (!prefixed && prefixedForgeQuery.current) {
-      setFocusPane(canFocusTabs ? "tabs" : "forge");
-    }
-    prefixedForgeQuery.current = prefixed;
-  }, [canFocusForge, canFocusTabs, forgeNavigatorQuery.active]);
-
-  useEffect(() => {
-    if (navigateForge && !canFocusForge && canFocusTabs) {
-      setFocusPane("tabs");
-    } else if (!canFocusTabs && canFocusForge) {
-      setFocusPane("forge");
-    }
-  }, [canFocusForge, canFocusTabs, navigateForge]);
 
   useEffect(() => {
     optionRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
@@ -683,16 +745,16 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           optionRefs.current[index] = element;
         }}
         data-testid="zen-search-item"
-        data-selected={selectedIndex === index ? "true" : undefined}
+        data-selected={!navigateForge && selectedIndex === index ? "true" : undefined}
         class={cn(
           "flex min-w-0 cursor-pointer items-start transition-colors",
           item.kind === "space" && "items-center justify-center text-center",
           compact ? "gap-2 rounded-md px-2 py-1.5 text-[13px]" : "gap-[12px] rounded-lg p-[12px]",
-          selectedIndex === index ? "bg-zen-line-soft" : "hover:bg-zen-line-soft",
+          !navigateForge && selectedIndex === index ? "bg-zen-line-soft" : "hover:bg-zen-line-soft",
           item.kind === "space" && item.data.isActive && "bg-zen-accent",
         )}
         role="option"
-        aria-selected={selectedIndex === index}
+        aria-selected={!navigateForge && selectedIndex === index}
         onContextMenu={(event) => {
           if (item.kind !== "tab") {
             return;
@@ -891,12 +953,12 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             } else if (event.key === "Tab" && canFocusForge && canFocusTabs) {
               event.preventDefault();
               if (navigateForge) {
-                setFocusPane("tabs");
-                setSelectedIndex((current) => (current >= 0 && current < count ? current : 0));
+                focusTabsPane(selectedIndex >= 0 && selectedIndex < count ? selectedIndex : 0);
               } else {
-                setFocusPane("forge");
-                setSelectedForgeIndex((current) =>
-                  current >= 0 && current < forgeCount ? current : 0,
+                focusForgePane(
+                  selectedForgeIndex >= 0 && selectedForgeIndex < forgeCount
+                    ? selectedForgeIndex
+                    : 0,
                 );
               }
             } else if (
@@ -907,8 +969,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               canFocusForge &&
               (inputRef.current?.selectionStart ?? 0) === 0
             ) {
-              setFocusPane("forge");
-              setSelectedForgeIndex(0);
+              focusForgePane(0);
             } else if (event.key === "Enter") {
               if (navigateForge) {
                 const selectedForge = navigatorEntries[selectedForgeIndex];

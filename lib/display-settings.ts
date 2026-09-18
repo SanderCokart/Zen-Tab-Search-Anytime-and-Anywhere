@@ -1,6 +1,7 @@
 export const DISPLAY_SETTINGS_STORAGE_KEY = "displaySettings";
 
 export interface DisplaySettings {
+  detectForgeIssues: boolean;
   filterIssuesInOverlay: boolean;
   groupFolders: boolean;
   groupSubfolders: boolean;
@@ -11,6 +12,7 @@ export interface DisplaySettings {
 }
 
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
+  detectForgeIssues: true,
   filterIssuesInOverlay: true,
   groupFolders: true,
   groupSubfolders: true,
@@ -33,15 +35,20 @@ function normalizeDisplaySettings(value: unknown): DisplaySettings {
     return { ...DEFAULT_DISPLAY_SETTINGS };
   }
 
+  const detectForgeIssues =
+    typeof value.detectForgeIssues === "boolean"
+      ? value.detectForgeIssues
+      : DEFAULT_DISPLAY_SETTINGS.detectForgeIssues;
   const groupFolders =
     typeof value.groupFolders === "boolean"
       ? value.groupFolders
       : DEFAULT_DISPLAY_SETTINGS.groupFolders;
   return {
+    detectForgeIssues,
     filterIssuesInOverlay:
-      typeof value.filterIssuesInOverlay === "boolean"
+      detectForgeIssues && typeof value.filterIssuesInOverlay === "boolean"
         ? value.filterIssuesInOverlay
-        : DEFAULT_DISPLAY_SETTINGS.filterIssuesInOverlay,
+        : DEFAULT_DISPLAY_SETTINGS.filterIssuesInOverlay && detectForgeIssues,
     groupFolders,
     groupSubfolders:
       groupFolders && typeof value.groupSubfolders === "boolean"

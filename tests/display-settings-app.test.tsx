@@ -11,6 +11,7 @@ describe("DisplaySettingsApp", () => {
           local: {
             get: vi.fn(async () => ({
               displaySettings: {
+                detectForgeIssues: true,
                 filterIssuesInOverlay: true,
                 groupFolders: true,
                 groupSubfolders: true,
@@ -37,16 +38,67 @@ describe("DisplaySettingsApp", () => {
     expect(document.querySelector(".pcr-type[data-type='RGBA']")).toBeTruthy();
     expect(document.querySelector(".pcr-type[data-type='HSLA']")).toBeTruthy();
     const checkboxes = root.querySelectorAll<HTMLInputElement>("input[type='checkbox']");
-    expect(checkboxes).toHaveLength(3);
-    await vi.waitFor(() => expect(checkboxes[1]?.disabled).toBe(false));
-    checkboxes[1]?.click();
+    expect(checkboxes).toHaveLength(4);
+    await vi.waitFor(() => expect(checkboxes[2]?.disabled).toBe(false));
+    checkboxes[2]?.click();
 
-    await vi.waitFor(() => expect(checkboxes[2]?.disabled).toBe(true));
+    await vi.waitFor(() => expect(checkboxes[3]?.disabled).toBe(true));
     expect(set).toHaveBeenCalledWith({
       displaySettings: {
+        detectForgeIssues: true,
         filterIssuesInOverlay: true,
         groupFolders: false,
         groupSubfolders: false,
+        textColor: "#f5f5f5",
+        issueBackgroundColor: "#252525",
+        folderBackgroundColor: "#2d2d2d",
+        spaceBackgroundColor: "#292929",
+      },
+    });
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("disables overlay-only issues when issue detection is disabled", async () => {
+    const set = vi.fn(async () => undefined);
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: {
+            get: vi.fn(async () => ({
+              displaySettings: {
+                detectForgeIssues: true,
+                filterIssuesInOverlay: true,
+                groupFolders: true,
+                groupSubfolders: true,
+              },
+            })),
+            set,
+          },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    render(<DisplaySettingsApp />, root);
+
+    const checkboxes = await vi.waitFor(() => {
+      const inputs = root.querySelectorAll<HTMLInputElement>("input[type='checkbox']");
+      expect(inputs).toHaveLength(4);
+      expect(inputs[0]?.disabled).toBe(false);
+      return inputs;
+    });
+    checkboxes[0]?.click();
+
+    await vi.waitFor(() => expect(checkboxes[1]?.disabled).toBe(true));
+    expect(set).toHaveBeenCalledWith({
+      displaySettings: {
+        detectForgeIssues: false,
+        filterIssuesInOverlay: false,
+        groupFolders: true,
+        groupSubfolders: true,
         textColor: "#f5f5f5",
         issueBackgroundColor: "#252525",
         folderBackgroundColor: "#2d2d2d",
@@ -66,6 +118,7 @@ describe("DisplaySettingsApp", () => {
           local: {
             get: vi.fn(async () => ({
               displaySettings: {
+                detectForgeIssues: true,
                 filterIssuesInOverlay: true,
                 groupFolders: true,
                 groupSubfolders: true,
@@ -92,6 +145,7 @@ describe("DisplaySettingsApp", () => {
     await vi.waitFor(() =>
       expect(set).toHaveBeenCalledWith({
         displaySettings: {
+          detectForgeIssues: true,
           filterIssuesInOverlay: true,
           groupFolders: true,
           groupSubfolders: true,

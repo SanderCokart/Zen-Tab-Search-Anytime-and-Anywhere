@@ -7,9 +7,14 @@ import {
 } from "../lib/display-settings";
 
 describe("display settings", () => {
-  it("uses defaults and disables subfolders when folders are disabled", async () => {
+  it("uses defaults and disables nested options when their parent setting is off", async () => {
     const get = vi.fn(async () => ({
-      displaySettings: { groupFolders: false, groupSubfolders: true },
+      displaySettings: {
+        detectForgeIssues: false,
+        filterIssuesInOverlay: true,
+        groupFolders: false,
+        groupSubfolders: true,
+      },
     }));
     const set = vi.fn(async () => undefined);
     const addListener = vi.fn();
@@ -25,19 +30,29 @@ describe("display settings", () => {
 
     await expect(readDisplaySettings()).resolves.toEqual({
       ...DEFAULT_DISPLAY_SETTINGS,
+      detectForgeIssues: false,
+      filterIssuesInOverlay: false,
       groupFolders: false,
       groupSubfolders: false,
     });
     await expect(
-      saveDisplaySettings({ ...DEFAULT_DISPLAY_SETTINGS, groupFolders: false }),
+      saveDisplaySettings({
+        ...DEFAULT_DISPLAY_SETTINGS,
+        detectForgeIssues: false,
+        groupFolders: false,
+      }),
     ).resolves.toEqual({
       ...DEFAULT_DISPLAY_SETTINGS,
+      detectForgeIssues: false,
+      filterIssuesInOverlay: false,
       groupFolders: false,
       groupSubfolders: false,
     });
     expect(set).toHaveBeenCalledWith({
       displaySettings: {
         ...DEFAULT_DISPLAY_SETTINGS,
+        detectForgeIssues: false,
+        filterIssuesInOverlay: false,
         groupFolders: false,
         groupSubfolders: false,
       },
@@ -66,6 +81,7 @@ describe("display settings", () => {
 
     expect(listener).toHaveBeenCalledWith({
       ...DEFAULT_DISPLAY_SETTINGS,
+      detectForgeIssues: true,
       groupFolders: false,
       groupSubfolders: false,
     });
