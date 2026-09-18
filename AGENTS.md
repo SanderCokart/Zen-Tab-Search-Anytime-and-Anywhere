@@ -120,3 +120,4 @@ context menu and popup, and its own UI — all in one directory.
   names under the `essentialTabNames` storage key, keyed by DOM id.
 - **`noUncheckedIndexedAccess` is on.** Indexing an array gives `T | undefined`.
 - Debug logging is compiled out unless `WXT_DEBUG=true` (see `.env.local`).
+w
