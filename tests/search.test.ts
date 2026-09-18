@@ -99,14 +99,14 @@ describe("filterSearchItems", () => {
           ...tab(2),
           title: "In Progress",
           customLabel: "In Progress",
-          url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/merge_requests/19800",
+          url: "https://gitlab.com/acme/project/-/merge_requests/80",
           workspaceName: "MR",
-          folderName: "SHOP",
+          folderName: "Work",
         },
         {
           ...tab(3),
-          title: 'ISSUE: #12161 - Follow-up of "Velden horen niet bij elkaar"',
-          url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/issues/12161",
+          title: 'ISSUE: #12 - Follow-up of "Empty search state"',
+          url: "https://gitlab.com/acme/project/-/issues/12",
         },
       ],
       [],
@@ -123,7 +123,7 @@ describe("filterSearchItems", () => {
       [
         {
           ...tab(1),
-          title: "Follow-up of Velden",
+          title: "Follow-up of empty search state",
           customLabel: "In Progress",
         },
       ],
@@ -138,14 +138,11 @@ describe("filterSearchItems", () => {
 
 describe("fuzzyMatchWithScore", () => {
   it("matches word prefixes and rejects letter-subsequence hits", () => {
-    expect(fuzzyMatchWithScore("Follow-up of Velden", "follow").matches).toBe(true);
+    expect(fuzzyMatchWithScore("Follow-up of empty search state", "follow").matches).toBe(true);
     expect(fuzzyMatchWithScore("In Progress", "follow").matches).toBe(false);
     expect(fuzzyMatchWithScore("Free, collaborative whiteboard", "follow").matches).toBe(false);
     expect(
-      fuzzyMatchWithScore(
-        "https://gitlab.biedmeer.nl/ccv/shop/shop/-/merge_requests/19800",
-        "follow",
-      ).matches,
+      fuzzyMatchWithScore("https://gitlab.com/acme/project/-/merge_requests/80", "follow").matches,
     ).toBe(false);
   });
 });
@@ -278,7 +275,7 @@ describe("forge issue entries", () => {
     const entries = buildForgeIssueEntries([
       {
         ...tab(1),
-        title: "Follow-up of Velden · Issue #10 · acme/project",
+        title: "Follow-up of empty search state · Issue #10 · acme/project",
         customLabel: "Epic",
         url: "https://github.com/acme/project/issues/10",
       },
@@ -286,7 +283,7 @@ describe("forge issue entries", () => {
 
     expect(filterForgeIssueEntries(entries, "Epic")[0]?.ref.id).toBe("10");
     expect(filterForgeIssueEntries(entries, "Follow")[0]?.ref.id).toBe("10");
-    expect(filterForgeIssueEntries(entries, "epic velden")[0]?.ref.id).toBe("10");
+    expect(filterForgeIssueEntries(entries, "epic empty")[0]?.ref.id).toBe("10");
   });
 
   it("ranks a custom-labeled exact issue match above a more recently opened issue", () => {
@@ -324,26 +321,24 @@ describe("forge issue entries", () => {
     const entries = buildForgeIssueEntries([
       {
         ...tab(1),
-        title: "Two column",
+        title: "Dark mode",
         url: "https://github.com/acme/project/issues/1",
         lastOpenedAt: 500,
       },
       {
         ...tab(2),
-        title: "Bedankpagina two-column checkout",
+        title: "Dark mode sidebar toggle",
         url: "https://github.com/acme/project/issues/2",
         lastOpenedAt: 100,
       },
     ]);
 
-    expect(
-      countExactQueryWords("EPIC (#11732) · Issues · ccv / shop / shop · GitLab", "EPIC"),
-    ).toBe(1);
-    expect(countExactQueryWords("Two column", "two column checkout")).toBe(2);
+    expect(countExactQueryWords("EPIC (#42) · Issues · acme / project · GitLab", "EPIC")).toBe(1);
+    expect(countExactQueryWords("Dark mode", "dark mode sidebar")).toBe(2);
 
-    const ranked = rankForgeIssueEntries(entries, "two column checkout");
+    const ranked = rankForgeIssueEntries(entries, "dark mode sidebar");
     const visual = flattenForgeNavigatorEntries(entries, "recent");
-    expect(bestForgeNavigatorIndex(visual, ranked, "two column checkout")).toBe(
+    expect(bestForgeNavigatorIndex(visual, ranked, "dark mode sidebar")).toBe(
       visual.findIndex((entry) => entry.ref.id === "2"),
     );
   });
@@ -352,19 +347,19 @@ describe("forge issue entries", () => {
     const entries = buildForgeIssueEntries([
       {
         ...tab(1),
-        title: "ISSUE: #11732 - EPIC",
-        url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/issues/11732",
+        title: "ISSUE: #42 - EPIC",
+        url: "https://gitlab.com/acme/project/-/issues/42",
       },
       {
         ...tab(2),
-        title: "ISSUE: #12118 - Bedankpagina two-column checkout",
-        url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/issues/12118",
+        title: "ISSUE: #7 - Dark mode sidebar toggle",
+        url: "https://gitlab.com/acme/project/-/issues/7",
       },
     ]);
 
     const ranked = rankForgeIssueEntries(entries, "EPIC");
     expect(ranked[0]?.direct).toBe(true);
-    expect(ranked[0]?.entry.ref.id).toBe("11732");
+    expect(ranked[0]?.entry.ref.id).toBe("42");
   });
 
   it("sorts issue entries from recently opened to oldest", () => {

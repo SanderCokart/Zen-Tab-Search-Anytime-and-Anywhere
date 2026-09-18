@@ -392,30 +392,30 @@ describe("SearchApp", () => {
     const mixedTabs = [
       {
         ...tabs[0],
-        title: "Acceptatie - CCV Shop",
+        title: "Handbook",
         url: "https://example.com/docs",
         folderName: "Docs",
-        workspaceName: "Bug Shift",
+        workspaceName: "Work",
       },
       {
         id: 3,
         title: "EPIC",
-        url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/issues/11732",
+        url: "https://gitlab.com/acme/project/-/issues/42",
         favIconUrl: "",
         windowId: 1,
         lastOpenedAt: Date.now() - 2 * 60 * 60 * 1000,
       },
       {
         id: 4,
-        title: "ISSUE: #12118 - Bedankpagina two-column checkout",
-        url: "https://gitlab.biedmeer.nl/ccv/shop/shop/-/issues/12118",
+        title: "ISSUE: #7 - Dark mode sidebar toggle",
+        url: "https://gitlab.com/acme/project/-/issues/7",
         favIconUrl: "",
         windowId: 1,
         lastOpenedAt: Date.now() - 24 * 60 * 60 * 1000,
       },
     ];
     const { root } = mountSearchApp(vi.fn(), mixedTabs, "overlay");
-    await vi.waitFor(() => expect(root.textContent).toContain("Acceptatie - CCV Shop"));
+    await vi.waitFor(() => expect(root.textContent).toContain("Handbook"));
 
     const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
     for (const value of ["E", "EP", "EPI", "EPIC"]) {
@@ -485,7 +485,7 @@ describe("SearchApp", () => {
       },
       {
         id: 3,
-        title: "Two column",
+        title: "Compact layout",
         url: "https://github.com/acme/project/issues/1",
         favIconUrl: "",
         windowId: 1,
@@ -493,7 +493,7 @@ describe("SearchApp", () => {
       },
       {
         id: 4,
-        title: "Bedankpagina two-column checkout",
+        title: "Dark mode sidebar toggle",
         url: "https://github.com/acme/project/issues/2",
         favIconUrl: "",
         windowId: 1,
@@ -504,16 +504,16 @@ describe("SearchApp", () => {
     await vi.waitFor(() => expect(root.textContent).toContain("Notes"));
 
     const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
-    input.value = "two column checkout";
+    input.value = "dark mode sidebar";
     input.dispatchEvent(new InputEvent("input", { bubbles: true }));
 
     await vi.waitFor(() =>
       expect(root.querySelector("[data-issue-selected='true']")?.textContent).toContain(
-        "Bedankpagina two-column checkout",
+        "Dark mode sidebar toggle",
       ),
     );
     expect(root.querySelector("[data-issue-selected='true']")?.textContent).not.toContain(
-      "Two column",
+      "Compact layout",
     );
     expect(root.querySelector("[data-selected='true']")).toBeNull();
 
