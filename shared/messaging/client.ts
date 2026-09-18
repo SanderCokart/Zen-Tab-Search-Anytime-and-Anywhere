@@ -55,7 +55,9 @@ export function subscribeToSnapshotChanged(onChanged: () => void): () => void {
 }
 
 export function subscribeToDisplaySettingsChanged(
-  onChanged: (settings: import("@/features/settings/model/display-settings").DisplaySettings) => void,
+  onChanged: (
+    settings: import("@/features/settings/model/display-settings").DisplaySettings,
+  ) => void,
 ): () => void {
   return subscribeToStoredDisplaySettingsChanged(onChanged);
 }

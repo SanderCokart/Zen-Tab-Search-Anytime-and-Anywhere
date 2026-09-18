@@ -1,7 +1,10 @@
 import { debugLog, debugWarn } from "@/shared/debug";
 import { isUsableTabId, type SpaceInfo, type TabInfo } from "@/shared/types";
 import { formatError, LOG_PREFIX } from "@/shared/log";
-import { resolveAnchorTabId as resolveBrowserAnchorTabId, zenAnchorTabId } from "@/features/zen/anchor";
+import {
+  resolveAnchorTabId as resolveBrowserAnchorTabId,
+  zenAnchorTabId,
+} from "@/features/zen/anchor";
 import { getZenTabsApi, type ZenTabsApi } from "@/features/zen/api";
 
 export interface BrowserTabSnapshot {

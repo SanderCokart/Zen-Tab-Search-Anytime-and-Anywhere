@@ -230,9 +230,7 @@ export function parseStoredTimer(value: unknown): TabTimer | undefined {
   return parsed.success ? parsed.output : undefined;
 }
 
-export function parseStoredTimers(
-  value: unknown,
-): Record<string, TabTimer> {
+export function parseStoredTimers(value: unknown): Record<string, TabTimer> {
   if (!value || typeof value !== "object") {
     return {};
   }

@@ -1,5 +1,9 @@
 import { debugLog, debugWarn } from "@/shared/debug";
-import { buildForgeLabel, parseForgeUrl, type ForgePageInfo } from "@/features/forge/model/forge-label";
+import {
+  buildForgeLabel,
+  parseForgeUrl,
+  type ForgePageInfo,
+} from "@/features/forge/model/forge-label";
 import { sendTabMessage } from "@/shared/messaging/client";
 import { isUsableTabId } from "@/shared/types";
 import { formatError, LOG_PREFIX } from "@/shared/log";

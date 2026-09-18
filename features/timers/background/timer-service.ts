@@ -1,7 +1,12 @@
 import { debugWarn } from "@/shared/debug";
 import { parseStoredTimer, parseStoredTimers } from "@/shared/messaging/protocol";
 import { isUsableTabId, type TabTimer } from "@/shared/types";
-import { composeTimerLabel, isAllowedTimerEnd, MAX_TIMER_MS, stripTimerPrefix } from "@/features/timers/model/timer";
+import {
+  composeTimerLabel,
+  isAllowedTimerEnd,
+  MAX_TIMER_MS,
+  stripTimerPrefix,
+} from "@/features/timers/model/timer";
 
 export interface TimerServiceDependencies {
   setLabel(label: string, tabId: number, silent?: boolean): Promise<boolean>;
