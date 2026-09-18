@@ -8,7 +8,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["entrypoints/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "ui/**/*.{ts,tsx}"],
+    files: ["app/**/*.{ts,tsx}", "entrypoints/**/*.{ts,tsx}", "features/**/*.{ts,tsx}", "shared/**/*.{ts,tsx}"],
     languageOptions: {
       globals: {
         browser: "readonly",
@@ -29,7 +29,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["tests/**/*.{ts,tsx}"],
+    files: ["**/*.test.{ts,tsx}"],
     languageOptions: {
       globals: {
         describe: "readonly",

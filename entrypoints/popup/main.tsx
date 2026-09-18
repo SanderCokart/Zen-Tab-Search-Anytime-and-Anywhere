@@ -1,6 +1,6 @@
 import { render } from "preact";
-import { SearchApp } from "@/ui/search/SearchApp";
-import "@/ui/styles.css";
+import { SearchApp } from "@/features/search/ui/SearchApp";
+import "@/shared/ui/styles.css";
 
 const root = document.getElementById("app");
 if (!root) {
