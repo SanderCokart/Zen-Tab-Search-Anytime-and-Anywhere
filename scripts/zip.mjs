@@ -115,7 +115,6 @@ function main() {
   const zipLabel = resolveLabel(parsed);
   console.log(`Zip label: ${zipLabel}`);
 
-  run("Disabling experiment debug logging", "node", ["scripts/set-experiment-debug.mjs", "false"]);
   run("Creating extension zip", "npx", ["wxt", "zip", "-b", "firefox"], {
     ZIP_ARTIFACT_LABEL: zipLabel,
   });

@@ -1,6 +1,7 @@
 import preact from "@preact/preset-vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "wxt";
+import { injectExperimentDebugAsset } from "./scripts/experiment-debug.mjs";
 
 const zipLabel = process.env.ZIP_ARTIFACT_LABEL?.trim() || "demo";
 
@@ -83,6 +84,9 @@ export default defineConfig({
   webExt: {
     disabled: true,
   },
+  hooks: {
+    "build:publicAssets": injectExperimentDebugAsset,
+  },
   // Browsers allow only 4 commands with suggested_key; all four are used above.
   // File-watch still rebuilds/reloads; this only skips WXT's Alt+R shortcut.
   dev: {
@@ -90,6 +94,7 @@ export default defineConfig({
   },
   // WXT has no official Preact module; this is the documented Vite-plugin path.
   vite: () => ({
+    envPrefix: ["VITE_", "WXT_"],
     plugins: [preact({ reactAliasesEnabled: false }), tailwindcss()],
   }),
 });

@@ -24,6 +24,12 @@ npm run dev
 
 While the dev server is running, WXT rebuilds and reloads the extension on file changes.
 
+Debug logging is off by default (`WXT_DEBUG=false` in `.env`). Enable it in a gitignored `.env.local`:
+
+```bash
+echo WXT_DEBUG=true > .env.local
+```
+
 Load the extension temporarily:
 
 1. Open `about:debugging`

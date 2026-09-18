@@ -9,3 +9,6 @@ dist/
 
 # Accidental non-Firefox build output
 .output/chrome-mv3/
+
+.env.local
+.env.*.local
