@@ -1,8 +1,9 @@
 import { render } from "preact";
 import { describe, expect, it, vi } from "vitest";
 import { SearchApp } from "@/features/search/ui/SearchApp";
+import type { SpaceInfo, TabInfo } from "@/shared/types";
 
-const tabs = [
+const tabs: TabInfo[] = [
   {
     id: 1,
     title: "First tab",
@@ -22,10 +23,12 @@ const tabs = [
 
 function mountSearchApp(
   onClose = vi.fn(),
-  snapshotTabs = tabs,
+  // Tests supply partial tabs; the component receives them through the mocked
+  // getSnapshot response exactly as the background script would send them.
+  snapshotTabs: Partial<TabInfo>[] = tabs,
   layout: "popup" | "overlay" = "popup",
   displaySettings?: Record<string, unknown>,
-  snapshotSpaces: Array<{ id: string; name: string; isActive: boolean }> = [],
+  snapshotSpaces: Partial<SpaceInfo>[] = [],
 ) {
   const sendMessage = vi.fn(async ({ type }: { type: string }) => {
     if (type === "getSnapshot") {

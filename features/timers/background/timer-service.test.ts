@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi, type Mock } from "vitest";
 import { createTimerService } from "@/features/timers/background/timer-service";
 
 const NOW = 1_700_000_000_000;
@@ -139,9 +139,8 @@ describe("createTimerService", () => {
     vi.setSystemTime(NOW);
     const timer = { tabId: 8, endAt: NOW + 60_000, originalLabel: "", title: "Tab" };
     const { service, storage } = installBrowser({ "8": timer }, { openTabIds: [] });
-    vi.mocked(browser.tabs.query)
-      .mockResolvedValueOnce([])
-      .mockResolvedValue([{ id: 8 }]);
+    const tabsQuery = vi.mocked(browser.tabs.query) as unknown as Mock;
+    tabsQuery.mockResolvedValueOnce([]).mockResolvedValue([{ id: 8 }]);
 
     await service.restorePersistedTimers();
     expect(browser.alarms.create).not.toHaveBeenCalled();

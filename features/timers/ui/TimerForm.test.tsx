@@ -29,7 +29,7 @@ describe("TimerForm", () => {
       .querySelector("form")!
       .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     await vi.waitFor(() => expect(onSet).toHaveBeenCalledTimes(1));
-    const endAt = onSet.mock.calls[0][0] as number;
+    const endAt = onSet.mock.calls[0]![0] as number;
     expect(endAt).toBeGreaterThan(Date.now());
     expect(endAt).toBeLessThanOrEqual(Date.now() + 31 * 60_000);
 

@@ -1,6 +1,7 @@
 import preact from "@preact/preset-vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "wxt";
+// @ts-expect-error - plain .mjs build helper with no type declarations
 import { injectExperimentDebugAsset } from "./scripts/experiment-debug.mjs";
 
 const zipLabel = process.env.ZIP_ARTIFACT_LABEL?.trim() || "demo";
