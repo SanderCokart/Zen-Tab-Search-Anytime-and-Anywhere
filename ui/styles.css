@@ -2,22 +2,29 @@
 
 @theme {
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --color-zen-bg: #1e1e1e;
+  --color-zen-bg: #202020;
   --color-zen-raised: #2a2a2a;
-  --color-zen-surface: #333333;
-  --color-zen-chip: #292929;
-  --color-zen-panel: #252038;
-  --color-zen-accent: #3d3270;
-  --color-zen-accent-hover: #51439a;
-  --color-zen-border: #6652b8;
-  --color-zen-line: #555555;
-  --color-zen-muted: #888888;
-  --color-zen-subtle: #aaaaaa;
-  --color-zen-faint: #bbbbbb;
-  --color-zen-lavender: #b9aaff;
-  --color-zen-badge: #7c5cff;
-  --color-zen-danger: #ff8a8a;
-  --color-zen-clear: #666666;
+  --color-zen-surface: #353535;
+  --color-zen-chip: #2d2d2d;
+  --color-zen-panel: #292929;
+  --color-zen-accent: #626262;
+  --color-zen-accent-hover: #777777;
+  --color-zen-border: #888888;
+  --color-zen-line: #5a5a5a;
+  --color-zen-muted: #999999;
+  --color-zen-subtle: #b8b8b8;
+  --color-zen-faint: #c8c8c8;
+  --color-zen-lavender: #d0d0d0;
+  --color-zen-badge: #707070;
+  --color-zen-danger: #ff9292;
+  --color-zen-clear: #777777;
+  --color-zen-text: #f5f5f5;
+  --color-zen-overlay: rgb(0 0 0 / 60%);
+  --color-zen-overlay-soft: rgb(0 0 0 / 40%);
+  --color-zen-tooltip: rgb(0 0 0 / 90%);
+  --color-zen-line-soft: rgb(255 255 255 / 10%);
+  --color-zen-line-medium: rgb(255 255 255 / 15%);
+  --color-zen-line-strong: rgb(255 255 255 / 20%);
 }
 
 @layer base {
@@ -25,20 +32,15 @@
     color-scheme: dark;
   }
 
-  /*
-    Rem still resolves against the page <html>, not :host. Overlay sizing uses
-    explicit px in SearchApp so Zen chrome pages with a small root font stay readable.
-  */
   :host,
   html {
     font-size: 16px;
   }
 
   body {
-    @apply bg-zen-bg m-0 font-sans text-[13px] leading-snug text-white;
+    @apply bg-zen-bg text-zen-text m-0 font-sans text-[13px] leading-snug;
   }
 
-  /* Popover UA + WXT :host reset paint an opaque canvas; keep the overlay see-through. */
   :host([popover]),
   :host([popover])::backdrop {
     background: transparent !important;
@@ -66,7 +68,7 @@
 
   .zen-scroll {
     scrollbar-width: thin;
-    scrollbar-color: #555 transparent;
+    scrollbar-color: var(--color-zen-line) transparent;
   }
 
   .zen-scroll::-webkit-scrollbar {
@@ -78,11 +80,11 @@
   }
 
   .zen-scroll::-webkit-scrollbar-thumb {
-    background: #555;
+    background: var(--color-zen-line);
     border-radius: 4px;
   }
 
   .zen-scroll::-webkit-scrollbar-thumb:hover {
-    background: #777;
+    background: var(--color-zen-subtle);
   }
 }
