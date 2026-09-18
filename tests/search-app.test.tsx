@@ -158,6 +158,7 @@ describe("SearchApp", () => {
     const { root, onClose, sendMessage } = mountSearchApp(vi.fn(), forgeTabs, "overlay");
 
     await vi.waitFor(() => expect(root.textContent).toContain("Issues and requests"));
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("3/2");
     expect(root.textContent).toContain("GitHub");
     expect(root.textContent).toContain("GitLab");
     expect(root.textContent).toContain("Issues");
@@ -210,6 +211,7 @@ describe("SearchApp", () => {
 
     await vi.waitFor(() => expect(root.textContent).toContain("Fix search"));
     expect(root.textContent).not.toContain("Issues and requests");
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("1/1");
     expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(2);
 
     render(null, root);
@@ -230,6 +232,7 @@ describe("SearchApp", () => {
     });
 
     await vi.waitFor(() => expect(root.textContent).toContain("Issues and requests"));
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("3/2");
     expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(1);
     expect(root.textContent).toContain("Fix search");
 

@@ -242,11 +242,13 @@ function SearchShell({
   layout,
   onClose,
   textColor,
+  issueNavigator,
   children,
 }: {
   layout: SearchLayout;
   onClose: () => void;
   textColor: string;
+  issueNavigator?: boolean;
   children: ComponentChildren;
 }) {
   if (layout === "popup") {
@@ -264,9 +266,10 @@ function SearchShell({
       style={{ color: textColor }}
     >
       <div
-        class="from-zen-bg to-zen-raised flex aspect-[3/2] h-auto w-[min(80vw,calc(90dvh*3/2))] shrink-0 flex-col overflow-hidden rounded-2xl bg-linear-to-br p-[16px] text-[16px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+        class="from-zen-bg to-zen-raised flex h-auto shrink-0 flex-col overflow-hidden rounded-2xl bg-linear-to-br p-[16px] text-[16px] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
         onClick={(event) => event.stopPropagation()}
         data-omnibar
+        data-omnibar-aspect={issueNavigator ? "3/2" : "1/1"}
       >
         {children}
       </div>
@@ -931,7 +934,12 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     });
 
   return (
-    <SearchShell layout={layout} onClose={onClose} textColor={displaySettings.textColor}>
+    <SearchShell
+      layout={layout}
+      onClose={onClose}
+      textColor={displaySettings.textColor}
+      issueNavigator={displaySettings.detectForgeIssues}
+    >
       <div class={cn("flex items-center", compact ? "mb-2 gap-2" : "mb-[16px] gap-2")}>
         <input
           ref={inputRef}

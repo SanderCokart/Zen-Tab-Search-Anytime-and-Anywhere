@@ -87,4 +87,14 @@
   .zen-scroll::-webkit-scrollbar-thumb:hover {
     background: var(--color-zen-subtle);
   }
+
+  [data-omnibar] {
+    aspect-ratio: 1 / 1;
+    width: min(80vw, 90dvh);
+  }
+
+  [data-omnibar][data-omnibar-aspect="3/2"] {
+    aspect-ratio: 3 / 2;
+    width: min(80vw, calc(90dvh * 3 / 2));
+  }
 }
