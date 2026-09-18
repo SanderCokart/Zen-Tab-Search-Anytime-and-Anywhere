@@ -1,3 +1,5 @@
+import { clampFontSize, clampUiScale } from "@/features/settings/model/ui-scale";
+
 export const DISPLAY_SETTINGS_STORAGE_KEY = "displaySettings";
 
 export interface DisplaySettings {
@@ -5,6 +7,16 @@ export interface DisplaySettings {
   filterIssuesInOverlay: boolean;
   groupFolders: boolean;
   groupSubfolders: boolean;
+  /** Base font size in px, before the surface and relative-mode adjustments. */
+  fontSize: number;
+  /** Density multiplier for padding, gaps, icons and tiles. */
+  uiScale: number;
+  /** Overlay only: follow the page zoom level instead of holding a constant size. */
+  respectZoom: boolean;
+  /** Cut tab titles to one line instead of wrapping them. */
+  truncateTabTitles: boolean;
+  /** Cut issue and pull-request titles to one line instead of wrapping them. */
+  truncateIssueTitles: boolean;
   textColor: string;
   issueBackgroundColor: string;
   folderBackgroundColor: string;
@@ -16,6 +28,11 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   filterIssuesInOverlay: true,
   groupFolders: true,
   groupSubfolders: true,
+  fontSize: 16,
+  uiScale: 1,
+  respectZoom: false,
+  truncateTabTitles: true,
+  truncateIssueTitles: true,
   textColor: "#f5f5f5",
   issueBackgroundColor: "#252525",
   folderBackgroundColor: "#2d2d2d",
@@ -24,6 +41,10 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object";
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function isColor(value: unknown): value is string {
@@ -54,6 +75,24 @@ function normalizeDisplaySettings(value: unknown): DisplaySettings {
       groupFolders && typeof value.groupSubfolders === "boolean"
         ? value.groupSubfolders
         : DEFAULT_DISPLAY_SETTINGS.groupSubfolders && groupFolders,
+    fontSize: clampFontSize(
+      isNumber(value.fontSize) ? value.fontSize : DEFAULT_DISPLAY_SETTINGS.fontSize,
+    ),
+    uiScale: clampUiScale(
+      isNumber(value.uiScale) ? value.uiScale : DEFAULT_DISPLAY_SETTINGS.uiScale,
+    ),
+    respectZoom:
+      typeof value.respectZoom === "boolean"
+        ? value.respectZoom
+        : DEFAULT_DISPLAY_SETTINGS.respectZoom,
+    truncateTabTitles:
+      typeof value.truncateTabTitles === "boolean"
+        ? value.truncateTabTitles
+        : DEFAULT_DISPLAY_SETTINGS.truncateTabTitles,
+    truncateIssueTitles:
+      typeof value.truncateIssueTitles === "boolean"
+        ? value.truncateIssueTitles
+        : DEFAULT_DISPLAY_SETTINGS.truncateIssueTitles,
     textColor: isColor(value.textColor) ? value.textColor : DEFAULT_DISPLAY_SETTINGS.textColor,
     issueBackgroundColor: isColor(value.issueBackgroundColor)
       ? value.issueBackgroundColor

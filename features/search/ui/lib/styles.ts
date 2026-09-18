@@ -5,6 +5,16 @@ export const primaryButtonClass =
 export const clearButtonClass =
   "cursor-pointer rounded-md border border-zen-clear bg-transparent font-[inherit] text-zen-faint hover:bg-zen-surface-faint";
 
+/**
+ * Whether a result's own text is cut to one line or allowed to wrap.
+ *
+ * Only the entry text itself takes this — section headers and group labels stay
+ * truncated either way, so turning wrapping on cannot make the chrome reflow.
+ */
+export function entryTextClass(truncate: boolean): string {
+  return truncate ? "truncate" : "break-words";
+}
+
 export const projectBorderColors = [
   "border-red-400",
   "border-orange-400",

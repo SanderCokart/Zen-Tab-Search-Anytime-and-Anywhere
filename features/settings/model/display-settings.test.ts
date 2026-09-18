@@ -59,6 +59,26 @@ describe("display settings", () => {
     });
   });
 
+  it("keeps the truncation toggles independent of each other", async () => {
+    const get = vi.fn(async () => ({
+      displaySettings: { truncateTabTitles: false, truncateIssueTitles: true },
+    }));
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: { get, set: vi.fn(async () => undefined) },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+
+    await expect(readDisplaySettings()).resolves.toEqual({
+      ...DEFAULT_DISPLAY_SETTINGS,
+      truncateTabTitles: false,
+      truncateIssueTitles: true,
+    });
+  });
+
   it("subscribes to local settings changes and cleans up", () => {
     const addListener = vi.fn();
     const removeListener = vi.fn();

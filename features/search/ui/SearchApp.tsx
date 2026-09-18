@@ -113,25 +113,26 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
   const iconButtonClass = cn(
     primaryButtonClass,
     "inline-flex shrink-0 items-center justify-center p-0",
-    compact ? "size-8" : "size-[44px]",
+    "size-[var(--zen-control)] rounded-[var(--zen-radius)]",
   );
 
   return (
     <SearchShell
       layout={layout}
       onClose={onClose}
-      textColor={displaySettings.textColor}
+      displaySettings={displaySettings}
       issueNavigator={displaySettings.detectForgeIssues}
     >
-      <div class={cn("flex items-center", compact ? "mb-2 gap-2" : "mb-[16px] gap-2")}>
+      <div class="mb-[var(--zen-space-3)] flex items-center gap-[var(--zen-space-2)]">
         <input
           ref={navigation.inputRef}
           data-testid="zen-search-input"
           type="text"
           placeholder="Search tabs and spaces..."
           class={cn(
-            "bg-zen-surface placeholder:text-zen-muted min-w-0 flex-1 rounded-lg border-0 outline-none",
-            compact ? "w-full px-2.5 py-2 text-sm" : "p-[12px] text-[18px]",
+            "bg-zen-surface placeholder:text-zen-muted min-w-0 flex-1 border-0 outline-none",
+            "rounded-[var(--zen-radius)] p-[var(--zen-space-2)] text-[length:var(--zen-text-lg)]",
+            compact && "w-full",
           )}
           value={query}
           onInput={(event) => setQuery(event.currentTarget.value)}
@@ -143,14 +144,13 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           title={showTimers ? "Close active timers" : "Show active timers"}
           onClick={() => setShowTimers(!showTimers)}
         >
-          <TimerIcon close={showTimers} class={compact ? "size-3.5" : "size-[16px]"} />
+          <TimerIcon close={showTimers} class="size-[var(--zen-icon-md)]" />
           {!showTimers && timers.size > 0 && (
             <span
               class={cn(
                 "bg-zen-badge absolute -top-1 -right-1 rounded-full text-center",
-                compact
-                  ? "min-w-3.5 px-0.5 text-[9px] leading-[14px]"
-                  : "min-w-4 px-1 text-[10px] leading-4",
+                "min-w-[var(--zen-icon-md)] px-[var(--zen-space-1)]",
+                "text-[length:var(--zen-text-xs)] leading-[var(--zen-icon-md)]",
               )}
             >
               {timers.size}
@@ -168,7 +168,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             )
           }
         >
-          <span aria-hidden="true" class={compact ? "text-sm" : "text-lg"}>
+          <span aria-hidden="true" class="text-[length:var(--zen-text-base)]">
             ⚙
           </span>
         </button>
@@ -177,7 +177,6 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
       {showTimers && (
         <ActiveTimersPanel
           timers={timers}
-          compact={compact}
           onClearAll={timerActions.clearAllTimers}
           onClearTimer={timerActions.clearTimer}
           onActivateTimer={(tabId) => {
@@ -190,7 +189,8 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
         <div class={cn(layout === "overlay" && "flex min-h-0 min-w-0 flex-1 flex-col")}>
           <ul
             class={cn(
-              "zen-scroll m-0 flex min-h-0 flex-1 list-none flex-col gap-1 overflow-y-auto p-0",
+              "zen-scroll m-0 flex min-h-0 flex-1 list-none flex-col overflow-y-auto p-0",
+              "gap-[var(--zen-space-1)]",
               compact && "min-h-[60px]",
             )}
             role="listbox"
@@ -200,7 +200,6 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               itemIndices={results.itemIndices}
               selectedIndex={navigation.selectedIndex}
               navigateForge={navigation.navigateForge}
-              compact={compact}
               displaySettings={displaySettings}
               timers={timers}
               timerTabId={timerTabId}
@@ -232,6 +231,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           <ForgeIssueNavigator
             entries={results.filteredForgeIssueEntries}
             backgroundColor={displaySettings.issueBackgroundColor}
+            truncate={displaySettings.truncateIssueTitles}
             sortMode={forgeSortMode}
             selectedIndex={navigation.navigateForge ? navigation.selectedForgeIndex : -1}
             onActivate={activateForgeEntry}

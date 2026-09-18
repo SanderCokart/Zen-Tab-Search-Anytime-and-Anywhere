@@ -116,6 +116,13 @@ context menu and popup, and its own UI — all in one directory.
 - **The Zen experiment API is privileged.** `web-ext lint` reports
   `MANIFEST_FIELD_PRIVILEGED`; `scripts/lint-web-ext.mjs` allows that one code
   and nothing else.
+- **No hard-coded sizes in the search UI.** `fontSize` and `uiScale` from the display
+  settings become `--zen-font-size` and `--zen-scale`, and `shared/ui/styles.css`
+  derives the type ramp, spacing ramp, icons and tile widths from them under
+  `[data-zen-ui]`. Use the tokens (`p-[var(--zen-space-2)]`,
+  `text-[length:var(--zen-text-base)]`), not literal pixels. Any new surface needs
+  `data-zen-ui` and `uiScaleStyle()` on its root, or the tokens are undefined and the
+  declarations are dropped.
 - **Essential tabs have no writable Zen label**, so the extension stores its own
   names under the `essentialTabNames` storage key, keyed by DOM id.
 - **`noUncheckedIndexedAccess` is on.** Indexing an array gives `T | undefined`.

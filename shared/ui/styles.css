@@ -58,6 +58,54 @@
 }
 
 @layer components {
+  /*
+   * The size system. Two inputs come from the display settings — `--zen-font-size`
+   * (a CSS length) and `--zen-scale` (a unitless density multiplier) — and every
+   * other size is derived from them here.
+   *
+   * The derived values multiply `--zen-font-size` rather than using `em`, on
+   * purpose: a custom property with an `em` value resolves against the font size of
+   * the element that *uses* it, so a token read inside a smaller-text row would
+   * come out smaller too. Multiplying a px-valued variable resolves identically
+   * everywhere in the subtree.
+   */
+  [data-zen-ui] {
+    --zen-font-size: 16px;
+    --zen-scale: 1;
+
+    font-size: var(--zen-font-size);
+
+    /* Type ramp — tracks the font size only, so text stays readable at any density. */
+    --zen-text-xs: calc(var(--zen-font-size) * 0.69);
+    --zen-text-sm: calc(var(--zen-font-size) * 0.78);
+    --zen-text-md: calc(var(--zen-font-size) * 0.88);
+    --zen-text-base: var(--zen-font-size);
+    --zen-text-lg: calc(var(--zen-font-size) * 1.14);
+
+    /* Spacing ramp — tracks both, so density is a real knob. */
+    --zen-space-1: calc(var(--zen-font-size) * 0.25 * var(--zen-scale));
+    --zen-space-2: calc(var(--zen-font-size) * 0.5 * var(--zen-scale));
+    --zen-space-3: calc(var(--zen-font-size) * 0.75 * var(--zen-scale));
+    --zen-space-4: calc(var(--zen-font-size) * 1 * var(--zen-scale));
+
+    --zen-radius: calc(var(--zen-font-size) * 0.5 * var(--zen-scale));
+    --zen-radius-lg: calc(var(--zen-font-size) * 0.9 * var(--zen-scale));
+
+    /* Icons and controls. */
+    --zen-icon-sm: calc(var(--zen-font-size) * 0.75 * var(--zen-scale));
+    --zen-icon-md: calc(var(--zen-font-size) * 1 * var(--zen-scale));
+    --zen-icon-lg: calc(var(--zen-font-size) * 1.5 * var(--zen-scale));
+    --zen-control: calc(var(--zen-font-size) * 2.75 * var(--zen-scale));
+
+    /*
+     * The spaces and essential-tab grids at the top of the results. These are the
+     * biggest consumers of vertical space, so they get their own tokens and can be
+     * tightened without dragging the rest of the list with them.
+     */
+    --zen-tile-space: calc(var(--zen-font-size) * 10 * var(--zen-scale));
+    --zen-tile-essential: calc(var(--zen-font-size) * 12 * var(--zen-scale));
+  }
+
   .zen-icon {
     fill: none;
     stroke: currentColor;

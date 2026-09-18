@@ -19,21 +19,13 @@ const clearButtonClass =
 
 export interface TimerFormProps {
   timer?: TabTimer;
-  compact?: boolean;
   disabled?: boolean;
   error?: string;
   onSet: (endAt: number) => void;
   onClear?: () => void;
 }
 
-export function TimerForm({
-  timer,
-  compact = false,
-  disabled = false,
-  error,
-  onSet,
-  onClear,
-}: TimerFormProps) {
+export function TimerForm({ timer, disabled = false, error, onSet, onClear }: TimerFormProps) {
   const whenInputRef = useRef<HTMLInputElement>(null);
   const [endAt, setEndAt] = useState(timer?.endAt ?? Date.now() + 30 * 60_000);
   const [naturalInput, setNaturalInput] = useState("");
@@ -64,7 +56,7 @@ export function TimerForm({
 
   return (
     <form
-      class={cn("flex flex-col", compact ? "gap-1.5" : "gap-2.5")}
+      class="flex flex-col gap-[var(--zen-space-2)]"
       onClick={(event) => event.stopPropagation()}
       onSubmit={(event) => {
         event.preventDefault();
@@ -74,15 +66,15 @@ export function TimerForm({
         }
       }}
     >
-      <div class="flex flex-col gap-1">
-        <span class={cn("text-zen-faint", compact ? "text-[11px]" : "text-xs")}>Presets</span>
-        <div class={cn("flex flex-wrap", compact ? "gap-1" : "gap-1.5")}>
+      <div class="flex flex-col gap-[var(--zen-space-1)]">
+        <span class="text-zen-faint text-[length:var(--zen-text-xs)]">Presets</span>
+        <div class="flex flex-wrap gap-[var(--zen-space-1)]">
           {TIMER_PRESETS.map((preset) => (
             <button
               type="button"
               class={cn(
                 presetButtonClass,
-                compact ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-1 text-xs",
+                "px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-[length:var(--zen-text-xs)]",
               )}
               disabled={disabled}
               onClick={() => {
@@ -96,18 +88,13 @@ export function TimerForm({
           ))}
         </div>
       </div>
-      <label
-        class={cn(
-          "text-zen-faint flex flex-col",
-          compact ? "gap-0.5 text-[11px]" : "gap-1 text-xs",
-        )}
-      >
+      <label class="text-zen-faint flex flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-xs)]">
         When
         <input
           ref={whenInputRef}
           class={cn(
-            "border-zen-line bg-zen-chip placeholder:text-zen-muted w-full rounded-md border font-[inherit]",
-            compact ? "h-6 px-1.5" : "h-8 px-2",
+            "border-zen-line bg-zen-chip placeholder:text-zen-muted w-full rounded-[var(--zen-radius)] border font-[inherit]",
+            "h-[calc(var(--zen-font-size)*2*var(--zen-scale))] px-[var(--zen-space-2)]",
           )}
           type="text"
           placeholder="tomorrow at 9am or 1d 30m"
@@ -125,20 +112,17 @@ export function TimerForm({
         />
       </label>
       {naturalInput.trim() && parsedNaturalInput === null && (
-        <p class="text-zen-danger m-0 text-xs">Use a time like “tomorrow at 9am” or “1d 30m”.</p>
+        <p class="text-zen-danger m-0 text-[length:var(--zen-text-xs)]">
+          Use a time like “tomorrow at 9am” or “1d 30m”.
+        </p>
       )}
-      <div class={cn("flex items-end", compact ? "gap-1.5" : "gap-3")}>
-        <label
-          class={cn(
-            "text-zen-faint flex flex-1 flex-col",
-            compact ? "gap-0.5 text-[11px]" : "gap-1 text-xs",
-          )}
-        >
+      <div class="flex items-end gap-[var(--zen-space-2)]">
+        <label class="text-zen-faint flex flex-1 flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-xs)]">
           Ends at
           <input
             class={cn(
-              "border-zen-line bg-zen-chip w-full rounded-md border font-[inherit] disabled:opacity-60",
-              compact ? "h-6 px-1.5" : "h-8 px-2",
+              "border-zen-line bg-zen-chip w-full rounded-[var(--zen-radius)] border font-[inherit] disabled:opacity-60",
+              "h-[calc(var(--zen-font-size)*2*var(--zen-scale))] px-[var(--zen-space-2)]",
             )}
             type="datetime-local"
             step="60"
@@ -154,9 +138,12 @@ export function TimerForm({
             }}
           />
         </label>
-        <div class={cn("flex", compact ? "gap-1.5" : "gap-2")}>
+        <div class="flex gap-[var(--zen-space-2)]">
           <button
-            class={cn(primaryButtonClass, compact ? "h-6 px-1.5" : "h-8 px-2.5")}
+            class={cn(
+              primaryButtonClass,
+              "h-[calc(var(--zen-font-size)*2*var(--zen-scale))] px-[var(--zen-space-2)]",
+            )}
             type="submit"
             disabled={disabled || !valid}
           >
@@ -164,7 +151,10 @@ export function TimerForm({
           </button>
           {timer && onClear && (
             <button
-              class={cn(clearButtonClass, compact ? "h-6 px-1.5" : "h-8 px-2.5")}
+              class={cn(
+                clearButtonClass,
+                "h-[calc(var(--zen-font-size)*2*var(--zen-scale))] px-[var(--zen-space-2)]",
+              )}
               type="button"
               onClick={onClear}
             >
@@ -173,7 +163,7 @@ export function TimerForm({
           )}
         </div>
       </div>
-      {message && <p class="text-zen-danger m-0 text-xs">{message}</p>}
+      {message && <p class="text-zen-danger m-0 text-[length:var(--zen-text-xs)]">{message}</p>}
     </form>
   );
 }

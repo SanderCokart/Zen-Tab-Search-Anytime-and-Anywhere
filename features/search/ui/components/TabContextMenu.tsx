@@ -10,7 +10,7 @@ export interface TabContextMenuProps {
 }
 
 const itemClass =
-  "hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left font-[inherit] text-sm";
+  "hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] px-[var(--zen-space-3)] py-[var(--zen-space-2)] text-left font-[inherit] text-[length:var(--zen-text-md)]";
 
 /** Right-click menu for a tab row. */
 export function TabContextMenu({ tab, x, y, onRename, onOpenTimer }: TabContextMenuProps) {
@@ -32,7 +32,7 @@ export function TabContextMenu({ tab, x, y, onRename, onOpenTimer }: TabContextM
       )}
       {tabId !== undefined && (
         <button type="button" class={itemClass} role="menuitem" onClick={() => onOpenTimer(tabId)}>
-          <TimerIcon class="size-4" />
+          <TimerIcon class="size-[var(--zen-icon-md)]" />
           Timer
         </button>
       )}

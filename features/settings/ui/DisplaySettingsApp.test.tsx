@@ -37,7 +37,9 @@ describe("DisplaySettingsApp", () => {
     expect(document.querySelector(".pcr-type[data-type='HEXA']")).toBeTruthy();
     expect(document.querySelector(".pcr-type[data-type='RGBA']")).toBeTruthy();
     expect(document.querySelector(".pcr-type[data-type='HSLA']")).toBeTruthy();
-    const checkboxes = root.querySelectorAll<HTMLInputElement>("input[type='checkbox']");
+    const checkboxes = root.querySelectorAll<HTMLInputElement>(
+      "input[type='checkbox']:not([data-testid])",
+    );
     expect(checkboxes).toHaveLength(4);
     await vi.waitFor(() => expect(checkboxes[2]?.disabled).toBe(false));
     checkboxes[2]?.click();
@@ -49,6 +51,11 @@ describe("DisplaySettingsApp", () => {
         filterIssuesInOverlay: true,
         groupFolders: false,
         groupSubfolders: false,
+        fontSize: 16,
+        uiScale: 1,
+        respectZoom: false,
+        truncateTabTitles: true,
+        truncateIssueTitles: true,
         textColor: "#f5f5f5",
         issueBackgroundColor: "#252525",
         folderBackgroundColor: "#2d2d2d",
@@ -85,7 +92,9 @@ describe("DisplaySettingsApp", () => {
     render(<DisplaySettingsApp />, root);
 
     const checkboxes = await vi.waitFor(() => {
-      const inputs = root.querySelectorAll<HTMLInputElement>("input[type='checkbox']");
+      const inputs = root.querySelectorAll<HTMLInputElement>(
+        "input[type='checkbox']:not([data-testid])",
+      );
       expect(inputs).toHaveLength(4);
       expect(inputs[0]?.disabled).toBe(false);
       return inputs;
@@ -99,6 +108,11 @@ describe("DisplaySettingsApp", () => {
         filterIssuesInOverlay: false,
         groupFolders: true,
         groupSubfolders: true,
+        fontSize: 16,
+        uiScale: 1,
+        respectZoom: false,
+        truncateTabTitles: true,
+        truncateIssueTitles: true,
         textColor: "#f5f5f5",
         issueBackgroundColor: "#252525",
         folderBackgroundColor: "#2d2d2d",
@@ -149,6 +163,11 @@ describe("DisplaySettingsApp", () => {
           filterIssuesInOverlay: true,
           groupFolders: true,
           groupSubfolders: true,
+          fontSize: 16,
+          uiScale: 1,
+          respectZoom: false,
+          truncateTabTitles: true,
+          truncateIssueTitles: true,
           textColor: "#f5f5f5",
           issueBackgroundColor: "#252525",
           folderBackgroundColor: "#2d2d2d",

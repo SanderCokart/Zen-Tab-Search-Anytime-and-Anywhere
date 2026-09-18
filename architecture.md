@@ -398,10 +398,50 @@ durations at 31 days.
 
 ### `settings/` — display preferences
 
-[display-settings.ts](features/settings/model/display-settings.ts) holds eight
-preferences: four booleans for grouping and issue detection, four hex colours.
-`DisplaySettingsApp` writes them, every surface subscribes via
-`storage.onChanged`, so changing a colour updates an open overlay live.
+[display-settings.ts](features/settings/model/display-settings.ts) holds thirteen
+preferences: four booleans for grouping and issue detection, four hex colours, three
+that size the UI, and two that decide whether tab and issue text is cut to one line. `DisplaySettingsApp` writes them, every surface subscribes
+via `storage.onChanged`, so changing a colour or a size updates an open overlay live.
+
+#### The size system
+
+Nothing in the search UI hard-codes a pixel size. Two settings —
+`fontSize` (px) and `uiScale` (a unitless density multiplier) — become the custom
+properties `--zen-font-size` and `--zen-scale`, and
+[shared/ui/styles.css](shared/ui/styles.css) derives every other size from those two
+under a `[data-zen-ui]` rule: a type ramp (`--zen-text-xs` … `--zen-text-lg`), a
+spacing ramp (`--zen-space-1` … `--zen-space-4`), radii, icon and control sizes, and
+the `--zen-tile-space` / `--zen-tile-essential` widths for the two grids at the top of
+the results. Components reference the tokens
+(`p-[var(--zen-space-2)]`, `text-[length:var(--zen-text-base)]`) and never a literal
+size. This replaced a `compact` boolean that every component threaded through to pick
+between two hard-coded pixel scales.
+
+[ui-scale.ts](features/settings/model/ui-scale.ts) turns the settings into those two
+properties, and `SearchShell` puts `data-zen-ui` plus the resulting style on the root
+of each surface. Two details are worth knowing before you change it:
+
+- **The derived tokens multiply `--zen-font-size` rather than using `em`.** A custom
+  property holding an `em` value resolves against the font size of the element that
+  *uses* it, so a token read inside a smaller-text row would silently come out
+  smaller. Multiplying a px-valued variable resolves identically everywhere.
+- **The unit decides the zoom behaviour; nothing ever queries the zoom factor.** The
+  overlay is laid out inside the page, so its CSS pixels scale with page zoom. That
+  one fact gives both modes for free: `respectZoom` on emits a plain `px` length and
+  the zoom scales it like everything else on the page, while `respectZoom` off emits
+  a `min(80vw, 90dvh)`-derived length, and because zoom shrinks the viewport in CSS
+  px by exactly the factor it magnifies them, that comes out identical on screen at
+  every zoom level.
+- **The zoom-independent expression must stay free of any `px` term.** A `px`
+  minimum, maximum or offset would scale with zoom and reintroduce the dependence the
+  mode exists to remove — an earlier version clamped it between two px bounds and was
+  zoom-dependent at the extremes. A test asserts the expression contains no `px`.
+- **Neither mode waits on the background.** An earlier version asked for
+  `tabs.getZoom()` and divided by it, which meant the overlay painted once at the
+  wrong size and visibly snapped when the message resolved. Both sizes are now known
+  synchronously and are correct on the first paint.
+- **The toolbar popup and options page are browser UI, not page content**, so page
+  zoom never touches them and they always take the plain px length.
 
 **One honest inconsistency:** this module validates by hand — `isColor()`,
 `typeof x === "boolean"` and a `normalizeDisplaySettings` function — rather than with

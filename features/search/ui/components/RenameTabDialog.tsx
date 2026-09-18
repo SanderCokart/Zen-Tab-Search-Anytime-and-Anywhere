@@ -30,31 +30,44 @@ export function RenameTabDialog({
   return (
     <div class="bg-zen-overlay-soft fixed inset-0 z-50 flex items-center justify-center p-4">
       <form
-        class="border-zen-accent bg-zen-panel w-full max-w-sm rounded-lg border p-4 shadow-xl"
+        class="border-zen-accent bg-zen-panel w-full max-w-sm rounded-[var(--zen-radius-lg)] border p-[var(--zen-space-3)] shadow-xl"
         onSubmit={(event) => {
           event.preventDefault();
           onSubmit(value.replace(/\s+/g, " ").trim());
         }}
       >
-        <label class="flex flex-col gap-2 text-sm">
+        <label class="flex flex-col gap-[var(--zen-space-2)] text-[length:var(--zen-text-md)]">
           Rename tab
           <input
             ref={inputRef}
-            class="focus:border-zen-accent border-zen-line-strong bg-zen-overlay-soft rounded border px-2 py-1.5 outline-none"
+            class="focus:border-zen-accent border-zen-line-strong bg-zen-overlay-soft rounded-[var(--zen-radius)] border px-[var(--zen-space-2)] py-[var(--zen-space-1)] outline-none"
             value={value}
             onInput={(event) => onChange(event.currentTarget.value)}
           />
         </label>
-        {error && <p class="text-zen-danger mt-2 mb-0 text-xs">{error}</p>}
-        <div class="mt-4 flex justify-end gap-2">
+        {error && (
+          <p class="text-zen-danger mt-[var(--zen-space-2)] mb-0 text-[length:var(--zen-text-xs)]">
+            {error}
+          </p>
+        )}
+        <div class="mt-[var(--zen-space-3)] flex justify-end gap-[var(--zen-space-2)]">
           <button
             type="button"
-            class={cn(clearButtonClass, "px-3 py-1.5 text-sm")}
+            class={cn(
+              clearButtonClass,
+              "px-[var(--zen-space-3)] py-[var(--zen-space-1)] text-[length:var(--zen-text-md)]",
+            )}
             onClick={onCancel}
           >
             Cancel
           </button>
-          <button type="submit" class={cn(primaryButtonClass, "px-3 py-1.5 text-sm")}>
+          <button
+            type="submit"
+            class={cn(
+              primaryButtonClass,
+              "px-[var(--zen-space-3)] py-[var(--zen-space-1)] text-[length:var(--zen-text-md)]",
+            )}
+          >
             Save
           </button>
         </div>

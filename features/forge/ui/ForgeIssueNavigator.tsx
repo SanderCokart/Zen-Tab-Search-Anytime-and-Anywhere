@@ -7,7 +7,7 @@ import {
 } from "@/features/search/model/ranking";
 import { forgeTitleIncludesRefId } from "@/features/forge/model/forge-label";
 import { formatForgeEntryDate } from "@/features/search/ui/lib/format";
-import { projectBorderColors } from "@/features/search/ui/lib/styles";
+import { entryTextClass, projectBorderColors } from "@/features/search/ui/lib/styles";
 import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import { formatForgeKind, formatForgePlatform } from "@/features/forge/model/forge-label";
 import { cn } from "@/shared/ui/cn";
@@ -15,6 +15,7 @@ import { cn } from "@/shared/ui/cn";
 export function ForgeIssueNavigator({
   entries,
   backgroundColor,
+  truncate,
   sortMode,
   selectedIndex,
   onActivate,
@@ -23,6 +24,7 @@ export function ForgeIssueNavigator({
 }: {
   entries: ForgeIssueEntry[];
   backgroundColor: string;
+  truncate: boolean;
   sortMode: ForgeIssueSortMode;
   selectedIndex: number;
   onActivate: (entry: ForgeIssueEntry) => void;
@@ -47,7 +49,7 @@ export function ForgeIssueNavigator({
           key={`${entry.ref.url}:${entry.tab.id ?? entry.tab.domId ?? entry.title}`}
           type="button"
           class={cn(
-            "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-lg border-0 bg-transparent p-[12px] text-left font-[inherit] text-inherit",
+            "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-[var(--zen-radius)] border-0 bg-transparent p-[var(--zen-space-2)] text-left font-[inherit] text-inherit",
             selectedIndex === entryIndex && "bg-zen-line-soft",
           )}
           data-issue-selected={selectedIndex === entryIndex ? "true" : undefined}
@@ -60,7 +62,11 @@ export function ForgeIssueNavigator({
           onFocus={() => onSelect(entryIndex)}
           title={entry.ref.url}
         >
-          <span class="block min-w-0 truncate text-[16px]">{forgeEntryDisplayTitle(entry)}</span>
+          <span
+            class={cn("block min-w-0 text-[length:var(--zen-text-base)]", entryTextClass(truncate))}
+          >
+            {forgeEntryDisplayTitle(entry)}
+          </span>
           {(() => {
             const entryDate = formatForgeEntryDate(entry);
             const tabTitle = `${entry.tab.customLabel || ""} ${entry.tab.title || ""}`;
@@ -70,7 +76,10 @@ export function ForgeIssueNavigator({
             }
             return (
               <span
-                class="text-zen-subtle block min-w-0 truncate text-[14px]"
+                class={cn(
+                  "text-zen-subtle block min-w-0 text-[length:var(--zen-text-sm)]",
+                  entryTextClass(truncate),
+                )}
                 title={entryDate ? `${entryDate.label}: ${entryDate.absolute}` : undefined}
               >
                 {showRef ? `${formatForgeKind(entry.ref.kind)} #${entry.ref.id}` : ""}
@@ -86,14 +95,16 @@ export function ForgeIssueNavigator({
 
   return (
     <aside
-      class="border-zen-border flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border p-[12px]"
+      class="border-zen-border flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--zen-radius-lg)] border p-[var(--zen-space-2)]"
       style={{ backgroundColor }}
     >
-      <div class="mb-3 flex min-w-0 items-center justify-between gap-2">
-        <strong class="min-w-0 truncate text-[16px]">Issues and requests</strong>
+      <div class="mb-[var(--zen-space-2)] flex min-w-0 items-center justify-between gap-[var(--zen-space-2)]">
+        <strong class="min-w-0 truncate text-[length:var(--zen-text-base)]">
+          Issues and requests
+        </strong>
         <button
           type="button"
-          class="text-zen-lavender shrink-0 cursor-pointer border-0 bg-transparent p-0 text-[14px]"
+          class="text-zen-lavender shrink-0 cursor-pointer border-0 bg-transparent p-0 text-[length:var(--zen-text-sm)]"
           onClick={onToggleSort}
           title="Change issue sorting"
         >
@@ -102,33 +113,36 @@ export function ForgeIssueNavigator({
       </div>
       <div class="zen-scroll min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
         {providers.length === 0 ? (
-          <p class="text-zen-muted m-0 py-3 text-center text-[14px]">
+          <p class="text-zen-muted m-0 py-[var(--zen-space-3)] text-center text-[length:var(--zen-text-sm)]">
             No matching issues or requests.
           </p>
         ) : (
           <div class="divide-zen-line-soft flex min-w-0 flex-col divide-y">
             {providers.map(({ platform, projects }) => {
               return (
-                <section key={platform} class="min-w-0 py-3 first:pt-0 last:pb-0">
-                  <div class="text-zen-lavender mb-2 truncate text-[14px] font-semibold uppercase">
+                <section
+                  key={platform}
+                  class="min-w-0 py-[var(--zen-space-3)] first:pt-0 last:pb-0"
+                >
+                  <div class="text-zen-lavender mb-[var(--zen-space-2)] truncate text-[length:var(--zen-text-sm)] font-semibold uppercase">
                     {formatForgePlatform(platform)}
                   </div>
-                  <div class="flex min-w-0 flex-col gap-3">
+                  <div class="flex min-w-0 flex-col gap-[var(--zen-space-3)]">
                     {projects.map((project) => (
                       <div
                         key={project.projectLabel}
                         class={cn(
-                          "min-w-0 overflow-hidden rounded-lg border-l-4 p-[12px]",
+                          "min-w-0 overflow-hidden rounded-[var(--zen-radius)] border-l-4 p-[var(--zen-space-2)]",
                           projectBorderColors[projectBorderIndex++ % projectBorderColors.length],
                         )}
                       >
-                        <div class="text-zen-subtle mb-2 min-w-0 truncate text-[16px] font-medium">
+                        <div class="text-zen-subtle mb-[var(--zen-space-2)] min-w-0 truncate text-[length:var(--zen-text-base)] font-medium">
                           {project.projectLabel}
                         </div>
-                        <div class="flex min-w-0 flex-col gap-2">
+                        <div class="flex min-w-0 flex-col gap-[var(--zen-space-2)]">
                           {project.issues.length > 0 && (
                             <div class="min-w-0">
-                              <div class="text-zen-muted mb-1 px-[12px] text-[14px] font-semibold uppercase">
+                              <div class="text-zen-muted mb-[var(--zen-space-1)] px-[var(--zen-space-2)] text-[length:var(--zen-text-sm)] font-semibold uppercase">
                                 Issues
                               </div>
                               {renderEntries(project.issues)}
@@ -138,10 +152,11 @@ export function ForgeIssueNavigator({
                             <div
                               class={cn(
                                 "min-w-0",
-                                project.issues.length > 0 && "border-zen-line-soft border-t pt-2",
+                                project.issues.length > 0 &&
+                                  "border-zen-line-soft border-t pt-[var(--zen-space-2)]",
                               )}
                             >
-                              <div class="text-zen-muted mb-1 px-[12px] text-[14px] font-semibold uppercase">
+                              <div class="text-zen-muted mb-[var(--zen-space-1)] px-[var(--zen-space-2)] text-[length:var(--zen-text-sm)] font-semibold uppercase">
                                 PRs / MRs
                               </div>
                               {renderEntries(project.requests)}

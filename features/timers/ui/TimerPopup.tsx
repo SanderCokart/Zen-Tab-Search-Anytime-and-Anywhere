@@ -4,7 +4,9 @@ import {
   DEFAULT_DISPLAY_SETTINGS,
   readDisplaySettings,
   subscribeToDisplaySettingsChanged,
+  type DisplaySettings,
 } from "@/features/settings/model/display-settings";
+import { uiScaleStyle } from "@/features/settings/model/ui-scale";
 import { sendExtensionMessage, subscribeToSnapshotChanged } from "@/shared/messaging/client";
 import { formatTimerCountdown, stripTimerPrefix } from "@/features/timers/model/timer";
 import type { TabInfo, TabTimer } from "@/shared/types";
@@ -24,16 +26,16 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
   const [timer, setTimer] = useState<TabTimer>();
   const [now, setNow] = useState(Date.now());
   const [error, setError] = useState<string>();
-  const [textColor, setTextColor] = useState(DEFAULT_DISPLAY_SETTINGS.textColor);
+  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
 
   useEffect(() => {
     if (!browser.storage?.local) {
       return;
     }
     void readDisplaySettings()
-      .then((settings) => setTextColor(settings.textColor))
+      .then(setDisplaySettings)
       .catch(() => undefined);
-    return subscribeToDisplaySettingsChanged((settings) => setTextColor(settings.textColor));
+    return subscribeToDisplaySettingsChanged(setDisplaySettings);
   }, []);
 
   useEffect(() => {
@@ -101,19 +103,23 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
   };
 
   return (
-    <div class="flex flex-col gap-2.5" style={{ color: textColor }}>
-      <h1 class="m-0 truncate text-sm font-semibold">
+    <div
+      class="flex flex-col gap-[var(--zen-space-2)]"
+      data-zen-ui
+      style={{ ...uiScaleStyle(displaySettings, "popup"), color: displaySettings.textColor }}
+    >
+      <h1 class="m-0 truncate text-[length:var(--zen-text-md)] font-semibold">
         {tab
           ? formatTabDisplayTitle({ ...tab, customLabel: stripTimerPrefix(tab.customLabel || "") })
           : "Loading tab…"}
       </h1>
       {tab && (
-        <p class="text-zen-subtle m-0 text-xs">
+        <p class="text-zen-subtle m-0 text-[length:var(--zen-text-xs)]">
           {tab.workspaceName || hostname(tab.url) || tab.url || "No URL"}
         </p>
       )}
       {timer && (
-        <p class="text-zen-lavender m-0 text-xs">
+        <p class="text-zen-lavender m-0 text-[length:var(--zen-text-xs)]">
           Current timer {formatTimerCountdown(timer.endAt, now)}
         </p>
       )}

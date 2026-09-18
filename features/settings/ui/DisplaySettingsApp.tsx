@@ -5,6 +5,12 @@ import {
   saveDisplaySettings,
   type DisplaySettings,
 } from "@/features/settings/model/display-settings";
+import {
+  MAX_FONT_SIZE,
+  MAX_UI_SCALE,
+  MIN_FONT_SIZE,
+  MIN_UI_SCALE,
+} from "@/features/settings/model/ui-scale";
 import { cn } from "@/shared/ui/cn";
 import { ColorPickerField } from "@/features/settings/ui/ColorPickerField";
 
@@ -14,6 +20,22 @@ const COLOR_SETTINGS = [
   ["folderBackgroundColor", "Folders background"],
   ["spaceBackgroundColor", "Spaces background"],
 ] as const;
+
+const TRUNCATE_SETTINGS = [
+  [
+    "truncateTabTitles",
+    "Tab titles",
+    "Cuts each tab and space title to one line. Off, long titles wrap onto as many lines as they need.",
+  ],
+  [
+    "truncateIssueTitles",
+    "Issue titles",
+    "Cuts each title in the issue navigator to one line. Off, long titles wrap onto as many lines as they need.",
+  ],
+] as const;
+
+const rangeClass =
+  "accent-zen-accent h-1 w-40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50";
 
 function ResetIcon({ class: className }: { class?: string }) {
   return (
@@ -89,6 +111,108 @@ export function DisplaySettingsApp() {
               </div>
             );
           })}
+        </fieldset>
+        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
+          <legend class="px-1 text-sm font-medium">Size</legend>
+          <label class="flex items-center justify-between gap-4 text-sm">
+            <span>
+              <span class="block font-medium">Font size</span>
+              <span class="text-zen-subtle block text-xs">
+                The base text size everything else is derived from.
+              </span>
+            </span>
+            <span class="flex shrink-0 items-center gap-2">
+              <input
+                type="range"
+                class={rangeClass}
+                min={MIN_FONT_SIZE}
+                max={MAX_FONT_SIZE}
+                step={1}
+                disabled={!loaded}
+                value={settings.fontSize}
+                onInput={(event) => updateSettings({ fontSize: Number(event.currentTarget.value) })}
+              />
+              <span class="w-12 text-right tabular-nums">{settings.fontSize}px</span>
+            </span>
+          </label>
+          <label class="flex items-center justify-between gap-4 text-sm">
+            <span>
+              <span class="block font-medium">Density</span>
+              <span class="text-zen-subtle block text-xs">
+                Padding, gaps, icons and the space and essential-tab tiles.
+              </span>
+            </span>
+            <span class="flex shrink-0 items-center gap-2">
+              <input
+                type="range"
+                class={rangeClass}
+                min={MIN_UI_SCALE}
+                max={MAX_UI_SCALE}
+                step={0.05}
+                disabled={!loaded}
+                value={settings.uiScale}
+                onInput={(event) => updateSettings({ uiScale: Number(event.currentTarget.value) })}
+              />
+              <span class="w-12 text-right tabular-nums">
+                {Math.round(settings.uiScale * 100)}%
+              </span>
+            </span>
+          </label>
+          <label class="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              class="accent-zen-accent mt-1 size-4"
+              data-testid="zen-respect-zoom"
+              checked={settings.respectZoom}
+              disabled={!loaded}
+              onChange={(event) => updateSettings({ respectZoom: event.currentTarget.checked })}
+            />
+            <span>
+              <span class="block text-sm font-medium">Follow the page zoom level</span>
+              <span class="text-zen-subtle block text-xs">
+                Lets the overlay grow and shrink with the browser's zoom, like the page underneath
+                it. Off, the overlay keeps the same size on screen at every zoom level.
+              </span>
+            </span>
+          </label>
+          <button
+            type="button"
+            class="border-zen-clear text-zen-faint hover:bg-zen-surface cursor-pointer self-start rounded-md border bg-transparent px-2 py-1 font-[inherit] text-xs disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={
+              !loaded ||
+              (settings.fontSize === DEFAULT_DISPLAY_SETTINGS.fontSize &&
+                settings.uiScale === DEFAULT_DISPLAY_SETTINGS.uiScale &&
+                settings.respectZoom === DEFAULT_DISPLAY_SETTINGS.respectZoom)
+            }
+            onClick={() =>
+              updateSettings({
+                fontSize: DEFAULT_DISPLAY_SETTINGS.fontSize,
+                uiScale: DEFAULT_DISPLAY_SETTINGS.uiScale,
+                respectZoom: DEFAULT_DISPLAY_SETTINGS.respectZoom,
+              })
+            }
+          >
+            Reset sizes
+          </button>
+        </fieldset>
+        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
+          <legend class="px-1 text-sm font-medium">Truncate</legend>
+          {TRUNCATE_SETTINGS.map(([key, label, hint]) => (
+            <label class="flex cursor-pointer items-start gap-3" key={key}>
+              <input
+                type="checkbox"
+                class="accent-zen-accent mt-1 size-4"
+                data-testid={`zen-${key}`}
+                checked={settings[key]}
+                disabled={!loaded}
+                onChange={(event) => updateSettings({ [key]: event.currentTarget.checked })}
+              />
+              <span>
+                <span class="block text-sm font-medium">{label}</span>
+                <span class="text-zen-subtle block text-xs">{hint}</span>
+              </span>
+            </label>
+          ))}
         </fieldset>
         <ul class="m-0 flex list-none flex-col gap-4 p-0" aria-label="Display options">
           <li>
