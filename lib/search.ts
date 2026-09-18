@@ -102,6 +102,10 @@ export function forgeEntryDisplayTitle(entry: ForgeIssueEntry): string {
   return entry.tab.customLabel?.trim() || entry.title;
 }
 
+function tabNameSearchText(tab: TabInfo): string {
+  return `${tab.customLabel || ""} ${tab.title || ""}`.trim();
+}
+
 export function searchItemExactWordCount(item: SearchItem, query: string): number {
   if (item.kind === "space") {
     return Math.max(
@@ -113,6 +117,7 @@ export function searchItemExactWordCount(item: SearchItem, query: string): numbe
   return Math.max(
     countExactQueryWords(item.data.customLabel || "", query),
     countExactQueryWords(item.data.title || "", query),
+    countExactQueryWords(tabNameSearchText(item.data), query),
     countExactQueryWords(item.data.workspaceName || "", query),
     countExactQueryWords(item.data.folderName || "", query),
   );
@@ -124,6 +129,7 @@ export function forgeEntryExactWordCount(entry: ForgeIssueEntry, query: string):
     countExactQueryWords(entry.title, query),
     countExactQueryWords(entry.tab.title || "", query),
     countExactQueryWords(entry.tab.customLabel || "", query),
+    countExactQueryWords(tabNameSearchText(entry.tab), query),
     countExactQueryWords(entry.ref.id, query),
     countExactQueryWords(`#${entry.ref.id}`, query),
     countExactQueryWords(`!${entry.ref.id}`, query),
@@ -142,6 +148,29 @@ export function buildSearchItems(allTabs: TabInfo[], allSpaces: SpaceInfo[]): Se
   return items;
 }
 
+export function isPinnedSearchItem(item: SearchItem): boolean {
+  return item.kind === "space" || (item.kind === "tab" && isEssentialTab(item.data));
+}
+
+function partitionPinnedSearchItems(items: SearchItem[]): {
+  pinned: SearchItem[];
+  rest: SearchItem[];
+} {
+  const spaces: SearchItem[] = [];
+  const essentials: SearchItem[] = [];
+  const rest: SearchItem[] = [];
+  for (const item of items) {
+    if (item.kind === "space") {
+      spaces.push(item);
+    } else if (item.kind === "tab" && isEssentialTab(item.data)) {
+      essentials.push(item);
+    } else {
+      rest.push(item);
+    }
+  }
+  return { pinned: [...spaces, ...essentials], rest };
+}
+
 export interface SearchItemGroup {
   folderId?: string;
   folderName?: string;
@@ -153,13 +182,15 @@ export function groupSearchItems(
   items: SearchItem[],
   options: { groupFolders?: boolean; groupSubfolders?: boolean } = {},
 ): SearchItemGroup[] {
+  const { pinned, rest } = partitionPinnedSearchItems(items);
   if (options.groupFolders === false) {
-    return items.length ? [{ items, children: [] }] : [];
+    const ordered = [...pinned, ...rest];
+    return ordered.length ? [{ items: ordered, children: [] }] : [];
   }
   const groupSubfolders = options.groupSubfolders !== false;
   const groups: SearchItemGroup[] = [];
 
-  for (const item of items) {
+  for (const item of rest) {
     const folderPath: FolderInfo[] =
       item.kind === "tab" && !isEssentialTab(item.data)
         ? (item.data.folderPath ??
@@ -198,7 +229,17 @@ export function groupSearchItems(
     }
   }
 
-  return groups;
+  if (!pinned.length) {
+    return groups;
+  }
+
+  const first = groups[0];
+  if (first && first.folderId === undefined) {
+    first.items = [...pinned, ...first.items];
+    return groups;
+  }
+
+  return [{ items: pinned, children: [] }, ...groups];
 }
 
 export type SearchItemGroupEntry =
@@ -263,6 +304,7 @@ export function forgeEntrySearchTexts(entry: ForgeIssueEntry): string[] {
     entry.title,
     entry.tab.title || "",
     entry.tab.customLabel || "",
+    tabNameSearchText(entry.tab),
     entry.projectLabel,
     entry.ref.id,
     `#${entry.ref.id}`,
@@ -441,24 +483,18 @@ export function prioritizeCurrentTab(
   items: SearchItem[],
   currentTabId?: number | null,
 ): SearchItem[] {
-  if (!isUsableTabId(currentTabId)) {
-    const current = items.find((item) => item.kind === "tab" && item.data.active);
-    if (!current) {
-      return items;
-    }
-    return [current, ...items.filter((item) => item !== current)];
-  }
+  const current = isUsableTabId(currentTabId)
+    ? items.find((item) => item.kind === "tab" && item.data.id === currentTabId)
+    : items.find((item) => item.kind === "tab" && item.data.active);
+  const movableCurrent = current && !isPinnedSearchItem(current) ? current : undefined;
+  const { pinned, rest } = partitionPinnedSearchItems(
+    movableCurrent ? items.filter((item) => item !== movableCurrent) : items,
+  );
 
-  const index = items.findIndex((item) => item.kind === "tab" && item.data.id === currentTabId);
-  if (index <= 0) {
-    return items;
+  if (!movableCurrent) {
+    return pinned.length ? [...pinned, ...rest] : items;
   }
-
-  const current = items[index];
-  if (!current) {
-    return items;
-  }
-  return [current, ...items.slice(0, index), ...items.slice(index + 1)];
+  return [...pinned, movableCurrent, ...rest];
 }
 
 export function filterSearchItems(items: SearchItem[], query: string): SearchItem[] {
@@ -495,14 +531,19 @@ export function filterSearchItems(items: SearchItem[], query: string): SearchIte
       continue;
     }
 
-    const labelMatch = fuzzyMatchWithScore(item.data.customLabel || "", queryLowerCase);
-    const titleMatch = fuzzyMatchWithScore(item.data.title || "", queryLowerCase);
+    const customLabel = item.data.customLabel || "";
+    const title = item.data.title || "";
+    const combinedName = tabNameSearchText(item.data);
+    const labelMatch = fuzzyMatchWithScore(customLabel, queryLowerCase);
+    const titleMatch = fuzzyMatchWithScore(title, queryLowerCase);
+    const combinedMatch = fuzzyMatchWithScore(combinedName, queryLowerCase);
     const urlMatch = fuzzyMatchWithScore(item.data.url || "", queryLowerCase);
     const workspaceMatch = fuzzyMatchWithScore(item.data.workspaceName || "", queryLowerCase);
     const folderMatch = fuzzyMatchWithScore(item.data.folderName || "", queryLowerCase);
     if (
       !labelMatch.matches &&
       !titleMatch.matches &&
+      !combinedMatch.matches &&
       !urlMatch.matches &&
       !workspaceMatch.matches &&
       !folderMatch.matches
@@ -516,11 +557,14 @@ export function filterSearchItems(items: SearchItem[], query: string): SearchIte
         ...item.data,
         score: Math.max(
           labelMatch.score +
-            directMatchBonus(item.data.customLabel || "", queryLowerCase) +
-            countExactQueryWords(item.data.customLabel || "", queryLowerCase) * 5_000,
+            directMatchBonus(customLabel, queryLowerCase) +
+            countExactQueryWords(customLabel, queryLowerCase) * 5_000,
           titleMatch.score +
-            directMatchBonus(item.data.title || "", queryLowerCase) +
-            countExactQueryWords(item.data.title || "", queryLowerCase) * 5_000,
+            directMatchBonus(title, queryLowerCase) +
+            countExactQueryWords(title, queryLowerCase) * 5_000,
+          combinedMatch.score +
+            directMatchBonus(combinedName, queryLowerCase) +
+            countExactQueryWords(combinedName, queryLowerCase) * 5_000,
           urlMatch.score + directMatchBonus(item.data.url || "", queryLowerCase),
           workspaceMatch.score +
             directMatchBonus(item.data.workspaceName || "", queryLowerCase) +

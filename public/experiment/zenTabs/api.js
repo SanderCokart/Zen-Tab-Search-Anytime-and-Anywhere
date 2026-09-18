@@ -319,9 +319,60 @@ this.zenTabs = class extends ExtensionAPI {
       return folders.reverse();
     }
 
+    function getSessionStoreTitle(tab) {
+      try {
+        const SessionStore = tab.ownerGlobal?.SessionStore;
+        if (!SessionStore?.getTabState) {
+          return "";
+        }
+
+        const raw = SessionStore.getTabState(tab);
+        const state = typeof raw === "string" ? JSON.parse(raw) : raw;
+        const entries = state?.entries || [];
+        if (!entries.length) {
+          return "";
+        }
+
+        const index = Math.max(0, (state.index || entries.length) - 1);
+        return String(entries[index]?.title || "").trim();
+      } catch {
+        return "";
+      }
+    }
+
+    function getOriginalTabTitle(tab, customLabel) {
+      const custom = typeof customLabel === "string" ? customLabel.trim() : "";
+      const displayed = String(tab.label || "").trim();
+      const candidates = [];
+
+      try {
+        const contentTitle = String(tab.linkedBrowser?.contentTitle || "").trim();
+        if (contentTitle) {
+          candidates.push(contentTitle);
+        }
+      } catch {
+        // contentTitle is best-effort for unloaded or hidden tabs.
+      }
+
+      const sessionTitle = getSessionStoreTitle(tab);
+      if (sessionTitle) {
+        candidates.push(sessionTitle);
+      }
+
+      if (displayed && displayed !== custom) {
+        candidates.push(displayed);
+      }
+
+      const original = candidates.find((value) => value && value !== custom);
+      return original || displayed || custom || "Untitled";
+    }
+
     function mapNativeTab(tab, win, spaceNames) {
       const workspaceId = String(tab.getAttribute("zen-workspace-id") || "");
-      const customLabel = tab.zenStaticLabel;
+      const customLabel =
+        typeof tab.zenStaticLabel === "string" && tab.zenStaticLabel
+          ? String(tab.zenStaticLabel)
+          : "";
       const folderPath = getFolderPath(tab);
       const folder = folderPath[folderPath.length - 1];
       const extTabId = getExtTabId(tab);
@@ -329,8 +380,8 @@ this.zenTabs = class extends ExtensionAPI {
       return {
         id: Number.isInteger(extTabId) && extTabId >= 0 ? extTabId : -1,
         domId: String(tab.id || ""),
-        title: String(tab.label || "Untitled"),
-        customLabel: typeof customLabel === "string" && customLabel ? String(customLabel) : "",
+        title: getOriginalTabTitle(tab, customLabel),
+        customLabel,
         url: String(tab.linkedBrowser?.currentURI?.spec || ""),
         favIconUrl: String(unwrapFavicon(tab.image)),
         windowId: Number(win.windowUtils?.outerWindowID ?? -1),

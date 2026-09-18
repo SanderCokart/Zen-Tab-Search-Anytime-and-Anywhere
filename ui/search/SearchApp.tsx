@@ -671,7 +671,11 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
       if (navigateForge || !items.length) {
         return -1;
       }
-      return current >= 0 && current < items.length ? current : 0;
+      if (current >= 0 && current < items.length) {
+        return current;
+      }
+      const currentTabIndex = items.findIndex((item) => item.kind === "tab" && item.data.active);
+      return currentTabIndex >= 0 ? currentTabIndex : 0;
     });
   }, [items, navigateForge, query]);
 

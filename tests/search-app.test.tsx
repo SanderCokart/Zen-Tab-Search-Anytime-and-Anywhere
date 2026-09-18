@@ -25,10 +25,11 @@ function mountSearchApp(
   snapshotTabs = tabs,
   layout: "popup" | "overlay" = "popup",
   displaySettings?: Record<string, unknown>,
+  snapshotSpaces: Array<{ id: string; name: string; isActive: boolean }> = [],
 ) {
   const sendMessage = vi.fn(async ({ type }: { type: string }) => {
     if (type === "getSnapshot") {
-      return { tabs: snapshotTabs, spaces: [], timers: [] };
+      return { tabs: snapshotTabs, spaces: snapshotSpaces, timers: [] };
     }
     return undefined;
   });
@@ -120,6 +121,44 @@ describe("SearchApp", () => {
       expect(sendMessage).toHaveBeenCalledWith({ type: "switchTab", tabId: 2, domId: undefined }),
     );
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("keeps spaces and essential tabs above the current folder tab", async () => {
+    const mixedTabs = [
+      {
+        ...tabs[0],
+        folderId: "folder-a",
+        folderName: "Projects",
+        active: true,
+      },
+      {
+        ...tabs[1],
+        essential: true,
+        title: "Pinned mail",
+      },
+    ];
+    const { root } = mountSearchApp(vi.fn(), mixedTabs, "popup", undefined, [
+      { id: "space-a", name: "Work", isActive: true },
+    ]);
+
+    await vi.waitFor(() => expect(root.textContent).toContain("Projects"));
+    const sectionOrder = [...root.querySelectorAll("[data-testid]")].flatMap((node) => {
+      const testId = node.getAttribute("data-testid");
+      return testId === "zen-space-section" ||
+        testId === "zen-essential-section" ||
+        testId === "zen-folder-section"
+        ? [testId]
+        : [];
+    });
+    expect(sectionOrder).toEqual([
+      "zen-space-section",
+      "zen-essential-section",
+      "zen-folder-section",
+    ]);
+    expect(root.querySelector("[data-selected='true']")?.textContent).toContain("First tab");
 
     render(null, root);
     root.remove();

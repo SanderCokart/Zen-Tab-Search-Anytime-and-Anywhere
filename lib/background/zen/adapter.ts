@@ -64,6 +64,23 @@ function normalizeTabId(value: unknown): number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 ? value : -1;
 }
 
+function resolveOriginalTabTitle(
+  title: string | undefined,
+  customLabel: string | undefined,
+  fallbackTitle?: string,
+): string {
+  const displayed = title?.trim() || "";
+  const custom = customLabel?.trim() || "";
+  const fallback = fallbackTitle?.trim() || "";
+  if (custom && displayed && displayed !== custom) {
+    return displayed;
+  }
+  if (custom && fallback && fallback !== custom) {
+    return fallback;
+  }
+  return displayed || fallback || custom || "Untitled";
+}
+
 function mapBrowserTabs(
   tabs: BrowserTabSnapshot[],
   labels: Record<number, string>,
@@ -72,10 +89,11 @@ function mapBrowserTabs(
   return tabs.map((tab) => {
     const tabId =
       typeof tab.id === "number" && Number.isInteger(tab.id) && tab.id >= 0 ? tab.id : -1;
+    const customLabel = labels[tabId] ?? "";
     return {
       id: tabId,
-      title: tab.title || "Untitled",
-      customLabel: labels[tabId] ?? "",
+      title: resolveOriginalTabTitle(tab.title, customLabel),
+      customLabel,
       url: tab.url || "",
       favIconUrl: tab.favIconUrl || "",
       windowId: tab.windowId ?? -1,
@@ -120,28 +138,27 @@ export function createZenWorkspaceAdapter(
         return undefined;
       }
       const focusedTabId = await resolveAnchor(tabId);
-      let lastAccessedById = new Map<number, number>();
+      let browserTabsById = new Map<number, BrowserTabSnapshot>();
       try {
-        lastAccessedById = new Map(
+        browserTabsById = new Map(
           (await host.queryTabs({}))
             .filter(
-              (tab): tab is BrowserTabSnapshot & { id: number; lastAccessed: number } =>
-                typeof tab.id === "number" &&
-                Number.isInteger(tab.id) &&
-                tab.id >= 0 &&
-                typeof tab.lastAccessed === "number",
+              (tab): tab is BrowserTabSnapshot & { id: number } =>
+                typeof tab.id === "number" && Number.isInteger(tab.id) && tab.id >= 0,
             )
-            .map((tab) => [tab.id, tab.lastAccessed]),
+            .map((tab) => [tab.id, tab]),
         );
       } catch {
-        // lastAccessed is optional when the browser fallback is unavailable.
+        // Browser tab metadata is optional when the fallback host is unavailable.
       }
       return tabs.map((tab) => {
         const candidateTabId = normalizeTabId(tab.id);
+        const browserTab = browserTabsById.get(candidateTabId);
         return {
           ...tab,
           id: candidateTabId,
-          lastOpenedAt: lastAccessedById.get(candidateTabId) ?? tab.lastOpenedAt,
+          title: resolveOriginalTabTitle(tab.title, tab.customLabel, browserTab?.title),
+          lastOpenedAt: browserTab?.lastAccessed ?? tab.lastOpenedAt,
           active: candidateTabId >= 0 && candidateTabId === focusedTabId,
         };
       });
@@ -177,10 +194,11 @@ export function createZenWorkspaceAdapter(
 
     const tab = await host.getTab(tabId);
     const labels = await getCustomLabels([tabId]);
+    const customLabel = labels[tabId] ?? "";
     return {
       id: tab.id ?? tabId,
-      title: tab.title || "Untitled",
-      customLabel: labels[tabId] ?? "",
+      title: resolveOriginalTabTitle(tab.title, customLabel),
+      customLabel,
       url: tab.url || "",
       favIconUrl: tab.favIconUrl || "",
       windowId: tab.windowId ?? -1,

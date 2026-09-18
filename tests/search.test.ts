@@ -42,6 +42,32 @@ describe("prioritizeCurrentTab", () => {
     const ordered = prioritizeCurrentTab(items);
     expect(ordered[0]).toMatchObject({ kind: "tab", data: { id: 2 } });
   });
+
+  it("keeps spaces and essential tabs above the current tab", () => {
+    const items = buildSearchItems(
+      [tab(1), { ...tab(2, true), essential: true }, tab(3)],
+      [{ id: "space-a", name: "Work", isActive: true }],
+    );
+    const ordered = prioritizeCurrentTab(items, 3);
+    expect(
+      ordered.map((item) =>
+        item.kind === "space" ? item.data.id : `${item.data.essential ? "e" : "t"}:${item.data.id}`,
+      ),
+    ).toEqual(["space-a", "e:2", "t:3", "t:1"]);
+  });
+
+  it("keeps an essential current tab with the other pinned items", () => {
+    const items = buildSearchItems(
+      [tab(1), { ...tab(2, true), essential: true }],
+      [{ id: "space-a", name: "Work", isActive: false }],
+    );
+    const ordered = prioritizeCurrentTab(items, 2);
+    expect(
+      ordered.map((item) =>
+        item.kind === "space" ? item.data.id : `${item.data.essential ? "e" : "t"}:${item.data.id}`,
+      ),
+    ).toEqual(["space-a", "e:2", "t:1"]);
+  });
 });
 
 describe("filterSearchItems", () => {
@@ -90,6 +116,23 @@ describe("filterSearchItems", () => {
 
     expect(filtered).toHaveLength(1);
     expect(filtered[0]).toMatchObject({ kind: "tab", data: { id: 3 } });
+  });
+
+  it("matches the custom Zen label and the original page title", () => {
+    const items: SearchItem[] = buildSearchItems(
+      [
+        {
+          ...tab(1),
+          title: "Follow-up of Velden",
+          customLabel: "In Progress",
+        },
+      ],
+      [],
+    );
+
+    expect(filterSearchItems(items, "Progress")).toMatchObject([{ data: { id: 1 } }]);
+    expect(filterSearchItems(items, "Follow")).toMatchObject([{ data: { id: 1 } }]);
+    expect(filterSearchItems(items, "progress follow")).toMatchObject([{ data: { id: 1 } }]);
   });
 });
 
@@ -163,6 +206,24 @@ describe("groupSearchItems", () => {
     expect(groupSearchItems(items, { groupFolders: false })[0]?.folderId).toBeUndefined();
     expect(groupSearchItems(items, { groupSubfolders: false })[0]?.children).toEqual([]);
   });
+
+  it("keeps spaces and essential tabs above folder groups", () => {
+    const items = buildSearchItems(
+      [
+        { ...tab(1), folderId: "folder-a", folderName: "Projects" },
+        { ...tab(2), essential: true, folderId: "folder-a", folderName: "Projects" },
+      ],
+      [{ id: "space-a", name: "Work", isActive: true }],
+    );
+    const grouped = groupSearchItems([items[1]!, items[2]!, items[0]!]);
+
+    expect(grouped.map((group) => group.folderName)).toEqual([undefined, "Projects"]);
+    expect(grouped[0]?.items.map((item) => item.kind)).toEqual(["space", "tab"]);
+    expect(grouped[0]?.items[1]).toMatchObject({ data: { id: 2, essential: true } });
+    expect(
+      grouped[1]?.items.map((item) => (item.kind === "tab" ? item.data.id : item.data.id)),
+    ).toEqual([1]);
+  });
 });
 
 describe("forge issue entries", () => {
@@ -211,6 +272,21 @@ describe("forge issue entries", () => {
     expect(filterForgeIssueEntries(entries, "42")).toHaveLength(1);
     expect(filterForgeIssueEntries(entries, "merge request")[0]?.ref.id).toBe("7");
     expect(filterForgeIssueEntries(entries, "gitlab")[0]?.ref.id).toBe("7");
+  });
+
+  it("matches a renamed issue by both its custom label and original title", () => {
+    const entries = buildForgeIssueEntries([
+      {
+        ...tab(1),
+        title: "Follow-up of Velden · Issue #10 · acme/project",
+        customLabel: "Epic",
+        url: "https://github.com/acme/project/issues/10",
+      },
+    ]);
+
+    expect(filterForgeIssueEntries(entries, "Epic")[0]?.ref.id).toBe("10");
+    expect(filterForgeIssueEntries(entries, "Follow")[0]?.ref.id).toBe("10");
+    expect(filterForgeIssueEntries(entries, "epic velden")[0]?.ref.id).toBe("10");
   });
 
   it("ranks a custom-labeled exact issue match above a more recently opened issue", () => {

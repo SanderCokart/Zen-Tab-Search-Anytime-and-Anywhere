@@ -114,4 +114,39 @@ describe("createZenWorkspaceAdapter browser fallback", () => {
       expect.objectContaining({ id: 8, title: "Recovered" }),
     ]);
   });
+
+  it("keeps the original page title when Zen overwrites the visible label", async () => {
+    const workspace = createZenWorkspaceAdapter({
+      getZenTabsApi: () => ({
+        getAllTabs: async () => [
+          {
+            id: 1,
+            title: "Epic",
+            customLabel: "Epic",
+            url: "https://example.com",
+            favIconUrl: "",
+            windowId: 1,
+          },
+        ],
+      }),
+      resolveAnchorTabId: async () => 1,
+      browser: {
+        queryTabs: async () => [
+          { id: 1, title: "Follow-up of Velden", windowId: 1, lastAccessed: 42 },
+        ],
+        getTab: async (tabId) => ({ id: tabId, title: "Follow-up of Velden", windowId: 1 }),
+        focusWindow: async () => undefined,
+        activateTab: async () => undefined,
+      },
+    });
+
+    await expect(workspace.listTabs()).resolves.toEqual([
+      expect.objectContaining({
+        id: 1,
+        title: "Follow-up of Velden",
+        customLabel: "Epic",
+        lastOpenedAt: 42,
+      }),
+    ]);
+  });
 });
