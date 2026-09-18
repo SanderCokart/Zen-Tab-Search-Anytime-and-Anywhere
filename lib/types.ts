@@ -86,3 +86,10 @@ export function isEssentialTab(tab: TabInfo): boolean {
 export function tabBrowserId(tab: TabInfo): number | undefined {
   return isUsableTabId(tab.id) ? tab.id : undefined;
 }
+
+export function canRenameTab(tab: TabInfo): boolean {
+  if (isEssentialTab(tab)) {
+    return typeof tab.domId === "string" && tab.domId.length > 0;
+  }
+  return tabBrowserId(tab) !== undefined;
+}

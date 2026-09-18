@@ -109,6 +109,11 @@ export const extensionRequestSchema = v.variant("type", [
   v.object({
     type: v.literal("openSettings"),
   }),
+  v.object({
+    type: v.literal("setTabLabel"),
+    tabId: tabIdSchema,
+    label: v.string(),
+  }),
 ]);
 
 export const contentCommandSchema = v.variant("type", [
@@ -150,6 +155,7 @@ export const EXTENSION_REQUEST_TYPES = [
   "clearTimer",
   "clearAllTimers",
   "openSettings",
+  "setTabLabel",
 ] as const;
 
 export type ExtensionRequestType = (typeof EXTENSION_REQUEST_TYPES)[number];
@@ -175,6 +181,7 @@ export type ExtensionSuccessMap = {
   clearTimer: ClearTimerResponse;
   clearAllTimers: ClearAllTimersResponse;
   openSettings: void;
+  setTabLabel: void;
 };
 
 const clearTimerResponseSchema = v.object({
@@ -262,6 +269,7 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
     case "clearAllTimers":
       return v.parse(clearAllTimersResponseSchema, value) as ExtensionSuccessMap[T];
     case "openSettings":
+    case "setTabLabel":
       return undefined as ExtensionSuccessMap[T];
     default: {
       const exhaustive: never = type;
@@ -280,6 +288,7 @@ export function invalidRequestMessage(type: ExtensionRequestType): string {
       return "Timer duration must be between 1 minute and 31 days.";
     case "clearTimer":
     case "switchTab":
+    case "setTabLabel":
       return "Invalid tab ID.";
     default:
       return "Invalid message.";

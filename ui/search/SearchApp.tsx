@@ -35,6 +35,7 @@ import {
   formatForgeKind,
   formatForgePlatform,
   formatTabDisplayTitle,
+  canRenameTab,
   isEssentialTab,
   isActivatableTab,
   tabBrowserId,
@@ -684,7 +685,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
       renameInputRef.current?.focus();
       renameInputRef.current?.select();
     }
-  }, [renameDialog?.tab.domId]);
+  }, [renameDialog]);
 
   useEffect(() => {
     optionRefs.current[selectedIndex]?.scrollIntoView({ block: "nearest" });
@@ -1186,7 +1187,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           role="menu"
           onPointerDown={(event) => event.stopPropagation()}
         >
-          {isEssentialTab(contextMenu.item.data) && (
+          {canRenameTab(contextMenu.item.data) && (
             <button
               type="button"
               class="hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left font-[inherit] text-sm"
@@ -1196,7 +1197,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
                 setRenameError(null);
                 setRenameDialog({
                   tab: contextMenu.item.data,
-                  value: contextMenu.item.data.customLabel || "",
+                  value: stripTimerPrefix(contextMenu.item.data.customLabel || ""),
                 });
               }}
             >
@@ -1231,32 +1232,54 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             class="border-zen-accent bg-zen-panel w-full max-w-sm rounded-lg border p-4 shadow-xl"
             onSubmit={(event) => {
               event.preventDefault();
-              const domId = renameDialog.tab.domId;
-              if (!domId) {
+              const name = renameDialog.value.replace(/\s+/g, " ").trim();
+              if (isEssentialTab(renameDialog.tab)) {
+                const domId = renameDialog.tab.domId;
+                if (!domId) {
+                  setRenameError("This tab cannot be renamed.");
+                  return;
+                }
+                const nextNames = { ...essentialNames };
+                if (name) {
+                  nextNames[domId] = name;
+                } else {
+                  delete nextNames[domId];
+                }
+                void browser.storage.local
+                  .set({ [ESSENTIAL_TAB_NAMES_KEY]: nextNames })
+                  .then(() => {
+                    setEssentialNames(nextNames);
+                    setRenameDialog(null);
+                  })
+                  .catch((error) => {
+                    debugError("Could not save essential tab name:", error);
+                    setRenameError("Could not rename this tab.");
+                  });
+                return;
+              }
+
+              const tabId = tabBrowserId(renameDialog.tab);
+              if (tabId === undefined) {
                 setRenameError("This tab cannot be renamed.");
                 return;
               }
-              const name = renameDialog.value.replace(/\s+/g, " ").trim();
-              const nextNames = { ...essentialNames };
-              if (name) {
-                nextNames[domId] = name;
-              } else {
-                delete nextNames[domId];
-              }
-              void browser.storage.local
-                .set({ [ESSENTIAL_TAB_NAMES_KEY]: nextNames })
+              void sendExtensionMessage({ type: "setTabLabel", tabId, label: name })
                 .then(() => {
-                  setEssentialNames(nextNames);
+                  setTabs((current) =>
+                    current.map((tab) =>
+                      tabBrowserId(tab) === tabId ? { ...tab, customLabel: name } : tab,
+                    ),
+                  );
                   setRenameDialog(null);
                 })
                 .catch((error) => {
-                  debugError("Could not save essential tab name:", error);
+                  debugError("Could not rename tab:", error);
                   setRenameError("Could not rename this tab.");
                 });
             }}
           >
             <label class="flex flex-col gap-2 text-sm">
-              Rename essential tab
+              Rename tab
               <input
                 ref={renameInputRef}
                 class="focus:border-zen-accent border-zen-line-strong bg-zen-overlay-soft rounded border px-2 py-1.5 outline-none"

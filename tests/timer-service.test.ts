@@ -242,4 +242,27 @@ describe("createTimerService", () => {
     await expect(service.clearTabTimer(3)).resolves.toBe(true);
     await expect(service.getActiveTimers()).resolves.toEqual([]);
   });
+
+  it("renames a tab without a timer", async () => {
+    const { service, setLabel } = installBrowser({}, { openTabIds: [4] });
+    await expect(service.renameTab(4, "  Docs  ")).resolves.toBe(true);
+    expect(setLabel).toHaveBeenCalledWith("Docs", 4, false);
+  });
+
+  it("renames a timed tab and keeps the timer prefix", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW);
+    const endAt = NOW + 60_000;
+    const { service, storage, setLabel } = installBrowser(
+      {
+        "4": { tabId: 4, endAt, originalLabel: "Old", title: "Docs" },
+      },
+      { openTabIds: [4] },
+    );
+
+    await expect(service.renameTab(4, "New")).resolves.toBe(true);
+    expect(setLabel).toHaveBeenCalledWith(expect.stringContaining("New"), 4, true);
+    expect(storage.tabTimers).toEqual({
+      "4": { tabId: 4, endAt, originalLabel: "New", title: "Docs" },
+    });
+  });
 });

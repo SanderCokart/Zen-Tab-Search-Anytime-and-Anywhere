@@ -520,4 +520,75 @@ describe("SearchApp", () => {
     render(null, root);
     root.remove();
   });
+
+  it("renames a normal tab from the context menu", async () => {
+    const { root, sendMessage } = mountSearchApp();
+    await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
+
+    root
+      .querySelector("[data-testid='zen-search-item']")!
+      .dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, clientX: 20, clientY: 20 }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-tab-context-menu']")?.textContent).toContain(
+        "Rename",
+      ),
+    );
+    [...root.querySelectorAll("[role='menuitem']")]
+      .find((node) => node.textContent?.includes("Rename"))
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    await vi.waitFor(() => expect(root.querySelector("form")?.textContent).toContain("Rename tab"));
+    const input = root.querySelector("form input") as HTMLInputElement;
+    input.value = "Docs";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() => expect(input.value).toBe("Docs"));
+    root.querySelector<HTMLButtonElement>("form button[type='submit']")!.click();
+
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "setTabLabel", tabId: 1, label: "Docs" }),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("renames an essential tab from the context menu", async () => {
+    const { root } = mountSearchApp(vi.fn(), [
+      {
+        ...tabs[0],
+        essential: true,
+        domId: "essential-1",
+        title: "Pinned mail",
+      },
+    ]);
+    await vi.waitFor(() => expect(root.textContent).toContain("Pinned mail"));
+
+    root
+      .querySelector("[data-testid='zen-search-item']")!
+      .dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, clientX: 20, clientY: 20 }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-tab-context-menu']")?.textContent).toContain(
+        "Rename",
+      ),
+    );
+    [...root.querySelectorAll("[role='menuitem']")]
+      .find((node) => node.textContent?.includes("Rename"))
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    await vi.waitFor(() => expect(root.querySelector("form")?.textContent).toContain("Rename tab"));
+    const input = root.querySelector("form input") as HTMLInputElement;
+    input.value = "Inbox";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() => expect(input.value).toBe("Inbox"));
+    root.querySelector<HTMLButtonElement>("form button[type='submit']")!.click();
+
+    await vi.waitFor(() =>
+      expect(browser.storage.local.set).toHaveBeenCalledWith({
+        essentialTabNames: { "essential-1": "Inbox" },
+      }),
+    );
+
+    render(null, root);
+    root.remove();
+  });
 });

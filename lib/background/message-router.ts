@@ -20,6 +20,7 @@ export interface MessageRouterHandlers {
   clearTimer(tabId: number): Promise<boolean>;
   clearAllTimers(): Promise<number>;
   openSettings(): Promise<void>;
+  setTabLabel(tabId: number, label: string): Promise<void>;
   isAllowedTimerEnd(endAt: number): boolean;
 }
 
@@ -113,6 +114,8 @@ function handleParsedRequest(
       return handlers.clearAllTimers().then((cleared) => ({ success: true, cleared }));
     case "openSettings":
       return handlers.openSettings();
+    case "setTabLabel":
+      return handlers.setTabLabel(message.tabId, message.label);
   }
 }
 

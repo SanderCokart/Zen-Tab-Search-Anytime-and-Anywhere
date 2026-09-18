@@ -461,6 +461,32 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
     return active;
   }
 
+  async function renameTab(tabId: number, label: string): Promise<boolean> {
+    const name = label.replace(/\s+/g, " ").trim();
+    const timers = await readTimers();
+    const timer = timers[String(tabId)];
+    if (!timer) {
+      return setLabel(name, tabId, false);
+    }
+
+    const next: TabTimer = {
+      ...timer,
+      originalLabel: stripTimerPrefix(name),
+    };
+    const remaining = Math.max(0, next.endAt - Date.now());
+    const indicator = composeTimerLabel(remaining, next.originalLabel, next.title);
+    const updated = await setTabLabelSilent(indicator, tabId);
+    if (!updated) {
+      return false;
+    }
+
+    timers[String(tabId)] = next;
+    lastTimerIndicators.set(tabId, indicator);
+    await writeTimers(timers);
+    await writeSessionTimer(next);
+    return true;
+  }
+
   async function removeTabTimer(tabId: number): Promise<void> {
     const timers = await readTimers();
     const timer = timers[String(tabId)];
@@ -483,6 +509,7 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
     handleTabRemoved,
     removeTabTimer,
     restorePersistedTimers,
+    renameTab,
     setTabTimer,
     tickActiveTimers,
   };

@@ -8,6 +8,7 @@ import { openSettingsPopup } from "../lib/background/popups/settings";
 import { openCustomTimerPopup } from "../lib/background/popups/timer";
 import {
   createSnapshotReader,
+  notifySnapshotChanged,
   registerSnapshotChangeNotifications,
 } from "../lib/background/snapshot";
 import { createTabQuery } from "../lib/background/tabs/query";
@@ -118,6 +119,13 @@ export default defineBackground(() => {
     clearTimer: timerService.clearTabTimer,
     clearAllTimers: timerService.clearAllTimers,
     openSettings: openSettingsPopup,
+    setTabLabel: async (tabId, label) => {
+      const renamed = await timerService.renameTab(tabId, label);
+      if (!renamed) {
+        throw new Error("Could not rename this tab.");
+      }
+      notifySnapshotChanged();
+    },
     isAllowedTimerEnd: (endAt) => isAllowedTimerEnd(endAt),
   });
 });
