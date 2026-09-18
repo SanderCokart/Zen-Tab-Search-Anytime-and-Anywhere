@@ -466,11 +466,23 @@ of each surface. Two details are worth knowing before you change it:
 - **The toolbar popup and options page are browser UI, not page content**, so page
   zoom never touches them and they always take the plain px length.
 
-**One honest inconsistency:** this module validates by hand — `isColor()`,
-`typeof x === "boolean"` and a `normalizeDisplaySettings` function — rather than with
-valibot like everything else. It predates the schema convention. It works and it is
-well tested, but if you are touching it substantially, converting it to a valibot
-schema would bring it in line with the rest of the codebase.
+Like the wire protocol, these are a valibot schema and the type is inferred from it.
+The schema differs from the protocol ones in two ways, both because it is reading
+storage that a previous version of the extension wrote rather than a message another
+part of *this* build just sent:
+
+- **Every field falls back individually**, and the object carries a fallback of its
+  own, so the parse cannot throw. One unreadable colour must not cost the user every
+  other preference, and storage holding no object at all is an ordinary first run.
+- **Numbers are normalised, not just validated.** Each one runs the same clamp the
+  options page uses, so a value restored from storage and one just moved on a slider
+  end up identical.
+
+The two dependent options — `filterIssuesInOverlay` under `detectForgeIssues`, and
+`groupSubfolders` under `groupFolders` — are resolved in a `v.transform` over the
+whole object rather than per field. They depend on another field's *normalised*
+value, and reading it off the raw input would get it wrong whenever the parent had
+itself fallen back.
 
 ---
 

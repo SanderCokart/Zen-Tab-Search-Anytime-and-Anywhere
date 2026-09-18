@@ -5,6 +5,7 @@ import {
   saveDisplaySettings,
   subscribeToDisplaySettingsChanged,
 } from "@/features/settings/model/display-settings";
+import { MAX_FONT_SIZE, MIN_UI_SCALE } from "@/features/settings/model/ui-scale";
 
 describe("display settings", () => {
   it("uses defaults and disables nested options when their parent setting is off", async () => {
@@ -76,6 +77,54 @@ describe("display settings", () => {
       ...DEFAULT_DISPLAY_SETTINGS,
       truncateTabTitles: false,
       truncateIssueTitles: true,
+    });
+  });
+
+  it("falls back to every default when storage holds no object", async () => {
+    for (const stored of [undefined, null, "nonsense", 42]) {
+      Object.assign(globalThis, {
+        browser: {
+          storage: {
+            local: { get: vi.fn(async () => ({ displaySettings: stored })), set: vi.fn() },
+            onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+          },
+        },
+      });
+      await expect(readDisplaySettings()).resolves.toEqual(DEFAULT_DISPLAY_SETTINGS);
+    }
+  });
+
+  it("replaces only the unreadable fields, and normalises the rest", async () => {
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: {
+            get: vi.fn(async () => ({
+              displaySettings: {
+                textColor: "not-a-color",
+                issueBackgroundColor: "#ABCDEF",
+                fontSize: 999,
+                uiScale: -4,
+                // Snapped to the nearest step rather than rejected.
+                tabGap: 13,
+                // Not finite, so this one alone falls back to its own default.
+                folderGap: Number.NaN,
+                truncateTabTitles: "yes",
+              },
+            })),
+            set: vi.fn(),
+          },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+
+    await expect(readDisplaySettings()).resolves.toEqual({
+      ...DEFAULT_DISPLAY_SETTINGS,
+      issueBackgroundColor: "#ABCDEF",
+      fontSize: MAX_FONT_SIZE,
+      uiScale: MIN_UI_SCALE,
+      tabGap: 12,
     });
   });
 
