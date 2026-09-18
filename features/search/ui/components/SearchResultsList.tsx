@@ -59,7 +59,7 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
             >
               <div class={sectionHeaderClass}>Spaces</div>
               <ul
-                class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,var(--zen-tile-space)),1fr))] gap-[var(--zen-space-2)] p-[var(--zen-space-2)]"
+                class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,var(--zen-tile-space)),1fr))] gap-[var(--zen-space-gap)] p-[var(--zen-space-2)]"
                 data-testid="zen-space-grid"
               >
                 {spaces.map((item) => renderItem(props, item))}
@@ -74,14 +74,23 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
             >
               <div class={sectionHeaderClass}>Essential tabs</div>
               <ul
-                class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,var(--zen-tile-essential)),1fr))] gap-[var(--zen-space-2)] p-[var(--zen-space-2)]"
+                class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,var(--zen-tile-essential)),1fr))] gap-[var(--zen-essential-gap)] p-[var(--zen-space-2)]"
                 data-testid="zen-essential-grid"
               >
                 {essentialTabs.map((item) => renderItem(props, item))}
               </ul>
             </li>
           )}
-          {tabs.map((item) => renderItem(props, item))}
+          {tabs.length > 0 && (
+            <li>
+              <ul
+                class="m-0 flex list-none flex-col gap-[var(--zen-tab-gap)] p-0"
+                data-testid="zen-tab-list"
+              >
+                {tabs.map((item) => renderItem(props, item))}
+              </ul>
+            </li>
+          )}
         </section>
       );
     }
@@ -90,9 +99,10 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
       <li
         key={`${group.folderId}-${level}-${groupIndex}`}
         class={cn(
-          level > 0
-            ? "mx-[var(--zen-space-1)] my-[var(--zen-space-2)]"
-            : "mt-[var(--zen-space-3)] first:mt-0",
+          // Margin-top only: adjacent folders then sit exactly one folder gap
+          // apart rather than two, and the last one adds no trailing space.
+          "mt-[var(--zen-folder-gap)] first:mt-0",
+          level > 0 && "mx-[var(--zen-space-1)]",
           "rounded-[var(--zen-radius)] p-[var(--zen-space-1)]",
         )}
         style={{ backgroundColor: displaySettings.folderBackgroundColor }}
@@ -114,7 +124,7 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
         >
           {group.folderName}
         </div>
-        <ul class="m-0 flex list-none flex-col gap-[var(--zen-space-1)] p-0">
+        <ul class="m-0 flex list-none flex-col gap-[var(--zen-tab-gap)] p-0">
           {group.items.map((item) => renderItem(props, item))}
           {renderGroups(props, group.children, level + 1)}
         </ul>

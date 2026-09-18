@@ -398,9 +398,10 @@ durations at 31 days.
 
 ### `settings/` — display preferences
 
-[display-settings.ts](features/settings/model/display-settings.ts) holds thirteen
+[display-settings.ts](features/settings/model/display-settings.ts) holds nineteen
 preferences: four booleans for grouping and issue detection, four hex colours, three
-that size the UI, and two that decide whether tab and issue text is cut to one line. `DisplaySettingsApp` writes them, every surface subscribes
+that size the UI, two that decide whether tab and issue text is cut to one line, and
+six gap sizes. `DisplaySettingsApp` writes them, every surface subscribes
 via `storage.onChanged`, so changing a colour or a size updates an open overlay live.
 
 #### The size system
@@ -416,6 +417,28 @@ the results. Components reference the tokens
 (`p-[var(--zen-space-2)]`, `text-[length:var(--zen-text-base)]`) and never a literal
 size. This replaced a `compact` boolean that every component threaded through to pick
 between two hard-coded pixel scales.
+
+Gaps are a second layer on top of that. Six settings — between sections, tabs,
+folders, essential tabs, spaces and issues — are picked in pixels in steps of 4 and
+stored as a ratio of a 16px reference, so at the default font size the number is the
+gap in pixels and it scales with the UI from there. A literal px value would have
+stranded the gaps: they would then grow with page zoom while zoom-independent text
+stayed put.
+
+**Padding is deliberately not configurable.** It follows `uiScale` alone. An earlier
+version exposed a padding multiplier beside each gap, which meant two controls
+competing over the same pixels and no way to predict which one to reach for. One
+control per gap, one knob for everything inside a row.
+
+`GAP_SETTINGS` in `ui-scale.ts` is the single list tying each setting key to its
+custom property; the options page renders a slider per entry and `uiScaleStyle` emits
+them, so adding a seventh means touching that list and the CSS, not the UI.
+
+Each gap drives exactly one `gap` or margin in one place, which is what makes the
+sliders predictable. Two structural details fall out of that: flat tab results are
+wrapped in their own `<ul>` so they take the tab gap rather than the section gap that
+separates the blocks around them, and folder sections carry `margin-top` only — with
+margin on both sides, adjacent folders would sit two gaps apart.
 
 [ui-scale.ts](features/settings/model/ui-scale.ts) turns the settings into those two
 properties, and `SearchShell` puts `data-zen-ui` plus the resulting style on the root

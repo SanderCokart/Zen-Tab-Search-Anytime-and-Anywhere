@@ -104,6 +104,20 @@
      */
     --zen-tile-space: calc(var(--zen-font-size) * 10 * var(--zen-scale));
     --zen-tile-essential: calc(var(--zen-font-size) * 12 * var(--zen-scale));
+
+    /*
+     * The configurable gaps. Each is picked in pixels and stored as a ratio of a
+     * 16px reference, so at the default font size the number the user chose is the
+     * gap in pixels, and it scales with the UI from there. Each one drives exactly
+     * one `gap` or margin in one place; the fallbacks are the defaults, for a
+     * surface that has not set them.
+     */
+    --zen-section-gap: calc(var(--zen-font-size) * var(--zen-section-gap-ratio, 0.25));
+    --zen-tab-gap: calc(var(--zen-font-size) * var(--zen-tab-gap-ratio, 0.25));
+    --zen-folder-gap: calc(var(--zen-font-size) * var(--zen-folder-gap-ratio, 0.75));
+    --zen-essential-gap: calc(var(--zen-font-size) * var(--zen-essential-gap-ratio, 0.5));
+    --zen-space-gap: calc(var(--zen-font-size) * var(--zen-space-gap-ratio, 0.5));
+    --zen-issue-gap: calc(var(--zen-font-size) * var(--zen-issue-gap-ratio, 0.25));
   }
 
   .zen-icon {

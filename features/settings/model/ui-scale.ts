@@ -7,6 +7,38 @@ export const MIN_FONT_SIZE = 10;
 export const MAX_FONT_SIZE = 22;
 export const MIN_UI_SCALE = 0.7;
 export const MAX_UI_SCALE = 1.5;
+export const MIN_GAP = 0;
+export const MAX_GAP = 64;
+export const GAP_STEP = 4;
+
+/**
+ * Gaps are chosen in pixels, but stored as a ratio of this reference size — which
+ * is the default `fontSize`. At the default the number on the slider is the gap in
+ * pixels exactly; if the font size or the zoom-independent sizing moves, the gap
+ * follows the rest of the UI instead of stranding itself at a fixed pixel value.
+ */
+const GAP_REFERENCE_PX = 16;
+
+/**
+ * Every gap in the search UI, paired with the custom property it feeds. Each one
+ * maps to exactly one `gap` (or one margin) in one place, so moving a slider has a
+ * single visible effect. This list is the only place the setting keys and the CSS
+ * properties are tied together — `shared/ui/styles.css` consumes the properties,
+ * the options page renders a slider per entry, and `uiScaleStyle` emits them.
+ *
+ * Padding is deliberately not here: it stays on the density knob, which keeps the
+ * two kinds of control from fighting over the same pixels.
+ */
+export const GAP_SETTINGS = [
+  ["sectionGap", "--zen-section-gap-ratio"],
+  ["tabGap", "--zen-tab-gap-ratio"],
+  ["folderGap", "--zen-folder-gap-ratio"],
+  ["essentialGap", "--zen-essential-gap-ratio"],
+  ["spaceGap", "--zen-space-gap-ratio"],
+  ["issueGap", "--zen-issue-gap-ratio"],
+] as const;
+
+export type GapSettingKey = (typeof GAP_SETTINGS)[number][0];
 
 /** The toolbar popup is a fixed 380px panel, so it runs a notch tighter than the overlay. */
 const POPUP_FONT_FACTOR = 0.8;
@@ -28,9 +60,18 @@ export function clampUiScale(value: number): number {
   return clamp(value, MIN_UI_SCALE, MAX_UI_SCALE);
 }
 
-function clamp(value: number, min: number, max: number): number {
+/** Snaps a gap to the nearest {@link GAP_STEP} and holds it within range. */
+export function clampGap(value: number, fallback = 0): number {
   if (!Number.isFinite(value)) {
-    return min;
+    return fallback;
+  }
+  const snapped = Math.round(value / GAP_STEP) * GAP_STEP;
+  return Math.min(MAX_GAP, Math.max(MIN_GAP, snapped));
+}
+
+function clamp(value: number, min: number, max: number, fallback = min): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
   }
   return Math.min(max, Math.max(min, value));
 }
@@ -80,8 +121,12 @@ export function uiScaleStyle(
   settings: DisplaySettings,
   surface: UiSurface,
 ): Record<string, string> {
-  return {
+  const style: Record<string, string> = {
     "--zen-font-size": resolveBaseFontSize(settings, surface),
     "--zen-scale": css(clampUiScale(settings.uiScale)),
   };
+  for (const [key, property] of GAP_SETTINGS) {
+    style[property] = css(clampGap(settings[key]) / GAP_REFERENCE_PX);
+  }
+  return style;
 }

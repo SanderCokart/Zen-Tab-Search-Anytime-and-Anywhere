@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_DISPLAY_SETTINGS } from "@/features/settings/model/display-settings";
 import {
+  GAP_SETTINGS,
+  GAP_STEP,
   MAX_FONT_SIZE,
+  MAX_GAP,
+  clampGap,
   MAX_UI_SCALE,
   MIN_FONT_SIZE,
   MIN_UI_SCALE,
@@ -56,12 +60,36 @@ describe("ui scale", () => {
     );
   });
 
-  it("exposes exactly the two custom properties the CSS tokens derive from", () => {
-    expect(
-      uiScaleStyle(settings({ fontSize: 12, uiScale: 1.25, respectZoom: true }), "overlay"),
-    ).toEqual({
-      "--zen-font-size": "12px",
-      "--zen-scale": "1.25",
-    });
+  it("snaps gaps to the step and holds them in range", () => {
+    expect(clampGap(999)).toBe(MAX_GAP);
+    expect(clampGap(-8)).toBe(0);
+    expect(clampGap(0)).toBe(0);
+    expect(clampGap(10)).toBe(GAP_STEP * 3);
+    expect(clampGap(13)).toBe(GAP_STEP * 3);
+    // 0 is a legitimate gap, so a corrupt value falls back to the caller's default
+    // rather than collapsing the gap.
+    expect(clampGap(Number.NaN, 12)).toBe(12);
+  });
+
+  it("stores gaps as a ratio of the 16px reference, so the slider reads as pixels", () => {
+    const style = uiScaleStyle(
+      settings({ fontSize: 12, uiScale: 1.25, respectZoom: true, tabGap: 0, folderGap: 16 }),
+      "overlay",
+    );
+
+    expect(style["--zen-font-size"]).toBe("12px");
+    expect(style["--zen-scale"]).toBe("1.25");
+    expect(style["--zen-tab-gap-ratio"]).toBe("0");
+    // 16px at the 16px reference is exactly one base font size.
+    expect(style["--zen-folder-gap-ratio"]).toBe("1");
+    expect(Object.keys(style)).toHaveLength(2 + GAP_SETTINGS.length);
+  });
+
+  it("gives every gap setting a distinct custom property", () => {
+    const keys = GAP_SETTINGS.map(([key]) => key);
+    const properties = GAP_SETTINGS.map(([, property]) => property);
+
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(new Set(properties).size).toBe(properties.length);
   });
 });

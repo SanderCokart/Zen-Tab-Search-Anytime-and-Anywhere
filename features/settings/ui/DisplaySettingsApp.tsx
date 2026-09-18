@@ -6,10 +6,14 @@ import {
   type DisplaySettings,
 } from "@/features/settings/model/display-settings";
 import {
+  GAP_STEP,
   MAX_FONT_SIZE,
+  MAX_GAP,
   MAX_UI_SCALE,
   MIN_FONT_SIZE,
+  MIN_GAP,
   MIN_UI_SCALE,
+  type GapSettingKey,
 } from "@/features/settings/model/ui-scale";
 import { cn } from "@/shared/ui/cn";
 import { ColorPickerField } from "@/features/settings/ui/ColorPickerField";
@@ -33,6 +37,19 @@ const TRUNCATE_SETTINGS = [
     "Cuts each title in the issue navigator to one line. Off, long titles wrap onto as many lines as they need.",
   ],
 ] as const;
+
+const GAP_CONTROLS: readonly (readonly [GapSettingKey, string, string])[] = [
+  ["tabGap", "Between tabs", "Separates one tab row from the next, inside folders as well."],
+  ["folderGap", "Between folders", "Separates each folder section from what comes before it."],
+  ["essentialGap", "Between essential tabs", "Separates the tiles in the essential-tabs grid."],
+  ["spaceGap", "Between spaces", "Separates the tiles in the spaces grid."],
+  [
+    "sectionGap",
+    "Between sections",
+    "Separates the spaces block, the essential-tabs block and the tab list from each other.",
+  ],
+  ["issueGap", "Between issues", "Separates one issue-navigator entry from the next."],
+];
 
 const rangeClass =
   "accent-zen-accent h-1 w-40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50";
@@ -193,6 +210,52 @@ export function DisplaySettingsApp() {
             }
           >
             Reset sizes
+          </button>
+        </fieldset>
+        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
+          <legend class="px-1 text-sm font-medium">Gaps</legend>
+          <p class="text-zen-subtle m-0 text-xs">
+            Pixels at the default font size, in steps of {GAP_STEP}. Each one moves a single gap and
+            nothing else; padding inside rows and tiles follows the density slider above.
+          </p>
+          {GAP_CONTROLS.map(([key, label, hint]) => (
+            <label class="flex items-center justify-between gap-4 text-sm" key={key}>
+              <span>
+                <span class="block font-medium">{label}</span>
+                <span class="text-zen-subtle block text-xs">{hint}</span>
+              </span>
+              <span class="flex shrink-0 items-center gap-2">
+                <input
+                  type="range"
+                  class={rangeClass}
+                  data-testid={`zen-${key}`}
+                  min={MIN_GAP}
+                  max={MAX_GAP}
+                  step={GAP_STEP}
+                  disabled={!loaded}
+                  value={settings[key]}
+                  onInput={(event) => updateSettings({ [key]: Number(event.currentTarget.value) })}
+                />
+                <span class="w-12 text-right tabular-nums">{settings[key]}px</span>
+              </span>
+            </label>
+          ))}
+          <button
+            type="button"
+            class="border-zen-clear text-zen-faint hover:bg-zen-surface cursor-pointer self-start rounded-md border bg-transparent px-2 py-1 font-[inherit] text-xs disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={
+              !loaded ||
+              GAP_CONTROLS.every(([key]) => settings[key] === DEFAULT_DISPLAY_SETTINGS[key])
+            }
+            onClick={() =>
+              updateSettings(
+                Object.fromEntries(
+                  GAP_CONTROLS.map(([key]) => [key, DEFAULT_DISPLAY_SETTINGS[key]]),
+                ),
+              )
+            }
+          >
+            Reset gaps
           </button>
         </fieldset>
         <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
