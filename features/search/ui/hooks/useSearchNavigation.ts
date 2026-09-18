@@ -5,7 +5,8 @@ import {
   searchItemExactWordCount,
 } from "@/features/search/model/ranking";
 import type { SearchLayout } from "@/features/search/ui/types";
-import type { ForgeIssueEntry, SearchItem } from "@/shared/types";
+import type { SearchItem } from "@/shared/types";
+import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
 
 export interface UseSearchNavigationOptions {
   layout: SearchLayout;

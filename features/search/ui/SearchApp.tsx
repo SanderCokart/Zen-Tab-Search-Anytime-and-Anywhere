@@ -20,12 +20,8 @@ import { primaryButtonClass } from "@/features/search/ui/lib/styles";
 import type { SearchLayout } from "@/features/search/ui/types";
 import { debugError } from "@/shared/debug";
 import { sendExtensionMessage } from "@/shared/messaging/client";
-import {
-  isActivatableTab,
-  tabBrowserId,
-  type ForgeIssueEntry,
-  type SearchItem,
-} from "@/shared/types";
+import { isActivatableTab, tabBrowserId, type SearchItem } from "@/shared/types";
+import { type ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import { cn } from "@/shared/ui/cn";
 
 export type { SearchLayout };

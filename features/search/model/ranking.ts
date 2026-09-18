@@ -3,11 +3,11 @@ import {
   isEssentialTab,
   isUsableTabId,
   type FolderInfo,
-  type ForgeIssueEntry,
   type SearchItem,
   type SpaceInfo,
   type TabInfo,
 } from "@/shared/types";
+import { type ForgeIssueEntry } from "@/features/forge/model/forge-label";
 
 export type ForgeIssueSortMode = "recent" | "old";
 

@@ -1,3 +1,8 @@
+import type { ForgePageInfo } from "@/shared/messaging/protocol";
+import type { TabInfo } from "@/shared/types";
+
+export type { ForgePageInfo };
+
 export type ForgePlatform = "gitlab" | "github";
 export type ForgeKind = "issue" | "merge_request" | "pull_request";
 
@@ -8,11 +13,6 @@ export interface ForgeRef {
   host: string;
   projectPath: string;
   url: string;
-}
-
-export interface ForgePageInfo {
-  title?: string;
-  bodyText?: string;
 }
 
 const CLOSES_PATTERN =
@@ -168,4 +168,22 @@ export function buildForgeLabel(url: string, tabTitle = "", page?: ForgePageInfo
     ref.kind === "issue" ? undefined : extractRelatedIssueId(page?.bodyText || "", ref.id);
 
   return formatForgeLabel(ref, title, relatedIssueId);
+}
+
+/** A tab that resolves to a forge issue/MR/PR, as shown in the navigator. */
+export interface ForgeIssueEntry {
+  ref: ForgeRef;
+  tab: TabInfo;
+  title: string;
+  projectLabel: string;
+}
+
+export function formatForgeKind(kind: ForgeKind): string {
+  if (kind === "merge_request") return "Merge request";
+  if (kind === "pull_request") return "Pull request";
+  return "Issue";
+}
+
+export function formatForgePlatform(platform: ForgePlatform): string {
+  return platform === "github" ? "GitHub" : "GitLab";
 }

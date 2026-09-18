@@ -1,4 +1,3 @@
-import type { ForgeKind, ForgePlatform, ForgeRef } from "@/features/forge/model/forge-label";
 import type { SpaceInfo, TabInfo } from "@/shared/messaging/protocol";
 
 /**
@@ -8,24 +7,7 @@ import type { SpaceInfo, TabInfo } from "@/shared/messaging/protocol";
  */
 export type { FolderInfo, SpaceInfo, TabInfo, TabTimer } from "@/shared/messaging/protocol";
 
-export interface ForgeIssueEntry {
-  ref: ForgeRef;
-  tab: TabInfo;
-  title: string;
-  projectLabel: string;
-}
-
 export type SearchItem = { kind: "tab"; data: TabInfo } | { kind: "space"; data: SpaceInfo };
-
-export function formatForgeKind(kind: ForgeKind): string {
-  if (kind === "merge_request") return "Merge request";
-  if (kind === "pull_request") return "Pull request";
-  return "Issue";
-}
-
-export function formatForgePlatform(platform: ForgePlatform): string {
-  return platform === "github" ? "GitHub" : "GitLab";
-}
 
 export function isUsableTabId(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;

@@ -162,6 +162,7 @@ export const EXTENSION_REQUEST_TYPES = [
  * re-exports them so feature code does not have to reach into the protocol.
  */
 export type FolderInfo = v.InferOutput<typeof folderInfoSchema>;
+export type ForgePageInfo = v.InferOutput<typeof forgePageInfoSchema>;
 export type TabInfo = v.InferOutput<typeof tabInfoSchema>;
 export type TabTimer = v.InferOutput<typeof tabTimerSchema>;
 export type SpaceInfo = v.InferOutput<typeof spaceInfoSchema>;

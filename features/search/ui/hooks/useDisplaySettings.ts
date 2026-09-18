@@ -1,9 +1,9 @@
 import { useEffect, useState } from "preact/hooks";
 import { debugError } from "@/shared/debug";
-import { subscribeToDisplaySettingsChanged } from "@/shared/messaging/client";
 import {
   DEFAULT_DISPLAY_SETTINGS,
   readDisplaySettings,
+  subscribeToDisplaySettingsChanged,
   type DisplaySettings,
 } from "@/features/settings/model/display-settings";
 

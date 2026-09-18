@@ -1,5 +1,6 @@
 import { stripTimerPrefix } from "@/features/timers/model/timer";
-import type { ForgeIssueEntry, TabInfo } from "@/shared/types";
+import type { TabInfo } from "@/shared/types";
+import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
 
 /** Host portion of a tab URL, or a readable placeholder when it has none. */
 export function hostname(url: string): string {

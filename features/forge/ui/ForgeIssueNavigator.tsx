@@ -8,8 +8,8 @@ import {
 import { forgeTitleIncludesRefId } from "@/features/forge/model/forge-label";
 import { formatForgeEntryDate } from "@/features/search/ui/lib/format";
 import { projectBorderColors } from "@/features/search/ui/lib/styles";
-import type { ForgeIssueEntry } from "@/shared/types";
-import { formatForgeKind, formatForgePlatform } from "@/shared/types";
+import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
+import { formatForgeKind, formatForgePlatform } from "@/features/forge/model/forge-label";
 import { cn } from "@/shared/ui/cn";
 
 export function ForgeIssueNavigator({
