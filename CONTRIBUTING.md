@@ -2,6 +2,12 @@
 
 Thanks for your interest in contributing. This project is a fork (with rewritten git history) of Anton Dobrovinskiy's original Zen Tab Search under the MIT license. Anton retains the copyright as per the MIT terms.
 
+## Architecture
+
+See [CLAUDE.md](CLAUDE.md) for the directory layout, the layering rules and how the
+background script, UIs and content script talk to each other. Read it before adding
+a feature.
+
 ## Development setup
 
 Prerequisites:
@@ -42,11 +48,13 @@ Load the extension temporarily:
 ## Quality gates (run before opening a PR)
 
 ```bash
-npm run lint:js     # ESLint on entrypoints and scripts
+npm run check       # Typecheck + ESLint + Vitest — the main gate
 npm run format      # Prettier (or use format:check to verify only)
-npm test            # Vitest
 npm run lint        # Builds first, then runs web-ext lint on the output
 ```
+
+`npm run check` is the one to run while working; it wraps `npm run typecheck`,
+`npm run lint:js` and `npm test`, which can also be run individually.
 
 All checks should pass cleanly.
 
