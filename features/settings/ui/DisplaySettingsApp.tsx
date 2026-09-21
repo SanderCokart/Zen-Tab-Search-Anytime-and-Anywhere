@@ -25,6 +25,29 @@ const COLOR_SETTINGS = [
   ["spaceBackgroundColor", "Spaces background"],
 ] as const;
 
+const PINNED_VISIBILITY = [
+  [
+    "hideSpacesInPopup",
+    "Hide spaces in the toolbar popup",
+    "Leaves the spaces grid out of the toolbar popup. The omnibar is unchanged.",
+  ],
+  [
+    "hideSpacesInOverlay",
+    "Hide spaces in the omnibar",
+    "Leaves the spaces grid out of the in-page search. The toolbar popup is unchanged.",
+  ],
+  [
+    "hideEssentialsInPopup",
+    "Hide essential tabs in the toolbar popup",
+    "Leaves essential tabs out of the toolbar popup, including while you search. The omnibar is unchanged.",
+  ],
+  [
+    "hideEssentialsInOverlay",
+    "Hide essential tabs in the omnibar",
+    "Leaves essential tabs out of the in-page search, including while you search. The toolbar popup is unchanged.",
+  ],
+] as const;
+
 const TRUNCATE_SETTINGS = [
   [
     "truncateTabTitles",
@@ -261,6 +284,25 @@ export function DisplaySettingsApp() {
         <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
           <legend class="px-1 text-sm font-medium">Truncate</legend>
           {TRUNCATE_SETTINGS.map(([key, label, hint]) => (
+            <label class="flex cursor-pointer items-start gap-3" key={key}>
+              <input
+                type="checkbox"
+                class="accent-zen-accent mt-1 size-4"
+                data-testid={`zen-${key}`}
+                checked={settings[key]}
+                disabled={!loaded}
+                onChange={(event) => updateSettings({ [key]: event.currentTarget.checked })}
+              />
+              <span>
+                <span class="block text-sm font-medium">{label}</span>
+                <span class="text-zen-subtle block text-xs">{hint}</span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
+          <legend class="px-1 text-sm font-medium">Spaces and essential tabs</legend>
+          {PINNED_VISIBILITY.map(([key, label, hint]) => (
             <label class="flex cursor-pointer items-start gap-3" key={key}>
               <input
                 type="checkbox"

@@ -3,6 +3,7 @@ import {
   bestForgeNavigatorIndex,
   buildForgeIssueEntries,
   buildSearchItems,
+  excludePinnedSearchSources,
   filterSearchItems,
   flattenForgeNavigatorEntries,
   groupSearchItems,
@@ -95,17 +96,32 @@ export function useSearchResults({
     [forgeNavigatorQuery.filterQuery, navigatorEntries, rankedForgeIssueEntries],
   );
 
+  const searchable = useMemo(() => {
+    const popup = layout === "popup";
+    return excludePinnedSearchSources(visibleTabs, spaces, {
+      excludeSpaces: popup
+        ? displaySettings.hideSpacesInPopup
+        : displaySettings.hideSpacesInOverlay,
+      excludeEssentials: popup
+        ? displaySettings.hideEssentialsInPopup
+        : displaySettings.hideEssentialsInOverlay,
+    });
+  }, [displaySettings, layout, spaces, visibleTabs]);
+
   const items = useMemo(() => {
     const effectiveQuery = forgeNavigatorQuery.active ? forgeNavigatorQuery.filterQuery : query;
-    const matches = filterSearchItems(buildSearchItems(visibleTabs, spaces), effectiveQuery);
+    const matches = filterSearchItems(
+      buildSearchItems(searchable.tabs, searchable.spaces),
+      effectiveQuery,
+    );
     if (effectiveQuery.trim()) {
       return matches;
     }
-    const activeId = visibleTabs.find(
+    const activeId = searchable.tabs.find(
       (tab) => tab.active === true && tabBrowserId(tab) !== undefined,
     )?.id;
     return prioritizeCurrentTab(matches, activeId);
-  }, [forgeNavigatorQuery, query, spaces, visibleTabs]);
+  }, [forgeNavigatorQuery, query, searchable]);
 
   // Position of each item in the flat list, so rows can look up their index
   // without an indexOf scan per row while rendering nested groups.

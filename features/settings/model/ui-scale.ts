@@ -40,7 +40,12 @@ export const GAP_SETTINGS = [
 
 export type GapSettingKey = (typeof GAP_SETTINGS)[number][0];
 
-/** The toolbar popup is a fixed 380px panel, so it runs a notch tighter than the overlay. */
+/**
+ * The timer popup (`surface: "popup"`) is a small browser-UI window, so it runs
+ * a notch tighter than the overlay. The toolbar search popup does not use this
+ * factor: it pins fixed tokens under `[data-zen-ui="popup"]` and never calls
+ * `uiScaleStyle`.
+ */
 const POPUP_FONT_FACTOR = 0.8;
 
 /**
@@ -98,8 +103,9 @@ function css(value: number): string {
  * Neither mode needs to know the zoom factor, so neither has to wait on the
  * background to tell it — the size is right on the first paint.
  *
- * The popup and the options page are browser UI rather than page content, so they
- * are never zoomed and always take the plain px length.
+ * The timer popup is browser UI rather than page content, so it is never zoomed
+ * and always takes the plain px length. The toolbar search popup does not come
+ * through here.
  */
 export function resolveBaseFontSize(settings: DisplaySettings, surface: UiSurface): string {
   const fontSize = clampFontSize(settings.fontSize) * (surface === "popup" ? POPUP_FONT_FACTOR : 1);

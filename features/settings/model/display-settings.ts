@@ -13,6 +13,12 @@ const DEFAULTS = {
   filterIssuesInOverlay: true,
   groupFolders: true,
   groupSubfolders: true,
+  /** Leave the spaces grid out of that surface. The other surface is unaffected. */
+  hideSpacesInPopup: false,
+  hideSpacesInOverlay: false,
+  /** Leave essential tabs out of that surface, including while searching. */
+  hideEssentialsInPopup: false,
+  hideEssentialsInOverlay: false,
   /** Base font size in px, before the surface and relative-mode adjustments. */
   fontSize: 16,
   /** Density multiplier for padding, gaps, icons and tiles. */
@@ -83,6 +89,10 @@ const displaySettingsSchema = v.pipe(
       filterIssuesInOverlay: boolean(DEFAULTS.filterIssuesInOverlay),
       groupFolders: boolean(DEFAULTS.groupFolders),
       groupSubfolders: boolean(DEFAULTS.groupSubfolders),
+      hideSpacesInPopup: boolean(DEFAULTS.hideSpacesInPopup),
+      hideSpacesInOverlay: boolean(DEFAULTS.hideSpacesInOverlay),
+      hideEssentialsInPopup: boolean(DEFAULTS.hideEssentialsInPopup),
+      hideEssentialsInOverlay: boolean(DEFAULTS.hideEssentialsInOverlay),
       fontSize: scalar(DEFAULTS.fontSize, clampFontSize),
       uiScale: scalar(DEFAULTS.uiScale, clampUiScale),
       respectZoom: boolean(DEFAULTS.respectZoom),

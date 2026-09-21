@@ -60,6 +60,29 @@ describe("display settings", () => {
     });
   });
 
+  it("keeps space and essential visibility independent per surface", async () => {
+    const get = vi.fn(async () => ({
+      displaySettings: {
+        hideSpacesInPopup: true,
+        hideEssentialsInOverlay: true,
+      },
+    }));
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: { get, set: vi.fn(async () => undefined) },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+
+    await expect(readDisplaySettings()).resolves.toEqual({
+      ...DEFAULT_DISPLAY_SETTINGS,
+      hideSpacesInPopup: true,
+      hideEssentialsInOverlay: true,
+    });
+  });
+
   it("keeps the truncation toggles independent of each other", async () => {
     const get = vi.fn(async () => ({
       displaySettings: { truncateTabTitles: false, truncateIssueTitles: true },

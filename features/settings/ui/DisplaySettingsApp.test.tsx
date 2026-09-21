@@ -1,5 +1,6 @@
 import { render } from "preact";
 import { describe, expect, it, vi } from "vitest";
+import { DEFAULT_DISPLAY_SETTINGS } from "@/features/settings/model/display-settings";
 import { DisplaySettingsApp } from "@/features/settings/ui/DisplaySettingsApp";
 
 describe("DisplaySettingsApp", () => {
@@ -51,6 +52,10 @@ describe("DisplaySettingsApp", () => {
         filterIssuesInOverlay: true,
         groupFolders: false,
         groupSubfolders: false,
+        hideSpacesInPopup: false,
+        hideSpacesInOverlay: false,
+        hideEssentialsInPopup: false,
+        hideEssentialsInOverlay: false,
         fontSize: 16,
         uiScale: 1,
         respectZoom: false,
@@ -114,6 +119,10 @@ describe("DisplaySettingsApp", () => {
         filterIssuesInOverlay: false,
         groupFolders: true,
         groupSubfolders: true,
+        hideSpacesInPopup: false,
+        hideSpacesInOverlay: false,
+        hideEssentialsInPopup: false,
+        hideEssentialsInOverlay: false,
         fontSize: 16,
         uiScale: 1,
         respectZoom: false,
@@ -175,6 +184,10 @@ describe("DisplaySettingsApp", () => {
           filterIssuesInOverlay: true,
           groupFolders: true,
           groupSubfolders: true,
+          hideSpacesInPopup: false,
+          hideSpacesInOverlay: false,
+          hideEssentialsInPopup: false,
+          hideEssentialsInOverlay: false,
           fontSize: 16,
           uiScale: 1,
           respectZoom: false,
@@ -190,6 +203,43 @@ describe("DisplaySettingsApp", () => {
           issueBackgroundColor: "#252525",
           folderBackgroundColor: "#2d2d2d",
           spaceBackgroundColor: "#292929",
+        },
+      }),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("saves a popup-only spaces hide without changing the omnibar", async () => {
+    const set = vi.fn(async () => undefined);
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: {
+            get: vi.fn(async () => ({ displaySettings: {} })),
+            set,
+          },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    render(<DisplaySettingsApp />, root);
+
+    const checkbox = await vi.waitFor(() => {
+      const input = root.querySelector<HTMLInputElement>("[data-testid='zen-hideSpacesInPopup']");
+      expect(input?.disabled).toBe(false);
+      return input!;
+    });
+    checkbox.click();
+
+    await vi.waitFor(() =>
+      expect(set).toHaveBeenCalledWith({
+        displaySettings: {
+          ...DEFAULT_DISPLAY_SETTINGS,
+          hideSpacesInPopup: true,
         },
       }),
     );

@@ -140,6 +140,21 @@ function directMatchBonus(value: string, queryLowerCase: string): number {
   return hasDirectMatch(value, queryLowerCase) ? 10_000 : 0;
 }
 
+/**
+ * Drops spaces and essential tabs before they are ranked. Each flag is
+ * independent, so a surface can hide one section and keep the other.
+ */
+export function excludePinnedSearchSources(
+  tabs: TabInfo[],
+  spaces: SpaceInfo[],
+  options: { excludeSpaces: boolean; excludeEssentials: boolean },
+): { tabs: TabInfo[]; spaces: SpaceInfo[] } {
+  return {
+    spaces: options.excludeSpaces ? [] : spaces,
+    tabs: options.excludeEssentials ? tabs.filter((tab) => !isEssentialTab(tab)) : tabs,
+  };
+}
+
 export function buildSearchItems(allTabs: TabInfo[], allSpaces: SpaceInfo[]): SearchItem[] {
   const items: SearchItem[] = allSpaces.map((space) => ({ kind: "space", data: space }));
   for (const tab of allTabs) {

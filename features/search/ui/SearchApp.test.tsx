@@ -167,6 +167,65 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("hides spaces and essential tabs on one surface only", async () => {
+    const mixedTabs = [
+      { ...tabs[0], title: "Regular tab", active: true },
+      { ...tabs[1], essential: true, title: "Pinned mail" },
+    ];
+    const spaces = [{ id: "space-a", name: "Work", isActive: false }];
+    const settings = {
+      hideSpacesInPopup: true,
+      hideEssentialsInPopup: true,
+    };
+
+    const popup = mountSearchApp(vi.fn(), mixedTabs, "popup", settings, spaces);
+    await vi.waitFor(() => expect(popup.root.textContent).toContain("Regular tab"));
+    expect(popup.root.textContent).not.toContain("Pinned mail");
+    expect(popup.root.textContent).not.toContain("Work");
+    expect(popup.root.querySelector("[data-testid='zen-space-section']")).toBeNull();
+    expect(popup.root.querySelector("[data-testid='zen-essential-section']")).toBeNull();
+
+    const input = popup.root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.value = "Pinned";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() => expect(popup.root.textContent).not.toContain("Pinned mail"));
+
+    render(null, popup.root);
+    popup.root.remove();
+
+    const overlay = mountSearchApp(vi.fn(), mixedTabs, "overlay", settings, spaces);
+    await vi.waitFor(() => expect(overlay.root.textContent).toContain("Pinned mail"));
+    expect(overlay.root.textContent).toContain("Work");
+    expect(overlay.root.querySelector("[data-testid='zen-space-section']")).toBeTruthy();
+    expect(overlay.root.querySelector("[data-testid='zen-essential-section']")).toBeTruthy();
+
+    render(null, overlay.root);
+    overlay.root.remove();
+  });
+
+  it("hides omnibar spaces without hiding essential tabs", async () => {
+    const mixedTabs = [
+      { ...tabs[0], title: "Regular tab", active: true },
+      { ...tabs[1], essential: true, title: "Pinned mail" },
+    ];
+    const { root } = mountSearchApp(
+      vi.fn(),
+      mixedTabs,
+      "overlay",
+      { hideSpacesInOverlay: true },
+      [{ id: "space-a", name: "Work", isActive: false }],
+    );
+
+    await vi.waitFor(() => expect(root.textContent).toContain("Pinned mail"));
+    expect(root.textContent).toContain("Regular tab");
+    expect(root.textContent).not.toContain("Work");
+    expect(root.querySelector("[data-testid='zen-essential-section']")).toBeTruthy();
+    expect(root.querySelector("[data-testid='zen-space-section']")).toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
   it("groups tabs under their Zen folder headings", async () => {
     const folderTabs = [
       { ...tabs[0], folderId: "folder-a", folderName: "Projects" },

@@ -398,10 +398,11 @@ durations at 31 days.
 
 ### `settings/` — display preferences
 
-[display-settings.ts](features/settings/model/display-settings.ts) holds nineteen
-preferences: four booleans for grouping and issue detection, four hex colours, three
-that size the UI, two that decide whether tab and issue text is cut to one line, and
-six gap sizes. `DisplaySettingsApp` writes them, every surface subscribes
+[display-settings.ts](features/settings/model/display-settings.ts) holds twenty-three
+preferences: four booleans for grouping and issue detection, four that hide the spaces
+grid or the essential-tab grid on the toolbar popup or the omnibar, four hex colours,
+three that size the UI, two that decide whether tab and issue text is cut to one line,
+and six gap sizes. `DisplaySettingsApp` writes them, every surface subscribes
 via `storage.onChanged`, so changing a colour or a size updates an open overlay live.
 
 #### The size system

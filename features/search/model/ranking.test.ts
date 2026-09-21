@@ -4,6 +4,7 @@ import {
   buildForgeIssueEntries,
   buildSearchItems,
   countExactQueryWords,
+  excludePinnedSearchSources,
   filterForgeIssueEntries,
   filterSearchItems,
   flattenForgeNavigatorEntries,
@@ -26,6 +27,46 @@ function tab(id: number, active = false): TabInfo {
     active,
   };
 }
+
+describe("excludePinnedSearchSources", () => {
+  const spaces = [{ id: "space-a", name: "Work", isActive: false }];
+
+  it("drops spaces and essential tabs independently", () => {
+    const tabs = [tab(1), { ...tab(2), essential: true }];
+
+    expect(
+      excludePinnedSearchSources(tabs, spaces, {
+        excludeSpaces: true,
+        excludeEssentials: false,
+      }),
+    ).toEqual({
+      tabs,
+      spaces: [],
+    });
+    expect(
+      excludePinnedSearchSources(tabs, spaces, {
+        excludeSpaces: false,
+        excludeEssentials: true,
+      }),
+    ).toEqual({
+      tabs: [tabs[0]],
+      spaces,
+    });
+  });
+
+  it("keeps both sections when neither flag is set", () => {
+    const tabs = [tab(1), { ...tab(2), essential: true }];
+    expect(
+      excludePinnedSearchSources(tabs, spaces, {
+        excludeSpaces: false,
+        excludeEssentials: false,
+      }),
+    ).toEqual({
+      tabs,
+      spaces,
+    });
+  });
+});
 
 describe("prioritizeCurrentTab", () => {
   it("moves the current tab to the top", () => {

@@ -120,6 +120,47 @@
     --zen-issue-gap: calc(var(--zen-font-size) * var(--zen-issue-gap-ratio, 0.25));
   }
 
+  /*
+   * The toolbar popup is a fixed 380×420 panel. These lengths replace the derived
+   * ramp above so font size, density, and the gap sliders stay on the overlay.
+   * Attribute selectors share a specificity, so this rule has to follow
+   * `[data-zen-ui]` to win on the same element.
+   */
+  [data-zen-ui="popup"] {
+    --zen-font-size: 13px;
+    font-size: 13px;
+    --zen-scale: 1;
+
+    --zen-text-xs: 11px;
+    --zen-text-sm: 11px;
+    --zen-text-md: 13px;
+    --zen-text-base: 13px;
+    --zen-text-lg: 14px;
+
+    --zen-space-1: 4px;
+    --zen-space-2: 8px;
+    --zen-space-3: 8px;
+    --zen-space-4: 16px;
+
+    --zen-radius: 6px;
+    --zen-radius-lg: 8px;
+
+    --zen-icon-sm: 11px;
+    --zen-icon-md: 14px;
+    --zen-icon-lg: 16px;
+    --zen-control: 32px;
+
+    --zen-tile-space: 8rem;
+    --zen-tile-essential: 10rem;
+
+    --zen-section-gap: 4px;
+    --zen-tab-gap: 4px;
+    --zen-folder-gap: 12px;
+    --zen-essential-gap: 8px;
+    --zen-space-gap: 8px;
+    --zen-issue-gap: 4px;
+  }
+
   .zen-icon {
     fill: none;
     stroke: currentColor;
