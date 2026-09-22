@@ -138,6 +138,19 @@
         ]
       },
       {
+        "name": "consumeExternalTab",
+        "type": "function",
+        "description": "If this tab was opened by an external application, return its URL and forget the claim. Returns an empty string otherwise.",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabId",
+            "type": "integer",
+            "description": "Extension tab ID from tabs.onCreated. Pass -1 to install the hook without claiming a tab."
+          }
+        ]
+      },
+      {
         "name": "activateTabByDomId",
         "type": "function",
         "description": "Activate a tab by DOM id, switching spaces if needed",

@@ -29,6 +29,7 @@ export interface ZenTabsApi {
   activateTabByDomId(domId: string, anchorTabId?: number): Promise<boolean>;
   changeLabel(anchorTabId?: number): Promise<boolean>;
   setLabel(label: string, anchorTabId?: number, silent?: boolean): Promise<boolean>;
+  consumeExternalTab?(tabId: number): Promise<string>;
 }
 
 export function getZenTabsApi(): ZenTabsApi | undefined {
