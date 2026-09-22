@@ -122,38 +122,58 @@ this.zenTabs = class extends ExtensionAPI {
       return windows;
     }
 
-    function resolveWindow(anchorTabId) {
-      if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
-        const anchored = getWinForTab(anchorTabId);
-        if (anchored) {
-          debugLog("getWin via anchor tab", {
-            anchorTabId,
-            hasGZenWorkspaces: !!anchored.gZenWorkspaces,
-          });
-          return { win: anchored, source: "anchorTab" };
-        }
-      }
-
-      for (const win of enumerateZenBrowserWindows()) {
-        if (win.gZenWorkspaces) {
-          debugLog("getWin via tabManager", { hasGZenWorkspaces: true });
-          return { win, source: "tabManager" };
-        }
-      }
-
-      for (const win of enumerateZenBrowserWindows()) {
-        debugLog("getWin via tabManager (gBrowser only)");
-        return { win, source: "tabManager" };
-      }
-
+    function enumerateMediatorWindows() {
+      const windows = [];
       try {
-        const recent = getServices().wm.getMostRecentWindow("navigator:browser");
-        if (recent && !recent.closed) {
-          debugLog("getWin wm fallback", { hasGZenWorkspaces: !!recent.gZenWorkspaces });
-          return { win: recent, source: "windowMediator" };
+        const enumerator = getServices().wm.getEnumerator("navigator:browser");
+        while (enumerator.hasMoreElements()) {
+          windows.push(enumerator.getNext());
         }
+        windows.push(getServices().wm.getMostRecentWindow("navigator:browser"));
       } catch (error) {
-        debugLog("getWin wm fallback failed", { error: formatError(error) });
+        debugLog("getWin wm enumerator failed", { error: formatError(error) });
+      }
+      return windows;
+    }
+
+    function resolveWindow(anchorTabId) {
+      // The settings page is its own window. It is often the focused one, and
+      // right after install it can be the only window the tab manager knows.
+      // Prefer any real Zen window over that popup.
+      const candidates = [];
+      const seen = new Set();
+
+      function add(win) {
+        if (!win || win.closed || seen.has(win) || !win.gBrowser) {
+          return;
+        }
+        seen.add(win);
+        candidates.push(win);
+      }
+
+      if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
+        add(getWinForTab(anchorTabId));
+      }
+      for (const win of enumerateZenBrowserWindows()) {
+        add(win);
+      }
+      for (const win of enumerateMediatorWindows()) {
+        add(win);
+      }
+
+      const zen = candidates.find((win) => win.gZenWorkspaces);
+      if (zen) {
+        debugLog("getWin via Zen window", {
+          anchorTabId,
+          candidateCount: candidates.length,
+        });
+        return { win: zen, source: "zen" };
+      }
+
+      const fallback = candidates[0];
+      if (fallback) {
+        debugLog("getWin via browser window without Zen workspaces", { anchorTabId });
+        return { win: fallback, source: "browser" };
       }
 
       debugLog("getWin: no Zen browser window found", { anchorTabId });
@@ -217,6 +237,150 @@ this.zenTabs = class extends ExtensionAPI {
         return tabManager.getWrapper(nativeTab)?.id ?? -1;
       } catch {
         return -1;
+      }
+    }
+
+    // WebExtensions tabs do not expose Firefox's fromExternal load flag, which
+    // is how a mail client (or any other app) opens Zen as the default browser.
+    const EXTERNAL_HOOK_KEY = "__zenTabSearchExternalHook";
+    const EXTERNAL_URL_KEY = "__zenTabSearchExternalUrl";
+    const pendingExternalTabs = new Map();
+    let externalHookInstalled = false;
+
+    function externalTabUrl(uri) {
+      if (typeof uri === "string") {
+        return uri;
+      }
+      if (uri && typeof uri.spec === "string") {
+        return uri.spec;
+      }
+      return "";
+    }
+
+    function rememberExternalTab(tab, uri) {
+      const url = externalTabUrl(uri);
+      if (!url || !tab) {
+        return;
+      }
+
+      tab[EXTERNAL_URL_KEY] = url;
+      const store = () => {
+        const tabId = getExtTabId(tab);
+        if (!Number.isInteger(tabId) || tabId < 0) {
+          return false;
+        }
+        pendingExternalTabs.set(tabId, { url, at: Date.now() });
+        return true;
+      };
+
+      if (store()) {
+        return;
+      }
+
+      Promise.resolve().then(() => {
+        if (!store()) {
+          setTimeout(store, 0);
+        }
+      });
+    }
+
+    function pruneExternalTabs() {
+      const cutoff = Date.now() - 10_000;
+      for (const [tabId, entry] of pendingExternalTabs) {
+        if (!entry || entry.at < cutoff) {
+          pendingExternalTabs.delete(tabId);
+        }
+      }
+    }
+
+    function hookBrowserAddTab(win) {
+      const gBrowser = win?.gBrowser;
+      if (!gBrowser || typeof gBrowser.addTab !== "function") {
+        return;
+      }
+
+      const existing = gBrowser[EXTERNAL_HOOK_KEY];
+      if (existing) {
+        existing.remember = rememberExternalTab;
+        return;
+      }
+
+      const original = gBrowser.addTab;
+      const state = { remember: rememberExternalTab };
+      gBrowser.addTab = function (...args) {
+        const tab = original.apply(this, args);
+        try {
+          const options = args[1];
+          if (options && options.fromExternal) {
+            state.remember(tab, args[0]);
+          }
+        } catch (error) {
+          debugLog("external tab hook failed", { error: formatError(error) });
+        }
+        return tab;
+      };
+      gBrowser[EXTERNAL_HOOK_KEY] = state;
+    }
+
+    function watchBrowserWindow(win) {
+      if (!win || win.closed) {
+        return;
+      }
+      if (win.gBrowser) {
+        hookBrowserAddTab(win);
+        return;
+      }
+      win.addEventListener("load", () => hookBrowserAddTab(win), { once: true });
+    }
+
+    function installExternalTabHook() {
+      if (externalHookInstalled) {
+        return;
+      }
+      externalHookInstalled = true;
+
+      for (const win of enumerateZenBrowserWindows()) {
+        watchBrowserWindow(win);
+      }
+
+      let services;
+      try {
+        services = getServices();
+      } catch (error) {
+        debugLog("external tab hook: Services unavailable", { error: formatError(error) });
+        return;
+      }
+
+      try {
+        const enumerator = services.wm.getEnumerator("navigator:browser");
+        while (enumerator.hasMoreElements()) {
+          watchBrowserWindow(enumerator.getNext());
+        }
+      } catch (error) {
+        debugLog("external tab hook: window enumeration failed", { error: formatError(error) });
+      }
+
+      const windowObserver = {
+        observe(subject) {
+          watchBrowserWindow(subject);
+        },
+      };
+
+      try {
+        services.obs.addObserver(windowObserver, "domwindowopened");
+        context.callOnClose({
+          close() {
+            try {
+              services.obs.removeObserver(windowObserver, "domwindowopened");
+            } catch {
+              // The observer is already gone when the extension unloads.
+            }
+          },
+        });
+      } catch (error) {
+        debugLog("external tab hook: domwindowopened observer failed", {
+          error: formatError(error),
+        });
       }
     }
 
@@ -508,8 +672,36 @@ this.zenTabs = class extends ExtensionAPI {
       return info;
     }
 
+    try {
+      installExternalTabHook();
+    } catch (error) {
+      debugLog("external tab hook install failed", { error: formatError(error) });
+    }
+
     return {
       zenTabs: {
+        async consumeExternalTab(tabId) {
+          pruneExternalTabs();
+          if (!Number.isInteger(tabId) || tabId < 0) {
+            return "";
+          }
+
+          const pending = pendingExternalTabs.get(tabId);
+          if (pending?.url) {
+            pendingExternalTabs.delete(tabId);
+            return pending.url;
+          }
+
+          const nativeTab = getNativeTabByExtId(tabId);
+          const url = nativeTab?.[EXTERNAL_URL_KEY];
+          if (typeof url === "string" && url) {
+            nativeTab[EXTERNAL_URL_KEY] = "";
+            return url;
+          }
+
+          return "";
+        },
+
         async getDebugInfo(anchorTabId = -1) {
           return buildDebugInfo(anchorTabId);
         },
@@ -560,13 +752,16 @@ this.zenTabs = class extends ExtensionAPI {
             }
 
             const activeSpaceId = String(zenWorkspaces.activeWorkspace || "");
-            return zenWorkspaces.getWorkspaces().map((space) => ({
-              id: String(space.uuid || ""),
-              name: String(space.name || "Untitled"),
-              icon: formatSpaceIcon(space.icon, space.name),
-              color: typeof space.color === "string" ? space.color : undefined,
-              isActive: String(space.uuid || "") === activeSpaceId,
-            }));
+            return zenWorkspaces
+              .getWorkspaces()
+              .map((space) => ({
+                id: String(space.uuid || ""),
+                name: String(space.name || "Untitled"),
+                icon: formatSpaceIcon(space.icon, space.name),
+                color: typeof space.color === "string" ? space.color : undefined,
+                isActive: String(space.uuid || "") === activeSpaceId,
+              }))
+              .filter((space) => space.id);
           } catch (error) {
             const details = formatError(error);
             debugLog("getSpaces failed", () => ({

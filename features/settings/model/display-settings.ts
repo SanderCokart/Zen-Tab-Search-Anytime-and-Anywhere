@@ -34,6 +34,8 @@ const DEFAULTS = {
   essentialGap: 8,
   spaceGap: 8,
   issueGap: 4,
+  /** Focus an already-open tab when another app opens the same address. */
+  reuseExternalTabs: false,
   textColor: "#f5f5f5",
   issueBackgroundColor: "#252525",
   folderBackgroundColor: "#2d2d2d",
@@ -104,6 +106,7 @@ const displaySettingsSchema = v.pipe(
       essentialGap: gap(DEFAULTS.essentialGap),
       spaceGap: gap(DEFAULTS.spaceGap),
       issueGap: gap(DEFAULTS.issueGap),
+      reuseExternalTabs: boolean(DEFAULTS.reuseExternalTabs),
       textColor: color(DEFAULTS.textColor),
       issueBackgroundColor: color(DEFAULTS.issueBackgroundColor),
       folderBackgroundColor: color(DEFAULTS.folderBackgroundColor),

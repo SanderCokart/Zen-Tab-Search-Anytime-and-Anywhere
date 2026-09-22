@@ -67,6 +67,7 @@ describe("DisplaySettingsApp", () => {
         essentialGap: 8,
         spaceGap: 8,
         issueGap: 4,
+        reuseExternalTabs: false,
         textColor: "#f5f5f5",
         issueBackgroundColor: "#252525",
         folderBackgroundColor: "#2d2d2d",
@@ -134,6 +135,7 @@ describe("DisplaySettingsApp", () => {
         essentialGap: 8,
         spaceGap: 8,
         issueGap: 4,
+        reuseExternalTabs: false,
         textColor: "#f5f5f5",
         issueBackgroundColor: "#252525",
         folderBackgroundColor: "#2d2d2d",
@@ -199,6 +201,7 @@ describe("DisplaySettingsApp", () => {
           essentialGap: 8,
           spaceGap: 8,
           issueGap: 4,
+          reuseExternalTabs: false,
           textColor: "#f5f5f5",
           issueBackgroundColor: "#252525",
           folderBackgroundColor: "#2d2d2d",
@@ -240,6 +243,44 @@ describe("DisplaySettingsApp", () => {
         displaySettings: {
           ...DEFAULT_DISPLAY_SETTINGS,
           hideSpacesInPopup: true,
+        },
+      }),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("saves external tab reuse only after the switch is turned on", async () => {
+    const set = vi.fn(async () => undefined);
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: {
+            get: vi.fn(async () => ({ displaySettings: {} })),
+            set,
+          },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    render(<DisplaySettingsApp />, root);
+
+    const checkbox = await vi.waitFor(() => {
+      const input = root.querySelector<HTMLInputElement>("[data-testid='zen-reuseExternalTabs']");
+      expect(input?.disabled).toBe(false);
+      expect(input?.checked).toBe(false);
+      return input!;
+    });
+    checkbox.click();
+
+    await vi.waitFor(() =>
+      expect(set).toHaveBeenCalledWith({
+        displaySettings: {
+          ...DEFAULT_DISPLAY_SETTINGS,
+          reuseExternalTabs: true,
         },
       }),
     );

@@ -319,6 +319,28 @@ export function DisplaySettingsApp() {
             </label>
           ))}
         </fieldset>
+        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
+          <legend class="px-1 text-sm font-medium">External links</legend>
+          <label class="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              class="accent-zen-accent mt-1 size-4"
+              data-testid="zen-reuseExternalTabs"
+              checked={settings.reuseExternalTabs}
+              disabled={!loaded}
+              onChange={(event) =>
+                updateSettings({ reuseExternalTabs: event.currentTarget.checked })
+              }
+            />
+            <span>
+              <span class="block text-sm font-medium">Reuse an open tab</span>
+              <span class="text-zen-subtle block text-xs">
+                When another app opens a link in Zen, such as a mail client, focus the tab that
+                already has that address instead of opening a new one.
+              </span>
+            </span>
+          </label>
+        </fieldset>
         <ul class="m-0 flex list-none flex-col gap-4 p-0" aria-label="Display options">
           <li>
             <label class="flex cursor-pointer items-start gap-3">

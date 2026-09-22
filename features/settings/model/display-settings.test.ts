@@ -103,6 +103,23 @@ describe("display settings", () => {
     });
   });
 
+  it("leaves external tab reuse off unless it was stored on", async () => {
+    const get = vi.fn(async () => ({ displaySettings: {} }));
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: { get, set: vi.fn(async () => undefined) },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+
+    await expect(readDisplaySettings()).resolves.toMatchObject({ reuseExternalTabs: false });
+
+    get.mockResolvedValueOnce({ displaySettings: { reuseExternalTabs: true } });
+    await expect(readDisplaySettings()).resolves.toMatchObject({ reuseExternalTabs: true });
+  });
+
   it("falls back to every default when storage holds no object", async () => {
     for (const stored of [undefined, null, "nonsense", 42]) {
       Object.assign(globalThis, {

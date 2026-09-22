@@ -23,6 +23,7 @@ import {
   recordTabLastOpened,
   registerTabLastOpenedTracking,
 } from "@/features/zen/tab-last-opened";
+import { registerBrowserExternalTabReuse } from "@/features/intercept/background/external-tab";
 
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());
@@ -45,6 +46,12 @@ export default defineBackground(() => {
 
   registerTimerContextMenus(timerService);
   registerPopupWindowTracking();
+  registerBrowserExternalTabReuse({
+    listTabs: (anchorTabId) => workspace.listTabs(anchorTabId),
+    activateTab: (tabId, domId, anchorTabId) => workspace.activateTab(tabId, domId, anchorTabId),
+    removeTab: (tabId) => browser.tabs.remove(tabId),
+    recordOpened: recordTabLastOpened,
+  });
   registerCommands(workspace);
   registerSnapshotChangeNotifications();
   registerTabLastOpenedTracking();
