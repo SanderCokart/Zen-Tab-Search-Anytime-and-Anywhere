@@ -208,13 +208,9 @@ describe("SearchApp", () => {
       { ...tabs[0], title: "Regular tab", active: true },
       { ...tabs[1], essential: true, title: "Pinned mail" },
     ];
-    const { root } = mountSearchApp(
-      vi.fn(),
-      mixedTabs,
-      "overlay",
-      { hideSpacesInOverlay: true },
-      [{ id: "space-a", name: "Work", isActive: false }],
-    );
+    const { root } = mountSearchApp(vi.fn(), mixedTabs, "overlay", { hideSpacesInOverlay: true }, [
+      { id: "space-a", name: "Work", isActive: false },
+    ]);
 
     await vi.waitFor(() => expect(root.textContent).toContain("Pinned mail"));
     expect(root.textContent).toContain("Regular tab");
