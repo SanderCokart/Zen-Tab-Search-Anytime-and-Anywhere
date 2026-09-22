@@ -46,7 +46,7 @@ npm run release -- minor --generate-notes
 
 If they supplied notes, use `--message` or `--notes-file` instead (only one notes source). See `scripts/release.mjs` usage. Do not create a throwaway `RELEASE.md`.
 
-Use `patch`/`bump`, `minor`, `major`, or an exact `x.y.z` version.
+Use `patch`/`bump`, `minor`, `major`, or an exact `x.y.z` version. If the user asked for a canary or prerelease, add `--canary`.
 
 ## Step 4: Branch cleanup (only if the user asked)
 

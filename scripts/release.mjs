@@ -40,6 +40,7 @@ function printUsage() {
     '  npm run release -- patch --message "Release notes"',
     "  npm run release -- minor --notes-file ./RELEASE.md",
     "  npm run release -- patch --generate-notes",
+    "  npm run release -- major --canary --notes-file ./RELEASE.md",
     "  npm run release -- patch --dry-run",
     "",
     "Bump:",
@@ -52,6 +53,7 @@ function printUsage() {
     "  --notes-since <tag>",
     "",
     "Options:",
+    "  --canary       GitHub prerelease; not marked Latest",
     "  --dry-run",
   ].join("\n");
 
@@ -70,6 +72,7 @@ function parseArgs(args) {
     notesFile: undefined,
     generateNotes: false,
     notesSince: undefined,
+    canary: false,
     dryRun: false,
   };
 
@@ -102,6 +105,8 @@ function parseArgs(args) {
       index += 1;
     } else if (arg.startsWith("--notes-since=")) {
       parsed.notesSince = arg.slice("--notes-since=".length);
+    } else if (arg === "--canary") {
+      parsed.canary = true;
     } else if (arg === "--dry-run") {
       parsed.dryRun = true;
     } else if (arg.startsWith("-")) {
@@ -280,11 +285,17 @@ function findZipArtifact(label) {
     .sort((left, right) => right.mtimeMs - left.mtimeMs)[0]?.file;
 }
 
-function printDryRun({ oldVersion, newVersion, tagName, notes }) {
+function releaseTitle(tagName, canary) {
+  return canary ? `${tagName} (canary)` : tagName;
+}
+
+function printDryRun({ oldVersion, newVersion, tagName, canary, notes }) {
   console.log("");
   console.log("Dry run only. No files, commits, tags, pushes, or releases were created.");
   console.log(`Version: ${oldVersion} -> ${newVersion}`);
   console.log(`Tag: ${tagName}`);
+  console.log(`Title: ${releaseTitle(tagName, canary)}`);
+  console.log(`GitHub prerelease: ${canary ? "yes" : "no"}`);
   if (notes.sinceTag) {
     console.log(`Generated notes since: ${notes.sinceTag}`);
   }
@@ -328,7 +339,7 @@ function main() {
   console.log(`Release: v${oldVersion} -> ${tagName}`);
 
   if (args.dryRun) {
-    printDryRun({ oldVersion, newVersion, tagName, notes });
+    printDryRun({ oldVersion, newVersion, tagName, canary: args.canary, notes });
     return;
   }
 
@@ -364,7 +375,18 @@ function main() {
   run("Pushing release commit", "git", ["push", "origin", "HEAD"], { shell: false });
   run("Pushing release tag", "git", ["push", "origin", tagName], { shell: false });
 
-  const releaseArgs = ["release", "create", tagName, zipArtifact, "--title", tagName];
+  const releaseArgs = [
+    "release",
+    "create",
+    tagName,
+    zipArtifact,
+    "--title",
+    releaseTitle(tagName, args.canary),
+    "--verify-tag",
+  ];
+  if (args.canary) {
+    releaseArgs.push("--prerelease", "--latest=false");
+  }
   if (notes.type === "file") {
     releaseArgs.push("--notes-file", notes.value);
   } else {

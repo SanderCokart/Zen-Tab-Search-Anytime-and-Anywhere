@@ -173,10 +173,11 @@ Releases are published as GitHub release zips. The release script bumps the pack
 npm run release -- patch --message "Maintenance release"
 npm run release -- minor --notes-file ./RELEASE.md
 npm run release -- patch --generate-notes
+npm run release -- major --canary --notes-file ./RELEASE.md
 npm run release -- patch --dry-run --generate-notes
 ```
 
-Use `patch`/`bump`, `minor`, `major`, or an exact `x.y.z` version. Release notes can be supplied with `--message`, loaded with `--notes-file`, or generated from commits since the latest tag with `--generate-notes`. The script requires a clean working tree and an authenticated GitHub CLI session (`gh auth login`) before it starts.
+Use `patch`/`bump`, `minor`, `major`, or an exact `x.y.z` version. Release notes can be supplied with `--message`, loaded with `--notes-file`, or generated from commits since the latest tag with `--generate-notes`. Add `--canary` to publish that tag as a GitHub prerelease, so it is not marked Latest. The script requires a clean working tree and an authenticated GitHub CLI session (`gh auth login`) before it starts.
 
 Release checklist:
 
