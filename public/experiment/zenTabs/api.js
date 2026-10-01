@@ -71,15 +71,61 @@ this.zenTabs = class extends ExtensionAPI {
       throw new Error("Services unavailable in experiment parent scope");
     }
 
+    function isBrowserWindow(win) {
+      return Boolean(win && !win.closed && win.gBrowser);
+    }
+
+    function chromeWindowForNativeTab(tab) {
+      return tab?.ownerGlobal || tab?.ownerDocument?.defaultView || null;
+    }
+
+    function windowContainsExtTabId(win, tabId) {
+      if (!isBrowserWindow(win)) {
+        return false;
+      }
+
+      try {
+        for (const tab of win.gBrowser.tabs) {
+          if (getExtTabId(tab) === tabId) {
+            return true;
+          }
+        }
+      } catch {
+        // gBrowser.tabs can throw while a window is tearing down.
+      }
+
+      try {
+        const stored = win.gZenWorkspaces?.allStoredTabs;
+        if (stored) {
+          for (const tab of stored) {
+            if (getExtTabId(tab) === tabId) {
+              return true;
+            }
+          }
+        }
+      } catch {
+        // Hidden-space tab lists are best-effort.
+      }
+
+      return false;
+    }
+
     function getWinForTab(tabId) {
       try {
         const wrapper = tabManager.get(tabId);
-        const win = wrapper?.nativeTab?.ownerGlobal;
-        if (win && !win.closed && win.gBrowser) {
+        const native = wrapper?.nativeTab;
+        const win = chromeWindowForNativeTab(native);
+        if (isBrowserWindow(win)) {
           return win;
         }
       } catch (error) {
-        debugLog("getWinForTab failed", { tabId, error: formatError(error) });
+        debugLog("getWinForTab tabManager.get failed", { tabId, error: formatError(error) });
+      }
+
+      for (const win of enumerateAllBrowserWindows()) {
+        if (windowContainsExtTabId(win, tabId)) {
+          return win;
+        }
       }
 
       return null;
@@ -125,45 +171,67 @@ this.zenTabs = class extends ExtensionAPI {
     function enumerateMediatorWindows() {
       const windows = [];
       try {
+        const recent = getServices().wm.getMostRecentWindow("navigator:browser");
+        if (recent) {
+          windows.push(recent);
+        }
         const enumerator = getServices().wm.getEnumerator("navigator:browser");
         while (enumerator.hasMoreElements()) {
           windows.push(enumerator.getNext());
         }
-        windows.push(getServices().wm.getMostRecentWindow("navigator:browser"));
       } catch (error) {
         debugLog("getWin wm enumerator failed", { error: formatError(error) });
       }
       return windows;
     }
 
-    function resolveWindow(anchorTabId) {
-      // The settings page is its own window. It is often the focused one, and
-      // right after install it can be the only window the tab manager knows.
-      // Prefer any real Zen window over that popup.
-      const candidates = [];
+    function enumerateAllBrowserWindows() {
+      const windows = [];
       const seen = new Set();
 
       function add(win) {
-        if (!win || win.closed || seen.has(win) || !win.gBrowser) {
+        if (!isBrowserWindow(win) || seen.has(win)) {
           return;
         }
         seen.add(win);
-        candidates.push(win);
+        windows.push(win);
       }
 
-      if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
-        add(getWinForTab(anchorTabId));
-      }
       for (const win of enumerateZenBrowserWindows()) {
         add(win);
       }
       for (const win of enumerateMediatorWindows()) {
         add(win);
       }
+      return windows;
+    }
 
+    function resolveWindow(anchorTabId) {
+      // Each Zen window has its own gBrowser / gZenWorkspaces. Picking the first
+      // enumerated window makes search, rename, and activation hit the oldest
+      // instance whenever more than one is open.
+      if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
+        const anchored = getWinForTab(anchorTabId);
+        if (anchored) {
+          debugLog("getWin via anchor tab", { anchorTabId });
+          return { win: anchored, source: "anchor" };
+        }
+      }
+
+      try {
+        const recent = getServices().wm.getMostRecentWindow("navigator:browser");
+        if (isBrowserWindow(recent)) {
+          debugLog("getWin via most recent browser window", { anchorTabId });
+          return { win: recent, source: "most-recent" };
+        }
+      } catch (error) {
+        debugLog("getWin most-recent failed", { error: formatError(error) });
+      }
+
+      const candidates = enumerateAllBrowserWindows();
       const zen = candidates.find((win) => win.gZenWorkspaces);
       if (zen) {
-        debugLog("getWin via Zen window", {
+        debugLog("getWin via enumerated Zen window", {
           anchorTabId,
           candidateCount: candidates.length,
         });
@@ -460,6 +528,51 @@ this.zenTabs = class extends ExtensionAPI {
       return tabs;
     }
 
+    function collectSelectedNativeTabs(win, zenWorkspaces) {
+      const selected = [];
+      const seen = new Set();
+
+      function add(tab) {
+        if (!tab || seen.has(tab)) {
+          return;
+        }
+
+        if (typeof win.gBrowser?.isTab === "function" && !win.gBrowser.isTab(tab)) {
+          return;
+        }
+
+        if (tab.hasAttribute?.("zen-empty-tab") || tab.hasAttribute?.("zen-glance-tab")) {
+          return;
+        }
+
+        seen.add(tab);
+        selected.push(tab);
+      }
+
+      const nativeSelected = win.gBrowser?.selectedTabs;
+      if (nativeSelected && typeof nativeSelected[Symbol.iterator] === "function") {
+        for (const tab of nativeSelected) {
+          add(tab);
+        }
+      }
+
+      try {
+        for (const tab of collectTabs(win, zenWorkspaces)) {
+          if (tab.multiselected === true || tab.hasAttribute?.("multiselected")) {
+            add(tab);
+          }
+        }
+      } catch (error) {
+        debugLog("collectSelectedNativeTabs collectTabs failed", { error: formatError(error) });
+      }
+
+      if (selected.length === 0 && win.gBrowser?.selectedTab) {
+        add(win.gBrowser.selectedTab);
+      }
+
+      return selected;
+    }
+
     function getWorkspaceNameMap(zenWorkspaces) {
       return new Map(
         zenWorkspaces
@@ -555,32 +668,40 @@ this.zenTabs = class extends ExtensionAPI {
         folderName: folder?.name || undefined,
         folderPath: folderPath.length ? folderPath : undefined,
         essential: tab.getAttribute("zen-essential") === "true",
+        active: win.gBrowser?.selectedTab === tab,
       };
     }
 
-    async function activateNativeTab(tab, anchorTabId) {
-      const win = getWin(anchorTabId);
-      if (!win?.gBrowser || !win.gZenWorkspaces || !tab) {
+    async function activateNativeTab(tab) {
+      const win = chromeWindowForNativeTab(tab);
+      if (!win?.gBrowser || !tab) {
         return false;
       }
 
-      if (typeof win.gZenWorkspaces.switchTabIfNeeded === "function") {
+      try {
+        win.focus();
+      } catch {
+        // The tab's window should come to the front when it is not focused.
+      }
+
+      if (typeof win.gZenWorkspaces?.switchTabIfNeeded === "function") {
         await win.gZenWorkspaces.switchTabIfNeeded(tab);
         return true;
       }
 
       const tabWorkspace = tab.getAttribute("zen-workspace-id") || null;
-      const activeWorkspace = win.gZenWorkspaces.activeWorkspace;
+      const zenWorkspaces = win.gZenWorkspaces;
+      const activeWorkspace = zenWorkspaces?.activeWorkspace;
 
-      if (tabWorkspace && tabWorkspace !== activeWorkspace) {
-        const lastSelectedTabs = win.gZenWorkspaces.lastSelectedWorkspaceTabs;
+      if (zenWorkspaces && tabWorkspace && tabWorkspace !== activeWorkspace) {
+        const lastSelectedTabs = zenWorkspaces.lastSelectedWorkspaceTabs;
         const previousLastSelected = lastSelectedTabs && lastSelectedTabs[tabWorkspace];
         if (lastSelectedTabs) {
           lastSelectedTabs[tabWorkspace] = tab;
         }
 
         try {
-          await win.gZenWorkspaces.changeWorkspaceWithID(tabWorkspace);
+          await zenWorkspaces.changeWorkspaceWithID(tabWorkspace);
         } catch (error) {
           if (lastSelectedTabs) {
             lastSelectedTabs[tabWorkspace] = previousLastSelected;
@@ -796,6 +917,29 @@ this.zenTabs = class extends ExtensionAPI {
           }
         },
 
+        async getSelectedTabs(anchorTabId = -1) {
+          try {
+            const win = getWin(anchorTabId);
+            const zenWorkspaces = await getZenWorkspaces(anchorTabId);
+            if (!win?.gBrowser || !zenWorkspaces) {
+              return [];
+            }
+
+            const spaceNames = getWorkspaceNameMap(zenWorkspaces);
+            return collectSelectedNativeTabs(win, zenWorkspaces).map((tab) =>
+              mapNativeTab(tab, win, spaceNames),
+            );
+          } catch (error) {
+            const details = formatError(error);
+            debugLog("getSelectedTabs failed", () => ({
+              anchorTabId,
+              error: details,
+              debug: buildDebugInfo(anchorTabId),
+            }));
+            throw new Error(`getSelectedTabs failed: ${details}`);
+          }
+        },
+
         async switchSpace(spaceId, anchorTabId = -1) {
           try {
             const zenWorkspaces = await getZenWorkspaces(anchorTabId);
@@ -812,14 +956,13 @@ this.zenTabs = class extends ExtensionAPI {
 
         async changeLabel(anchorTabId = -1) {
           try {
-            const win = getWin(anchorTabId);
-            if (!win?.gBrowser) {
-              return false;
-            }
-
             let tab = null;
             if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
               tab = getNativeTabByExtId(anchorTabId);
+            }
+            const win = chromeWindowForNativeTab(tab) || getWin(anchorTabId);
+            if (!win?.gBrowser) {
+              return false;
             }
             if (!tab) {
               tab = win.gBrowser.selectedTab;
@@ -859,14 +1002,13 @@ this.zenTabs = class extends ExtensionAPI {
           try {
             const newName = typeof label === "string" ? label.replace(/\s+/g, " ").trim() : "";
 
-            const win = getWin(anchorTabId);
-            if (!win?.gBrowser) {
-              return false;
-            }
-
             let tab = null;
             if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
               tab = getNativeTabByExtId(anchorTabId);
+            }
+            const win = chromeWindowForNativeTab(tab) || getWin(anchorTabId);
+            if (!win?.gBrowser) {
+              return false;
             }
             if (!tab) {
               tab = win.gBrowser.selectedTab;
@@ -907,7 +1049,7 @@ this.zenTabs = class extends ExtensionAPI {
               return false;
             }
 
-            return activateNativeTab(nativeTab, anchorTabId);
+            return activateNativeTab(nativeTab);
           } catch (error) {
             throw new Error(`activateTab failed: ${formatError(error)}`);
           }
@@ -920,7 +1062,7 @@ this.zenTabs = class extends ExtensionAPI {
               return false;
             }
 
-            return activateNativeTab(nativeTab, anchorTabId);
+            return activateNativeTab(nativeTab);
           } catch (error) {
             throw new Error(`activateTabByDomId failed: ${formatError(error)}`);
           }

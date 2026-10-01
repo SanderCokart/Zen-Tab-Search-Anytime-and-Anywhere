@@ -24,6 +24,7 @@ export interface ZenTabsApi {
   getCustomLabels(tabIds?: number[]): Promise<Record<number, string>>;
   getSpaces(anchorTabId?: number): Promise<SpaceInfo[]>;
   getAllTabs(anchorTabId?: number): Promise<TabInfo[] | null>;
+  getSelectedTabs(anchorTabId?: number): Promise<TabInfo[]>;
   switchSpace(spaceId: string, anchorTabId?: number): Promise<boolean>;
   activateTab(tabId: number, anchorTabId?: number): Promise<boolean>;
   activateTabByDomId(domId: string, anchorTabId?: number): Promise<boolean>;

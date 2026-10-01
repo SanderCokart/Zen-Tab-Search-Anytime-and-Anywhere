@@ -2,6 +2,7 @@ import { debugLog, debugWarn } from "@/shared/debug";
 import { isUsableTabId, type SpaceInfo, type TabInfo } from "@/shared/types";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import {
+  isUsableWindowId,
   resolveAnchorTabId as resolveBrowserAnchorTabId,
   zenAnchorTabId,
 } from "@/features/zen/anchor";
@@ -17,8 +18,16 @@ export interface BrowserTabSnapshot {
   lastAccessed?: number;
 }
 
+export type TabQueryInfo = {
+  highlighted?: boolean;
+  lastFocusedWindow?: boolean;
+  currentWindow?: boolean;
+  active?: boolean;
+  windowId?: number;
+};
+
 export interface WorkspaceBrowserHost {
-  queryTabs(queryInfo?: Record<string, boolean>): Promise<BrowserTabSnapshot[]>;
+  queryTabs(queryInfo?: TabQueryInfo): Promise<BrowserTabSnapshot[]>;
   getTab(tabId: number): Promise<BrowserTabSnapshot>;
   focusWindow(windowId: number): Promise<void>;
   activateTab(tabId: number): Promise<void>;
@@ -29,6 +38,7 @@ export interface WorkspaceAdapter {
   apiMethodNames(): string[];
   resolveAnchorTabId(preferredTabId?: number): Promise<number | undefined>;
   listTabs(anchorTabId?: number): Promise<TabInfo[]>;
+  listSelectedTabs(anchorTabId?: number): Promise<TabInfo[]>;
   getTab(tabId: number): Promise<TabInfo>;
   listSpaces(anchorTabId?: number): Promise<SpaceInfo[]>;
   getCustomLabels(tabIds: number[]): Promise<Record<number, string>>;
@@ -128,6 +138,37 @@ export function createZenWorkspaceAdapter(
     }
   }
 
+  async function enrichZenTabs(tabs: TabInfo[], anchorTabId?: number): Promise<TabInfo[]> {
+    const focusedTabId = await resolveAnchor(anchorTabId);
+    let browserTabsById = new Map<number, BrowserTabSnapshot>();
+    try {
+      browserTabsById = new Map(
+        (await host.queryTabs({}))
+          .filter(
+            (tab): tab is BrowserTabSnapshot & { id: number } =>
+              typeof tab.id === "number" && Number.isInteger(tab.id) && tab.id >= 0,
+          )
+          .map((tab) => [tab.id, tab]),
+      );
+    } catch {
+      // Browser tab metadata is optional when the fallback host is unavailable.
+    }
+    return tabs.map((tab) => {
+      const candidateTabId = normalizeTabId(tab.id);
+      const browserTab = browserTabsById.get(candidateTabId);
+      return {
+        ...tab,
+        id: candidateTabId,
+        title: resolveOriginalTabTitle(tab.title, tab.customLabel, browserTab?.title),
+        lastOpenedAt: browserTab?.lastAccessed ?? tab.lastOpenedAt,
+        active:
+          focusedTabId !== undefined
+            ? candidateTabId >= 0 && candidateTabId === focusedTabId
+            : tab.active === true || browserTab?.active === true,
+      };
+    });
+  }
+
   async function listTabsFromZen(tabId?: number): Promise<TabInfo[] | undefined> {
     const zenTabs = getApi();
     if (!zenTabs?.getAllTabs) {
@@ -140,35 +181,90 @@ export function createZenWorkspaceAdapter(
       if (!tabs) {
         return undefined;
       }
-      const focusedTabId = await resolveAnchor(tabId);
-      let browserTabsById = new Map<number, BrowserTabSnapshot>();
-      try {
-        browserTabsById = new Map(
-          (await host.queryTabs({}))
-            .filter(
-              (tab): tab is BrowserTabSnapshot & { id: number } =>
-                typeof tab.id === "number" && Number.isInteger(tab.id) && tab.id >= 0,
-            )
-            .map((tab) => [tab.id, tab]),
-        );
-      } catch {
-        // Browser tab metadata is optional when the fallback host is unavailable.
-      }
-      return tabs.map((tab) => {
-        const candidateTabId = normalizeTabId(tab.id);
-        const browserTab = browserTabsById.get(candidateTabId);
-        return {
-          ...tab,
-          id: candidateTabId,
-          title: resolveOriginalTabTitle(tab.title, tab.customLabel, browserTab?.title),
-          lastOpenedAt: browserTab?.lastAccessed ?? tab.lastOpenedAt,
-          active: candidateTabId >= 0 && candidateTabId === focusedTabId,
-        };
-      });
+      return enrichZenTabs(tabs, tabId);
     } catch (error) {
       console.error(`${LOG_PREFIX} Could not read tabs across Zen spaces:`, formatError(error));
       await logDebugInfo?.("queryTabs getAllTabs", tabId);
       return undefined;
+    }
+  }
+
+  async function listSelectedTabsFromZen(tabId?: number): Promise<TabInfo[] | undefined> {
+    const zenTabs = getApi();
+    if (!zenTabs?.getSelectedTabs) {
+      return undefined;
+    }
+
+    try {
+      debugLog(`${LOG_PREFIX} listSelectedTabs via zenTabs.getSelectedTabs`, {
+        anchorTabId: tabId,
+      });
+      const tabs = await zenTabs.getSelectedTabs(zenAnchorTabId(tabId));
+      if (!tabs?.length) {
+        return undefined;
+      }
+      return enrichZenTabs(tabs, tabId);
+    } catch (error) {
+      debugWarn(`${LOG_PREFIX} Could not read selected Zen tabs:`, formatError(error));
+      await logDebugInfo?.("listSelectedTabs getSelectedTabs", tabId);
+      return undefined;
+    }
+  }
+
+  async function queryInfoForAnchorWindow(anchorTabId?: number): Promise<TabQueryInfo> {
+    if (!isUsableTabId(anchorTabId)) {
+      return {};
+    }
+    try {
+      const tab = await host.getTab(anchorTabId);
+      if (isUsableWindowId(tab.windowId)) {
+        return { windowId: tab.windowId };
+      }
+    } catch {
+      // Anchor tab may already be gone.
+    }
+    return {};
+  }
+
+  async function listSelectedTabsFromBrowser(anchorTabId?: number): Promise<TabInfo[]> {
+    const windowQuery = await queryInfoForAnchorWindow(anchorTabId);
+    const queries: TabQueryInfo[] = [];
+    if (isUsableWindowId(windowQuery.windowId)) {
+      queries.push({ highlighted: true, windowId: windowQuery.windowId });
+    }
+    queries.push(
+      { highlighted: true, lastFocusedWindow: true },
+      { highlighted: true, currentWindow: true },
+    );
+
+    for (const query of queries) {
+      try {
+        const browserTabs = await host.queryTabs(query);
+        const tabIds = browserTabs
+          .map((tab) => tab.id)
+          .filter((id): id is number => typeof id === "number" && Number.isInteger(id) && id >= 0);
+        if (tabIds.length === 0) {
+          continue;
+        }
+        const customLabels = await getCustomLabels(tabIds);
+        const focusedTabId = await resolveAnchor(anchorTabId);
+        return mapBrowserTabs(browserTabs, customLabels, focusedTabId);
+      } catch {
+        // Try the next highlighted-tab query.
+      }
+    }
+
+    const tabId = await resolveAnchor(anchorTabId);
+    if (!isUsableTabId(tabId)) {
+      return [];
+    }
+
+    try {
+      const tab = await host.getTab(tabId);
+      const labels = await getCustomLabels([tabId]);
+      return mapBrowserTabs([tab], labels, tabId);
+    } catch {
+      return [];
     }
   }
 
@@ -179,13 +275,22 @@ export function createZenWorkspaceAdapter(
       return zenTabs;
     }
 
-    const browserTabs = await host.queryTabs({});
+    const browserTabs = await host.queryTabs(await queryInfoForAnchorWindow(tabId));
     const tabIds = browserTabs
       .map((tab) => tab.id)
       .filter((id): id is number => typeof id === "number" && Number.isInteger(id) && id >= 0);
     const customLabels = await getCustomLabels(tabIds);
     const focusedTabId = await resolveAnchor(tabId);
     return mapBrowserTabs(browserTabs, customLabels, focusedTabId);
+  }
+
+  async function listSelectedTabs(anchorTabId?: number): Promise<TabInfo[]> {
+    const tabId = await resolveAnchor(anchorTabId);
+    const zenTabs = await listSelectedTabsFromZen(tabId);
+    if (zenTabs) {
+      return zenTabs;
+    }
+    return listSelectedTabsFromBrowser(tabId);
   }
 
   async function getTab(tabId: number): Promise<TabInfo> {
@@ -223,6 +328,7 @@ export function createZenWorkspaceAdapter(
     resolveAnchorTabId: resolveAnchor,
 
     listTabs,
+    listSelectedTabs,
     getTab,
 
     async listSpaces(anchorTabId?: number) {
@@ -250,8 +356,21 @@ export function createZenWorkspaceAdapter(
     getCustomLabels,
 
     async activateTab(tabId?: number, domId?: string, anchorTabId?: number) {
-      const anchorId = zenAnchorTabId(await resolveAnchor(anchorTabId));
+      const anchorId = zenAnchorTabId(await resolveAnchor(anchorTabId ?? tabId));
       const zenTabs = getApi();
+
+      // Extension tab IDs are unique across windows. DOM ids are not, so a
+      // shared `tab-1` in another instance must not win when we have a real id.
+      if (zenTabs?.activateTab && isUsableTabId(tabId)) {
+        try {
+          const activated = await zenTabs.activateTab(tabId, anchorId);
+          if (activated) {
+            return;
+          }
+        } catch (error) {
+          debugWarn(`${LOG_PREFIX} Zen tab activation failed:`, formatError(error));
+        }
+      }
 
       if (zenTabs?.activateTabByDomId && domId) {
         try {
@@ -261,17 +380,6 @@ export function createZenWorkspaceAdapter(
           }
         } catch (error) {
           debugWarn(`${LOG_PREFIX} Zen DOM tab activation failed:`, formatError(error));
-        }
-      }
-
-      if (zenTabs?.activateTab && isUsableTabId(tabId)) {
-        try {
-          const activated = await zenTabs.activateTab(tabId, anchorId);
-          if (activated) {
-            return;
-          }
-        } catch (error) {
-          debugWarn(`${LOG_PREFIX} Zen tab activation failed:`, formatError(error));
         }
       }
 

@@ -48,7 +48,7 @@ export default defineConfig({
           default: "Ctrl+Alt+R",
           mac: "MacCtrl+Alt+R",
         },
-        description: "Change Zen label of the selected/open tab",
+        description: "Change Zen labels of the selected tabs",
       },
       "set-tab-timer": {
         suggested_key: {

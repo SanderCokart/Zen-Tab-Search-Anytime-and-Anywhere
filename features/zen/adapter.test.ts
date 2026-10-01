@@ -48,6 +48,23 @@ function createFakeAdapter() {
 }
 
 describe("createZenWorkspaceAdapter with a fake experiment API", () => {
+  it("passes the preferred anchor tab into getAllTabs", async () => {
+    const getAllTabs = vi.fn(async () => [tab({ id: 22, title: "Current" })]);
+    const workspace = createZenWorkspaceAdapter({
+      resolveAnchorTabId: async (preferred) => preferred ?? 1,
+      getZenTabsApi: () => ({ getAllTabs }),
+      browser: {
+        queryTabs: async () => [{ id: 22, title: "Current", windowId: 2 }],
+        getTab: async (tabId) => ({ id: tabId, windowId: 2 }),
+        focusWindow: async () => undefined,
+        activateTab: async () => undefined,
+      },
+    });
+
+    await workspace.listTabs(22);
+    expect(getAllTabs).toHaveBeenCalledWith(22);
+  });
+
   it("lists Zen tabs instead of falling back to browser.tabs", async () => {
     const workspace = createFakeAdapter();
     const { queryTabs } = createTabQuery(workspace);
@@ -55,6 +72,28 @@ describe("createZenWorkspaceAdapter with a fake experiment API", () => {
       expect.objectContaining({ id: 1, title: "One", active: true }),
       expect.objectContaining({ id: -1, title: "Essential", active: false }),
     ]);
+  });
+
+  it("activates a tab by extension id so a shared DOM id cannot hit another window", async () => {
+    const activateTab = vi.fn(async () => true);
+    const activateTabByDomId = vi.fn(async () => true);
+    const workspace = createZenWorkspaceAdapter({
+      resolveAnchorTabId: async (preferred) => preferred ?? 7,
+      getZenTabsApi: () => ({
+        activateTab,
+        activateTabByDomId,
+      }),
+      browser: {
+        queryTabs: async () => [],
+        getTab: async (tabId) => ({ id: tabId, windowId: 2 }),
+        focusWindow: vi.fn(async () => undefined),
+        activateTab: vi.fn(async () => undefined),
+      },
+    });
+
+    await workspace.activateTab(7, "tab-1", 7);
+    expect(activateTab).toHaveBeenCalledWith(7, 7);
+    expect(activateTabByDomId).not.toHaveBeenCalled();
   });
 
   it("activates a tab by DOM id through the fake API", async () => {
@@ -74,11 +113,14 @@ describe("createZenWorkspaceAdapter browser fallback", () => {
   it("uses browser.tabs when zenTabs is missing", async () => {
     const activateTab = vi.fn(async () => undefined);
     const focusWindow = vi.fn(async () => undefined);
+    const queryTabs = vi.fn(async () => [
+      { id: 5, title: "Local", url: "https://x.test", windowId: 2 },
+    ]);
     const workspace = createZenWorkspaceAdapter({
       getZenTabsApi: () => undefined,
       resolveAnchorTabId: async () => 5,
       browser: {
-        queryTabs: async () => [{ id: 5, title: "Local", url: "https://x.test", windowId: 2 }],
+        queryTabs,
         getTab: async (tabId) => ({ id: tabId, title: "Local", windowId: 2, active: true }),
         focusWindow,
         activateTab,
@@ -88,6 +130,7 @@ describe("createZenWorkspaceAdapter browser fallback", () => {
     await expect(workspace.listTabs()).resolves.toEqual([
       expect.objectContaining({ id: 5, title: "Local", active: true, customLabel: "" }),
     ]);
+    expect(queryTabs).toHaveBeenCalledWith({ windowId: 2 });
     await workspace.activateTab(5);
     expect(focusWindow).toHaveBeenCalledWith(2);
     expect(activateTab).toHaveBeenCalledWith(5);
@@ -152,5 +195,63 @@ describe("createZenWorkspaceAdapter browser fallback", () => {
         lastOpenedAt: 42,
       }),
     ]);
+  });
+});
+
+describe("listSelectedTabs", () => {
+  it("returns selected tabs from the experiment API", async () => {
+    const workspace = createZenWorkspaceAdapter({
+      resolveAnchorTabId: async () => 2,
+      getZenTabsApi: () => ({
+        getSelectedTabs: async () => [
+          tab({ id: 1, title: "Issue", url: "https://github.com/a/b/issues/1" }),
+          tab({ id: 2, title: "PR", url: "https://github.com/a/b/pull/2" }),
+        ],
+        getCustomLabels: async () => ({}),
+      }),
+      browser: {
+        queryTabs: vi.fn(async () => [
+          { id: 1, title: "Issue", windowId: 1 },
+          { id: 2, title: "PR", windowId: 1, lastAccessed: 9 },
+        ]),
+        getTab: vi.fn(async (tabId) => ({ id: tabId, windowId: 1 })),
+        focusWindow: vi.fn(async () => undefined),
+        activateTab: vi.fn(async () => undefined),
+      },
+    });
+
+    await expect(workspace.listSelectedTabs()).resolves.toEqual([
+      expect.objectContaining({ id: 1, title: "Issue", active: false }),
+      expect.objectContaining({ id: 2, title: "PR", active: true, lastOpenedAt: 9 }),
+    ]);
+  });
+
+  it("lists highlighted tabs in the anchor tab's window", async () => {
+    const queryTabs = vi.fn(async (queryInfo?: { highlighted?: boolean; windowId?: number }) => {
+      if (queryInfo?.highlighted) {
+        return [
+          { id: 3, title: "A", url: "https://github.com/a/b/issues/3", windowId: 2 },
+          { id: 4, title: "B", url: "https://gitlab.com/a/b/-/issues/4", windowId: 2 },
+        ];
+      }
+      return [];
+    });
+    const workspace = createZenWorkspaceAdapter({
+      getZenTabsApi: () => undefined,
+      resolveAnchorTabId: async () => 3,
+      browser: {
+        queryTabs,
+        getTab: async (tabId) => ({ id: tabId, windowId: 2 }),
+        focusWindow: async () => undefined,
+        activateTab: async () => undefined,
+      },
+    });
+
+    await expect(workspace.listSelectedTabs()).resolves.toEqual([
+      expect.objectContaining({ id: 3, title: "A", active: true }),
+      expect.objectContaining({ id: 4, title: "B", active: false }),
+    ]);
+    expect(queryTabs).toHaveBeenCalledWith({ highlighted: true, windowId: 2 });
+    expect(queryTabs).not.toHaveBeenCalledWith({ highlighted: true });
   });
 });

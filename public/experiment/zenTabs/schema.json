@@ -61,6 +61,20 @@
         ]
       },
       {
+        "name": "getSelectedTabs",
+        "type": "function",
+        "description": "Returns the currently selected (highlighted) tabs in the Zen browser window",
+        "async": true,
+        "parameters": [
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Active extension tab ID used to locate the Zen browser window"
+          }
+        ]
+      },
+      {
         "name": "switchSpace",
         "type": "function",
         "description": "Switch to a Zen space by UUID",

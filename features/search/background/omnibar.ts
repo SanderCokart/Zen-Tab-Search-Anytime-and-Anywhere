@@ -4,13 +4,23 @@ import { isUsableTabId } from "@/shared/types";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { toggleSearchPopup } from "@/features/search/background/popup";
 import { isContentScriptInjectableUrl } from "@/shared/urls";
+import { resolveAnchorTabId } from "@/features/zen/anchor";
 
-export async function toggleOmnibar(): Promise<void> {
-  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-  const tab = tabs[0];
-  const tabId = tab?.id;
+export async function toggleOmnibar(preferredTabId?: number): Promise<void> {
+  const tabId = await resolveAnchorTabId(preferredTabId);
+  if (!isUsableTabId(tabId)) {
+    await toggleSearchPopup();
+    return;
+  }
 
-  if (isUsableTabId(tabId) && isContentScriptInjectableUrl(tab?.url)) {
+  let url: string | undefined;
+  try {
+    url = (await browser.tabs.get(tabId)).url;
+  } catch {
+    url = undefined;
+  }
+
+  if (isContentScriptInjectableUrl(url)) {
     try {
       await sendTabMessage(tabId, { type: "toggleOmnibar", anchorTabId: tabId });
       return;
