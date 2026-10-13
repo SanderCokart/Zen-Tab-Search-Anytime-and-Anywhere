@@ -8,7 +8,8 @@ import {
 } from "@/features/bridge/model/mcp-install";
 
 function fromBase64Url(value: string): string {
-  const padded = value.replaceAll("-", "+").replaceAll("_", "/") + "==".slice(0, (4 - (value.length % 4)) % 4);
+  const padded =
+    value.replaceAll("-", "+").replaceAll("_", "/") + "==".slice(0, (4 - (value.length % 4)) % 4);
   return atob(padded);
 }
 
