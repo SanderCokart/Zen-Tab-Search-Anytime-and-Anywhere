@@ -104,7 +104,7 @@ As you can see here you can add a timer and clear it from search, from the tab m
 
 ### AI agents (MCP)
 
-Claude, Cursor and other MCP clients can read and organise Zen through a local MCP server that ships in this repo: list spaces, folders and tabs, rename tabs, create and rename folders, move tabs into folders or other spaces, and reorder them. Turn it on under **AI agents (MCP)** in the settings, then follow [mcp/README.md](mcp/README.md) to register the server with your client. It only listens on this computer and only accepts the token from your settings.
+Claude, Cursor and other MCP clients can read and organise Zen through a local MCP server that ships in this repo: list spaces, folders and tabs, rename tabs, create and rename folders, move tabs into folders or other spaces, and reorder them. Turn it on under **AI agents (MCP)** in the settings, then follow [mcp/README.md](mcp/README.md) to register the server with your client. It only listens on this computer and only accepts the token from your settings. To run the agent on another machine, such as a server, tunnel the bridge port over SSH: see [Remote agents over SSH](mcp/README.md#remote-agents-over-ssh).
 
 
 
