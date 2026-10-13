@@ -7,10 +7,13 @@ import { registerPopupWindowTracking } from "@/app/background/popup-tracking";
 import { openSettingsPopup } from "@/features/settings/background/popup";
 import { openCustomTimerPopup } from "@/features/timers/background/popup";
 import {
+  createCachedSnapshotReader,
   createSnapshotReader,
   notifySnapshotChanged,
   registerSnapshotChangeNotifications,
 } from "@/features/search/background/snapshot";
+import { searchSnapshotSchema } from "@/shared/messaging/protocol";
+import * as v from "valibot";
 import { createTabQuery } from "@/features/zen/tabs-query";
 import { createTabSwitcher } from "@/features/zen/tabs-switch";
 import { createTimerService } from "@/features/timers/background/timer-service";
@@ -44,15 +47,23 @@ export default defineBackground(() => {
 
   const todoService = createTodoService();
 
-  const getSnapshot = createSnapshotReader({
-    queryTabs,
-    getSpaces,
-    getTimers: timerService.getActiveTimers,
-    getTodos: todoService.getTodos,
-    readLastOpened: readTabLastOpened,
-  });
+  const snapshotCache = createCachedSnapshotReader(
+    createSnapshotReader({
+      queryTabs,
+      getSpaces,
+      getTimers: timerService.getActiveTimers,
+      getTodos: todoService.getTodos,
+      readLastOpened: readTabLastOpened,
+    }),
+  );
+  const notify = () => {
+    snapshotCache.invalidate();
+    notifySnapshotChanged();
+  };
+  const getSnapshot = async (anchorTabId?: number) =>
+    v.parse(searchSnapshotSchema, await snapshotCache.getSnapshot(anchorTabId));
 
-  registerTimerContextMenus(timerService, todoService, notifySnapshotChanged);
+  registerTimerContextMenus(timerService, todoService, notify);
   registerPopupWindowTracking();
   registerBrowserExternalTabReuse({
     listTabs: (anchorTabId) => workspace.listTabs(anchorTabId),
@@ -61,7 +72,7 @@ export default defineBackground(() => {
     recordOpened: recordTabLastOpened,
   });
   registerCommands(workspace);
-  registerSnapshotChangeNotifications();
+  registerSnapshotChangeNotifications(150, snapshotCache.invalidate);
   registerTabLastOpenedTracking();
 
   if (DEBUG) {
@@ -108,8 +119,17 @@ export default defineBackground(() => {
   browser.tabs.onCreated.addListener((tab) => {
     if (isUsableTabId(tab.id)) {
       void timerService.adoptRestoredTab(tab.id);
+      void todoService.hydrate([tab.id]);
     }
   });
+  void browser.tabs
+    .query({})
+    .then((tabs) =>
+      todoService.hydrate(tabs.flatMap((tab) => (isUsableTabId(tab.id) ? [tab.id] : []))),
+    )
+    .catch((error) => {
+      debugWarn(`${LOG_PREFIX} Could not hydrate todos:`, formatError(error));
+    });
 
   browser.tabs.onRemoved.addListener((tabId, removeInfo) => {
     todoService.forget(tabId);
@@ -140,11 +160,11 @@ export default defineBackground(() => {
       if (!renamed) {
         throw new Error("Could not rename this tab.");
       }
-      notifySnapshotChanged();
+      notify();
     },
     setTodo: async (tabId, status) => {
       await todoService.setTodo(tabId, status);
-      notifySnapshotChanged();
+      notify();
     },
     isAllowedTimerEnd: (endAt) => isAllowedTimerEnd(endAt),
   });
@@ -159,14 +179,14 @@ export default defineBackground(() => {
       todos: {
         setTodo: async (tabId, status) => {
           await todoService.setTodo(tabId, status);
-          notifySnapshotChanged();
+          notify();
         },
         getTodos: todoService.getTodos,
       },
       detectForgeLabels: async (tabs, options) => {
         const detections = await detectForgeLabels(workspace, tabs, options);
         if (detections.some((detection) => detection.applied)) {
-          notifySnapshotChanged();
+          notify();
         }
         return detections;
       },

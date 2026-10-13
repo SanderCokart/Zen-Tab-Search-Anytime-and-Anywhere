@@ -175,6 +175,50 @@ describe("filterSearchItems", () => {
     expect(filterSearchItems(items, "Follow")).toMatchObject([{ data: { id: 1 } }]);
     expect(filterSearchItems(items, "progress follow")).toMatchObject([{ data: { id: 1 } }]);
   });
+
+  it("matches a hostname without the URL scheme", () => {
+    const items = buildSearchItems(
+      [{ ...tab(1), title: "Whiteboard", url: "https://excalidraw.com/room/1" }],
+      [],
+    );
+
+    expect(filterSearchItems(items, "excalidraw")).toMatchObject([{ data: { id: 1 } }]);
+  });
+
+  it("matches URL path tokens and ignores scheme-only queries", () => {
+    const items = buildSearchItems(
+      [
+        {
+          ...tab(1),
+          title: "Whiteboard",
+          url: "https://gitlab.com/acme/project/-/merge_requests/80",
+        },
+        { ...tab(2), title: "Notes", url: "https://example.com/docs" },
+      ],
+      [],
+    );
+
+    expect(filterSearchItems(items, "merge_requests")).toMatchObject([{ data: { id: 1 } }]);
+    expect(filterSearchItems(items, "https")).toEqual([]);
+  });
+
+  it("does not keep every https tab for a one-character query", () => {
+    const items = buildSearchItems(
+      Array.from({ length: 500 }, (_, index) => ({
+        ...tab(index + 1),
+        title: `Unique title ${index}`,
+        url: `https://example.com/path/${index}`,
+      })),
+      [],
+    );
+
+    const started = performance.now();
+    const filtered = filterSearchItems(items, "h");
+    const elapsed = performance.now() - started;
+
+    expect(filtered).toEqual([]);
+    expect(elapsed).toBeLessThan(100);
+  });
 });
 
 describe("fuzzyMatchWithScore", () => {

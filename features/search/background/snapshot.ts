@@ -13,23 +13,71 @@ export interface SearchSnapshotPayload {
 export function createSnapshotReader(deps: {
   queryTabs(anchorTabId?: number): Promise<TabInfo[]>;
   getSpaces(anchorTabId?: number): Promise<SpaceInfo[]>;
-  getTimers(): Promise<TabTimer[]>;
+  getTimers(tabIds?: number[]): Promise<TabTimer[]>;
   getTodos?(tabIds: number[]): Promise<TabTodo[]>;
   readLastOpened?(): Promise<Record<string, number>>;
 }): (anchorTabId?: number) => Promise<SearchSnapshotPayload> {
   return async (anchorTabId?: number): Promise<SearchSnapshotPayload> => {
-    const [tabs, spaces, timers, lastOpened] = await Promise.all([
+    const [tabs, spaces, lastOpened] = await Promise.all([
       deps.queryTabs(anchorTabId),
       deps.getSpaces(anchorTabId),
-      deps.getTimers(),
       deps.readLastOpened?.() ?? Promise.resolve({}),
     ]);
     const tabIds = tabs.flatMap((tab) => {
       const id = tabBrowserId(tab);
       return id === undefined ? [] : [id];
     });
-    const todos = deps.getTodos ? await deps.getTodos(tabIds) : [];
+    const [timers, todos] = await Promise.all([
+      deps.getTimers(tabIds),
+      deps.getTodos ? deps.getTodos(tabIds) : Promise.resolve([]),
+    ]);
     return { tabs: mergeTabLastOpened(tabs, lastOpened), spaces, timers, todos };
+  };
+}
+
+export function createCachedSnapshotReader(
+  read: (anchorTabId?: number) => Promise<SearchSnapshotPayload>,
+): {
+  getSnapshot(anchorTabId?: number): Promise<SearchSnapshotPayload>;
+  invalidate(): void;
+} {
+  const UNSET = Symbol("unset");
+  let epoch = 0;
+  let payload: SearchSnapshotPayload | undefined;
+  let payloadAnchor: number | undefined | typeof UNSET = UNSET;
+  let inflight: Promise<SearchSnapshotPayload> | undefined;
+  let inflightAnchor: number | undefined | typeof UNSET = UNSET;
+
+  return {
+    invalidate() {
+      epoch += 1;
+      payload = undefined;
+      payloadAnchor = UNSET;
+    },
+    async getSnapshot(anchorTabId?: number): Promise<SearchSnapshotPayload> {
+      if (payload && payloadAnchor === anchorTabId) {
+        return payload;
+      }
+      if (inflight && inflightAnchor === anchorTabId) {
+        return inflight;
+      }
+
+      const started = epoch;
+      inflightAnchor = anchorTabId;
+      inflight = read(anchorTabId)
+        .then((next) => {
+          if (started === epoch) {
+            payload = next;
+            payloadAnchor = anchorTabId;
+          }
+          return next;
+        })
+        .finally(() => {
+          inflight = undefined;
+          inflightAnchor = UNSET;
+        });
+      return inflight;
+    },
   };
 }
 
@@ -39,7 +87,10 @@ export function notifySnapshotChanged(): void {
   });
 }
 
-export function registerSnapshotChangeNotifications(debounceMs = 150): () => void {
+export function registerSnapshotChangeNotifications(
+  debounceMs = 150,
+  onNotify?: () => void,
+): () => void {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const notify = () => {
     if (timeout !== undefined) {
@@ -47,6 +98,7 @@ export function registerSnapshotChangeNotifications(debounceMs = 150): () => voi
     }
     timeout = setTimeout(() => {
       timeout = undefined;
+      onNotify?.();
       notifySnapshotChanged();
     }, debounceMs);
   };
@@ -58,9 +110,15 @@ export function registerSnapshotChangeNotifications(debounceMs = 150): () => voi
   };
   const onTabUpdated = (
     _tabId: number,
-    changeInfo: { url?: string; favIconUrl?: string; status?: string },
+    changeInfo: {
+      url?: string;
+      title?: string;
+      pinned?: boolean;
+      favIconUrl?: string;
+      status?: string;
+    },
   ) => {
-    if (changeInfo.url || changeInfo.favIconUrl || changeInfo.status === "complete") {
+    if (changeInfo.url || changeInfo.title !== undefined || changeInfo.pinned !== undefined) {
       notify();
     }
   };

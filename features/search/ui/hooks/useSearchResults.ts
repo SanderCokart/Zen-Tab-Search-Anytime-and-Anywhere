@@ -2,9 +2,10 @@ import { useMemo } from "preact/hooks";
 import {
   bestForgeNavigatorIndex,
   buildForgeIssueEntries,
+  buildSearchDocuments,
   buildSearchItems,
   excludePinnedSearchSources,
-  filterSearchItems,
+  filterSearchDocuments,
   flattenForgeNavigatorEntries,
   groupSearchItems,
   parseForgeNavigatorQuery,
@@ -108,20 +109,34 @@ export function useSearchResults({
     });
   }, [displaySettings, layout, spaces, visibleTabs]);
 
-  const items = useMemo(() => {
+  const searchDocuments = useMemo(
+    () => buildSearchDocuments(buildSearchItems(searchable.tabs, searchable.spaces)),
+    [searchable],
+  );
+
+  const filtered = useMemo(() => {
     const effectiveQuery = forgeNavigatorQuery.active ? forgeNavigatorQuery.filterQuery : query;
-    const matches = filterSearchItems(
-      buildSearchItems(searchable.tabs, searchable.spaces),
-      effectiveQuery,
-    );
+    const matches = filterSearchDocuments(searchDocuments, effectiveQuery);
     if (effectiveQuery.trim()) {
       return matches;
     }
     const activeId = searchable.tabs.find(
       (tab) => tab.active === true && tabBrowserId(tab) !== undefined,
     )?.id;
-    return prioritizeCurrentTab(matches, activeId);
-  }, [forgeNavigatorQuery, query, searchable]);
+    return {
+      items: prioritizeCurrentTab(matches.items, activeId),
+      bestExactWordCount: 0,
+    };
+  }, [forgeNavigatorQuery, query, searchable, searchDocuments]);
+
+  const items = filtered.items;
+  const bestTabWordCount = filtered.bestExactWordCount;
+  const bestForgeWordCount = useMemo(() => {
+    if (!forgeNavigatorQuery.filterQuery.trim()) {
+      return 0;
+    }
+    return rankedForgeIssueEntries.reduce((max, entry) => Math.max(max, entry.words), 0);
+  }, [forgeNavigatorQuery.filterQuery, rankedForgeIssueEntries]);
 
   // Position of each item in the flat list, so rows can look up their index
   // without an indexOf scan per row while rendering nested groups.
@@ -146,6 +161,8 @@ export function useSearchResults({
     navigatorEntries,
     bestForgeIndex,
     items,
+    bestTabWordCount,
+    bestForgeWordCount,
     itemIndices,
     itemGroups,
   };

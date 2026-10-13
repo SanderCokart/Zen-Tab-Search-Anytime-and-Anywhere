@@ -29,18 +29,35 @@ function getTabSessionStore(): TabSessionStore | undefined {
 
 export function createTodoService() {
   const memory = new Map<number, TodoStatus>();
+  const hydrated = new Set<number>();
 
-  async function readTodo(tabId: number): Promise<TodoStatus | undefined> {
-    try {
-      const value = await getTabSessionStore()?.getTabValue(tabId, TODO_SESSION_KEY);
-      const parsed = v.safeParse(todoStatusSchema, value);
-      if (parsed.success) {
-        return parsed.output;
-      }
-    } catch {
-      // The tab may already be gone; fall through to the in-memory copy.
+  function peekTodos(tabIds: number[]): TabTodo[] {
+    return tabIds.flatMap((tabId) => {
+      const status = memory.get(tabId);
+      return status ? [{ tabId, status }] : [];
+    });
+  }
+
+  async function hydrate(tabIds: number[]): Promise<void> {
+    const missing = tabIds.filter((tabId) => !hydrated.has(tabId));
+    if (missing.length === 0) {
+      return;
     }
-    return memory.get(tabId);
+
+    await Promise.all(
+      missing.map(async (tabId) => {
+        try {
+          const value = await getTabSessionStore()?.getTabValue(tabId, TODO_SESSION_KEY);
+          const parsed = v.safeParse(todoStatusSchema, value);
+          if (parsed.success) {
+            memory.set(tabId, parsed.output);
+          }
+        } catch {
+          // The tab may already be gone; keep whatever is already in memory.
+        }
+        hydrated.add(tabId);
+      }),
+    );
   }
 
   /** Sets a tab's todo, or removes it with "none". */
@@ -49,6 +66,7 @@ export function createTodoService() {
       throw new Error("Invalid tab ID.");
     }
 
+    hydrated.add(tabId);
     if (status === "none") {
       memory.delete(tabId);
       try {
@@ -67,21 +85,19 @@ export function createTodoService() {
     }
   }
 
-  /** The todo for each of these tabs that has one. */
+  /** The todo for each of these tabs that has one. Session reads happen once per tab. */
   async function getTodos(tabIds: number[]): Promise<TabTodo[]> {
-    const statuses = await Promise.all(tabIds.map((tabId) => readTodo(tabId)));
-    return tabIds.flatMap((tabId, index) => {
-      const status = statuses[index];
-      return status ? [{ tabId, status }] : [];
-    });
+    await hydrate(tabIds);
+    return peekTodos(tabIds);
   }
 
   /** Drops the in-memory copy when a tab closes. Session data goes with the tab. */
   function forget(tabId: number): void {
     memory.delete(tabId);
+    hydrated.delete(tabId);
   }
 
-  return { setTodo, getTodos, forget };
+  return { setTodo, getTodos, hydrate, forget };
 }
 
 export type TodoService = ReturnType<typeof createTodoService>;

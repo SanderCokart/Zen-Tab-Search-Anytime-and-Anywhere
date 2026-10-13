@@ -25,6 +25,11 @@ export async function sendExtensionMessage<T extends ExtensionRequestType>(
   if (isErrorResponse(response)) {
     throw new ExtensionMessageError(response.error);
   }
+  // The snapshot is validated in the background so the overlay/popup thread
+  // does not walk every tab through valibot on the typing/hot path.
+  if (message.type === "getSnapshot") {
+    return response as ExtensionSuccessMap[T];
+  }
   return parseExtensionSuccess(message.type, response);
 }
 

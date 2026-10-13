@@ -273,8 +273,10 @@ describe("SearchApp", () => {
     const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
     input.value = "42";
     input.dispatchEvent(new InputEvent("input", { bubbles: true }));
-    await vi.waitFor(() => expect(root.textContent).toContain("Fix search"));
-    expect(root.textContent).not.toContain("Improve filters");
+    await vi.waitFor(() => {
+      expect(root.textContent).toContain("Fix search");
+      expect(root.textContent).not.toContain("Improve filters");
+    });
 
     root.querySelector<HTMLButtonElement>("button[title*='github.com']")?.click();
     await vi.waitFor(() =>
