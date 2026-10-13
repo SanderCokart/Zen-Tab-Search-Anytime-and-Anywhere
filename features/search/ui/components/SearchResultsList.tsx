@@ -9,7 +9,7 @@ import {
   type SearchItem,
   type TabInfo,
   type TabTimer,
-  type TodoStatus,
+  type TabTodo,
 } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
@@ -22,7 +22,7 @@ export interface SearchResultsListProps {
   navigateForge: boolean;
   displaySettings: DisplaySettings;
   timers: Map<number, TabTimer>;
-  todos: Map<number, TodoStatus>;
+  todos: Map<number, TabTodo>;
   timerTabId: number | null;
   registerOption: (index: number, element: HTMLLIElement | null) => void;
   onActivate: (item: SearchItem) => void;

@@ -1,30 +1,41 @@
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { hostname } from "@/features/search/ui/lib/format";
-import { formatTabDisplayTitle, type TabInfo } from "@/shared/types";
+import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
+import { TrafficLightIcon } from "@/features/todos/ui/TrafficLightIcon";
+import { trafficLightRowClass } from "@/features/todos/ui/traffic-light";
+import { formatTabDisplayTitle, tabBrowserId, type TabInfo, type TabTodo } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
 /**
  * The third overlay column: tabs marked as todo. Clicking a row switches to
- * its tab, its "Mark as done" link removes the todo, and right-clicking opens the tab
- * context menu. Only rendered while there is at least one todo.
+ * its tab, its traffic light sets a status color that tints the row, its "Mark as done"
+ * link removes the todo, and right-clicking opens the tab context menu. Only rendered while there is at least one todo.
  */
 export function TodoNavigator({
   tabs,
+  todos,
+  lightMenuTabId,
   backgroundColor,
   truncate,
   selectedIndex,
   onActivate,
   onSelect,
   onDone,
+  onOpenLightMenu,
   onContextMenu,
 }: {
   tabs: TabInfo[];
+  todos: Map<number, TabTodo>;
+  /** The tab whose traffic-light menu is open, if any. */
+  lightMenuTabId: number | null;
   backgroundColor: string;
   truncate: boolean;
   selectedIndex: number;
   onActivate: (tab: TabInfo) => void;
   onSelect: (index: number) => void;
   onDone: (tab: TabInfo) => void;
+  /** Opens the traffic-light menu under the button at `anchor`. */
+  onOpenLightMenu: (tab: TabInfo, anchor: DOMRect) => void;
   onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
 }) {
   return (
@@ -42,13 +53,19 @@ export function TodoNavigator({
       <div class="zen-scroll flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
         {tabs.map((tab, index) => {
           const selected = selectedIndex === index;
+          const tabId = tabBrowserId(tab);
+          const light = todos.get(tabId ?? -1)?.light;
+          const rowClass = light
+            ? trafficLightRowClass[light][selected ? "selected" : "idle"]
+            : cn("hover:bg-zen-line-soft", selected && "bg-zen-line-soft");
           return (
             <div
               key={tab.id ?? tab.domId ?? tab.url}
               class={cn(
-                "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 shrink-0 items-end overflow-hidden rounded-[var(--zen-radius)]",
-                selected && "bg-zen-line-soft",
+                "flex w-full max-w-full min-w-0 shrink-0 items-end overflow-hidden rounded-[var(--zen-radius)]",
+                rowClass,
               )}
+              data-todo-light={light}
               data-todo-selected={selected ? "true" : undefined}
               ref={(element) => {
                 if (selected) {
@@ -81,14 +98,32 @@ export function TodoNavigator({
                   {tab.workspaceName || hostname(tab.url)}
                 </span>
               </button>
-              <button
-                type="button"
-                class="text-zen-subtle hover:text-zen-text shrink-0 cursor-pointer border-0 bg-transparent p-[var(--zen-space-2)] font-[inherit] text-[length:var(--zen-text-sm)] whitespace-nowrap hover:underline"
-                data-testid="zen-todo-done-button"
-                onClick={() => onDone(tab)}
-              >
-                Mark as done
-              </button>
+              <span class="flex shrink-0 items-center">
+                <TooltipButton
+                  label={light ? `Status: ${light}` : "Set status color"}
+                  tooltip={light ? `Status: ${light}. Change color` : "Set a status color"}
+                  aria-haspopup="menu"
+                  aria-expanded={tabId !== undefined && lightMenuTabId === tabId}
+                  data-testid="zen-todo-light-button"
+                  data-traffic-light-trigger=""
+                  class="text-zen-subtle hover:text-zen-text inline-flex cursor-pointer items-center border-0 bg-transparent p-[var(--zen-space-2)]"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpenLightMenu(tab, event.currentTarget.getBoundingClientRect());
+                  }}
+                >
+                  <TrafficLightIcon light={light} class="size-[var(--zen-icon-md)]" />
+                </TooltipButton>
+                <TooltipButton
+                  label="Mark as done"
+                  tooltip="Mark as done and remove from your todos"
+                  data-testid="zen-todo-done-button"
+                  class="text-zen-subtle hover:text-zen-text shrink-0 cursor-pointer border-0 bg-transparent p-[var(--zen-space-2)] font-[inherit] text-[length:var(--zen-text-sm)] whitespace-nowrap hover:underline"
+                  onClick={() => onDone(tab)}
+                >
+                  Mark as done
+                </TooltipButton>
+              </span>
             </div>
           );
         })}

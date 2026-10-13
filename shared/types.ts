@@ -12,6 +12,7 @@ export type {
   TabTimer,
   TabTodo,
   TodoStatus,
+  TrafficLight,
 } from "@/shared/messaging/protocol";
 
 export type SearchItem = { kind: "tab"; data: TabInfo } | { kind: "space"; data: SpaceInfo };

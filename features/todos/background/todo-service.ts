@@ -1,8 +1,8 @@
 import * as v from "valibot";
 import { debugWarn } from "@/shared/debug";
 import { formatError, LOG_PREFIX } from "@/shared/log";
-import { isUsableTabId, type TabTodo, type TodoStatus } from "@/shared/types";
-import { TODO_STATUSES } from "@/shared/messaging/protocol";
+import { isUsableTabId, type TabTodo, type TodoStatus, type TrafficLight } from "@/shared/types";
+import { TODO_STATUSES, TRAFFIC_LIGHTS } from "@/shared/messaging/protocol";
 
 /**
  * A tab's todo lives in that tab's session data, like a timer. Session data
@@ -12,6 +12,23 @@ import { TODO_STATUSES } from "@/shared/messaging/protocol";
  */
 const TODO_SESSION_KEY = "tabTodo";
 const todoStatusSchema = v.picklist(TODO_STATUSES);
+
+type StoredTodo = Omit<TabTodo, "tabId">;
+
+/**
+ * What is saved in the session: a status and an optional traffic light. Todos
+ * saved before lights existed hold the bare status string, so that still parses.
+ */
+const storedTodoSchema = v.union([
+  v.pipe(
+    todoStatusSchema,
+    v.transform((status): StoredTodo => ({ status })),
+  ),
+  v.object({
+    status: todoStatusSchema,
+    light: v.optional(v.picklist(TRAFFIC_LIGHTS)),
+  }),
+]);
 
 interface TabSessionStore {
   getTabValue(tabId: number, key: string): Promise<unknown>;
@@ -28,13 +45,13 @@ function getTabSessionStore(): TabSessionStore | undefined {
 }
 
 export function createTodoService() {
-  const memory = new Map<number, TodoStatus>();
+  const memory = new Map<number, StoredTodo>();
   const hydrated = new Set<number>();
 
   function peekTodos(tabIds: number[]): TabTodo[] {
     return tabIds.flatMap((tabId) => {
-      const status = memory.get(tabId);
-      return status ? [{ tabId, status }] : [];
+      const stored = memory.get(tabId);
+      return stored ? [{ tabId, ...stored }] : [];
     });
   }
 
@@ -48,8 +65,9 @@ export function createTodoService() {
       missing.map(async (tabId) => {
         try {
           const value = await getTabSessionStore()?.getTabValue(tabId, TODO_SESSION_KEY);
-          const parsed = v.safeParse(todoStatusSchema, value);
-          if (parsed.success) {
+          const parsed = v.safeParse(storedTodoSchema, value);
+          // A write that landed while the read was in flight is newer than the session.
+          if (parsed.success && !memory.has(tabId)) {
             memory.set(tabId, parsed.output);
           }
         } catch {
@@ -60,12 +78,21 @@ export function createTodoService() {
     );
   }
 
-  /** Sets a tab's todo, or removes it with "none". */
-  async function setTodo(tabId: number, status: TodoStatus | "none"): Promise<void> {
+  /**
+   * Sets a tab's todo, or removes it with "none". `light` sets the traffic
+   * light, "none" clears it, and leaving it out keeps whatever the todo has.
+   */
+  async function setTodo(
+    tabId: number,
+    status: TodoStatus | "none",
+    light?: TrafficLight | "none",
+  ): Promise<void> {
     if (!isUsableTabId(tabId)) {
       throw new Error("Invalid tab ID.");
     }
 
+    // Read any saved light first, so changing the status alone does not drop it.
+    await hydrate([tabId]);
     hydrated.add(tabId);
     if (status === "none") {
       memory.delete(tabId);
@@ -77,9 +104,12 @@ export function createTodoService() {
       return;
     }
 
-    memory.set(tabId, status);
+    const nextLight = light === undefined ? memory.get(tabId)?.light : light;
+    const next: StoredTodo =
+      nextLight === undefined || nextLight === "none" ? { status } : { status, light: nextLight };
+    memory.set(tabId, next);
     try {
-      await getTabSessionStore()?.setTabValue(tabId, TODO_SESSION_KEY, status);
+      await getTabSessionStore()?.setTabValue(tabId, TODO_SESSION_KEY, next);
     } catch (error) {
       debugWarn(`${LOG_PREFIX} Could not persist todo to the tab session:`, formatError(error));
     }

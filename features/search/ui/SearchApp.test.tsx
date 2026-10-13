@@ -1,7 +1,7 @@
 import { render } from "preact";
 import { describe, expect, it, vi } from "vitest";
 import { SearchApp } from "@/features/search/ui/SearchApp";
-import type { SpaceInfo, TabInfo } from "@/shared/types";
+import type { SpaceInfo, TabInfo, TabTodo } from "@/shared/types";
 
 const tabs: TabInfo[] = [
   {
@@ -29,7 +29,7 @@ function mountSearchApp(
   layout: "popup" | "overlay" = "popup",
   displaySettings?: Record<string, unknown>,
   snapshotSpaces: Partial<SpaceInfo>[] = [],
-  snapshotTodos: { tabId: number; status: "todo" }[] = [],
+  snapshotTodos: TabTodo[] = [],
 ) {
   const sendMessage = vi.fn(async ({ type }: { type: string }) => {
     if (type === "getSnapshot") {
@@ -418,6 +418,161 @@ describe("SearchApp", () => {
       expect(root.querySelector("[data-testid='zen-todo-column']")).toBeNull(),
     );
     expect(sendMessage).toHaveBeenCalledWith({ type: "setTodo", tabId: 1, status: "none" });
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("swaps the row's todo icon between outline and solid", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-button']")).not.toBeNull(),
+    );
+    const button = () => root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-button']")!;
+
+    // The outline icon has no cut-out mask; the solid one does.
+    expect(button().querySelector("mask")).toBeNull();
+    button().click();
+    await vi.waitFor(() => expect(button().getAttribute("aria-pressed")).toBe("true"));
+    expect(button().querySelector("mask")).not.toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("shows a tooltip on the todo and timer buttons", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-button']")).not.toBeNull(),
+    );
+
+    root
+      .querySelector("[data-testid='zen-todo-button']")!
+      .dispatchEvent(new MouseEvent("mouseenter"));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[role='tooltip']")?.textContent).toBe("Mark as todo"),
+    );
+    root
+      .querySelector("[data-testid='zen-todo-button']")!
+      .dispatchEvent(new MouseEvent("mouseleave"));
+    await vi.waitFor(() => expect(root.querySelector("[role='tooltip']")).toBeNull());
+
+    root
+      .querySelector("[data-testid='zen-timer-button']")!
+      .dispatchEvent(new MouseEvent("mouseenter"));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[role='tooltip']")?.textContent).toBe("Open timer controls"),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("gives issue entries todo and timer buttons", async () => {
+    const forgeTabs = [
+      { ...tabs[0], title: "Fix search", url: "https://github.com/acme/project/issues/42" },
+    ];
+    const { root, sendMessage } = mountSearchApp(vi.fn(), forgeTabs, "overlay");
+
+    const issue = () => root.querySelector("[data-testid='zen-issue-entry']");
+    await vi.waitFor(() => expect(issue()).toBeTruthy());
+    expect(issue()!.querySelector("[data-testid='zen-timer-button']")).not.toBeNull();
+
+    issue()!.querySelector<HTMLButtonElement>("[data-testid='zen-todo-button']")!.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "setTodo", tabId: 1, status: "todo" }),
+    );
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-column']")?.textContent).toContain(
+        "Fix search",
+      ),
+    );
+
+    issue()!.querySelector<HTMLButtonElement>("[data-testid='zen-timer-button']")!.click();
+    await vi.waitFor(() => expect(issue()!.querySelector("form")).not.toBeNull());
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "switchTab" }));
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("sets a todo's traffic light from its dropdown, which tints the row", async () => {
+    const { root, sendMessage } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [{ tabId: 2, status: "todo" }],
+    );
+    const lightButton = () =>
+      root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-light-button']");
+    const menu = () => root.querySelector("[data-testid='zen-traffic-light-menu']");
+    const row = () => root.querySelector("[data-testid='zen-todo-column'] [data-todo-light]");
+
+    await vi.waitFor(() => expect(lightButton()).not.toBeNull());
+    expect(row()).toBeNull();
+
+    lightButton()!.click();
+    await vi.waitFor(() => expect(menu()).not.toBeNull());
+    expect(lightButton()!.getAttribute("aria-expanded")).toBe("true");
+    expect(
+      [...menu()!.querySelectorAll("[role='menuitemradio']")].map((item) => item.textContent),
+    ).toEqual(["Red", "Orange", "Green"]);
+
+    menu()!.querySelector<HTMLButtonElement>("[data-traffic-light='orange']")!.click();
+    await vi.waitFor(() => expect(menu()).toBeNull());
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: "setTodo",
+      tabId: 2,
+      status: "todo",
+      light: "orange",
+    });
+    await vi.waitFor(() => expect(row()?.getAttribute("data-todo-light")).toBe("orange"));
+    expect(row()!.className).toContain("bg-orange-500/15");
+
+    // Clearing it from the same dropdown removes the tint.
+    lightButton()!.click();
+    await vi.waitFor(() => expect(menu()).not.toBeNull());
+    menu()!.querySelector<HTMLButtonElement>("[data-traffic-light='none']")!.click();
+    await vi.waitFor(() => expect(row()).toBeNull());
+    expect(sendMessage).toHaveBeenCalledWith({
+      type: "setTodo",
+      tabId: 2,
+      status: "todo",
+      light: "none",
+    });
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("closes the traffic-light dropdown when its button is clicked again", async () => {
+    const { root } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [{ tabId: 2, status: "todo", light: "red" }],
+    );
+    const lightButton = () =>
+      root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-light-button']")!;
+    const menu = () => root.querySelector("[data-testid='zen-traffic-light-menu']");
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-todo-light='red']")?.className).toContain("bg-red-500/15"),
+    );
+    lightButton().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    lightButton().click();
+    await vi.waitFor(() => expect(menu()).not.toBeNull());
+    expect(menu()!.querySelector("[data-traffic-light='red']")!.getAttribute("aria-checked")).toBe(
+      "true",
+    );
+
+    lightButton().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    lightButton().click();
+    await vi.waitFor(() => expect(menu()).toBeNull());
 
     render(null, root);
     root.remove();

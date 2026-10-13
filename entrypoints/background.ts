@@ -162,8 +162,8 @@ export default defineBackground(() => {
       }
       notify();
     },
-    setTodo: async (tabId, status) => {
-      await todoService.setTodo(tabId, status);
+    setTodo: async (tabId, status, light) => {
+      await todoService.setTodo(tabId, status, light);
       notify();
     },
     isAllowedTimerEnd: (endAt) => isAllowedTimerEnd(endAt),

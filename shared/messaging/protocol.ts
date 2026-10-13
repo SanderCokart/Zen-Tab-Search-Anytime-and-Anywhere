@@ -45,10 +45,14 @@ export const tabTimerSchema = v.object({
 
 export const TODO_STATUSES = ["todo"] as const;
 
+/** The traffic-light colors a todo can be marked with. */
+export const TRAFFIC_LIGHTS = ["red", "orange", "green"] as const;
+
 /** A tab the user marked as a todo. Marking it done removes the entry. */
 export const tabTodoSchema = v.object({
   tabId: tabIdSchema,
   status: v.picklist(TODO_STATUSES),
+  light: v.optional(v.picklist(TRAFFIC_LIGHTS)),
 });
 
 export const forgePageInfoSchema = v.object({
@@ -125,6 +129,8 @@ export const extensionRequestSchema = v.variant("type", [
     tabId: tabIdSchema,
     /** "none" removes the tab from the todo list, which is what marking it done means. */
     status: v.picklist([...TODO_STATUSES, "none"]),
+    /** Sets the todo's traffic light; "none" clears it and leaving it out keeps the current one. */
+    light: v.optional(v.picklist([...TRAFFIC_LIGHTS, "none"])),
   }),
 ]);
 
@@ -184,6 +190,7 @@ export type TabTimer = v.InferOutput<typeof tabTimerSchema>;
 export type SpaceInfo = v.InferOutput<typeof spaceInfoSchema>;
 export type TabTodo = v.InferOutput<typeof tabTodoSchema>;
 export type TodoStatus = (typeof TODO_STATUSES)[number];
+export type TrafficLight = (typeof TRAFFIC_LIGHTS)[number];
 
 export type ExtensionRequestType = (typeof EXTENSION_REQUEST_TYPES)[number];
 export type ExtensionRequest = v.InferOutput<typeof extensionRequestSchema>;

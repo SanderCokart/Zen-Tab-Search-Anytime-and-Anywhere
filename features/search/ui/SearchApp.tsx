@@ -3,6 +3,11 @@ import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
 import type { ForgeIssueSortMode } from "@/features/search/model/ranking";
 import { collectTodoTabs } from "@/features/todos/model/todo";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
+import {
+  TRAFFIC_LIGHT_MENU_SELECTOR,
+  TRAFFIC_LIGHT_TRIGGER_SELECTOR,
+  TrafficLightMenu,
+} from "@/features/todos/ui/TrafficLightMenu";
 import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersPanel";
 import { RenameTabDialog } from "@/features/search/ui/components/RenameTabDialog";
 import { SearchInput } from "@/features/search/ui/components/SearchInput";
@@ -52,6 +57,8 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     null,
   );
 
+  const [lightMenu, setLightMenu] = useState<{ tabId: number; x: number; y: number } | null>(null);
+
   const { tabs, spaces, timers, todos, loadError, setTabs, setTimers, setTodos } =
     useSearchSnapshot();
   const displaySettings = useDisplaySettings();
@@ -84,9 +91,26 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     setContextMenu(null),
   );
 
+  useCloseOnOutsideClick(
+    lightMenu !== null,
+    `${TRAFFIC_LIGHT_MENU_SELECTOR}, ${TRAFFIC_LIGHT_TRIGGER_SELECTOR}`,
+    () => setLightMenu(null),
+  );
+
   const openContextMenu = useCallback((tab: TabInfo, event: MouseEvent) => {
     event.preventDefault();
+    setLightMenu(null);
     setContextMenu({ tab, x: event.clientX, y: event.clientY });
+  }, []);
+
+  const toggleLightMenu = useCallback((tab: TabInfo, anchor: DOMRect) => {
+    const tabId = tabBrowserId(tab);
+    setContextMenu(null);
+    setLightMenu((current) =>
+      tabId === undefined || current?.tabId === tabId
+        ? null
+        : { tabId, x: anchor.left, y: anchor.bottom + 4 },
+    );
   }, []);
 
   const activateTab = useCallback(
@@ -282,11 +306,21 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               navigation.setSelectedForgeIndex(0);
             }}
             onContextMenu={openContextMenu}
+            timers={timers}
+            todos={todos}
+            timerTabId={timerTabId}
+            onToggleTodo={onToggleTodo}
+            onToggleTimerForm={onToggleTimerForm}
+            onOpenTimerPopup={timerActions.openTimerPopup}
+            onSetTimer={timerActions.setTimer}
+            onClearTimer={timerActions.clearTimer}
           />
         )}
         {layout === "overlay" && todoTabs.length > 0 && (
           <TodoNavigator
             tabs={todoTabs}
+            todos={todos}
+            lightMenuTabId={lightMenu?.tabId ?? null}
             backgroundColor={displaySettings.issueBackgroundColor}
             truncate={displaySettings.truncateIssueTitles}
             selectedIndex={navigation.activePane === "todos" ? navigation.selectedTodoIndex : -1}
@@ -298,10 +332,23 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
                 todoActions.setTodo(tabId, "none");
               }
             }}
+            onOpenLightMenu={toggleLightMenu}
             onContextMenu={openContextMenu}
           />
         )}
       </div>
+
+      {lightMenu && todos.has(lightMenu.tabId) && (
+        <TrafficLightMenu
+          x={lightMenu.x}
+          y={lightMenu.y}
+          light={todos.get(lightMenu.tabId)?.light}
+          onSelect={(light) => {
+            setLightMenu(null);
+            todoActions.setTodo(lightMenu.tabId, "todo", light);
+          }}
+        />
+      )}
 
       {contextMenu && (
         <TabContextMenu

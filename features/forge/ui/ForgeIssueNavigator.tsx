@@ -6,11 +6,14 @@ import {
   type ForgeIssueSortMode,
 } from "@/features/search/model/ranking";
 import { forgeTitleIncludesRefId } from "@/features/forge/model/forge-label";
+import { TabActions } from "@/features/search/ui/components/TabActions";
 import { formatForgeEntryDate } from "@/features/search/ui/lib/format";
 import { entryTextClass, projectBorderColors } from "@/features/search/ui/lib/styles";
 import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import { formatForgeKind, formatForgePlatform } from "@/features/forge/model/forge-label";
-import type { TabInfo } from "@/shared/types";
+import { TimerCountdown } from "@/features/timers/ui/TimerCountdown";
+import { TimerForm } from "@/features/timers/ui/TimerForm";
+import { tabBrowserId, type TabInfo, type TabTimer, type TabTodo } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
 export function ForgeIssueNavigator({
@@ -23,6 +26,14 @@ export function ForgeIssueNavigator({
   onSelect,
   onToggleSort,
   onContextMenu,
+  timers,
+  todos,
+  timerTabId,
+  onToggleTodo,
+  onToggleTimerForm,
+  onOpenTimerPopup,
+  onSetTimer,
+  onClearTimer,
 }: {
   entries: ForgeIssueEntry[];
   backgroundColor: string;
@@ -34,6 +45,15 @@ export function ForgeIssueNavigator({
   onToggleSort: () => void;
   /** Right-click on an entry opens the context menu for its tab. */
   onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
+  timers: Map<number, TabTimer>;
+  todos: Map<number, TabTodo>;
+  /** The tab whose timer form is open, if any. */
+  timerTabId: number | null;
+  onToggleTodo: (tabId: number) => void;
+  onToggleTimerForm: (tabId: number) => void;
+  onOpenTimerPopup: (tabId: number) => void;
+  onSetTimer: (tabId: number, endAt: number) => void;
+  onClearTimer: (tabId: number) => void;
 }) {
   const providers = useMemo(() => groupForgeIssueEntries(entries, sortMode), [entries, sortMode]);
   // Index once instead of an indexOf scan per rendered row.
@@ -49,55 +69,86 @@ export function ForgeIssueNavigator({
     <div class="flex min-w-0 flex-col gap-[var(--zen-issue-gap)]">
       {groupEntries.map((entry) => {
         const entryIndex = entryIndices.get(entry) ?? -1;
+        const selected = selectedIndex === entryIndex;
+        const tabId = tabBrowserId(entry.tab);
+        const timer = timers.get(tabId ?? -1);
+        const timerOpen = tabId !== undefined && timerTabId === tabId;
+        const entryDate = formatForgeEntryDate(entry);
+        const tabTitle = `${entry.tab.customLabel || ""} ${entry.tab.title || ""}`;
+        const showRef = !forgeTitleIncludesRefId(tabTitle, entry.ref.id);
         return (
-          <button
+          <div
             key={`${entry.ref.url}:${entry.tab.id ?? entry.tab.domId ?? entry.title}`}
-            type="button"
             class={cn(
-              "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 cursor-pointer flex-col items-stretch overflow-hidden rounded-[var(--zen-radius)] border-0 bg-transparent p-[var(--zen-space-2)] text-left font-[inherit] text-inherit",
-              selectedIndex === entryIndex && "bg-zen-line-soft",
+              "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 flex-col overflow-hidden rounded-[var(--zen-radius)]",
+              selected && "bg-zen-line-soft",
             )}
-            data-issue-selected={selectedIndex === entryIndex ? "true" : undefined}
+            data-testid="zen-issue-entry"
+            data-issue-selected={selected ? "true" : undefined}
             ref={(element) => {
-              if (selectedIndex === entryIndex) {
+              if (selected) {
                 element?.scrollIntoView({ block: "nearest", inline: "nearest" });
               }
             }}
-            onClick={() => onActivate(entry)}
-            onFocus={() => onSelect(entryIndex)}
             onContextMenu={(event) => onContextMenu(entry.tab, event)}
-            title={entry.ref.url}
           >
-            <span
-              class={cn(
-                "block min-w-0 text-[length:var(--zen-text-base)]",
-                entryTextClass(truncate),
-              )}
-            >
-              {forgeEntryDisplayTitle(entry)}
-            </span>
-            {(() => {
-              const entryDate = formatForgeEntryDate(entry);
-              const tabTitle = `${entry.tab.customLabel || ""} ${entry.tab.title || ""}`;
-              const showRef = !forgeTitleIncludesRefId(tabTitle, entry.ref.id);
-              if (!showRef && !entryDate) {
-                return null;
-              }
-              return (
+            <div class="flex min-w-0 items-end">
+              <button
+                type="button"
+                class="flex min-w-0 flex-1 cursor-pointer flex-col items-stretch overflow-hidden border-0 bg-transparent p-[var(--zen-space-2)] text-left font-[inherit] text-inherit"
+                onClick={() => onActivate(entry)}
+                onFocus={() => onSelect(entryIndex)}
+                title={entry.ref.url}
+              >
                 <span
                   class={cn(
-                    "text-zen-subtle block min-w-0 text-[length:var(--zen-text-sm)]",
+                    "block min-w-0 text-[length:var(--zen-text-base)]",
                     entryTextClass(truncate),
                   )}
-                  title={entryDate ? `${entryDate.label}: ${entryDate.absolute}` : undefined}
                 >
-                  {showRef ? `${formatForgeKind(entry.ref.kind)} #${entry.ref.id}` : ""}
-                  {showRef && entryDate ? " · " : ""}
-                  {entryDate ? `${entryDate.label}: ${entryDate.relative}` : ""}
+                  {forgeEntryDisplayTitle(entry)}
                 </span>
-              );
-            })()}
-          </button>
+                {(showRef || entryDate) && (
+                  <span
+                    class={cn(
+                      "text-zen-subtle block min-w-0 text-[length:var(--zen-text-sm)]",
+                      entryTextClass(truncate),
+                    )}
+                    title={entryDate ? `${entryDate.label}: ${entryDate.absolute}` : undefined}
+                  >
+                    {showRef ? `${formatForgeKind(entry.ref.kind)} #${entry.ref.id}` : ""}
+                    {showRef && entryDate ? " · " : ""}
+                    {entryDate ? `${entryDate.label}: ${entryDate.relative}` : ""}
+                  </span>
+                )}
+              </button>
+              <span class="text-zen-subtle flex shrink-0 items-center gap-[var(--zen-space-2)] p-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]">
+                {timer && (
+                  <span class="text-zen-lavender text-[length:var(--zen-text-xs)]">
+                    <TimerCountdown endAt={timer.endAt} />
+                  </span>
+                )}
+                <TabActions
+                  tab={entry.tab}
+                  timer={timer}
+                  timerOpen={timerOpen}
+                  isTodo={todos.has(tabId ?? -1)}
+                  onToggleTodo={onToggleTodo}
+                  onToggleTimer={onToggleTimerForm}
+                  onOpenTimerPopup={onOpenTimerPopup}
+                />
+              </span>
+            </div>
+            {timerOpen && tabId !== undefined && (
+              <div class="px-[var(--zen-space-2)] pb-[var(--zen-space-2)]">
+                <TimerForm
+                  timer={timer}
+                  onSet={(endAt) => onSetTimer(tabId, endAt)}
+                  onClear={() => onClearTimer(tabId)}
+                />
+              </div>
+            )}
+          </div>
         );
       })}
     </div>

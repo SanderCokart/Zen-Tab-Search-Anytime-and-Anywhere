@@ -6,24 +6,22 @@ import {
   type SpaceInfo,
   type TabInfo,
   type TabTimer,
-  type TodoStatus,
+  type TabTodo,
 } from "@/shared/types";
-import { todoStatusByTabId } from "@/features/todos/model/todo";
+import { todosByTabId } from "@/features/todos/model/todo";
 
 export interface SearchSnapshotState {
   tabs: TabInfo[];
   spaces: SpaceInfo[];
   timers: Map<number, TabTimer>;
-  todos: Map<number, TodoStatus>;
+  todos: Map<number, TabTodo>;
   loadError: string | null;
   setTabs: (update: (current: TabInfo[]) => TabInfo[]) => void;
   setTimers: (
     update: Map<number, TabTimer> | ((current: Map<number, TabTimer>) => Map<number, TabTimer>),
   ) => void;
   setTodos: (
-    update:
-      | Map<number, TodoStatus>
-      | ((current: Map<number, TodoStatus>) => Map<number, TodoStatus>),
+    update: Map<number, TabTodo> | ((current: Map<number, TabTodo>) => Map<number, TabTodo>),
   ) => void;
 }
 
@@ -76,7 +74,7 @@ export function useSearchSnapshot(): SearchSnapshotState {
   const [tabs, setTabs] = useState<TabInfo[]>([]);
   const [spaces, setSpaces] = useState<SpaceInfo[]>([]);
   const [timers, setTimers] = useState<Map<number, TabTimer>>(new Map());
-  const [todos, setTodos] = useState<Map<number, TodoStatus>>(new Map());
+  const [todos, setTodos] = useState<Map<number, TabTodo>>(new Map());
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -104,7 +102,7 @@ export function useSearchSnapshot(): SearchSnapshotState {
             sameSpaces(current, snapshot.spaces) ? current : snapshot.spaces,
           );
           setTimers(new Map(snapshot.timers.map((item) => [item.tabId, item])));
-          setTodos(todoStatusByTabId(snapshot.todos));
+          setTodos(todosByTabId(snapshot.todos));
           setLoadError(null);
         })
         .catch((error) => {

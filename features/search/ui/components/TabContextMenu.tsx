@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useRef } from "preact/hooks";
+import { useClampedPosition } from "@/features/search/ui/hooks/useClampedPosition";
 import { TimerIcon } from "@/features/search/ui/components/TimerIcon";
 import { canRenameTab, tabBrowserId, isEssentialTab, type TabInfo } from "@/shared/types";
 
@@ -34,14 +35,7 @@ export function TabContextMenu({
   const canTodo = tabId !== undefined && !isEssentialTab(tab);
 
   const menuRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState({ left: x, top: y });
-  useLayoutEffect(() => {
-    const rect = menuRef.current?.getBoundingClientRect();
-    setPosition({
-      left: Math.max(0, Math.min(x, window.innerWidth - (rect?.width ?? 0))),
-      top: Math.max(0, Math.min(y, window.innerHeight - (rect?.height ?? 0))),
-    });
-  }, [x, y]);
+  const position = useClampedPosition(menuRef, x, y);
 
   return (
     <div
