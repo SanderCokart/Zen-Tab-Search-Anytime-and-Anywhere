@@ -465,7 +465,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   tool(
     "zen_list_todos",
-    "List tabs marked as todo or done, with the tab, its title and where it sits. Open todos come first, then done. Tabs with no mark are omitted.",
+    "List tabs marked as todo, in tab order, with the tab, its title and where it sits.",
     {},
     readOnly,
     () => ({ type: "listTodos" }),
@@ -473,18 +473,15 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   tool(
     "zen_set_todo",
-    'Mark a tab as todo or done, the same statuses the extension\'s todo column uses. Replaces any mark the tab already has. Example: { "tabId": 118, "status": "todo" }.',
-    {
-      tabId,
-      status: z.enum(["todo", "done"]).describe('"todo" or "done"'),
-    },
+    'Mark a tab as todo, so it shows in the extension\'s todo column. Example: { "tabId": 118 }.',
+    { tabId },
     idempotentWrites,
-    (input) => ({ type: "setTodo", tabId: input.tabId, status: input.status }),
+    (input) => ({ type: "setTodo", tabId: input.tabId, status: "todo" }),
   );
 
   tool(
     "zen_clear_todo",
-    "Remove the todo mark from a tab. Reports cleared: false when the tab had no mark.",
+    "Mark a tab's todo as done, which removes it from the todo list. Reports cleared: false when the tab was not a todo.",
     { tabId },
     idempotentWrites,
     (input) => ({ type: "clearTodo", tabId: input.tabId }),

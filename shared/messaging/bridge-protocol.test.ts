@@ -51,18 +51,20 @@ describe("todo commands", () => {
       type: "listTodos",
     });
     expect(
-      parseBridgeRequest({ id: "1", command: { type: "setTodo", tabId: 4, status: "done" } })
+      parseBridgeRequest({ id: "1", command: { type: "setTodo", tabId: 4, status: "todo" } })
         ?.command,
-    ).toEqual({ type: "setTodo", tabId: 4, status: "done" });
-    expect(parseBridgeRequest({ id: "1", command: { type: "clearTodo", tabId: 4 } })?.command).toEqual(
-      { type: "clearTodo", tabId: 4 },
-    );
+    ).toEqual({ type: "setTodo", tabId: 4, status: "todo" });
+    expect(
+      parseBridgeRequest({ id: "1", command: { type: "clearTodo", tabId: 4 } })?.command,
+    ).toEqual({ type: "clearTodo", tabId: 4 });
   });
 
-  it("rejects an unknown todo status", () => {
-    expect(
-      parseBridgeRequest({ id: "1", command: { type: "setTodo", tabId: 4, status: "none" } }),
-    ).toBeUndefined();
+  it("rejects any status but todo, since done means cleared", () => {
+    for (const status of ["none", "done"]) {
+      expect(
+        parseBridgeRequest({ id: "1", command: { type: "setTodo", tabId: 4, status } }),
+      ).toBeUndefined();
+    }
   });
 });
 

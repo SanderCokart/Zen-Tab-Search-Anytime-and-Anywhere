@@ -1,13 +1,14 @@
-import type { TodoStatus } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
-/** An empty box for a tab with no todo, a box with a tick once it is done. */
-export function TodoIcon({ status, class: className }: { status?: TodoStatus; class?: string }) {
+/** A task list: two ticked boxes beside two lines. */
+export function TodoIcon({ class: className }: { class?: string }) {
   return (
     <svg class={cn("zen-icon", className)} viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="4" y="4" width="16" height="16" rx="3" />
-      {status === "done" && <path d="M8 12l3 3 5-6" />}
-      {status === "todo" && <path d="M8 12h8" />}
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <path d="M5 6.5l1.5 1.5 2-2.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <path d="M5 17.5l1.5 1.5 2-2.5" />
+      <path d="M14 6.5h7M14 17.5h7" />
     </svg>
   );
 }

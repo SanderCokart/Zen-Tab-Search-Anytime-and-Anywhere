@@ -1,7 +1,7 @@
 import { useMemo, useState } from "preact/hooks";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
 import type { ForgeIssueSortMode } from "@/features/search/model/ranking";
-import { groupTodoTabs } from "@/features/todos/model/todo";
+import { collectTodoTabs } from "@/features/todos/model/todo";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
 import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersPanel";
 import { RenameTabDialog } from "@/features/search/ui/components/RenameTabDialog";
@@ -23,13 +23,7 @@ import { primaryButtonClass } from "@/features/search/ui/lib/styles";
 import type { SearchLayout } from "@/features/search/ui/types";
 import { debugError } from "@/shared/debug";
 import { sendExtensionMessage } from "@/shared/messaging/client";
-import {
-  isActivatableTab,
-  tabBrowserId,
-  type SearchItem,
-  type TabInfo,
-  type TodoStatus,
-} from "@/shared/types";
+import { isActivatableTab, tabBrowserId, type SearchItem, type TabInfo } from "@/shared/types";
 import { type ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import { cn } from "@/shared/ui/cn";
 
@@ -57,8 +51,6 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     item: Extract<SearchItem, { kind: "tab" }>;
     x: number;
     y: number;
-    /** "todo" when opened from the todo button, which shows only the todo options. */
-    scope: "all" | "todo";
   } | null>(null);
 
   const { tabs, spaces, timers, todos, loadError, setTabs, setTimers, setTodos } =
@@ -83,13 +75,9 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
 
   const rename = useTabRename({ essentialNames, setEssentialNames, setTabs });
   const todoActions = useTodoActions({ setTodos });
-  const todoColumn = useMemo(
-    () => groupTodoTabs(results.labeledTabs, todos),
-    [results.labeledTabs, todos],
-  );
   const todoTabs = useMemo(
-    () => [...todoColumn.todo, ...todoColumn.done].map((entry) => entry.tab),
-    [todoColumn],
+    () => collectTodoTabs(results.labeledTabs, todos),
+    [results.labeledTabs, todos],
   );
 
   useCloseOnOutsideClick(contextMenu !== null, "[data-testid='zen-tab-context-menu']", () =>
@@ -123,9 +111,11 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     activateTab(tabBrowserId(tab), tab.domId, "todo tab");
   };
 
-  // The overlay is three columns (tabs, issues, todos) when issue detection is
-  // on, and two (tabs, todos) when it is off. The popup has no columns.
-  const overlayAspect = displaySettings.detectForgeIssues ? "2/1" : "3/2";
+  // The overlay gains an issue column when issue detection is on and a todo
+  // column while any tab is marked as todo. The popup has no columns.
+  const overlayColumns =
+    1 + (displaySettings.detectForgeIssues ? 1 : 0) + (todoTabs.length > 0 ? 1 : 0);
+  const overlayAspect = overlayColumns === 3 ? "2/1" : overlayColumns === 2 ? "3/2" : "1/1";
 
   const navigation = useSearchNavigation({
     layout,
@@ -240,14 +230,12 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               onActivate={activateItem}
               onContextMenu={(item, x, y) => {
                 if (item.kind === "tab") {
-                  setContextMenu({ item, x, y, scope: "all" });
+                  setContextMenu({ item, x, y });
                 }
               }}
-              onTodoMenu={(item, x, y) => {
-                if (item.kind === "tab") {
-                  setContextMenu({ item, x, y, scope: "todo" });
-                }
-              }}
+              onToggleTodo={(tabId) =>
+                todoActions.setTodo(tabId, todos.has(tabId) ? "none" : "todo")
+              }
               onToggleTimerForm={(tabId) => setTimerTabId(timerTabId === tabId ? null : tabId)}
               onOpenTimerPopup={timerActions.openTimerPopup}
               onSetTimer={timerActions.setTimer}
@@ -271,9 +259,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             backgroundColor={displaySettings.issueBackgroundColor}
             truncate={displaySettings.truncateIssueTitles}
             sortMode={forgeSortMode}
-            selectedIndex={
-              navigation.activePane === "forge" ? navigation.selectedForgeIndex : -1
-            }
+            selectedIndex={navigation.activePane === "forge" ? navigation.selectedForgeIndex : -1}
             onActivate={activateForgeEntry}
             onSelect={navigation.setSelectedForgeIndex}
             onToggleSort={() => {
@@ -282,15 +268,12 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             }}
           />
         )}
-        {layout === "overlay" && (
+        {layout === "overlay" && todoTabs.length > 0 && (
           <TodoNavigator
-            todo={todoColumn.todo}
-            done={todoColumn.done}
+            tabs={todoTabs}
             backgroundColor={displaySettings.issueBackgroundColor}
             truncate={displaySettings.truncateIssueTitles}
-            selectedIndex={
-              navigation.activePane === "todos" ? navigation.selectedTodoIndex : -1
-            }
+            selectedIndex={navigation.activePane === "todos" ? navigation.selectedTodoIndex : -1}
             onActivate={activateTodoTab}
             onSelect={navigation.setSelectedTodoIndex}
           />
@@ -302,8 +285,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           tab={contextMenu.item.data}
           x={contextMenu.x}
           y={contextMenu.y}
-          scope={contextMenu.scope}
-          todoStatus={todos.get(tabBrowserId(contextMenu.item.data) ?? -1)}
+          isTodo={todos.has(tabBrowserId(contextMenu.item.data) ?? -1)}
           onRename={() => {
             rename.open(contextMenu.item.data, stripTimerPrefixFromTab(contextMenu.item.data));
             setContextMenu(null);
@@ -312,7 +294,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             setContextMenu(null);
             timerActions.openTimerPopup(tabId);
           }}
-          onSetTodo={(status: TodoStatus | "none") => {
+          onSetTodo={(status) => {
             const tabId = tabBrowserId(contextMenu.item.data);
             setContextMenu(null);
             if (tabId !== undefined) {

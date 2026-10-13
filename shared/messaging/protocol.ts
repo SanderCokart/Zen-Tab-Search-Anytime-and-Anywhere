@@ -43,9 +43,9 @@ export const tabTimerSchema = v.object({
   title: v.fallback(v.string(), ""),
 });
 
-export const TODO_STATUSES = ["todo", "done"] as const;
+export const TODO_STATUSES = ["todo"] as const;
 
-/** A tab the user marked as a todo, or as done. Tabs with neither have no entry. */
+/** A tab the user marked as a todo. Marking it done removes the entry. */
 export const tabTodoSchema = v.object({
   tabId: tabIdSchema,
   status: v.picklist(TODO_STATUSES),
@@ -123,7 +123,7 @@ export const extensionRequestSchema = v.variant("type", [
   v.object({
     type: v.literal("setTodo"),
     tabId: tabIdSchema,
-    /** "none" removes the tab from the todo list. */
+    /** "none" removes the tab from the todo list, which is what marking it done means. */
     status: v.picklist([...TODO_STATUSES, "none"]),
   }),
 ]);

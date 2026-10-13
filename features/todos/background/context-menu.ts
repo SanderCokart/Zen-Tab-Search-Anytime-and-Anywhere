@@ -7,11 +7,10 @@ type ContextMenuContext = NonNullable<
 >[number];
 const TAB_CONTEXT = "tab" as unknown as ContextMenuContext;
 
-/** Menu item ID to the status it sets. "none" removes the todo. */
+/** Menu item ID to the status it sets. Marking a todo done removes it. */
 const TODO_MENU_ACTIONS: Record<string, TodoStatus | "none"> = {
   "tab-todo-mark-todo": "todo",
-  "tab-todo-mark-done": "done",
-  "tab-todo-clear": "none",
+  "tab-todo-mark-done": "none",
 };
 
 /**
@@ -27,7 +26,6 @@ export function createTodoContextMenuItems(): void {
   for (const [id, title] of [
     ["tab-todo-mark-todo", "Mark as todo"],
     ["tab-todo-mark-done", "Mark as done"],
-    ["tab-todo-clear", "Remove todo"],
   ]) {
     browser.contextMenus.create({
       id,

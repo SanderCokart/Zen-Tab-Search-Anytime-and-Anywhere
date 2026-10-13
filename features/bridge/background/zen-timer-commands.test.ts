@@ -174,9 +174,9 @@ describe("bridge todo commands", () => {
     { id: 3, title: "Notes", url: "https://notes.example/", favIconUrl: "", windowId: 1 },
   ];
 
-  it("lists open todos first, then done, with the tab's title and location", async () => {
+  it("lists todos in tab order with the tab's title and location", async () => {
     const marked: TabTodo[] = [
-      { tabId: 2, status: "done" },
+      { tabId: 2, status: "todo" },
       { tabId: 1, status: "todo" },
     ];
     const handle = createBridgeCommandHandler(
@@ -185,8 +185,7 @@ describe("bridge todo commands", () => {
     );
 
     await expect(handle({ type: "listTodos" })).resolves.toEqual({
-      todoCount: 1,
-      doneCount: 1,
+      todoCount: 2,
       todo: [
         expect.objectContaining({
           tabId: 1,
@@ -194,11 +193,9 @@ describe("bridge todo commands", () => {
           title: "Docs",
           url: "https://example.com/docs",
         }),
-      ],
-      done: [
         expect.objectContaining({
           tabId: 2,
-          status: "done",
+          status: "todo",
           title: "Mail",
           label: "Inbox",
           spaceName: "Work",

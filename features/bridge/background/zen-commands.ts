@@ -2,7 +2,13 @@ import type { WorkspaceAdapter } from "@/features/zen/adapter";
 import type { ForgeDetection } from "@/features/forge/background/label-command";
 import { isAllowedTimerEnd, parseTimerInput } from "@/features/timers/model/timer";
 import type { BridgeCommand, TabSummary } from "@/shared/messaging/bridge-protocol";
-import { isUsableTabId, type TabInfo, type TabTimer, type TabTodo, type TodoStatus } from "@/shared/types";
+import {
+  isUsableTabId,
+  type TabInfo,
+  type TabTimer,
+  type TabTodo,
+  type TodoStatus,
+} from "@/shared/types";
 
 export type BridgeWorkspace = Pick<
   WorkspaceAdapter,
@@ -245,18 +251,14 @@ export function createBridgeCommandHandler(
           tabs.flatMap((tab) => (isUsableTabId(tab.id) ? [[tab.id, tab] as const] : [])),
         );
         const marked = await services.todos.getTodos([...byId.keys()]);
-        const statusById = new Map(marked.map((todo) => [todo.tabId, todo.status]));
+        const todoIds = new Set(marked.map((todo) => todo.tabId));
         const todo = [];
-        const done = [];
         for (const [tabId, tab] of byId) {
-          const status = statusById.get(tabId);
-          if (status === "todo") {
-            todo.push(todoView({ tabId, status }, tab));
-          } else if (status === "done") {
-            done.push(todoView({ tabId, status }, tab));
+          if (todoIds.has(tabId)) {
+            todo.push(todoView({ tabId, status: "todo" }, tab));
           }
         }
-        return { todoCount: todo.length, doneCount: done.length, todo, done };
+        return { todoCount: todo.length, todo };
       }
 
       case "setTodo": {

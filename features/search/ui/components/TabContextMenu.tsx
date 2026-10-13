@@ -1,35 +1,31 @@
 import { TimerIcon } from "@/features/search/ui/components/TimerIcon";
-import type { TodoStatus } from "@/shared/types";
 import { canRenameTab, tabBrowserId, isEssentialTab, type TabInfo } from "@/shared/types";
 
 export interface TabContextMenuProps {
   tab: TabInfo;
   x: number;
   y: number;
-  /** "todo" shows only the todo options, for the todo button. */
-  scope?: "all" | "todo";
-  todoStatus?: TodoStatus;
+  isTodo: boolean;
   onRename: () => void;
   onOpenTimer: (tabId: number) => void;
-  onSetTodo: (status: TodoStatus | "none") => void;
+  /** "none" marks the todo done, which removes it. */
+  onSetTodo: (status: "todo" | "none") => void;
 }
 
 const itemClass =
   "hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] px-[var(--zen-space-3)] py-[var(--zen-space-2)] text-left font-[inherit] text-[length:var(--zen-text-md)]";
 
-/** Menu for a tab row: from the right-click, or from the todo button. */
+/** Right-click menu for a tab row. */
 export function TabContextMenu({
   tab,
   x,
   y,
-  scope = "all",
-  todoStatus,
+  isTodo,
   onRename,
   onOpenTimer,
   onSetTodo,
 }: TabContextMenuProps) {
   const tabId = tabBrowserId(tab);
-  const showGeneral = scope === "all";
   const canTodo = tabId !== undefined && !isEssentialTab(tab);
 
   return (
@@ -40,13 +36,13 @@ export function TabContextMenu({
       role="menu"
       onPointerDown={(event) => event.stopPropagation()}
     >
-      {showGeneral && canRenameTab(tab) && (
+      {canRenameTab(tab) && (
         <button type="button" class={itemClass} role="menuitem" onClick={onRename}>
           <span aria-hidden="true">✎</span>
           Rename
         </button>
       )}
-      {showGeneral && tabId !== undefined && (
+      {tabId !== undefined && (
         <button type="button" class={itemClass} role="menuitem" onClick={() => onOpenTimer(tabId)}>
           <TimerIcon class="size-[var(--zen-icon-md)]" />
           Timer
@@ -54,37 +50,15 @@ export function TabContextMenu({
       )}
       {canTodo && (
         <>
-          {showGeneral && <div class="bg-zen-line-soft my-1 h-px" role="separator" />}
-          {todoStatus !== "todo" && (
-            <button
-              type="button"
-              class={itemClass}
-              role="menuitem"
-              onClick={() => onSetTodo("todo")}
-            >
-              Mark as todo
-            </button>
-          )}
-          {todoStatus !== "done" && (
-            <button
-              type="button"
-              class={itemClass}
-              role="menuitem"
-              onClick={() => onSetTodo("done")}
-            >
-              Mark as done
-            </button>
-          )}
-          {todoStatus && (
-            <button
-              type="button"
-              class={itemClass}
-              role="menuitem"
-              onClick={() => onSetTodo("none")}
-            >
-              Remove todo
-            </button>
-          )}
+          <div class="bg-zen-line-soft my-1 h-px" role="separator" />
+          <button
+            type="button"
+            class={itemClass}
+            role="menuitem"
+            onClick={() => onSetTodo(isTodo ? "none" : "todo")}
+          >
+            {isTodo ? "Mark as done" : "Mark as todo"}
+          </button>
         </>
       )}
     </div>

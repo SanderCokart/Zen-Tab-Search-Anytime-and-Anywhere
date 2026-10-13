@@ -5,7 +5,7 @@ import { TodoIcon } from "@/features/todos/ui/TodoIcon";
 import { hostname } from "@/features/search/ui/lib/format";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { TimerIcon } from "@/features/search/ui/components/TimerIcon";
-import type { TabInfo, TabTimer, TodoStatus } from "@/shared/types";
+import type { TabInfo, TabTimer } from "@/shared/types";
 import { formatTabDisplayTitle, isEssentialTab, tabBrowserId } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
@@ -13,27 +13,27 @@ export function TabSearchRow({
   tab,
   timer,
   timerOpen,
-  todoStatus,
+  isTodo,
   truncate,
   displayTitle,
   onToggleTimer,
   onOpenTimerPopup,
   onSetTimer,
   onClearTimer,
-  onOpenTodoMenu,
+  onToggleTodo,
 }: {
   tab: TabInfo;
   timer?: TabTimer;
   timerOpen: boolean;
-  todoStatus?: TodoStatus;
+  isTodo: boolean;
   truncate: boolean;
   displayTitle?: string;
   onToggleTimer: () => void;
   onOpenTimerPopup: () => void;
   onSetTimer: (endAt: number) => void;
   onClearTimer: () => void;
-  /** Opens the todo menu below the given screen point. */
-  onOpenTodoMenu: (x: number, y: number) => void;
+  /** Marks the tab as todo, or as done (which removes the todo). */
+  onToggleTodo: () => void;
 }) {
   const tabId = tabBrowserId(tab);
   const [tooltipSuppressed, setTooltipSuppressed] = useState(false);
@@ -52,7 +52,6 @@ export function TabSearchRow({
               class={cn(
                 "min-w-0 flex-1 text-[length:var(--zen-text-base)]",
                 entryTextClass(truncate),
-                todoStatus === "done" && "text-zen-subtle line-through",
               )}
             >
               {displayTitle ??
@@ -86,26 +85,20 @@ export function TabSearchRow({
               {canMarkTodo && (
                 <button
                   type="button"
-                  aria-label="Todo actions"
+                  aria-label={isTodo ? "Mark as done" : "Mark as todo"}
+                  aria-pressed={isTodo}
                   data-testid="zen-todo-button"
                   class={cn(
                     "inline-flex cursor-pointer items-center border-0 bg-transparent p-0 hover:text-inherit",
-                    todoStatus ? "text-zen-lavender" : "text-inherit",
+                    isTodo ? "text-zen-lavender" : "text-inherit",
                   )}
-                  title={
-                    todoStatus === "todo"
-                      ? "To do: change todo"
-                      : todoStatus === "done"
-                        ? "Done: change todo"
-                        : "Mark as todo"
-                  }
+                  title={isTodo ? "Mark as done" : "Mark as todo"}
                   onClick={(event) => {
                     event.stopPropagation();
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    onOpenTodoMenu(rect.left, rect.bottom + 4);
+                    onToggleTodo();
                   }}
                 >
-                  <TodoIcon status={todoStatus} class="size-[var(--zen-icon-sm)]" />
+                  <TodoIcon class="size-[var(--zen-icon-sm)]" />
                 </button>
               )}
               {tabId !== undefined && (

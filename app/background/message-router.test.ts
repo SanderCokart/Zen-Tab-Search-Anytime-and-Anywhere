@@ -165,9 +165,9 @@ describe("dispatchExtensionMessage", () => {
     expect(api.setTodo).toHaveBeenNthCalledWith(2, 4, "none");
   });
 
-  it("rejects a setTodo status that is not todo, done or none", () => {
+  it("rejects a setTodo status that is not todo or none", () => {
     const api = handlers();
-    const result = dispatchExtensionMessage(api, { type: "setTodo", tabId: 4, status: "later" });
+    const result = dispatchExtensionMessage(api, { type: "setTodo", tabId: 4, status: "done" });
     expect(result).toEqual({
       handled: true,
       async: false,

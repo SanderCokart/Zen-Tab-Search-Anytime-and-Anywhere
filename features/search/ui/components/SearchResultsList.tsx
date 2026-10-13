@@ -26,7 +26,7 @@ export interface SearchResultsListProps {
   registerOption: (index: number, element: HTMLLIElement | null) => void;
   onActivate: (item: SearchItem) => void;
   onContextMenu: (item: SearchItem, x: number, y: number) => void;
-  onTodoMenu: (item: SearchItem, x: number, y: number) => void;
+  onToggleTodo: (tabId: number) => void;
   onToggleTimerForm: (tabId: number) => void;
   onOpenTimerPopup: (tabId: number) => void;
   onSetTimer: (tabId: number, endAt: number) => void;
@@ -147,7 +147,7 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
     registerOption,
     onActivate,
     onContextMenu,
-    onTodoMenu,
+    onToggleTodo,
     onToggleTimerForm,
     onOpenTimerPopup,
     onSetTimer,
@@ -212,7 +212,7 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
           onOpenTimerPopup={onOpenTimerPopup}
           onSetTimer={onSetTimer}
           onClearTimer={onClearTimer}
-          onOpenTodoMenu={(x, y) => onTodoMenu(item, x, y)}
+          onToggleTodo={onToggleTodo}
         />
       )}
     </li>
@@ -229,7 +229,7 @@ function TabRow({
   onOpenTimerPopup,
   onSetTimer,
   onClearTimer,
-  onOpenTodoMenu,
+  onToggleTodo,
 }: {
   item: Extract<SearchItem, { kind: "tab" }>;
   truncate: boolean;
@@ -240,7 +240,7 @@ function TabRow({
   onOpenTimerPopup: (tabId: number) => void;
   onSetTimer: (tabId: number, endAt: number) => void;
   onClearTimer: (tabId: number) => void;
-  onOpenTodoMenu: (x: number, y: number) => void;
+  onToggleTodo: (tabId: number) => void;
 }) {
   const tabId = tabBrowserId(item.data);
 
@@ -248,8 +248,8 @@ function TabRow({
     <TabSearchRow
       tab={item.data}
       timer={timers.get(tabId ?? -1)}
-      todoStatus={tabId === undefined ? undefined : todos.get(tabId)}
-      onOpenTodoMenu={onOpenTodoMenu}
+      isTodo={tabId !== undefined && todos.has(tabId)}
+      onToggleTodo={() => tabId !== undefined && onToggleTodo(tabId)}
       timerOpen={timerTabId !== null && timerTabId === tabId}
       truncate={truncate}
       displayTitle={
