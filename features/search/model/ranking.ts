@@ -16,22 +16,67 @@ interface FuzzyMatch {
   score: number;
 }
 
-export function fuzzyMatchWithScore(str: string, queryLowerCase: string): FuzzyMatch {
-  const query = normalizeSearchText(queryLowerCase);
-  if (!query) {
+export interface SearchField {
+  normalized: string;
+  tokens: string[];
+  tokenSet: Set<string>;
+}
+
+export interface SearchDocument {
+  item: SearchItem;
+  fields: SearchField[];
+  /** Hostname + path tokens; omitted from 1-character queries. */
+  urlField?: SearchField;
+  /** Label+title, used when neither field matches a multi-word query alone. */
+  combinedField?: SearchField;
+}
+
+const SCHEME_RE = /^https?:\/\//i;
+const WWW_RE = /^www\./i;
+
+export function compileSearchField(value: string): SearchField {
+  const normalized = normalizeSearchText(value);
+  const tokens = normalized ? normalized.split(" ").filter(Boolean) : [];
+  return { normalized, tokens, tokenSet: new Set(tokens) };
+}
+
+export function urlSearchText(url: string): string {
+  return url.replace(SCHEME_RE, "").replace(WWW_RE, "");
+}
+
+export function buildSearchDocuments(items: SearchItem[]): SearchDocument[] {
+  return items.map((item) => {
+    if (item.kind === "space") {
+      return {
+        item,
+        fields: [compileSearchField(item.data.name), compileSearchField(item.data.icon || "")],
+      };
+    }
+
+    const label = compileSearchField(item.data.customLabel || "");
+    const title = compileSearchField(item.data.title || "");
+    return {
+      item,
+      fields: [
+        label,
+        title,
+        compileSearchField(item.data.workspaceName || ""),
+        compileSearchField(item.data.folderName || ""),
+      ],
+      urlField: compileSearchField(urlSearchText(item.data.url || "")),
+      combinedField: compileSearchField(tabNameSearchText(item.data)),
+    };
+  });
+}
+
+function fuzzyMatchPrepared(field: SearchField, query: string, queryWords: string[]): FuzzyMatch {
+  if (!query || !field.normalized) {
     return { matches: false, score: 0 };
   }
 
-  const normalized = normalizeSearchText(str);
-  if (!normalized) {
-    return { matches: false, score: 0 };
-  }
-
-  const queryWords = query.split(" ");
-  const valueWords = normalized.split(" ");
-  const substringIndex = normalized.indexOf(query);
+  const substringIndex = field.normalized.indexOf(query);
   const prefixIndexes = queryWords.map((queryWord) =>
-    valueWords.findIndex((valueWord) => valueWord.startsWith(queryWord)),
+    field.tokens.findIndex((valueWord) => valueWord.startsWith(queryWord)),
   );
   const prefixesInOrder =
     prefixIndexes.every((index) => index >= 0) &&
@@ -44,14 +89,14 @@ export function fuzzyMatchWithScore(str: string, queryLowerCase: string): FuzzyM
   let score = 0;
   if (substringIndex >= 0) {
     score += 1000;
-    if (substringIndex === 0 || normalized[substringIndex - 1] === " ") {
+    if (substringIndex === 0 || field.normalized[substringIndex - 1] === " ") {
       score += 500;
     }
     score += Math.max(0, 100 - substringIndex * 2);
   }
 
   for (const queryWord of queryWords) {
-    for (const valueWord of valueWords) {
+    for (const valueWord of field.tokens) {
       if (valueWord === queryWord) {
         score += 200;
       } else if (valueWord.startsWith(queryWord)) {
@@ -62,8 +107,16 @@ export function fuzzyMatchWithScore(str: string, queryLowerCase: string): FuzzyM
     }
   }
 
-  score += Math.max(0, 200 - normalized.length);
+  score += Math.max(0, 200 - field.normalized.length);
   return { matches: true, score };
+}
+
+export function fuzzyMatchWithScore(str: string, queryLowerCase: string): FuzzyMatch {
+  const query = normalizeSearchText(queryLowerCase);
+  if (!query) {
+    return { matches: false, score: 0 };
+  }
+  return fuzzyMatchPrepared(compileSearchField(str), query, query.split(" ").filter(Boolean));
 }
 
 export function normalizeSearchText(value: string): string {
@@ -78,14 +131,19 @@ export function tokenizeSearchText(value: string): string[] {
   return normalizeSearchText(value).split(" ").filter(Boolean);
 }
 
+export function countExactQueryWordsPrepared(tokenSet: Set<string>, queryWords: string[]): number {
+  if (queryWords.length === 0) {
+    return 0;
+  }
+  return queryWords.filter((word) => tokenSet.has(word)).length;
+}
+
 export function countExactQueryWords(value: string, query: string): number {
   const queryWords = tokenizeSearchText(query);
   if (queryWords.length === 0) {
     return 0;
   }
-
-  const valueWords = new Set(tokenizeSearchText(value));
-  return queryWords.filter((word) => valueWords.has(word)).length;
+  return countExactQueryWordsPrepared(compileSearchField(value).tokenSet, queryWords);
 }
 
 export function hasDirectMatch(value: string, queryLowerCase: string): boolean {
@@ -93,9 +151,8 @@ export function hasDirectMatch(value: string, queryLowerCase: string): boolean {
   if (queryWords.length === 0) {
     return false;
   }
-
-  const valueWords = tokenizeSearchText(value);
-  return queryWords.every((word) => valueWords.includes(word));
+  const tokenSet = compileSearchField(value).tokenSet;
+  return queryWords.every((word) => tokenSet.has(word));
 }
 
 export function forgeEntryDisplayTitle(entry: ForgeIssueEntry): string {
@@ -106,38 +163,46 @@ function tabNameSearchText(tab: TabInfo): string {
   return `${tab.customLabel || ""} ${tab.title || ""}`.trim();
 }
 
-export function searchItemExactWordCount(item: SearchItem, query: string): number {
-  if (item.kind === "space") {
-    return Math.max(
-      countExactQueryWords(item.data.name, query),
-      countExactQueryWords(item.data.icon || "", query),
-    );
+export function maxExactWordCount(fields: SearchField[], queryWords: string[]): number {
+  let best = 0;
+  for (const field of fields) {
+    const count = countExactQueryWordsPrepared(field.tokenSet, queryWords);
+    if (count > best) {
+      best = count;
+    }
   }
+  return best;
+}
 
-  return Math.max(
-    countExactQueryWords(item.data.customLabel || "", query),
-    countExactQueryWords(item.data.title || "", query),
-    countExactQueryWords(tabNameSearchText(item.data), query),
-    countExactQueryWords(item.data.workspaceName || "", query),
-    countExactQueryWords(item.data.folderName || "", query),
-  );
+export function searchDocumentExactWordCount(
+  document: SearchDocument,
+  queryWords: string[],
+): number {
+  const fields = document.combinedField
+    ? [...document.fields, document.combinedField]
+    : document.fields;
+  return maxExactWordCount(fields, queryWords);
+}
+
+export function searchItemExactWordCount(item: SearchItem, query: string): number {
+  const queryWords = tokenizeSearchText(query);
+  const documents = buildSearchDocuments([item]);
+  return documents[0] ? searchDocumentExactWordCount(documents[0], queryWords) : 0;
 }
 
 export function forgeEntryExactWordCount(entry: ForgeIssueEntry, query: string): number {
-  return Math.max(
-    countExactQueryWords(forgeEntryDisplayTitle(entry), query),
-    countExactQueryWords(entry.title, query),
-    countExactQueryWords(entry.tab.title || "", query),
-    countExactQueryWords(entry.tab.customLabel || "", query),
-    countExactQueryWords(tabNameSearchText(entry.tab), query),
-    countExactQueryWords(entry.ref.id, query),
-    countExactQueryWords(`#${entry.ref.id}`, query),
-    countExactQueryWords(`!${entry.ref.id}`, query),
-  );
+  const queryWords = tokenizeSearchText(query);
+  return maxExactWordCount(compileForgeEntryFields(entry), queryWords);
 }
 
-function directMatchBonus(value: string, queryLowerCase: string): number {
-  return hasDirectMatch(value, queryLowerCase) ? 10_000 : 0;
+function fieldScore(field: SearchField, query: string, queryWords: string[]): number {
+  const match = fuzzyMatchPrepared(field, query, queryWords);
+  if (!match.matches) {
+    return Number.NEGATIVE_INFINITY;
+  }
+  const words = countExactQueryWordsPrepared(field.tokenSet, queryWords);
+  const direct = queryWords.length > 0 && words >= queryWords.length;
+  return match.score + words * 5_000 + (direct ? 10_000 : 0);
 }
 
 /**
@@ -314,7 +379,7 @@ export function parseForgeNavigatorQuery(query: string): {
 }
 
 export function forgeEntrySearchTexts(entry: ForgeIssueEntry): string[] {
-  return [
+  const texts = [
     forgeEntryDisplayTitle(entry),
     entry.title,
     entry.tab.title || "",
@@ -322,11 +387,23 @@ export function forgeEntrySearchTexts(entry: ForgeIssueEntry): string[] {
     tabNameSearchText(entry.tab),
     entry.projectLabel,
     entry.ref.id,
-    `#${entry.ref.id}`,
-    `!${entry.ref.id}`,
     entry.ref.kind.replaceAll("_", " "),
     entry.ref.platform,
   ];
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const text of texts) {
+    if (!text || seen.has(text)) {
+      continue;
+    }
+    seen.add(text);
+    unique.push(text);
+  }
+  return unique;
+}
+
+function compileForgeEntryFields(entry: ForgeIssueEntry): SearchField[] {
+  return forgeEntrySearchTexts(entry).map(compileSearchField);
 }
 
 export function isSameForgeEntry(first: ForgeIssueEntry, second: ForgeIssueEntry): boolean {
@@ -341,6 +418,11 @@ export interface RankedForgeIssueEntry {
   entry: ForgeIssueEntry;
   score: number;
   direct: boolean;
+  words: number;
+}
+
+function forgeEntryKey(entry: ForgeIssueEntry): string {
+  return `${entry.ref.url}:${entry.tab.id ?? ""}:${entry.tab.domId ?? ""}`;
 }
 
 export function rankForgeIssueEntries(
@@ -348,24 +430,28 @@ export function rankForgeIssueEntries(
   query: string,
 ): RankedForgeIssueEntry[] {
   if (!query.trim()) {
-    return entries.map((entry) => ({ entry, score: 0, direct: false }));
+    return entries.map((entry) => ({ entry, score: 0, direct: false, words: 0 }));
   }
 
-  const queryLowerCase = query.trim().toLowerCase();
+  const queryNormalized = normalizeSearchText(query);
+  const queryWords = queryNormalized.split(" ").filter(Boolean);
   return entries
     .map((entry) => {
-      const texts = forgeEntrySearchTexts(entry);
-      const matches = texts.map((value) => fuzzyMatchWithScore(value, queryLowerCase));
-      const queryWords = tokenizeSearchText(queryLowerCase);
-      const words = forgeEntryExactWordCount(entry, queryLowerCase);
+      const fields = compileForgeEntryFields(entry);
+      let bestFieldScore = Number.NEGATIVE_INFINITY;
+      for (const field of fields) {
+        const match = fuzzyMatchPrepared(field, queryNormalized, queryWords);
+        if (match.matches && match.score > bestFieldScore) {
+          bestFieldScore = match.score;
+        }
+      }
+      const words = maxExactWordCount(fields, queryWords);
       const direct = queryWords.length > 0 && words >= queryWords.length;
       return {
         entry,
         direct,
-        score:
-          Math.max(...matches.filter((match) => match.matches).map((match) => match.score), -1) +
-          words * 5_000 +
-          (direct ? 10_000 : 0),
+        words,
+        score: bestFieldScore + words * 5_000 + (direct ? 10_000 : 0),
       };
     })
     .filter(({ score }) => score >= 0)
@@ -385,6 +471,7 @@ export function bestForgeNavigatorIndex(
   ranked: RankedForgeIssueEntry[],
   query = "",
 ): number {
+  const rankedByKey = new Map(ranked.map((entry) => [forgeEntryKey(entry.entry), entry]));
   const queryWords = tokenizeSearchText(query);
   if (queryWords.length === 0) {
     const best = ranked.find((entry) => entry.direct) ?? ranked[0];
@@ -399,9 +486,9 @@ export function bestForgeNavigatorIndex(
   let bestWords = -1;
   let bestScore = Number.NEGATIVE_INFINITY;
   visualEntries.forEach((entry, index) => {
-    const words = forgeEntryExactWordCount(entry, query);
-    const score =
-      ranked.find((rankedEntry) => isSameForgeEntry(rankedEntry.entry, entry))?.score ?? -1;
+    const rankedEntry = rankedByKey.get(forgeEntryKey(entry));
+    const words = rankedEntry?.words ?? 0;
+    const score = rankedEntry?.score ?? -1;
     if (words > bestWords || (words === bestWords && score > bestScore)) {
       bestWords = words;
       bestScore = score;
@@ -512,85 +599,76 @@ export function prioritizeCurrentTab(
   return [...pinned, movableCurrent, ...rest];
 }
 
-export function filterSearchItems(items: SearchItem[], query: string): SearchItem[] {
+export interface FilterSearchResult {
+  items: SearchItem[];
+  bestExactWordCount: number;
+}
+
+export function filterSearchDocuments(
+  documents: SearchDocument[],
+  query: string,
+): FilterSearchResult {
   if (!query.trim()) {
-    return items;
+    return { items: documents.map((document) => document.item), bestExactWordCount: 0 };
   }
 
-  const queryLowerCase = query.trim().toLowerCase();
-  const scored: SearchItem[] = [];
+  const queryNormalized = normalizeSearchText(query);
+  const queryWords = queryNormalized.split(" ").filter(Boolean);
+  const includeUrl = queryNormalized.length >= 2;
+  const scored: { item: SearchItem; score: number; words: number }[] = [];
 
-  for (const item of items) {
-    if (item.kind === "space") {
-      const nameMatch = fuzzyMatchWithScore(item.data.name, queryLowerCase);
-      const iconMatch = fuzzyMatchWithScore(item.data.icon || "", queryLowerCase);
-      if (!nameMatch.matches && !iconMatch.matches) {
-        continue;
+  for (const document of documents) {
+    let best = Number.NEGATIVE_INFINITY;
+    let matched = false;
+    for (const field of document.fields) {
+      const score = fieldScore(field, queryNormalized, queryWords);
+      if (score > best) {
+        best = score;
+        matched = true;
       }
+    }
 
-      scored.push({
-        kind: "space",
-        data: {
-          ...item.data,
-          score:
-            Math.max(
-              nameMatch.score +
-                directMatchBonus(item.data.name, queryLowerCase) +
-                countExactQueryWords(item.data.name, queryLowerCase) * 5_000,
-              iconMatch.score +
-                directMatchBonus(item.data.icon || "", queryLowerCase) +
-                countExactQueryWords(item.data.icon || "", queryLowerCase) * 5_000,
-            ) + 300,
-        },
-      });
+    if (!matched && document.combinedField) {
+      const combinedScore = fieldScore(document.combinedField, queryNormalized, queryWords);
+      if (combinedScore > best) {
+        best = combinedScore;
+        matched = true;
+      }
+    }
+
+    if (includeUrl && document.urlField) {
+      const urlMatch = fuzzyMatchPrepared(document.urlField, queryNormalized, queryWords);
+      if (urlMatch.matches) {
+        const urlScore = urlMatch.score;
+        if (urlScore > best) {
+          best = urlScore;
+        }
+        matched = true;
+      }
+    }
+
+    if (!matched || !Number.isFinite(best)) {
       continue;
     }
 
-    const customLabel = item.data.customLabel || "";
-    const title = item.data.title || "";
-    const combinedName = tabNameSearchText(item.data);
-    const labelMatch = fuzzyMatchWithScore(customLabel, queryLowerCase);
-    const titleMatch = fuzzyMatchWithScore(title, queryLowerCase);
-    const combinedMatch = fuzzyMatchWithScore(combinedName, queryLowerCase);
-    const urlMatch = fuzzyMatchWithScore(item.data.url || "", queryLowerCase);
-    const workspaceMatch = fuzzyMatchWithScore(item.data.workspaceName || "", queryLowerCase);
-    const folderMatch = fuzzyMatchWithScore(item.data.folderName || "", queryLowerCase);
-    if (
-      !labelMatch.matches &&
-      !titleMatch.matches &&
-      !combinedMatch.matches &&
-      !urlMatch.matches &&
-      !workspaceMatch.matches &&
-      !folderMatch.matches
-    ) {
-      continue;
+    if (document.item.kind === "space") {
+      best += 300;
     }
 
     scored.push({
-      kind: "tab",
-      data: {
-        ...item.data,
-        score: Math.max(
-          labelMatch.score +
-            directMatchBonus(customLabel, queryLowerCase) +
-            countExactQueryWords(customLabel, queryLowerCase) * 5_000,
-          titleMatch.score +
-            directMatchBonus(title, queryLowerCase) +
-            countExactQueryWords(title, queryLowerCase) * 5_000,
-          combinedMatch.score +
-            directMatchBonus(combinedName, queryLowerCase) +
-            countExactQueryWords(combinedName, queryLowerCase) * 5_000,
-          urlMatch.score + directMatchBonus(item.data.url || "", queryLowerCase),
-          workspaceMatch.score +
-            directMatchBonus(item.data.workspaceName || "", queryLowerCase) +
-            countExactQueryWords(item.data.workspaceName || "", queryLowerCase) * 5_000,
-          folderMatch.score +
-            directMatchBonus(item.data.folderName || "", queryLowerCase) +
-            countExactQueryWords(item.data.folderName || "", queryLowerCase) * 5_000,
-        ),
-      },
+      item: document.item,
+      score: best,
+      words: searchDocumentExactWordCount(document, queryWords),
     });
   }
 
-  return scored.sort((a, b) => (b.data.score ?? 0) - (a.data.score ?? 0));
+  scored.sort((first, second) => second.score - first.score);
+  return {
+    items: scored.map(({ item }) => item),
+    bestExactWordCount: scored.reduce((max, entry) => Math.max(max, entry.words), 0),
+  };
+}
+
+export function filterSearchItems(items: SearchItem[], query: string): SearchItem[] {
+  return filterSearchDocuments(buildSearchDocuments(items), query).items;
 }

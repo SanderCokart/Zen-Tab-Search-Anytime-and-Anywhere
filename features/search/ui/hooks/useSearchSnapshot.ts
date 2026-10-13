@@ -27,6 +27,47 @@ export interface SearchSnapshotState {
   ) => void;
 }
 
+function tabRankingSignature(tab: TabInfo): string {
+  return [
+    tab.id ?? "",
+    tab.domId ?? "",
+    tab.title,
+    tab.customLabel ?? "",
+    tab.url,
+    tab.workspaceName ?? "",
+    tab.folderName ?? "",
+    tab.folderId ?? "",
+    tab.active === true ? "1" : "0",
+    tab.essential === true ? "1" : "0",
+    tab.lastOpenedAt ?? "",
+  ].join("\0");
+}
+
+function sameRankingTabs(first: TabInfo[], second: TabInfo[]): boolean {
+  if (first.length !== second.length) {
+    return false;
+  }
+  return first.every(
+    (tab, index) => tabRankingSignature(tab) === tabRankingSignature(second[index]!),
+  );
+}
+
+function sameSpaces(first: SpaceInfo[], second: SpaceInfo[]): boolean {
+  if (first.length !== second.length) {
+    return false;
+  }
+  return first.every((space, index) => {
+    const other = second[index];
+    return (
+      other !== undefined &&
+      space.id === other.id &&
+      space.name === other.name &&
+      space.icon === other.icon &&
+      space.isActive === other.isActive
+    );
+  });
+}
+
 /**
  * Loads tabs, spaces and timers from the background script and keeps them in
  * sync with the `snapshotChanged` broadcast.
@@ -40,12 +81,28 @@ export function useSearchSnapshot(): SearchSnapshotState {
 
   useEffect(() => {
     let cancelled = false;
-    const load = () =>
+    let inFlight = false;
+    let queued = false;
+
+    const load = () => {
+      if (cancelled) {
+        return;
+      }
+      if (inFlight) {
+        queued = true;
+        return;
+      }
+      inFlight = true;
       sendExtensionMessage({ type: "getSnapshot" })
         .then((snapshot) => {
-          if (cancelled) return;
-          setTabs(snapshot.tabs.filter(isActivatableTab));
-          setSpaces(snapshot.spaces);
+          if (cancelled) {
+            return;
+          }
+          const nextTabs = snapshot.tabs.filter(isActivatableTab);
+          setTabs((current) => (sameRankingTabs(current, nextTabs) ? current : nextTabs));
+          setSpaces((current) =>
+            sameSpaces(current, snapshot.spaces) ? current : snapshot.spaces,
+          );
           setTimers(new Map(snapshot.timers.map((item) => [item.tabId, item])));
           setTodos(todoStatusByTabId(snapshot.todos));
           setLoadError(null);
@@ -55,24 +112,26 @@ export function useSearchSnapshot(): SearchSnapshotState {
           if (!cancelled) {
             setLoadError("Unable to load tabs. Make sure the extension is enabled in Zen Browser.");
           }
+        })
+        .finally(() => {
+          inFlight = false;
+          if (cancelled) {
+            return;
+          }
+          if (queued) {
+            queued = false;
+            load();
+          }
         });
+    };
 
     void load();
-    const unsubscribe = subscribeToSnapshotChanged(() => void load());
+    const unsubscribe = subscribeToSnapshotChanged(() => load());
     return () => {
       cancelled = true;
       unsubscribe();
     };
   }, []);
-
-  // Re-render once a second so countdowns tick, but only while a timer exists.
-  useEffect(() => {
-    if (timers.size === 0) {
-      return;
-    }
-    const id = window.setInterval(() => setTimers((current) => new Map(current)), 1000);
-    return () => window.clearInterval(id);
-  }, [timers.size]);
 
   return { tabs, spaces, timers, todos, loadError, setTabs, setTimers, setTodos };
 }

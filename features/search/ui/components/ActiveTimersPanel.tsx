@@ -1,4 +1,4 @@
-import { formatTimerCountdown } from "@/features/timers/model/timer";
+import { TimerCountdown } from "@/features/timers/ui/TimerCountdown";
 import { clearButtonClass } from "@/features/search/ui/lib/styles";
 import type { TabTimer } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
@@ -48,7 +48,7 @@ export function ActiveTimersPanel({
                   {timer.title || timer.originalLabel || `Tab ${timer.tabId}`}
                 </span>
                 <span class="text-zen-lavender text-[length:var(--zen-text-xs)]">
-                  ⏱ {formatTimerCountdown(timer.endAt)}
+                  <TimerCountdown endAt={timer.endAt} />
                 </span>
               </button>
               <button

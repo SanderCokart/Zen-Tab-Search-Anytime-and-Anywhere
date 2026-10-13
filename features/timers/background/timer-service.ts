@@ -449,12 +449,12 @@ export function createTimerService({ setLabel, getCustomTabLabels }: TimerServic
     await removeTabTimer(tabId);
   }
 
-  async function getActiveTimers(): Promise<TabTimer[]> {
+  async function getActiveTimers(openTabIds?: Iterable<number>): Promise<TabTimer[]> {
     const timers = await readTimers();
-    const openTabIds = new Set(await listOpenTabIds());
+    const openIds = new Set(openTabIds ?? (await listOpenTabIds()));
     const active: TabTimer[] = [];
     for (const timer of Object.values(timers)) {
-      if (!openTabIds.has(timer.tabId)) {
+      if (!openIds.has(timer.tabId)) {
         continue;
       }
       if (timer.endAt <= Date.now()) {

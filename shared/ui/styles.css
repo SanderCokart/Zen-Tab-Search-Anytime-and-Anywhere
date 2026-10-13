@@ -112,6 +112,11 @@
      * one `gap` or margin in one place; the fallbacks are the defaults, for a
      * surface that has not set them.
      */
+    --zen-row-size: calc(
+      var(--zen-icon-lg) + var(--zen-space-2) * 2 + var(--zen-text-base) + var(--zen-text-sm) +
+        var(--zen-space-1)
+    );
+
     --zen-section-gap: calc(var(--zen-font-size) * var(--zen-section-gap-ratio, 0.25));
     --zen-tab-gap: calc(var(--zen-font-size) * var(--zen-tab-gap-ratio, 0.25));
     --zen-folder-gap: calc(var(--zen-font-size) * var(--zen-folder-gap-ratio, 0.75));
@@ -153,12 +158,19 @@
     --zen-tile-space: 8rem;
     --zen-tile-essential: 10rem;
 
+    --zen-row-size: 48px;
+
     --zen-section-gap: 4px;
     --zen-tab-gap: 4px;
     --zen-folder-gap: 12px;
     --zen-essential-gap: 8px;
     --zen-space-gap: 8px;
     --zen-issue-gap: 4px;
+  }
+
+  .zen-search-row {
+    content-visibility: auto;
+    contain-intrinsic-size: auto var(--zen-row-size);
   }
 
   .zen-icon {

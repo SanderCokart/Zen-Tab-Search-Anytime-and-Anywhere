@@ -1,5 +1,7 @@
+import { memo } from "preact/compat";
 import { useState } from "preact/hooks";
-import { formatTimerCountdown, stripTimerPrefix } from "@/features/timers/model/timer";
+import { stripTimerPrefix } from "@/features/timers/model/timer";
+import { TimerCountdown } from "@/features/timers/ui/TimerCountdown";
 import { TimerForm } from "@/features/timers/ui/TimerForm";
 import { TodoIcon } from "@/features/todos/ui/TodoIcon";
 import { hostname } from "@/features/search/ui/lib/format";
@@ -9,7 +11,7 @@ import type { TabInfo, TabTimer } from "@/shared/types";
 import { formatTabDisplayTitle, isEssentialTab, tabBrowserId } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
-export function TabSearchRow({
+export const TabSearchRow = memo(function TabSearchRow({
   tab,
   timer,
   timerOpen,
@@ -28,16 +30,15 @@ export function TabSearchRow({
   isTodo: boolean;
   truncate: boolean;
   displayTitle?: string;
-  onToggleTimer: () => void;
-  onOpenTimerPopup: () => void;
-  onSetTimer: (endAt: number) => void;
-  onClearTimer: () => void;
+  onToggleTimer: (tabId: number) => void;
+  onOpenTimerPopup: (tabId: number) => void;
+  onSetTimer: (tabId: number, endAt: number) => void;
+  onClearTimer: (tabId: number) => void;
   /** Marks the tab as todo, or as done (which removes the todo). */
-  onToggleTodo: () => void;
+  onToggleTodo: (tabId: number) => void;
 }) {
   const tabId = tabBrowserId(tab);
   const [tooltipSuppressed, setTooltipSuppressed] = useState(false);
-  // Essential tabs have no browser ID, so they cannot carry a todo.
   const canMarkTodo = tabId !== undefined && !isEssentialTab(tab);
 
   return (
@@ -61,11 +62,15 @@ export function TabSearchRow({
                 })}
             </span>
             <span class="text-zen-lavender ml-auto flex shrink-0 items-center justify-end gap-[var(--zen-space-1)] text-[length:var(--zen-text-xs)]">
-              {timer && !isEssentialTab(tab) && <span>⏱ {formatTimerCountdown(timer.endAt)}</span>}
+              {timer && !isEssentialTab(tab) && <TimerCountdown endAt={timer.endAt} />}
             </span>
           </div>
           {timerOpen && tabId !== undefined && (
-            <TimerForm timer={timer} onSet={onSetTimer} onClear={onClearTimer} />
+            <TimerForm
+              timer={timer}
+              onSet={(endAt) => onSetTimer(tabId, endAt)}
+              onClear={() => onClearTimer(tabId)}
+            />
           )}
         </div>
         <div
@@ -95,7 +100,7 @@ export function TabSearchRow({
                   title={isTodo ? "Mark as done" : "Mark as todo"}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onToggleTodo();
+                    onToggleTodo(tabId);
                   }}
                 >
                   <TodoIcon class="size-[var(--zen-icon-sm)]" />
@@ -114,9 +119,9 @@ export function TabSearchRow({
                       event.stopPropagation();
                       setTooltipSuppressed(true);
                       if (isEssentialTab(tab)) {
-                        onOpenTimerPopup();
+                        onOpenTimerPopup(tabId);
                       } else {
-                        onToggleTimer();
+                        onToggleTimer(tabId);
                       }
                     }}
                   >
@@ -132,13 +137,17 @@ export function TabSearchRow({
                     )}
                     role="tooltip"
                   >
-                    {timer
-                      ? `Timer: ${formatTimerCountdown(timer.endAt)}`
-                      : isEssentialTab(tab)
-                        ? "Open timer popup"
-                        : timerOpen
-                          ? "Close timer controls"
-                          : "Open timer controls"}
+                    {timer ? (
+                      <>
+                        Timer: <TimerCountdown endAt={timer.endAt} prefix="" />
+                      </>
+                    ) : isEssentialTab(tab) ? (
+                      "Open timer popup"
+                    ) : timerOpen ? (
+                      "Close timer controls"
+                    ) : (
+                      "Open timer controls"
+                    )}
                   </span>
                 </span>
               )}
@@ -148,4 +157,4 @@ export function TabSearchRow({
       </div>
     </>
   );
-}
+});

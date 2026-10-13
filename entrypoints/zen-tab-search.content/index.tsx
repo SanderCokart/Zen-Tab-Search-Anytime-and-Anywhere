@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { debugLog } from "@/shared/debug";
-import { parseContentCommand } from "@/shared/messaging/protocol";
+import { parseContentCommand, SNAPSHOT_CHANGED_TYPE } from "@/shared/messaging/protocol";
 import { SearchApp } from "@/features/search/ui/SearchApp";
 import "@/shared/ui/styles.css";
 
@@ -103,6 +103,17 @@ export default defineContentScript({
     }
 
     browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (
+        !message ||
+        typeof message !== "object" ||
+        !("type" in message) ||
+        message.type === SNAPSHOT_CHANGED_TYPE ||
+        (message.type !== "getForgePageInfo" &&
+          message.type !== "toggleOmnibar" &&
+          message.type !== "showOmnibar")
+      ) {
+        return;
+      }
       const command = parseContentCommand(message);
       if (!command) return;
       if (command.type === "getForgePageInfo") {

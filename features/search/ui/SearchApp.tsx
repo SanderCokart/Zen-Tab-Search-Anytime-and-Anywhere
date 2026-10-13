@@ -1,10 +1,11 @@
-import { useMemo, useState } from "preact/hooks";
+import { useCallback, useMemo, useState } from "preact/hooks";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
 import type { ForgeIssueSortMode } from "@/features/search/model/ranking";
 import { collectTodoTabs } from "@/features/todos/model/todo";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
 import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersPanel";
 import { RenameTabDialog } from "@/features/search/ui/components/RenameTabDialog";
+import { SearchInput } from "@/features/search/ui/components/SearchInput";
 import { SearchResultsList } from "@/features/search/ui/components/SearchResultsList";
 import { SearchShell } from "@/features/search/ui/components/SearchShell";
 import { TabContextMenu } from "@/features/search/ui/components/TabContextMenu";
@@ -66,9 +67,10 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     forgeSortMode,
   });
 
+  const onTimerFormClose = useCallback(() => setTimerTabId(null), []);
   const timerActions = useTimerActions({
     setTimers,
-    onTimerFormClose: () => setTimerTabId(null),
+    onTimerFormClose,
   });
 
   const rename = useTabRename({ essentialNames, setEssentialNames, setTabs });
@@ -82,37 +84,59 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     setContextMenu(null),
   );
 
-  const openContextMenu = (tab: TabInfo, event: MouseEvent) => {
+  const openContextMenu = useCallback((tab: TabInfo, event: MouseEvent) => {
     event.preventDefault();
     setContextMenu({ tab, x: event.clientX, y: event.clientY });
-  };
+  }, []);
 
-  const activateTab = (tabId: number | undefined, domId: string | undefined, label: string) => {
-    void sendExtensionMessage({ type: "switchTab", tabId, domId: domId || undefined })
-      .then(onClose)
-      .catch((error) => debugError(`Could not switch ${label}:`, error));
-  };
-
-  const activateItem = (item: SearchItem) => {
-    if (item.kind === "space") {
-      void sendExtensionMessage({ type: "switchSpace", spaceId: item.data.id })
+  const activateTab = useCallback(
+    (tabId: number | undefined, domId: string | undefined, label: string) => {
+      void sendExtensionMessage({ type: "switchTab", tabId, domId: domId || undefined })
         .then(onClose)
-        .catch((error) => debugError("Could not switch space:", error));
-      return;
-    }
-    if (!isActivatableTab(item.data)) return;
-    activateTab(tabBrowserId(item.data), item.data.domId, "tab");
-  };
+        .catch((error) => debugError(`Could not switch ${label}:`, error));
+    },
+    [onClose],
+  );
 
-  const activateForgeEntry = (entry: ForgeIssueEntry) => {
-    if (!isActivatableTab(entry.tab)) return;
-    activateTab(tabBrowserId(entry.tab), entry.tab.domId, "issue tab");
-  };
+  const activateItem = useCallback(
+    (item: SearchItem) => {
+      if (item.kind === "space") {
+        void sendExtensionMessage({ type: "switchSpace", spaceId: item.data.id })
+          .then(onClose)
+          .catch((error) => debugError("Could not switch space:", error));
+        return;
+      }
+      if (!isActivatableTab(item.data)) return;
+      activateTab(tabBrowserId(item.data), item.data.domId, "tab");
+    },
+    [activateTab, onClose],
+  );
 
-  const activateTodoTab = (tab: TabInfo) => {
-    if (!isActivatableTab(tab)) return;
-    activateTab(tabBrowserId(tab), tab.domId, "todo tab");
-  };
+  const activateForgeEntry = useCallback(
+    (entry: ForgeIssueEntry) => {
+      if (!isActivatableTab(entry.tab)) return;
+      activateTab(tabBrowserId(entry.tab), entry.tab.domId, "issue tab");
+    },
+    [activateTab],
+  );
+
+  const activateTodoTab = useCallback(
+    (tab: TabInfo) => {
+      if (!isActivatableTab(tab)) return;
+      activateTab(tabBrowserId(tab), tab.domId, "todo tab");
+    },
+    [activateTab],
+  );
+
+  const onToggleTodo = useCallback(
+    (tabId: number) => todoActions.setTodo(tabId, todos.has(tabId) ? "none" : "todo"),
+    [todoActions, todos],
+  );
+
+  const onToggleTimerForm = useCallback(
+    (tabId: number) => setTimerTabId((current) => (current === tabId ? null : tabId)),
+    [],
+  );
 
   // The overlay gains an issue column when issue detection is on and a todo
   // column while any tab is marked as todo. The popup has no columns.
@@ -129,6 +153,8 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     todoTabs,
     forgeNavigatorQuery: results.forgeNavigatorQuery,
     bestForgeIndex: results.bestForgeIndex,
+    bestTabWordCount: results.bestTabWordCount,
+    bestForgeWordCount: results.bestForgeWordCount,
     onClose,
     onActivateItem: activateItem,
     onActivateForgeEntry: activateForgeEntry,
@@ -149,18 +175,10 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
       aspect={layout === "overlay" ? overlayAspect : "1/1"}
     >
       <div class="mb-[var(--zen-space-3)] flex items-center gap-[var(--zen-space-2)]">
-        <input
-          ref={navigation.inputRef}
-          data-testid="zen-search-input"
-          type="text"
-          placeholder="Search tabs and spaces..."
-          class={cn(
-            "bg-zen-surface placeholder:text-zen-muted min-w-0 flex-1 border-0 outline-none",
-            "rounded-[var(--zen-radius)] p-[var(--zen-space-2)] text-[length:var(--zen-text-lg)]",
-            compact && "w-full",
-          )}
-          value={query}
-          onInput={(event) => setQuery(event.currentTarget.value)}
+        <SearchInput
+          inputRef={navigation.inputRef}
+          compact={compact}
+          onQueryChange={setQuery}
           onKeyDown={navigation.onKeyDown}
         />
         <button
@@ -232,10 +250,8 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               registerOption={navigation.registerOption}
               onActivate={activateItem}
               onContextMenu={openContextMenu}
-              onToggleTodo={(tabId) =>
-                todoActions.setTodo(tabId, todos.has(tabId) ? "none" : "todo")
-              }
-              onToggleTimerForm={(tabId) => setTimerTabId(timerTabId === tabId ? null : tabId)}
+              onToggleTodo={onToggleTodo}
+              onToggleTimerForm={onToggleTimerForm}
               onOpenTimerPopup={timerActions.openTimerPopup}
               onSetTimer={timerActions.setTimer}
               onClearTimer={timerActions.clearTimer}

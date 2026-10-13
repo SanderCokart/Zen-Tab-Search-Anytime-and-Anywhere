@@ -138,6 +138,13 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
   });
 }
 
+function itemKey(item: SearchItem): string {
+  if (item.kind === "space") {
+    return `space:${item.data.id}`;
+  }
+  return `tab:${item.data.id ?? "none"}:${item.data.domId ?? item.data.url}`;
+}
+
 function renderItem(props: SearchResultsListProps, item: SearchItem) {
   const {
     itemIndices,
@@ -158,15 +165,16 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
 
   const index = itemIndices.get(item) ?? -1;
   const selected = !navigateForge && selectedIndex === index;
+  const tabId = item.kind === "tab" ? tabBrowserId(item.data) : undefined;
 
   return (
     <li
-      key={`${item.kind}-${index}`}
+      key={itemKey(item)}
       ref={(element) => registerOption(index, element)}
       data-testid="zen-search-item"
       data-selected={selected ? "true" : undefined}
       class={cn(
-        "flex min-w-0 cursor-pointer items-start transition-colors",
+        "zen-search-row flex min-w-0 cursor-pointer items-start transition-colors",
         item.kind === "space" && "items-center justify-center text-center",
         "gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] p-[var(--zen-space-2)] text-[length:var(--zen-text-md)]",
         selected ? "bg-zen-line-soft" : "hover:bg-zen-line-soft",
@@ -198,63 +206,22 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
           </div>
         </>
       ) : (
-        <TabRow
-          item={item}
+        <TabSearchRow
+          tab={item.data}
+          timer={timers.get(tabId ?? -1)}
+          isTodo={tabId !== undefined && todos.has(tabId)}
+          timerOpen={timerTabId !== null && timerTabId === tabId}
           truncate={props.displaySettings.truncateTabTitles}
-          timers={timers}
-          todos={todos}
-          timerTabId={timerTabId}
-          onToggleTimerForm={onToggleTimerForm}
+          displayTitle={
+            isEssentialTab(item.data) ? item.data.customLabel?.trim() || item.data.title : undefined
+          }
+          onToggleTodo={onToggleTodo}
+          onToggleTimer={onToggleTimerForm}
           onOpenTimerPopup={onOpenTimerPopup}
           onSetTimer={onSetTimer}
           onClearTimer={onClearTimer}
-          onToggleTodo={onToggleTodo}
         />
       )}
     </li>
-  );
-}
-
-function TabRow({
-  item,
-  truncate,
-  timers,
-  todos,
-  timerTabId,
-  onToggleTimerForm,
-  onOpenTimerPopup,
-  onSetTimer,
-  onClearTimer,
-  onToggleTodo,
-}: {
-  item: Extract<SearchItem, { kind: "tab" }>;
-  truncate: boolean;
-  timers: Map<number, TabTimer>;
-  todos: Map<number, TodoStatus>;
-  timerTabId: number | null;
-  onToggleTimerForm: (tabId: number) => void;
-  onOpenTimerPopup: (tabId: number) => void;
-  onSetTimer: (tabId: number, endAt: number) => void;
-  onClearTimer: (tabId: number) => void;
-  onToggleTodo: (tabId: number) => void;
-}) {
-  const tabId = tabBrowserId(item.data);
-
-  return (
-    <TabSearchRow
-      tab={item.data}
-      timer={timers.get(tabId ?? -1)}
-      isTodo={tabId !== undefined && todos.has(tabId)}
-      onToggleTodo={() => tabId !== undefined && onToggleTodo(tabId)}
-      timerOpen={timerTabId !== null && timerTabId === tabId}
-      truncate={truncate}
-      displayTitle={
-        isEssentialTab(item.data) ? item.data.customLabel?.trim() || item.data.title : undefined
-      }
-      onToggleTimer={() => tabId !== undefined && onToggleTimerForm(tabId)}
-      onOpenTimerPopup={() => tabId !== undefined && onOpenTimerPopup(tabId)}
-      onSetTimer={(endAt) => tabId !== undefined && onSetTimer(tabId, endAt)}
-      onClearTimer={() => tabId !== undefined && onClearTimer(tabId)}
-    />
   );
 }
