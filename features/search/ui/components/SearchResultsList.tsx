@@ -8,6 +8,7 @@ import {
   tabBrowserId,
   type SearchItem,
   type TabTimer,
+  type TodoStatus,
 } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
@@ -16,14 +17,16 @@ export interface SearchResultsListProps {
   /** Position of each item in the flat result list, for selection and refs. */
   itemIndices: Map<SearchItem, number>;
   selectedIndex: number;
-  /** True while the forge navigator owns the selection, so no row looks selected. */
+  /** True while another overlay column owns the keyboard, so no result row looks selected. */
   navigateForge: boolean;
   displaySettings: DisplaySettings;
   timers: Map<number, TabTimer>;
+  todos: Map<number, TodoStatus>;
   timerTabId: number | null;
   registerOption: (index: number, element: HTMLLIElement | null) => void;
   onActivate: (item: SearchItem) => void;
   onContextMenu: (item: SearchItem, x: number, y: number) => void;
+  onTodoMenu: (item: SearchItem, x: number, y: number) => void;
   onToggleTimerForm: (tabId: number) => void;
   onOpenTimerPopup: (tabId: number) => void;
   onSetTimer: (tabId: number, endAt: number) => void;
@@ -139,10 +142,12 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
     selectedIndex,
     navigateForge,
     timers,
+    todos,
     timerTabId,
     registerOption,
     onActivate,
     onContextMenu,
+    onTodoMenu,
     onToggleTimerForm,
     onOpenTimerPopup,
     onSetTimer,
@@ -201,11 +206,13 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
           item={item}
           truncate={props.displaySettings.truncateTabTitles}
           timers={timers}
+          todos={todos}
           timerTabId={timerTabId}
           onToggleTimerForm={onToggleTimerForm}
           onOpenTimerPopup={onOpenTimerPopup}
           onSetTimer={onSetTimer}
           onClearTimer={onClearTimer}
+          onOpenTodoMenu={(x, y) => onTodoMenu(item, x, y)}
         />
       )}
     </li>
@@ -216,20 +223,24 @@ function TabRow({
   item,
   truncate,
   timers,
+  todos,
   timerTabId,
   onToggleTimerForm,
   onOpenTimerPopup,
   onSetTimer,
   onClearTimer,
+  onOpenTodoMenu,
 }: {
   item: Extract<SearchItem, { kind: "tab" }>;
   truncate: boolean;
   timers: Map<number, TabTimer>;
+  todos: Map<number, TodoStatus>;
   timerTabId: number | null;
   onToggleTimerForm: (tabId: number) => void;
   onOpenTimerPopup: (tabId: number) => void;
   onSetTimer: (tabId: number, endAt: number) => void;
   onClearTimer: (tabId: number) => void;
+  onOpenTodoMenu: (x: number, y: number) => void;
 }) {
   const tabId = tabBrowserId(item.data);
 
@@ -237,6 +248,8 @@ function TabRow({
     <TabSearchRow
       tab={item.data}
       timer={timers.get(tabId ?? -1)}
+      todoStatus={tabId === undefined ? undefined : todos.get(tabId)}
+      onOpenTodoMenu={onOpenTodoMenu}
       timerOpen={timerTabId !== null && timerTabId === tabId}
       truncate={truncate}
       displayTitle={

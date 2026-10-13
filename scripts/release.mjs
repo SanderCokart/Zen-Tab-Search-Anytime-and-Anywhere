@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 const rootDir = fileURLToPath(new URL("..", import.meta.url));
 const packagePath = path.join(rootDir, "package.json");
 const packageLockPath = path.join(rootDir, "package-lock.json");
+// Fixed name so `releases/latest/download/zen-tab-search-mcp.mjs` always
+// serves the MCP server that matches the latest extension.
+const mcpArtifact = path.join(rootDir, "mcp", "dist", "zen-tab-search-mcp.mjs");
 
 let releaseStep = "preflight";
 let currentTagName;
@@ -296,6 +299,7 @@ function printDryRun({ oldVersion, newVersion, tagName, canary, notes }) {
   console.log(`Tag: ${tagName}`);
   console.log(`Title: ${releaseTitle(tagName, canary)}`);
   console.log(`GitHub prerelease: ${canary ? "yes" : "no"}`);
+  console.log(`Assets: zen-tab-search-${tagName}-firefox.zip, zen-tab-search-mcp.mjs`);
   if (notes.sinceTag) {
     console.log(`Generated notes since: ${notes.sinceTag}`);
   }
@@ -360,6 +364,12 @@ function main() {
     fail(`No zip artifact matching ${tagName} was found in .output after npm run zip.`);
   }
 
+  releaseStep = "MCP server build";
+  run("Bundling MCP server", "npm", ["run", "mcp:build"]);
+  if (!fs.existsSync(mcpArtifact)) {
+    fail(`No MCP server bundle was found at ${path.relative(rootDir, mcpArtifact)}.`);
+  }
+
   releaseStep = "release commit";
   run("Staging version files", "git", ["add", packagePath, packageLockPath], { shell: false });
   run("Committing version bump", "git", ["commit", "-m", `Release ${tagName}`], { shell: false });
@@ -380,6 +390,7 @@ function main() {
     "create",
     tagName,
     zipArtifact,
+    mcpArtifact,
     "--title",
     releaseTitle(tagName, args.canary),
     "--verify-tag",
@@ -397,7 +408,9 @@ function main() {
   run("Creating GitHub release", "gh", releaseArgs);
 
   console.log("");
-  console.log(`Release ${tagName} created with ${path.relative(rootDir, zipArtifact)} attached.`);
+  console.log(
+    `Release ${tagName} created with ${path.relative(rootDir, zipArtifact)} and ${path.relative(rootDir, mcpArtifact)} attached.`,
+  );
 }
 
 try {

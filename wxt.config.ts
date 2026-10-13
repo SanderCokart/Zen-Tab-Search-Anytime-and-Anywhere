@@ -3,6 +3,12 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "wxt";
 // @ts-expect-error - plain .mjs build helper with no type declarations
 import { injectExperimentDebugAsset } from "./scripts/experiment-debug.mjs";
+// @ts-expect-error - plain .mjs build helper with no type declarations
+import { buildMcp, MCP_OUTFILE } from "./scripts/build-mcp.mjs";
+
+// Where the bundled MCP server sits inside the extension. Must match MCP_SERVER_ASSET_PATH
+// in features/bridge/model/mcp-install.ts.
+const MCP_SERVER_ASSET = "mcp/zen-tab-search-mcp.mjs";
 
 const zipLabel = process.env.ZIP_ARTIFACT_LABEL?.trim() || "demo";
 
@@ -86,7 +92,12 @@ export default defineConfig({
     disabled: true,
   },
   hooks: {
-    "build:publicAssets": injectExperimentDebugAsset,
+    "build:publicAssets": async (wxt, files) => {
+      injectExperimentDebugAsset(wxt, files);
+      // Ship the MCP server with the extension so its settings page can offer the matching build.
+      await buildMcp();
+      files.push({ relativeDest: MCP_SERVER_ASSET, absoluteSrc: MCP_OUTFILE });
+    },
   },
   // Browsers allow only 4 commands with suggested_key; all four are used above.
   // File-watch still rebuilds/reloads; this only skips WXT's Alt+R shortcut.

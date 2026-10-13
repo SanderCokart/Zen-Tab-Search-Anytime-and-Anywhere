@@ -11,17 +11,23 @@ import type { SearchLayout } from "@/features/search/ui/types";
  * popup carries `data-zen-ui="popup"`, which pins those tokens to a fixed
  * compact size and never reads the sliders. It only takes the text colour.
  */
+/**
+ * Overlay shape by column count: one tab column is square, two (tabs and
+ * todos) is 3:2, and three (tabs, issues and todos) is 2:1.
+ */
+export type OmnibarAspect = "1/1" | "3/2" | "2/1";
+
 export function SearchShell({
   layout,
   onClose,
   displaySettings,
-  issueNavigator,
+  aspect = "1/1",
   children,
 }: {
   layout: SearchLayout;
   onClose: () => void;
   displaySettings: DisplaySettings;
-  issueNavigator?: boolean;
+  aspect?: OmnibarAspect;
   children: ComponentChildren;
 }) {
   if (layout === "popup") {
@@ -47,7 +53,7 @@ export function SearchShell({
         class="from-zen-bg to-zen-raised flex h-auto shrink-0 flex-col overflow-hidden rounded-2xl bg-linear-to-br p-[var(--zen-space-3)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
         onClick={(event) => event.stopPropagation()}
         data-omnibar
-        data-omnibar-aspect={issueNavigator ? "3/2" : "1/1"}
+        data-omnibar-aspect={aspect}
       >
         {children}
       </div>

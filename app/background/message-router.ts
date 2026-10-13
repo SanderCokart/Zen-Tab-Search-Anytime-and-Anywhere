@@ -1,4 +1,4 @@
-import { isUsableTabId } from "@/shared/types";
+import { isUsableTabId, type TodoStatus } from "@/shared/types";
 import {
   type ExtensionRequest,
   invalidRequestMessage,
@@ -21,6 +21,7 @@ export interface MessageRouterHandlers {
   clearAllTimers(): Promise<number>;
   openSettings(): Promise<void>;
   setTabLabel(tabId: number, label: string): Promise<void>;
+  setTodo(tabId: number, status: TodoStatus | "none"): Promise<void>;
   isAllowedTimerEnd(endAt: number): boolean;
 }
 
@@ -116,6 +117,8 @@ function handleParsedRequest(
       return handlers.openSettings();
     case "setTabLabel":
       return handlers.setTabLabel(message.tabId, message.label);
+    case "setTodo":
+      return handlers.setTodo(message.tabId, message.status);
   }
 }
 

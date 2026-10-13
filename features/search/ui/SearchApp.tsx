@@ -1,6 +1,8 @@
-import { useState } from "preact/hooks";
+import { useMemo, useState } from "preact/hooks";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
 import type { ForgeIssueSortMode } from "@/features/search/model/ranking";
+import { groupTodoTabs } from "@/features/todos/model/todo";
+import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
 import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersPanel";
 import { RenameTabDialog } from "@/features/search/ui/components/RenameTabDialog";
 import { SearchResultsList } from "@/features/search/ui/components/SearchResultsList";
@@ -15,12 +17,19 @@ import { useSearchResults } from "@/features/search/ui/hooks/useSearchResults";
 import { useSearchSnapshot } from "@/features/search/ui/hooks/useSearchSnapshot";
 import { useTabRename } from "@/features/search/ui/hooks/useTabRename";
 import { useTimerActions } from "@/features/search/ui/hooks/useTimerActions";
+import { useTodoActions } from "@/features/search/ui/hooks/useTodoActions";
 import { stripTimerPrefixFromTab } from "@/features/search/ui/lib/format";
 import { primaryButtonClass } from "@/features/search/ui/lib/styles";
 import type { SearchLayout } from "@/features/search/ui/types";
 import { debugError } from "@/shared/debug";
 import { sendExtensionMessage } from "@/shared/messaging/client";
-import { isActivatableTab, tabBrowserId, type SearchItem } from "@/shared/types";
+import {
+  isActivatableTab,
+  tabBrowserId,
+  type SearchItem,
+  type TabInfo,
+  type TodoStatus,
+} from "@/shared/types";
 import { type ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import { cn } from "@/shared/ui/cn";
 
@@ -48,9 +57,12 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     item: Extract<SearchItem, { kind: "tab" }>;
     x: number;
     y: number;
+    /** "todo" when opened from the todo button, which shows only the todo options. */
+    scope: "all" | "todo";
   } | null>(null);
 
-  const { tabs, spaces, timers, loadError, setTabs, setTimers } = useSearchSnapshot();
+  const { tabs, spaces, timers, todos, loadError, setTabs, setTimers, setTodos } =
+    useSearchSnapshot();
   const displaySettings = useDisplaySettings();
   const { essentialNames, setEssentialNames } = useEssentialTabNames();
 
@@ -70,6 +82,15 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
   });
 
   const rename = useTabRename({ essentialNames, setEssentialNames, setTabs });
+  const todoActions = useTodoActions({ setTodos });
+  const todoColumn = useMemo(
+    () => groupTodoTabs(results.labeledTabs, todos),
+    [results.labeledTabs, todos],
+  );
+  const todoTabs = useMemo(
+    () => [...todoColumn.todo, ...todoColumn.done].map((entry) => entry.tab),
+    [todoColumn],
+  );
 
   useCloseOnOutsideClick(contextMenu !== null, "[data-testid='zen-tab-context-menu']", () =>
     setContextMenu(null),
@@ -97,17 +118,28 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     activateTab(tabBrowserId(entry.tab), entry.tab.domId, "issue tab");
   };
 
+  const activateTodoTab = (tab: TabInfo) => {
+    if (!isActivatableTab(tab)) return;
+    activateTab(tabBrowserId(tab), tab.domId, "todo tab");
+  };
+
+  // The overlay is three columns (tabs, issues, todos) when issue detection is
+  // on, and two (tabs, todos) when it is off. The popup has no columns.
+  const overlayAspect = displaySettings.detectForgeIssues ? "2/1" : "3/2";
+
   const navigation = useSearchNavigation({
     layout,
     query,
     pageJump,
     items: results.items,
     navigatorEntries: results.navigatorEntries,
+    todoTabs,
     forgeNavigatorQuery: results.forgeNavigatorQuery,
     bestForgeIndex: results.bestForgeIndex,
     onClose,
     onActivateItem: activateItem,
     onActivateForgeEntry: activateForgeEntry,
+    onActivateTodoTab: activateTodoTab,
   });
 
   const iconButtonClass = cn(
@@ -121,7 +153,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
       layout={layout}
       onClose={onClose}
       displaySettings={displaySettings}
-      issueNavigator={displaySettings.detectForgeIssues}
+      aspect={layout === "overlay" ? overlayAspect : "1/1"}
     >
       <div class="mb-[var(--zen-space-3)] flex items-center gap-[var(--zen-space-2)]">
         <input
@@ -199,15 +231,21 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               groups={results.itemGroups}
               itemIndices={results.itemIndices}
               selectedIndex={navigation.selectedIndex}
-              navigateForge={navigation.navigateForge}
+              navigateForge={navigation.activePane !== "tabs"}
               displaySettings={displaySettings}
               timers={timers}
+              todos={todos}
               timerTabId={timerTabId}
               registerOption={navigation.registerOption}
               onActivate={activateItem}
               onContextMenu={(item, x, y) => {
                 if (item.kind === "tab") {
-                  setContextMenu({ item, x, y });
+                  setContextMenu({ item, x, y, scope: "all" });
+                }
+              }}
+              onTodoMenu={(item, x, y) => {
+                if (item.kind === "tab") {
+                  setContextMenu({ item, x, y, scope: "todo" });
                 }
               }}
               onToggleTimerForm={(tabId) => setTimerTabId(timerTabId === tabId ? null : tabId)}
@@ -233,13 +271,28 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             backgroundColor={displaySettings.issueBackgroundColor}
             truncate={displaySettings.truncateIssueTitles}
             sortMode={forgeSortMode}
-            selectedIndex={navigation.navigateForge ? navigation.selectedForgeIndex : -1}
+            selectedIndex={
+              navigation.activePane === "forge" ? navigation.selectedForgeIndex : -1
+            }
             onActivate={activateForgeEntry}
             onSelect={navigation.setSelectedForgeIndex}
             onToggleSort={() => {
               setForgeSortMode((current) => (current === "recent" ? "old" : "recent"));
               navigation.setSelectedForgeIndex(0);
             }}
+          />
+        )}
+        {layout === "overlay" && (
+          <TodoNavigator
+            todo={todoColumn.todo}
+            done={todoColumn.done}
+            backgroundColor={displaySettings.issueBackgroundColor}
+            truncate={displaySettings.truncateIssueTitles}
+            selectedIndex={
+              navigation.activePane === "todos" ? navigation.selectedTodoIndex : -1
+            }
+            onActivate={activateTodoTab}
+            onSelect={navigation.setSelectedTodoIndex}
           />
         )}
       </div>
@@ -249,6 +302,8 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           tab={contextMenu.item.data}
           x={contextMenu.x}
           y={contextMenu.y}
+          scope={contextMenu.scope}
+          todoStatus={todos.get(tabBrowserId(contextMenu.item.data) ?? -1)}
           onRename={() => {
             rename.open(contextMenu.item.data, stripTimerPrefixFromTab(contextMenu.item.data));
             setContextMenu(null);
@@ -256,6 +311,13 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           onOpenTimer={(tabId) => {
             setContextMenu(null);
             timerActions.openTimerPopup(tabId);
+          }}
+          onSetTodo={(status: TodoStatus | "none") => {
+            const tabId = tabBrowserId(contextMenu.item.data);
+            setContextMenu(null);
+            if (tabId !== undefined) {
+              todoActions.setTodo(tabId, status);
+            }
           }}
         />
       )}

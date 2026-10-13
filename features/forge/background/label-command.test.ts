@@ -33,6 +33,15 @@ function workspace(partial: Partial<WorkspaceAdapter> = {}): WorkspaceAdapter {
     setLabel: async () => true,
     changeLabel: async () => true,
     getDebugInfo: async () => ({}),
+    listFolders: async () => [],
+    createFolder: async () => "folder",
+    renameFolder: async () => undefined,
+    moveTabsToFolder: async () => 0,
+    removeTabsFromFolder: async () => 0,
+    moveTabsToSpace: async () => 0,
+    moveTab: async () => undefined,
+    openTab: async () => 1,
+    closeTab: async () => undefined,
     ...partial,
   };
 }

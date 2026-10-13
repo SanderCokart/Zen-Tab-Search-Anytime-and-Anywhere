@@ -182,6 +182,147 @@
             "description": "Active extension tab ID used to locate the Zen browser window"
           }
         ]
+      },
+      {
+        "name": "listFolders",
+        "type": "function",
+        "description": "Returns all Zen folders (tab groups) across spaces, including empty ones",
+        "async": true,
+        "parameters": [
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Active extension tab ID used to locate the Zen browser window"
+          }
+        ]
+      },
+      {
+        "name": "createFolder",
+        "type": "function",
+        "description": "Create a Zen folder in a space, optionally grouping the given tabs into it. Returns the folder ID",
+        "async": true,
+        "parameters": [
+          {
+            "name": "name",
+            "type": "string",
+            "description": "Folder name"
+          },
+          {
+            "name": "spaceId",
+            "type": "string",
+            "optional": true,
+            "description": "Zen space UUID; defaults to the active space"
+          },
+          {
+            "name": "tabIds",
+            "type": "array",
+            "items": { "type": "integer" },
+            "optional": true,
+            "description": "Extension tab IDs to put in the folder"
+          },
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Active extension tab ID used to locate the Zen browser window"
+          }
+        ]
+      },
+      {
+        "name": "renameFolder",
+        "type": "function",
+        "description": "Rename a Zen folder by its folder ID",
+        "async": true,
+        "parameters": [
+          {
+            "name": "folderId",
+            "type": "string",
+            "description": "Folder ID from listFolders"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "description": "New folder name"
+          }
+        ]
+      },
+      {
+        "name": "moveTabsToFolder",
+        "type": "function",
+        "description": "Move tabs into a folder, pinning them and moving them to the folder's space",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabIds",
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "Extension tab IDs to move"
+          },
+          {
+            "name": "folderId",
+            "type": "string",
+            "description": "Folder ID from listFolders"
+          }
+        ]
+      },
+      {
+        "name": "removeTabsFromFolder",
+        "type": "function",
+        "description": "Take tabs out of their folder; they stay in the same space",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabIds",
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "Extension tab IDs to take out of their folder"
+          }
+        ]
+      },
+      {
+        "name": "moveTabsToSpace",
+        "type": "function",
+        "description": "Move tabs to another Zen space without switching to it",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabIds",
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "Extension tab IDs to move"
+          },
+          {
+            "name": "spaceId",
+            "type": "string",
+            "description": "Zen space UUID"
+          }
+        ]
+      },
+      {
+        "name": "moveTab",
+        "type": "function",
+        "description": "Move a tab directly before or after another tab in the tab strip",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabId",
+            "type": "integer",
+            "description": "Extension tab ID to move"
+          },
+          {
+            "name": "beforeTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Place the tab before this extension tab ID"
+          },
+          {
+            "name": "afterTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Place the tab after this extension tab ID"
+          }
+        ]
       }
     ]
   }

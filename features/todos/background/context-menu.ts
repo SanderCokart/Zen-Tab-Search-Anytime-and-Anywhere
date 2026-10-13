@@ -1,0 +1,60 @@
+import { formatError, LOG_PREFIX } from "@/shared/log";
+import type { TodoService } from "@/features/todos/background/todo-service";
+import type { TodoStatus } from "@/shared/types";
+
+type ContextMenuContext = NonNullable<
+  Parameters<typeof browser.contextMenus.create>[0]["contexts"]
+>[number];
+const TAB_CONTEXT = "tab" as unknown as ContextMenuContext;
+
+/** Menu item ID to the status it sets. "none" removes the todo. */
+const TODO_MENU_ACTIONS: Record<string, TodoStatus | "none"> = {
+  "tab-todo-mark-todo": "todo",
+  "tab-todo-mark-done": "done",
+  "tab-todo-clear": "none",
+};
+
+/**
+ * Adds the todo submenu to the tab context menu. Called from inside the same
+ * `removeAll` reset as the timer menu, so the two cannot wipe each other out.
+ */
+export function createTodoContextMenuItems(): void {
+  browser.contextMenus.create({
+    id: "tab-todo",
+    title: "Todo",
+    contexts: [TAB_CONTEXT],
+  });
+  for (const [id, title] of [
+    ["tab-todo-mark-todo", "Mark as todo"],
+    ["tab-todo-mark-done", "Mark as done"],
+    ["tab-todo-clear", "Remove todo"],
+  ]) {
+    browser.contextMenus.create({
+      id,
+      parentId: "tab-todo",
+      title,
+      contexts: [TAB_CONTEXT],
+    });
+  }
+}
+
+/** Handles a todo menu click. Returns false when the click was for another menu. */
+export function handleTodoContextMenuClick(
+  menuItemId: string | number,
+  tabId: number,
+  todoService: TodoService,
+  onChanged: () => void,
+): boolean {
+  const status = TODO_MENU_ACTIONS[String(menuItemId)];
+  if (!status) {
+    return false;
+  }
+
+  todoService
+    .setTodo(tabId, status)
+    .then(onChanged)
+    .catch((error) => {
+      console.error(`${LOG_PREFIX} Could not update todo from the tab menu:`, formatError(error));
+    });
+  return true;
+}

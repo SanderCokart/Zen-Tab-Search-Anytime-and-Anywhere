@@ -793,6 +793,78 @@ this.zenTabs = class extends ExtensionAPI {
       return info;
     }
 
+    // Bridge helpers. Writes address tabs and folders by extension tab ID or
+    // folder DOM id, so they work regardless of which window is "current".
+    function nativeTabsFor(tabIds) {
+      return tabIds.map((tabId) => {
+        const tab = getNativeTabByExtId(tabId);
+        if (!tab) {
+          throw new Error(`Tab not found: ${tabId}`);
+        }
+        return tab;
+      });
+    }
+
+    function windowForTabs(tabs) {
+      const windows = [...new Set(tabs.map((tab) => chromeWindowForNativeTab(tab)))];
+      const [win] = windows;
+      if (windows.length !== 1 || !win?.gBrowser) {
+        throw new Error("Tabs must all be in the same Zen window.");
+      }
+      return win;
+    }
+
+    function ensureMovable(tabs) {
+      const essential = tabs.find((tab) => tab.getAttribute("zen-essential") === "true");
+      if (essential) {
+        throw new Error(`Essential tabs cannot be moved: ${getExtTabId(essential)}`);
+      }
+    }
+
+    function findFolder(folderId) {
+      for (const win of enumerateZenBrowserWindows()) {
+        const folder =
+          typeof folderId === "string" && folderId ? win.document?.getElementById(folderId) : null;
+        if (folder?.isZenFolder) {
+          return { win, folder };
+        }
+      }
+      throw new Error(`Zen folder not found: ${folderId}`);
+    }
+
+    async function zenWorkspacesOf(win) {
+      const zenWorkspaces = win?.gZenWorkspaces;
+      if (!zenWorkspaces) {
+        throw new Error("Zen spaces are not available in this window.");
+      }
+      if (zenWorkspaces.promiseInitialized) {
+        try {
+          await zenWorkspaces.promiseInitialized;
+        } catch {
+          // Keep going with whatever state Zen has.
+        }
+      }
+      return zenWorkspaces;
+    }
+
+    function folderSummary(folder, spaceNames) {
+      const spaceId = String(folder.getAttribute("zen-workspace-id") || "");
+      const parent = folder.group;
+      return {
+        id: String(folder.id || ""),
+        name: String(folder.label || "Folder"),
+        spaceId,
+        spaceName: String(spaceNames.get(spaceId) || ""),
+        parentId: parent?.isZenFolder ? String(parent.id || "") : undefined,
+        collapsed: folder.collapsed === true,
+      };
+    }
+
+    function cleanName(name, fallback) {
+      const cleaned = typeof name === "string" ? name.replace(/\s+/g, " ").trim() : "";
+      return cleaned || fallback;
+    }
+
     try {
       installExternalTabHook();
     } catch (error) {
@@ -1065,6 +1137,156 @@ this.zenTabs = class extends ExtensionAPI {
             return activateNativeTab(nativeTab);
           } catch (error) {
             throw new Error(`activateTabByDomId failed: ${formatError(error)}`);
+          }
+        },
+
+        async listFolders(anchorTabId = -1) {
+          try {
+            const win = getWin(anchorTabId);
+            const zenWorkspaces = await getZenWorkspaces(anchorTabId);
+            if (!win?.document || !zenWorkspaces) {
+              throw new Error(`Zen browser window not found (anchorTabId=${anchorTabId}).`);
+            }
+
+            const spaceNames = getWorkspaceNameMap(zenWorkspaces);
+            return [...win.document.querySelectorAll("zen-folder")].map((folder) =>
+              folderSummary(folder, spaceNames),
+            );
+          } catch (error) {
+            throw new Error(`listFolders failed: ${formatError(error)}`);
+          }
+        },
+
+        async createFolder(name, spaceId = "", tabIds = [], anchorTabId = -1) {
+          try {
+            const win = getWin(anchorTabId);
+            const zenWorkspaces = await zenWorkspacesOf(win);
+            const targetSpace = spaceId || String(zenWorkspaces.activeWorkspace || "");
+            if (!targetSpace || !zenWorkspaces.getWorkspaceFromId(targetSpace)) {
+              throw new Error(`Space not found: ${spaceId}`);
+            }
+
+            const tabs = nativeTabsFor(tabIds);
+            ensureMovable(tabs);
+            if (tabs.length) {
+              zenWorkspaces.moveTabsToWorkspace(tabs, targetSpace);
+            }
+
+            // Zen pins the tabs it groups into a folder; that is Zen's own rule, not ours.
+            const folder = win.gZenFolders.createFolder(tabs, {
+              label: cleanName(name, "New Folder"),
+              workspaceId: targetSpace,
+              renameFolder: false,
+            });
+            return String(folder.id);
+          } catch (error) {
+            throw new Error(`createFolder failed: ${formatError(error)}`);
+          }
+        },
+
+        async renameFolder(folderId, name) {
+          try {
+            const label = cleanName(name, "");
+            if (!label) {
+              throw new Error("Folder name cannot be empty.");
+            }
+            findFolder(folderId).folder.label = label;
+            return true;
+          } catch (error) {
+            throw new Error(`renameFolder failed: ${formatError(error)}`);
+          }
+        },
+
+        async moveTabsToFolder(tabIds, folderId) {
+          try {
+            const { win: folderWindow, folder } = findFolder(folderId);
+            const tabs = nativeTabsFor(tabIds);
+            ensureMovable(tabs);
+            if (windowForTabs(tabs) !== folderWindow) {
+              throw new Error("Tabs must be in the same Zen window as the folder.");
+            }
+
+            const zenWorkspaces = await zenWorkspacesOf(folderWindow);
+            const folderSpace = String(folder.getAttribute("zen-workspace-id") || "");
+            const otherSpaceTabs = tabs.filter(
+              (tab) => tab.getAttribute("zen-workspace-id") !== folderSpace,
+            );
+            if (folderSpace && otherSpaceTabs.length) {
+              zenWorkspaces.moveTabsToWorkspace(otherSpaceTabs, folderSpace);
+            }
+
+            // Folders hold pinned tabs, so pin anything that is not yet pinned.
+            for (const tab of tabs) {
+              if (!tab.pinned) {
+                folderWindow.gBrowser.pinTab(tab);
+              }
+            }
+            folder.addTabs(tabs);
+            return tabs.length;
+          } catch (error) {
+            throw new Error(`moveTabsToFolder failed: ${formatError(error)}`);
+          }
+        },
+
+        async removeTabsFromFolder(tabIds) {
+          try {
+            const tabs = nativeTabsFor(tabIds);
+            let removed = 0;
+            for (const tab of tabs) {
+              if (!tab.group?.isZenFolder) {
+                continue;
+              }
+              chromeWindowForNativeTab(tab).gBrowser.ungroupTab(tab);
+              removed++;
+            }
+            return removed;
+          } catch (error) {
+            throw new Error(`removeTabsFromFolder failed: ${formatError(error)}`);
+          }
+        },
+
+        async moveTabsToSpace(tabIds, spaceId) {
+          try {
+            const tabs = nativeTabsFor(tabIds);
+            ensureMovable(tabs);
+            const win = windowForTabs(tabs);
+            const zenWorkspaces = await zenWorkspacesOf(win);
+            if (!zenWorkspaces.getWorkspaceFromId(spaceId)) {
+              throw new Error(`Space not found: ${spaceId}`);
+            }
+            zenWorkspaces.moveTabsToWorkspace(tabs, spaceId);
+            return tabs.length;
+          } catch (error) {
+            throw new Error(`moveTabsToSpace failed: ${formatError(error)}`);
+          }
+        },
+
+        async moveTab(tabId, beforeTabId = -1, afterTabId = -1) {
+          try {
+            const [tab] = nativeTabsFor([tabId]);
+            const afterMode = afterTabId >= 0;
+            const [target] = nativeTabsFor([afterMode ? afterTabId : beforeTabId]);
+            if (!tab || !target || tab === target) {
+              throw new Error("Pick a different tab to move next to.");
+            }
+            const win = windowForTabs([tab, target]);
+            ensureMovable([tab]);
+            if (tab.getAttribute("zen-workspace-id") !== target.getAttribute("zen-workspace-id")) {
+              throw new Error(
+                "Both tabs must be in the same space. Move the tab to that space first.",
+              );
+            }
+
+            // moveTabBefore/After handle forward index shifts, the pinned/unpinned
+            // boundary, essentials and folder edges; moveTabTo with a raw index does not.
+            if (afterMode) {
+              win.gBrowser.moveTabAfter(tab, target);
+            } else {
+              win.gBrowser.moveTabBefore(tab, target);
+            }
+            return true;
+          } catch (error) {
+            throw new Error(`moveTab failed: ${formatError(error)}`);
           }
         },
       },

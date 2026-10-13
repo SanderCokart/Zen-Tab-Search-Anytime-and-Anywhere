@@ -14,7 +14,8 @@ is type-clean and lint-clean, so any error you see is one you introduced.
 
 Other scripts: `npm run dev` (live-reloading dev build), `npm run build`,
 `npm run format`, `npm run lint:web-ext` (builds, then runs the Firefox
-add-on linter).
+add-on linter), `npm run mcp:build` (bundles the MCP server to
+`mcp/dist/zen-tab-search-mcp.mjs`).
 
 ## Layout
 
@@ -35,8 +36,9 @@ each violation so far has been a genuine misplacement.
 | `app/`         | Background wiring that spans features: message router, command registration      |
 | `features/`    | One directory per feature, each owning its whole vertical                        |
 | `shared/`      | Wire protocol, domain types, logging, debug, `cn`, global styles                  |
+| `mcp/`         | Node MCP server (outside the extension bundle); may import `shared/` only         |
 
-Features: `search`, `timers`, `forge`, `settings`, `zen`.
+Features: `search`, `timers`, `todos`, `forge`, `settings`, `zen`, `bridge`.
 
 Inside a feature:
 
@@ -90,6 +92,12 @@ surface asks it for data.
 - **background → UI**: the background broadcasts `snapshotChanged`; UIs subscribe
   with `subscribeToSnapshotChanged` and re-fetch. There is no push of data.
 - **background → content script**: `sendTabMessage` with a `ContentCommand`.
+- **MCP server ↔ background**: the extension dials a loopback WebSocket that
+  `mcp/` listens on and authenticates with the token stored under
+  `mcpBridgeToken`. Commands are `bridgeCommandSchema` in
+  `shared/messaging/bridge-protocol.ts`, validated on both sides, and handled
+  in `features/bridge/background/zen-commands.ts`. The bridge stays off until
+  the user turns it on in settings.
 - **Zen access**: only through `features/zen/adapter.ts`, which falls back to
   `browser.tabs` when the Zen experiment API is unavailable. Do not call
   `browser.zenTabs` anywhere else.

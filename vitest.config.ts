@@ -16,7 +16,7 @@ export default defineConfig({
   test: {
     environment: "happy-dom",
     // Tests live next to the code they cover, inside each feature slice.
-    include: ["{app,entrypoints,features,shared,tests}/**/*.test.{ts,tsx}"],
+    include: ["{app,entrypoints,features,mcp,shared,tests}/**/*.test.{ts,tsx}"],
     passWithNoTests: true,
   },
 });

@@ -5,7 +5,14 @@ import type { SpaceInfo, TabInfo } from "@/shared/messaging/protocol";
  * these shapes; they are re-exported here so feature code keeps importing domain
  * types from one place.
  */
-export type { FolderInfo, SpaceInfo, TabInfo, TabTimer } from "@/shared/messaging/protocol";
+export type {
+  FolderInfo,
+  SpaceInfo,
+  TabInfo,
+  TabTimer,
+  TabTodo,
+  TodoStatus,
+} from "@/shared/messaging/protocol";
 
 export type SearchItem = { kind: "tab"; data: TabInfo } | { kind: "space"; data: SpaceInfo };
 

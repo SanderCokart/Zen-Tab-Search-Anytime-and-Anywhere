@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [".output/**", ".wxt/**", "node_modules/**"],
+    ignores: [".output/**", ".wxt/**", "node_modules/**", "mcp/dist/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -12,6 +12,7 @@ export default tseslint.config(
       "app/**/*.{ts,tsx}",
       "entrypoints/**/*.{ts,tsx}",
       "features/**/*.{ts,tsx}",
+      "mcp/**/*.{ts,tsx}",
       "shared/**/*.{ts,tsx}",
     ],
     languageOptions: {
@@ -64,6 +65,23 @@ export default tseslint.config(
               group: ["@/app/*", "@/entrypoints/*"],
               message:
                 "features/ must not import from app/ or entrypoints/; those wire features together, not the other way round.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["mcp/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/features/*", "@/app/*", "@/entrypoints/*"],
+              message:
+                "mcp/ runs in Node, not the extension: it may share only shared/ (the wire protocol) with the extension.",
             },
           ],
         },

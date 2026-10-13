@@ -3,6 +3,7 @@ import {
   buildForgeLabel,
   parseForgeUrl,
   type ForgePageInfo,
+  type ForgePlatform,
 } from "@/features/forge/model/forge-label";
 import { sendTabMessage } from "@/shared/messaging/client";
 import { isUsableTabId, type TabInfo } from "@/shared/types";
@@ -49,6 +50,45 @@ async function applyForgeLabel(
     });
   }
   return set;
+}
+
+export interface ForgeDetection {
+  tabId: number;
+  url: string;
+  label: string;
+  platform: ForgePlatform;
+  applied: boolean;
+}
+
+/**
+ * Labels every GitHub/GitLab tab in `tabs` in one pass, the bulk counterpart
+ * of the per-tab rename. With `dryRun` nothing is renamed and `applied` is false.
+ */
+export async function detectForgeLabels(
+  workspace: Pick<WorkspaceAdapter, "setLabel">,
+  tabs: TabInfo[],
+  { dryRun }: { dryRun: boolean },
+): Promise<ForgeDetection[]> {
+  const detections: ForgeDetection[] = [];
+
+  for (const tab of tabs) {
+    const url = tab.url || "";
+    const ref = isUsableTabId(tab.id) ? parseForgeUrl(url) : null;
+    if (!isUsableTabId(tab.id) || !ref) {
+      continue;
+    }
+
+    const pageInfo = await getForgePageInfo(tab.id, url);
+    const label = buildForgeLabel(url, tab.title || "", pageInfo);
+    if (!label) {
+      continue;
+    }
+
+    const applied = dryRun ? false : await workspace.setLabel(label, tab.id, true);
+    detections.push({ tabId: tab.id, url, label, platform: ref.platform, applied });
+  }
+
+  return detections;
 }
 
 function editorTabId(tabs: TabInfo[]): number | undefined {

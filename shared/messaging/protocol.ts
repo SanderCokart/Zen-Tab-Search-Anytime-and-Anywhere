@@ -43,6 +43,14 @@ export const tabTimerSchema = v.object({
   title: v.fallback(v.string(), ""),
 });
 
+export const TODO_STATUSES = ["todo", "done"] as const;
+
+/** A tab the user marked as a todo, or as done. Tabs with neither have no entry. */
+export const tabTodoSchema = v.object({
+  tabId: tabIdSchema,
+  status: v.picklist(TODO_STATUSES),
+});
+
 export const forgePageInfoSchema = v.object({
   title: v.optional(v.string()),
   bodyText: v.optional(v.string()),
@@ -112,6 +120,12 @@ export const extensionRequestSchema = v.variant("type", [
     tabId: tabIdSchema,
     label: v.string(),
   }),
+  v.object({
+    type: v.literal("setTodo"),
+    tabId: tabIdSchema,
+    /** "none" removes the tab from the todo list. */
+    status: v.picklist([...TODO_STATUSES, "none"]),
+  }),
 ]);
 
 export const contentCommandSchema = v.variant("type", [
@@ -137,6 +151,7 @@ export const searchSnapshotSchema = v.object({
   tabs: v.array(tabInfoSchema),
   spaces: v.array(spaceInfoSchema),
   timers: v.array(tabTimerSchema),
+  todos: v.fallback(v.array(tabTodoSchema), []),
 });
 
 export const EXTENSION_REQUEST_TYPES = [
@@ -154,6 +169,7 @@ export const EXTENSION_REQUEST_TYPES = [
   "clearAllTimers",
   "openSettings",
   "setTabLabel",
+  "setTodo",
 ] as const;
 
 /**
@@ -166,6 +182,8 @@ export type ForgePageInfo = v.InferOutput<typeof forgePageInfoSchema>;
 export type TabInfo = v.InferOutput<typeof tabInfoSchema>;
 export type TabTimer = v.InferOutput<typeof tabTimerSchema>;
 export type SpaceInfo = v.InferOutput<typeof spaceInfoSchema>;
+export type TabTodo = v.InferOutput<typeof tabTodoSchema>;
+export type TodoStatus = (typeof TODO_STATUSES)[number];
 
 export type ExtensionRequestType = (typeof EXTENSION_REQUEST_TYPES)[number];
 export type ExtensionRequest = v.InferOutput<typeof extensionRequestSchema>;
@@ -191,6 +209,7 @@ export type ExtensionSuccessMap = {
   clearAllTimers: ClearAllTimersResponse;
   openSettings: void;
   setTabLabel: void;
+  setTodo: void;
 };
 
 const clearTimerResponseSchema = v.object({
@@ -277,6 +296,7 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
       return v.parse(clearAllTimersResponseSchema, value) as ExtensionSuccessMap[T];
     case "openSettings":
     case "setTabLabel":
+    case "setTodo":
       return undefined as ExtensionSuccessMap[T];
     default: {
       const exhaustive: never = type;

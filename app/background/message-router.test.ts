@@ -33,6 +33,7 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
     openSettings: vi.fn(async () => undefined),
     openTimerPopup: vi.fn(async () => undefined),
     setTabLabel: vi.fn(async () => undefined),
+    setTodo: vi.fn(async () => undefined),
     isAllowedTimerEnd: vi.fn(() => true),
     ...overrides,
   };
@@ -150,5 +151,28 @@ describe("dispatchExtensionMessage", () => {
     }
     await expect(result.promise).resolves.toBeUndefined();
     expect(api.setTabLabel).toHaveBeenCalledWith(4, "Docs");
+  });
+
+  it("dispatches setTodo, including clearing it with none", async () => {
+    const api = handlers();
+    const marked = dispatchExtensionMessage(api, { type: "setTodo", tabId: 4, status: "todo" });
+    const cleared = dispatchExtensionMessage(api, { type: "setTodo", tabId: 4, status: "none" });
+    if (!marked.handled || !marked.async || !cleared.handled || !cleared.async) {
+      throw new Error("expected async dispatch");
+    }
+    await Promise.all([marked.promise, cleared.promise]);
+    expect(api.setTodo).toHaveBeenNthCalledWith(1, 4, "todo");
+    expect(api.setTodo).toHaveBeenNthCalledWith(2, 4, "none");
+  });
+
+  it("rejects a setTodo status that is not todo, done or none", () => {
+    const api = handlers();
+    const result = dispatchExtensionMessage(api, { type: "setTodo", tabId: 4, status: "later" });
+    expect(result).toEqual({
+      handled: true,
+      async: false,
+      response: { error: "Invalid message." },
+    });
+    expect(api.setTodo).not.toHaveBeenCalled();
   });
 });

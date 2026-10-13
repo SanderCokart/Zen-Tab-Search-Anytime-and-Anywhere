@@ -200,4 +200,9 @@
     aspect-ratio: 3 / 2;
     width: min(80vw, calc(90dvh * 3 / 2));
   }
+
+  [data-omnibar][data-omnibar-aspect="2/1"] {
+    aspect-ratio: 2 / 1;
+    width: min(80vw, calc(90dvh * 2));
+  }
 }

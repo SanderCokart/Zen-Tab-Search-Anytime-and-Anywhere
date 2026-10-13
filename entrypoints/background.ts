@@ -24,6 +24,11 @@ import {
   registerTabLastOpenedTracking,
 } from "@/features/zen/tab-last-opened";
 import { registerBrowserExternalTabReuse } from "@/features/intercept/background/external-tab";
+import { startBridgeClient } from "@/features/bridge/background/bridge-client";
+import { createBridgeCommandHandler } from "@/features/bridge/background/zen-commands";
+import { BRIDGE_TOKEN_STORAGE_KEY } from "@/shared/messaging/bridge-protocol";
+import { createTodoService } from "@/features/todos/background/todo-service";
+import { detectForgeLabels } from "@/features/forge/background/label-command";
 
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());
@@ -37,14 +42,17 @@ export default defineBackground(() => {
     getCustomTabLabels: (tabIds) => workspace.getCustomLabels(tabIds),
   });
 
+  const todoService = createTodoService();
+
   const getSnapshot = createSnapshotReader({
     queryTabs,
     getSpaces,
     getTimers: timerService.getActiveTimers,
+    getTodos: todoService.getTodos,
     readLastOpened: readTabLastOpened,
   });
 
-  registerTimerContextMenus(timerService);
+  registerTimerContextMenus(timerService, todoService, notifySnapshotChanged);
   registerPopupWindowTracking();
   registerBrowserExternalTabReuse({
     listTabs: (anchorTabId) => workspace.listTabs(anchorTabId),
@@ -104,6 +112,7 @@ export default defineBackground(() => {
   });
 
   browser.tabs.onRemoved.addListener((tabId, removeInfo) => {
+    todoService.forget(tabId);
     void timerService.handleTabRemoved(tabId, removeInfo.isWindowClosing);
   });
 
@@ -133,6 +142,39 @@ export default defineBackground(() => {
       }
       notifySnapshotChanged();
     },
+    setTodo: async (tabId, status) => {
+      await todoService.setTodo(tabId, status);
+      notifySnapshotChanged();
+    },
     isAllowedTimerEnd: (endAt) => isAllowedTimerEnd(endAt),
+  });
+
+  const bridge = startBridgeClient({
+    handle: createBridgeCommandHandler(workspace, {
+      timers: {
+        setTabTimer: timerService.setTabTimer,
+        clearTabTimer: timerService.clearTabTimer,
+        getActiveTimers: timerService.getActiveTimers,
+      },
+      todos: {
+        setTodo: async (tabId, status) => {
+          await todoService.setTodo(tabId, status);
+          notifySnapshotChanged();
+        },
+        getTodos: todoService.getTodos,
+      },
+      detectForgeLabels: async (tabs, options) => {
+        const detections = await detectForgeLabels(workspace, tabs, options);
+        if (detections.some((detection) => detection.applied)) {
+          notifySnapshotChanged();
+        }
+        return detections;
+      },
+    }),
+  });
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && BRIDGE_TOKEN_STORAGE_KEY in changes) {
+      bridge.reconnect();
+    }
   });
 });

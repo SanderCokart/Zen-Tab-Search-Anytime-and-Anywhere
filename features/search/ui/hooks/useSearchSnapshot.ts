@@ -1,16 +1,29 @@
 import { useEffect, useState } from "preact/hooks";
 import { debugError } from "@/shared/debug";
 import { sendExtensionMessage, subscribeToSnapshotChanged } from "@/shared/messaging/client";
-import { isActivatableTab, type SpaceInfo, type TabInfo, type TabTimer } from "@/shared/types";
+import {
+  isActivatableTab,
+  type SpaceInfo,
+  type TabInfo,
+  type TabTimer,
+  type TodoStatus,
+} from "@/shared/types";
+import { todoStatusByTabId } from "@/features/todos/model/todo";
 
 export interface SearchSnapshotState {
   tabs: TabInfo[];
   spaces: SpaceInfo[];
   timers: Map<number, TabTimer>;
+  todos: Map<number, TodoStatus>;
   loadError: string | null;
   setTabs: (update: (current: TabInfo[]) => TabInfo[]) => void;
   setTimers: (
     update: Map<number, TabTimer> | ((current: Map<number, TabTimer>) => Map<number, TabTimer>),
+  ) => void;
+  setTodos: (
+    update:
+      | Map<number, TodoStatus>
+      | ((current: Map<number, TodoStatus>) => Map<number, TodoStatus>),
   ) => void;
 }
 
@@ -22,6 +35,7 @@ export function useSearchSnapshot(): SearchSnapshotState {
   const [tabs, setTabs] = useState<TabInfo[]>([]);
   const [spaces, setSpaces] = useState<SpaceInfo[]>([]);
   const [timers, setTimers] = useState<Map<number, TabTimer>>(new Map());
+  const [todos, setTodos] = useState<Map<number, TodoStatus>>(new Map());
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,6 +47,7 @@ export function useSearchSnapshot(): SearchSnapshotState {
           setTabs(snapshot.tabs.filter(isActivatableTab));
           setSpaces(snapshot.spaces);
           setTimers(new Map(snapshot.timers.map((item) => [item.tabId, item])));
+          setTodos(todoStatusByTabId(snapshot.todos));
           setLoadError(null);
         })
         .catch((error) => {
@@ -59,5 +74,5 @@ export function useSearchSnapshot(): SearchSnapshotState {
     return () => window.clearInterval(id);
   }, [timers.size]);
 
-  return { tabs, spaces, timers, loadError, setTabs, setTimers };
+  return { tabs, spaces, timers, todos, loadError, setTabs, setTimers, setTodos };
 }

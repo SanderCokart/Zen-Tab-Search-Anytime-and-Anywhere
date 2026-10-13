@@ -29,10 +29,11 @@ function mountSearchApp(
   layout: "popup" | "overlay" = "popup",
   displaySettings?: Record<string, unknown>,
   snapshotSpaces: Partial<SpaceInfo>[] = [],
+  snapshotTodos: { tabId: number; status: "todo" | "done" }[] = [],
 ) {
   const sendMessage = vi.fn(async ({ type }: { type: string }) => {
     if (type === "getSnapshot") {
-      return { tabs: snapshotTabs, spaces: snapshotSpaces, timers: [] };
+      return { tabs: snapshotTabs, spaces: snapshotSpaces, timers: [], todos: snapshotTodos };
     }
     return undefined;
   });
@@ -255,7 +256,7 @@ describe("SearchApp", () => {
     const { root, onClose, sendMessage } = mountSearchApp(vi.fn(), forgeTabs, "overlay");
 
     await vi.waitFor(() => expect(root.textContent).toContain("Issues and requests"));
-    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("3/2");
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("2/1");
     expect(root.textContent).toContain("GitHub");
     expect(root.textContent).toContain("GitLab");
     expect(root.textContent).toContain("Issues");
@@ -308,8 +309,107 @@ describe("SearchApp", () => {
 
     await vi.waitFor(() => expect(root.textContent).toContain("Fix search"));
     expect(root.textContent).not.toContain("Issues and requests");
-    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("1/1");
+    // Tabs and the todo column, with no issue column.
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("3/2");
     expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(2);
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("lists marked tabs in the todo column, to do first and done after", async () => {
+    const { root } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [
+        { tabId: 1, status: "todo" },
+        { tabId: 2, status: "done" },
+      ],
+    );
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-column']")?.textContent).toContain(
+        "First tab",
+      ),
+    );
+    const column = root.querySelector("[data-testid='zen-todo-column']")!;
+    expect(column.textContent).toContain("1 to do · 1 done");
+    expect(column.querySelector("[data-todo-status='todo']")?.textContent).toContain("First tab");
+    expect(column.querySelector("[data-todo-status='done']")?.textContent).toContain("Second tab");
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("moves arrow navigation to the todo column with Tab, then activates with Enter", async () => {
+    const { root, onClose, sendMessage } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [
+        { tabId: 1, status: "todo" },
+        { tabId: 2, status: "done" },
+      ],
+    );
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-column']")?.textContent).toContain(
+        "First tab",
+      ),
+    );
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-selected='true']")?.textContent).toContain("First tab"),
+    );
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-todo-selected='true']")?.textContent).toContain("First tab"),
+    );
+    expect(root.querySelector("[data-selected='true']")).toBeNull();
+
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-todo-selected='true']")?.textContent).toContain(
+        "Second tab",
+      ),
+    );
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "switchTab",
+        tabId: 2,
+        domId: undefined,
+      }),
+    );
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("opens the todo menu from a row's todo button with only the todo options", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
+
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll("[data-testid='zen-todo-button']").length).toBeGreaterThan(0),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-button']")?.click();
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-tab-context-menu']")).not.toBeNull(),
+    );
+    const menu = root.querySelector("[data-testid='zen-tab-context-menu']")!;
+    expect(menu.textContent).toContain("Mark as todo");
+    expect(menu.textContent).toContain("Mark as done");
+    expect(menu.textContent).not.toContain("Rename");
+    expect(menu.textContent).not.toContain("Timer");
 
     render(null, root);
     root.remove();
@@ -329,7 +429,7 @@ describe("SearchApp", () => {
     });
 
     await vi.waitFor(() => expect(root.textContent).toContain("Issues and requests"));
-    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("3/2");
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("2/1");
     expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(1);
     expect(root.textContent).toContain("Fix search");
 

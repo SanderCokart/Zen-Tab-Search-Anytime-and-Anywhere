@@ -102,6 +102,10 @@ As you can see here you can add a timer and clear it from search, from the tab m
 
 ![Adding a tab timer and clearing it](docs/gifs/timers-from-search.gif)
 
+### AI agents (MCP)
+
+Claude, Cursor and other MCP clients can read and organise Zen through a local MCP server that ships in this repo: list spaces, folders and tabs, rename tabs, create and rename folders, move tabs into folders or other spaces, and reorder them. Turn it on under **AI agents (MCP)** in the settings, then follow [mcp/README.md](mcp/README.md) to register the server with your client. It only listens on this computer and only accepts the token from your settings.
+
 
 
 ## Installation
@@ -117,6 +121,8 @@ As you can see here you can add a timer and clear it from search, from the tab m
   - `xpinstall.signatures.required`
 4. Open `about:addons`, click the gear icon, and choose **Install Add-on From File…**.
 5. Select the downloaded `.zip` (you can also drag it onto the page).
+
+**Optional: let AI agents control Zen.** The same release has a `zen-tab-search-mcp.mjs` asset, the MCP server for Claude, Cursor and other MCP clients. It needs Node.js 20 or newer. See [mcp/README.md](mcp/README.md#install) to download it, turn it on in the settings, and register it with your client.
 
 
 
@@ -167,7 +173,7 @@ The only supported distribution method for this extension is sideloading a zip (
 
 ## Creating a release
 
-Releases are published as GitHub release zips. The release script bumps the package version, commits the version files, tags the commit, builds the extension zip, creates a GitHub release, and attaches the zip.
+Releases are published as GitHub release zips. The release script bumps the package version, commits the version files, tags the commit, builds the extension zip and the MCP server bundle, creates a GitHub release, and attaches both.
 
 ```bash
 npm run release -- patch --message "Maintenance release"
@@ -185,7 +191,7 @@ Release checklist:
 2. Confirm GitHub CLI auth with `gh auth status`.
 3. Preview the release with `npm run release -- patch --dry-run --generate-notes`.
 4. Run the release command, for example `npm run release -- patch --generate-notes`.
-5. Confirm the GitHub release contains the `zen-tab-search-<version>-firefox.zip` asset.
+5. Confirm the GitHub release contains both assets: `zen-tab-search-<version>-firefox.zip` and `zen-tab-search-mcp.mjs`.
 
 If a release fails, follow the recovery instructions printed by the script before retrying.
 
@@ -225,8 +231,9 @@ Pre-commit hooks run through Husky and lint-staged. They format staged JSON, Mar
 ```
 entrypoints/          WXT entry points (background, content script, popup, options)
 app/                  Background wiring that spans features
-features/             search, timers, forge, settings, zen
+features/             search, timers, forge, settings, zen, bridge
 shared/               Wire protocol, types, logging, styles
+mcp/                  MCP server that lets AI agents drive Zen through the extension
 public/experiment/    Privileged Experiment API (zenTabs) — required for cross-space Zen support
 public/icon/          Extension icons
 scripts/              Build and release helpers

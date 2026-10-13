@@ -17,6 +17,7 @@ import {
 } from "@/features/settings/model/ui-scale";
 import { cn } from "@/shared/ui/cn";
 import { ColorPickerField } from "@/features/settings/ui/ColorPickerField";
+import { BridgeSettings } from "@/features/bridge/ui/BridgeSettings";
 
 const COLOR_SETTINGS = [
   ["textColor", "Text color"],
@@ -443,6 +444,7 @@ export function DisplaySettingsApp() {
             </ul>
           </li>
         </ul>
+        <BridgeSettings />
         <button
           type="button"
           class="border-zen-border bg-zen-accent hover:bg-zen-accent-hover cursor-pointer self-end rounded-md border px-4 py-2 font-[inherit] text-sm"

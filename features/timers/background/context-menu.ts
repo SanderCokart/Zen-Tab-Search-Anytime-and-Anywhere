@@ -1,6 +1,11 @@
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { openCustomTimerPopup } from "@/features/timers/background/popup";
 import type { createTimerService } from "@/features/timers/background/timer-service";
+import {
+  createTodoContextMenuItems,
+  handleTodoContextMenuClick,
+} from "@/features/todos/background/context-menu";
+import type { TodoService } from "@/features/todos/background/todo-service";
 import { isUsableTabId } from "@/shared/types";
 
 type TimerService = ReturnType<typeof createTimerService>;
@@ -10,8 +15,14 @@ type ContextMenuContext = NonNullable<
 >[number];
 const TAB_CONTEXT = "tab" as unknown as ContextMenuContext;
 
-export function registerTimerContextMenus(timerService: TimerService): void {
+/** Registers the tab context-menu entries for timers and todos in one pass. */
+export function registerTimerContextMenus(
+  timerService: TimerService,
+  todoService: TodoService,
+  onTodosChanged: () => void,
+): void {
   void browser.contextMenus.removeAll().then(() => {
+    createTodoContextMenuItems();
     browser.contextMenus.create({
       id: "tab-timer",
       title: "Tab timer",
@@ -47,6 +58,10 @@ export function registerTimerContextMenus(timerService: TimerService): void {
   browser.contextMenus.onClicked.addListener((info, tab) => {
     const tabId = tab?.id;
     if (!isUsableTabId(tabId)) {
+      return;
+    }
+
+    if (handleTodoContextMenuClick(info.menuItemId, tabId, todoService, onTodosChanged)) {
       return;
     }
 
