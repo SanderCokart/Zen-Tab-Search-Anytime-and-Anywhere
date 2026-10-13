@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { TimerIcon } from "@/features/search/ui/components/TimerIcon";
 import { canRenameTab, tabBrowserId, isEssentialTab, type TabInfo } from "@/shared/types";
 
@@ -15,7 +16,11 @@ export interface TabContextMenuProps {
 const itemClass =
   "hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] px-[var(--zen-space-3)] py-[var(--zen-space-2)] text-left font-[inherit] text-[length:var(--zen-text-md)]";
 
-/** Right-click menu for a tab row. */
+/**
+ * Right-click menu for a tab, opened from the result rows, the issue column and
+ * the todo column. `x`/`y` are the pointer position; the menu shifts left or up
+ * when it would overflow the viewport.
+ */
 export function TabContextMenu({
   tab,
   x,
@@ -28,10 +33,21 @@ export function TabContextMenu({
   const tabId = tabBrowserId(tab);
   const canTodo = tabId !== undefined && !isEssentialTab(tab);
 
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ left: x, top: y });
+  useLayoutEffect(() => {
+    const rect = menuRef.current?.getBoundingClientRect();
+    setPosition({
+      left: Math.max(0, Math.min(x, window.innerWidth - (rect?.width ?? 0))),
+      top: Math.max(0, Math.min(y, window.innerHeight - (rect?.height ?? 0))),
+    });
+  }, [x, y]);
+
   return (
     <div
+      ref={menuRef}
       class="bg-zen-panel border-zen-line-medium fixed z-50 min-w-[180px] rounded-md border p-1 shadow-lg"
-      style={{ left: `${x}px`, top: `${y}px` }}
+      style={{ left: `${position.left}px`, top: `${position.top}px` }}
       data-testid="zen-tab-context-menu"
       role="menu"
       onPointerDown={(event) => event.stopPropagation()}

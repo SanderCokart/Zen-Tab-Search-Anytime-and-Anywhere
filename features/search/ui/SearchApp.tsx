@@ -47,11 +47,9 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
   const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("recent");
   const [timerTabId, setTimerTabId] = useState<number | null>(null);
   const [showTimers, setShowTimers] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{
-    item: Extract<SearchItem, { kind: "tab" }>;
-    x: number;
-    y: number;
-  } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ tab: TabInfo; x: number; y: number } | null>(
+    null,
+  );
 
   const { tabs, spaces, timers, todos, loadError, setTabs, setTimers, setTodos } =
     useSearchSnapshot();
@@ -83,6 +81,11 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
   useCloseOnOutsideClick(contextMenu !== null, "[data-testid='zen-tab-context-menu']", () =>
     setContextMenu(null),
   );
+
+  const openContextMenu = (tab: TabInfo, event: MouseEvent) => {
+    event.preventDefault();
+    setContextMenu({ tab, x: event.clientX, y: event.clientY });
+  };
 
   const activateTab = (tabId: number | undefined, domId: string | undefined, label: string) => {
     void sendExtensionMessage({ type: "switchTab", tabId, domId: domId || undefined })
@@ -228,11 +231,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               timerTabId={timerTabId}
               registerOption={navigation.registerOption}
               onActivate={activateItem}
-              onContextMenu={(item, x, y) => {
-                if (item.kind === "tab") {
-                  setContextMenu({ item, x, y });
-                }
-              }}
+              onContextMenu={openContextMenu}
               onToggleTodo={(tabId) =>
                 todoActions.setTodo(tabId, todos.has(tabId) ? "none" : "todo")
               }
@@ -266,6 +265,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               setForgeSortMode((current) => (current === "recent" ? "old" : "recent"));
               navigation.setSelectedForgeIndex(0);
             }}
+            onContextMenu={openContextMenu}
           />
         )}
         {layout === "overlay" && todoTabs.length > 0 && (
@@ -276,18 +276,25 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             selectedIndex={navigation.activePane === "todos" ? navigation.selectedTodoIndex : -1}
             onActivate={activateTodoTab}
             onSelect={navigation.setSelectedTodoIndex}
+            onDone={(tab) => {
+              const tabId = tabBrowserId(tab);
+              if (tabId !== undefined) {
+                todoActions.setTodo(tabId, "none");
+              }
+            }}
+            onContextMenu={openContextMenu}
           />
         )}
       </div>
 
       {contextMenu && (
         <TabContextMenu
-          tab={contextMenu.item.data}
+          tab={contextMenu.tab}
           x={contextMenu.x}
           y={contextMenu.y}
-          isTodo={todos.has(tabBrowserId(contextMenu.item.data) ?? -1)}
+          isTodo={todos.has(tabBrowserId(contextMenu.tab) ?? -1)}
           onRename={() => {
-            rename.open(contextMenu.item.data, stripTimerPrefixFromTab(contextMenu.item.data));
+            rename.open(contextMenu.tab, stripTimerPrefixFromTab(contextMenu.tab));
             setContextMenu(null);
           }}
           onOpenTimer={(tabId) => {
@@ -295,7 +302,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             timerActions.openTimerPopup(tabId);
           }}
           onSetTodo={(status) => {
-            const tabId = tabBrowserId(contextMenu.item.data);
+            const tabId = tabBrowserId(contextMenu.tab);
             setContextMenu(null);
             if (tabId !== undefined) {
               todoActions.setTodo(tabId, status);

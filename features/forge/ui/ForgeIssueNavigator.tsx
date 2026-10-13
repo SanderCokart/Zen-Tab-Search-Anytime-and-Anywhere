@@ -10,6 +10,7 @@ import { formatForgeEntryDate } from "@/features/search/ui/lib/format";
 import { entryTextClass, projectBorderColors } from "@/features/search/ui/lib/styles";
 import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import { formatForgeKind, formatForgePlatform } from "@/features/forge/model/forge-label";
+import type { TabInfo } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
 export function ForgeIssueNavigator({
@@ -21,6 +22,7 @@ export function ForgeIssueNavigator({
   onActivate,
   onSelect,
   onToggleSort,
+  onContextMenu,
 }: {
   entries: ForgeIssueEntry[];
   backgroundColor: string;
@@ -30,6 +32,8 @@ export function ForgeIssueNavigator({
   onActivate: (entry: ForgeIssueEntry) => void;
   onSelect: (index: number) => void;
   onToggleSort: () => void;
+  /** Right-click on an entry opens the context menu for its tab. */
+  onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
 }) {
   const providers = useMemo(() => groupForgeIssueEntries(entries, sortMode), [entries, sortMode]);
   // Index once instead of an indexOf scan per rendered row.
@@ -61,6 +65,7 @@ export function ForgeIssueNavigator({
             }}
             onClick={() => onActivate(entry)}
             onFocus={() => onSelect(entryIndex)}
+            onContextMenu={(event) => onContextMenu(entry.tab, event)}
             title={entry.ref.url}
           >
             <span

@@ -7,6 +7,7 @@ import {
   isEssentialTab,
   tabBrowserId,
   type SearchItem,
+  type TabInfo,
   type TabTimer,
   type TodoStatus,
 } from "@/shared/types";
@@ -25,7 +26,8 @@ export interface SearchResultsListProps {
   timerTabId: number | null;
   registerOption: (index: number, element: HTMLLIElement | null) => void;
   onActivate: (item: SearchItem) => void;
-  onContextMenu: (item: SearchItem, x: number, y: number) => void;
+  /** Right-click on a tab row; spaces have no menu. */
+  onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
   onToggleTodo: (tabId: number) => void;
   onToggleTimerForm: (tabId: number) => void;
   onOpenTimerPopup: (tabId: number) => void;
@@ -173,15 +175,9 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
       role="option"
       aria-selected={selected}
       onContextMenu={(event) => {
-        if (item.kind !== "tab") {
-          return;
+        if (item.kind === "tab") {
+          onContextMenu(item.data, event);
         }
-        event.preventDefault();
-        onContextMenu(
-          item,
-          Math.min(event.clientX, window.innerWidth - 180),
-          Math.min(event.clientY, window.innerHeight - 52),
-        );
       }}
       onClick={() => onActivate(item)}
     >

@@ -5,7 +5,8 @@ import { cn } from "@/shared/ui/cn";
 
 /**
  * The third overlay column: tabs marked as todo. Clicking a row switches to
- * its tab. Only rendered while there is at least one todo.
+ * its tab, its "Mark as done" link removes the todo, and right-clicking opens the tab
+ * context menu. Only rendered while there is at least one todo.
  */
 export function TodoNavigator({
   tabs,
@@ -14,6 +15,8 @@ export function TodoNavigator({
   selectedIndex,
   onActivate,
   onSelect,
+  onDone,
+  onContextMenu,
 }: {
   tabs: TabInfo[];
   backgroundColor: string;
@@ -21,6 +24,8 @@ export function TodoNavigator({
   selectedIndex: number;
   onActivate: (tab: TabInfo) => void;
   onSelect: (index: number) => void;
+  onDone: (tab: TabInfo) => void;
+  onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
 }) {
   return (
     <aside
@@ -38,11 +43,10 @@ export function TodoNavigator({
         {tabs.map((tab, index) => {
           const selected = selectedIndex === index;
           return (
-            <button
+            <div
               key={tab.id ?? tab.domId ?? tab.url}
-              type="button"
               class={cn(
-                "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 shrink-0 cursor-pointer flex-col overflow-hidden rounded-[var(--zen-radius)] border-0 bg-transparent p-[var(--zen-space-2)] text-left font-[inherit] text-inherit",
+                "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 shrink-0 items-end overflow-hidden rounded-[var(--zen-radius)]",
                 selected && "bg-zen-line-soft",
               )}
               data-todo-selected={selected ? "true" : undefined}
@@ -51,27 +55,41 @@ export function TodoNavigator({
                   element?.scrollIntoView({ block: "nearest", inline: "nearest" });
                 }
               }}
-              onClick={() => onActivate(tab)}
-              onFocus={() => onSelect(index)}
-              title={tab.url}
+              onContextMenu={(event) => onContextMenu(tab, event)}
             >
-              <span
-                class={cn(
-                  "block w-full min-w-0 text-[length:var(--zen-text-base)]",
-                  entryTextClass(truncate),
-                )}
+              <button
+                type="button"
+                class="flex min-w-0 flex-1 cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-[var(--zen-space-2)] text-left font-[inherit] text-inherit"
+                onClick={() => onActivate(tab)}
+                onFocus={() => onSelect(index)}
+                title={tab.url}
               >
-                {formatTabDisplayTitle(tab)}
-              </span>
-              <span
-                class={cn(
-                  "text-zen-subtle block w-full min-w-0 text-[length:var(--zen-text-sm)]",
-                  entryTextClass(truncate),
-                )}
+                <span
+                  class={cn(
+                    "block w-full min-w-0 text-[length:var(--zen-text-base)]",
+                    entryTextClass(truncate),
+                  )}
+                >
+                  {formatTabDisplayTitle(tab)}
+                </span>
+                <span
+                  class={cn(
+                    "text-zen-subtle block w-full min-w-0 text-[length:var(--zen-text-sm)]",
+                    entryTextClass(truncate),
+                  )}
+                >
+                  {tab.workspaceName || hostname(tab.url)}
+                </span>
+              </button>
+              <button
+                type="button"
+                class="text-zen-subtle hover:text-zen-text shrink-0 cursor-pointer border-0 bg-transparent p-[var(--zen-space-2)] font-[inherit] text-[length:var(--zen-text-sm)] whitespace-nowrap hover:underline"
+                data-testid="zen-todo-done-button"
+                onClick={() => onDone(tab)}
               >
-                {tab.workspaceName || hostname(tab.url)}
-              </span>
-            </button>
+                Mark as done
+              </button>
+            </div>
           );
         })}
       </div>

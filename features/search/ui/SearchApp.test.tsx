@@ -421,6 +421,107 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("marks a todo done from its Done button in the todo column", async () => {
+    const { root, sendMessage, onClose } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [{ tabId: 2, status: "todo" }],
+    );
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-done-button']")).not.toBeNull(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-done-button']")!.click();
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-column']")).toBeNull(),
+    );
+    expect(sendMessage).toHaveBeenCalledWith({ type: "setTodo", tabId: 2, status: "none" });
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "switchTab" }));
+    expect(onClose).not.toHaveBeenCalled();
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("opens the tab context menu from a todo row", async () => {
+    const { root, sendMessage } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [{ tabId: 2, status: "todo" }],
+    );
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-done-button']")).not.toBeNull(),
+    );
+    root.querySelector("[data-testid='zen-todo-done-button']")!.parentElement!.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
+    const menu = () => root.querySelector("[data-testid='zen-tab-context-menu']");
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Mark as done"));
+    expect(menu()?.textContent).toContain("Rename");
+    expect(menu()?.textContent).toContain("Timer");
+
+    [...root.querySelectorAll("[role='menuitem']")]
+      .find((node) => node.textContent?.includes("Timer"))
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "openTimerPopup", tabId: 2 }),
+    );
+    expect(menu()).toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("opens the tab context menu from an issue entry", async () => {
+    const forgeTabs = [
+      { ...tabs[0], title: "Fix search", url: "https://github.com/acme/project/issues/42" },
+    ];
+    const { root, sendMessage } = mountSearchApp(vi.fn(), forgeTabs, "overlay");
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("button[title*='github.com']")).not.toBeNull(),
+    );
+    root.querySelector("button[title*='github.com']")!.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
+    const menu = () => root.querySelector("[data-testid='zen-tab-context-menu']");
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Mark as todo"));
+    expect(menu()?.textContent).toContain("Rename");
+
+    [...root.querySelectorAll("[role='menuitem']")]
+      .find((node) => node.textContent?.includes("Mark as todo"))
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "setTodo", tabId: 1, status: "todo" }),
+    );
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-column']")?.textContent).toContain(
+        "Fix search",
+      ),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
   it("shows forge tabs in both overlay results and the issue navigator when the nested filter is off", async () => {
     const forgeTabs = [
       {
