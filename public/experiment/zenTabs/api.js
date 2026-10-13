@@ -822,10 +822,17 @@ this.zenTabs = class extends ExtensionAPI {
     }
 
     function findFolder(folderId) {
-      for (const win of enumerateZenBrowserWindows()) {
-        const folder =
-          typeof folderId === "string" && folderId ? win.document?.getElementById(folderId) : null;
-        if (folder?.isZenFolder) {
+      if (typeof folderId !== "string" || !folderId) {
+        throw new Error(`Zen folder not found: ${folderId}`);
+      }
+      // Match folders the way listFolders does: every browser window, not only those
+      // tabManager yields, and scan zen-folder elements, since getElementById
+      // returns the first element with that ID, which need not be the folder.
+      for (const win of enumerateAllBrowserWindows()) {
+        const folder = [...(win.document?.querySelectorAll("zen-folder") ?? [])].find(
+          (entry) => entry.isZenFolder && String(entry.id || "") === folderId,
+        );
+        if (folder) {
           return { win, folder };
         }
       }
@@ -871,8 +878,48 @@ this.zenTabs = class extends ExtensionAPI {
       debugLog("external tab hook install failed", { error: formatError(error) });
     }
 
+    function getExtensionError() {
+      try {
+        return ChromeUtils.importESModule("resource://gre/modules/ExtensionUtils.sys.mjs")
+          .ExtensionUtils.ExtensionError;
+      } catch (error) {
+        debugLog("ExtensionError unavailable", { error: formatError(error) });
+        return undefined;
+      }
+    }
+
+    /**
+     * Firefox replaces any error an experiment throws with "An unexpected error
+     * occurred" unless it is an ExtensionError, so rethrow as one to keep the
+     * message. Only the first line is kept; formatError appends stacks.
+     */
+    function exposeErrors(api) {
+      const ExtensionError = getExtensionError();
+      if (!ExtensionError) {
+        return api;
+      }
+
+      return Object.fromEntries(
+        Object.entries(api).map(([name, method]) => [
+          name,
+          async (...args) => {
+            try {
+              return await method(...args);
+            } catch (error) {
+              if (error instanceof ExtensionError) {
+                throw error;
+              }
+              debugLog(`${name} failed`, { error: formatError(error) });
+              const message = typeof error === "string" ? error : error?.message || String(error);
+              throw new ExtensionError(message.split("\n")[0] || `${name} failed`);
+            }
+          },
+        ]),
+      );
+    }
+
     return {
-      zenTabs: {
+      zenTabs: exposeErrors({
         async consumeExternalTab(tabId) {
           pruneExternalTabs();
           if (!Number.isInteger(tabId) || tabId < 0) {
@@ -1289,7 +1336,7 @@ this.zenTabs = class extends ExtensionAPI {
             throw new Error(`moveTab failed: ${formatError(error)}`);
           }
         },
-      },
+      }),
     };
   }
 };
