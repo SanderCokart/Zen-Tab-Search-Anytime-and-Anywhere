@@ -9,7 +9,7 @@ import {
 } from "@/shared/messaging/bridge-protocol";
 import { spaceInfoSchema, TRAFFIC_LIGHTS, type SpaceInfo } from "@/shared/messaging/protocol";
 import type { ZenBridge } from "./bridge-server";
-import { findReusableFolder } from "./folders";
+import { findReusableFolder, folderPath, requireFolder } from "./folders";
 import { applyPatchTree, type PatchTreeNode } from "./patch-tree";
 import { findReusableSpace } from "./spaces";
 import {
@@ -26,6 +26,14 @@ const spaceId = z.string().min(1).describe("Space ID from zen_list_spaces");
 const spaceIds = z.array(spaceId).min(1).max(200).describe("Space IDs from zen_list_spaces");
 const folderId = z.string().min(1).describe("Folder ID from zen_list_folders or zen_list_tabs");
 const folderIds = z.array(folderId).min(1).max(200).describe("Folder IDs from zen_list_folders");
+const folderPathInput = z
+  .string()
+  .trim()
+  .min(1)
+  .max(500)
+  .describe(
+    'Folder path from zen_list_folders, for example "Work / repo / master". Use this when two folders share a name.',
+  );
 const folderName = z.string().trim().min(1).max(120).describe("Folder name");
 const spaceName = z.string().trim().min(1).max(120).describe("Space name");
 const webUrl = z
@@ -141,6 +149,8 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
     v.parse(v.array(spaceInfoSchema), await bridge.request({ type: "listSpaces" }));
   const fetchFolders = async () =>
     v.parse(v.array(zenFolderInfoSchema), await bridge.request({ type: "listFolders" }));
+  const resolveFolder = async (input: { folderId?: string; path?: string }) =>
+    requireFolder(await fetchFolders(), input);
   const fetchTabs = async (filter: { spaceId?: string; folderId?: string }) =>
     v.parse(v.array(tabSummarySchema), await bridge.request({ type: "listTabs", ...filter }));
   const openTab = async (command: Omit<Extract<BridgeCommand, { type: "openTab" }>, "type">) =>
@@ -180,7 +190,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   workflow(
     "zen_list_tabs",
-    'List open tabs across Zen spaces. Every result starts with totals: totalTabs, essentialTabs and tabsBySpace (tab counts per space and per folder). Tabs come grouped by space by default, 100 per page; follow page.nextOffset for more, or pass limit: 500 to get a typical session in one call. Essential tabs are shared by all spaces, so they are marked global and listed under essentials. A tab with a traffic-light color includes `color` (`red`, `orange` or `green`). Filter with spaceId or folderId (a folder includes its subfolders). Examples: { "fields": "counts" } for totals only; { "groupBy": "none", "fields": "titles", "limit": 500 } for every tab at once.',
+    'List open tabs across Zen spaces. Every result starts with totals: totalTabs, essentialTabs and tabsBySpace (tab counts per space and per folder). Tabs come grouped by space by default, 100 per page; follow page.nextOffset for more, or pass limit: 500 to get a typical session in one call. Essential tabs are shared by all spaces, so they are marked global and listed under essentials. A tab with a traffic-light color includes `color` (`red`, `orange` or `green`). Firefox tab IDs change if a tab is closed or restored, so always use IDs from the latest call. Filter with spaceId or folderId (a folder includes its subfolders). Examples: { "fields": "counts" } for totals only; { "groupBy": "none", "fields": "titles", "limit": 500 } for every tab at once.',
     z.object({
       spaceId: spaceId.optional(),
       folderId: folderId.optional(),
@@ -218,12 +228,15 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
     },
   );
 
-  tool(
+  workflow(
     "zen_list_folders",
-    "List Zen folders (tab groups), including empty ones, with their space and parent folder.",
-    {},
+    'List Zen folders (tab groups), including empty ones, with their space, parent folder, and `path` (space and ancestors, for example "Work / repo / master"). Use path when two folders share a name.',
+    z.object({}),
     readOnly,
-    () => ({ type: "listFolders" }),
+    async () => {
+      const folders = await fetchFolders();
+      return folders.map((entry) => ({ ...entry, path: folderPath(folders, entry) }));
+    },
   );
 
   tool(
@@ -236,7 +249,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   workflow(
     "zen_open_tab",
-    'Open a new tab in the background and return its tabId, title, URL, space and folder. Defaults to the active space. With folderId the tab goes straight into that folder (and its space), and Zen pins it, because folders hold pinned tabs. Example: { "url": "https://example.com", "folderId": "1712345678901-42" }.',
+    'Open a new tab in the background and return its tabId, title, URL, space and folder. Defaults to the active space. With folderId or path the tab goes straight into that folder (and its space), and Zen pins it, because folders hold pinned tabs. Example: { "url": "https://example.com", "path": "Work / Reading" }.',
     z.object({
       url: webUrl,
       spaceId: spaceId
@@ -245,15 +258,20 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
       folderId: folderId
         .optional()
         .describe("Folder to put the tab in; spaceId, if given, must be the folder's space"),
+      path: folderPathInput.optional().describe("Same as folderId, by path instead of id"),
       activate: z.boolean().default(false).describe("Switch to the new tab (and its space)"),
       pinned: z.boolean().default(false).describe("Pin the tab; tabs in folders are always pinned"),
     }),
     writes,
     async (input) => {
+      const folder =
+        input.folderId || input.path
+          ? await resolveFolder({ folderId: input.folderId, path: input.path })
+          : undefined;
       const tab = await openTab({
         url: input.url,
         spaceId: input.spaceId,
-        folderId: input.folderId,
+        folderId: folder?.id,
         active: input.activate,
         pinned: input.pinned,
       });
@@ -263,7 +281,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   workflow(
     "zen_open_google_workspace",
-    `Open Google services (${GOOGLE_SERVICES.join(", ")}) in a space or folder, skipping any already open there, so repeating the call creates nothing new. Returns one result per service with status "created", "existing" or "failed", plus its tabId and folder. Example: { "services": ["drive", "docs", "sheets"], "folderId": "1712345678901-42" }.`,
+    `Open Google services (${GOOGLE_SERVICES.join(", ")}) in a space or folder, skipping any already open there, so repeating the call creates nothing new. Returns one result per service with status "created", "existing" or "failed", plus its tabId and folder. Example: { "services": ["drive", "docs", "sheets"], "path": "Work / Google" }.`,
     z.object({
       services: z
         .array(z.enum(GOOGLE_SERVICES))
@@ -274,6 +292,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
         .optional()
         .describe("Space to open them in; defaults to the active space, or the folder's space"),
       folderId: folderId.optional().describe("Folder to open them in"),
+      path: folderPathInput.optional().describe("Same as folderId, by path instead of id"),
       activateFirst: z
         .boolean()
         .default(false)
@@ -282,13 +301,8 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
     idempotentWrites,
     async (input) => {
       let target: { spaceId: string; spaceName: string; folderId?: string; folderName?: string };
-      if (input.folderId) {
-        const folder = (await fetchFolders()).find((entry) => entry.id === input.folderId);
-        if (!folder) {
-          throw new Error(
-            `Folder not found: ${input.folderId}. Get folder IDs from zen_list_folders.`,
-          );
-        }
+      if (input.folderId || input.path) {
+        const folder = await resolveFolder({ folderId: input.folderId, path: input.path });
         if (input.spaceId && folder.spaceId !== input.spaceId) {
           throw new Error(
             `Folder "${folder.name}" is in space "${folder.spaceName}" (${folder.spaceId}), not ${input.spaceId}. Leave out spaceId or pick a folder in that space.`,
@@ -398,7 +412,13 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
         ? undefined
         : findReusableSpace(await fetchSpaces(), input.name);
       if (existing) {
-        return { created: false, spaceId: existing.id, name: existing.name };
+        return {
+          created: false,
+          reused: true,
+          note: `Reused existing space "${existing.name}". Pass allowDuplicate: true to create another.`,
+          spaceId: existing.id,
+          name: existing.name,
+        };
       }
       const result = v.parse(
         v.object({ spaceId: v.string(), name: v.string() }),
@@ -418,7 +438,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   workflow(
     "zen_create_folder",
-    'Create a folder in a space, or a nested folder with parentId, and optionally move tabs into it (Zen pins them). If a folder with the same name already exists in that place, it is reused instead (created: false); pass allowDuplicate: true to always create a new one. Example: { "name": "Google", "spaceId": "{general-space-id}" }.',
+    'Create a folder in a space, or a nested folder with parentId or parentPath, and optionally move tabs into it (Zen pins them). If a folder with the same name already exists in that place, it is reused (created: false, reused: true, plus a note); pass allowDuplicate: true to always create a new one. Example: { "name": "master", "parentPath": "Work / repo" }.',
     z.object({
       name: folderName,
       spaceId: spaceId
@@ -427,6 +447,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
           "Space to create the folder in; defaults to the parent folder's space, or the active space",
         ),
       parentId: folderId.optional().describe("Parent folder; omit for a top-level folder"),
+      parentPath: folderPathInput.optional().describe("Same as parentId, by path instead of id"),
       tabIds: tabIds.optional(),
       allowDuplicate: z
         .boolean()
@@ -436,14 +457,12 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
     idempotentWrites,
     async (input) => {
       const folders = await fetchFolders();
+      const parent =
+        input.parentId || input.parentPath
+          ? requireFolder(folders, { folderId: input.parentId, path: input.parentPath })
+          : undefined;
       let targetSpaceId = input.spaceId;
-      if (input.parentId) {
-        const parent = folders.find((entry) => entry.id === input.parentId);
-        if (!parent) {
-          throw new Error(
-            `Folder not found: ${input.parentId}. Get folder IDs from zen_list_folders.`,
-          );
-        }
+      if (parent) {
         if (targetSpaceId && parent.spaceId !== targetSpaceId) {
           throw new Error(
             `Parent folder "${parent.name}" is in space "${parent.spaceName}" (${parent.spaceId}), not ${targetSpaceId}.`,
@@ -455,9 +474,10 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
       const existing = input.allowDuplicate
         ? undefined
-        : findReusableFolder(folders, input.name, space.id, input.parentId);
+        : findReusableFolder(folders, input.name, space.id, parent?.id);
 
       if (existing) {
+        const path = folderPath(folders, existing);
         const moved = input.tabIds
           ? await bridge.request({
               type: "moveTabsToFolder",
@@ -467,11 +487,14 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
           : undefined;
         return {
           created: false,
+          reused: true,
+          note: `Reused existing folder "${existing.name}" at ${path}. Pass allowDuplicate: true to create another.`,
           folderId: existing.id,
           name: existing.name,
+          path,
           spaceId: space.id,
           spaceName: space.name,
-          ...(input.parentId ? { parentId: input.parentId } : {}),
+          ...(parent ? { parentId: parent.id } : {}),
           ...(moved ? { movedTabs: moved } : {}),
         };
       }
@@ -482,17 +505,21 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
           type: "createFolder",
           name: input.name,
           spaceId: space.id,
-          parentId: input.parentId,
+          parentId: parent?.id,
           tabIds: input.tabIds,
         }),
       );
+      const path = parent
+        ? `${folderPath(folders, parent)} / ${input.name}`
+        : `${space.name} / ${input.name}`;
       return {
         created: true,
         folderId: result.folderId,
         name: input.name,
+        path,
         spaceId: space.id,
         spaceName: space.name,
-        ...(input.parentId ? { parentId: input.parentId } : {}),
+        ...(parent ? { parentId: parent.id } : {}),
       };
     },
   );
@@ -561,12 +588,23 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
     tabIds: input.tabIds,
   }));
 
-  tool(
+  workflow(
     "zen_move_tabs_to_folder",
-    "Move tabs into a folder. The tabs are pinned and moved to the folder's space.",
-    { tabIds, folderId },
+    'Move tabs into a folder. The tabs are pinned and moved to the folder\'s space. Pass folderId, or path when two folders share a name. Example: { "tabIds": [118], "path": "Work / repo / master" }.',
+    z.object({
+      tabIds,
+      folderId: folderId.optional(),
+      path: folderPathInput.optional(),
+    }),
     idempotentWrites,
-    (input) => ({ type: "moveTabsToFolder", tabIds: input.tabIds, folderId: input.folderId }),
+    async (input) => {
+      const folder = await resolveFolder({ folderId: input.folderId, path: input.path });
+      return bridge.request({
+        type: "moveTabsToFolder",
+        tabIds: input.tabIds,
+        folderId: folder.id,
+      });
+    },
   );
 
   tool(

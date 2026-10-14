@@ -162,6 +162,36 @@ describe("buildTabListView", () => {
     ]);
   });
 
+  it("unstacks a repeated forge prefix and uses the host while a new tab is still loading", () => {
+    const stacked = buildTabListView(
+      [
+        tab(8, {
+          spaceId: "work",
+          spaceName: "Work",
+          customLabel: "MR: !19962 - MR: !19962 - Example change",
+          title: "Example change",
+        }),
+      ],
+      spaces,
+      { ...defaults, groupBy: "none", fields: "titles" },
+    );
+    expect(stacked.tabs).toEqual([{ id: 8, title: "MR: !19962 - Example change", space: "Work" }]);
+
+    const loading = buildTabListView(
+      [
+        tab(9, {
+          spaceId: "work",
+          spaceName: "Work",
+          title: "https://gitlab.com/acme/app",
+          url: "https://gitlab.com/acme/app",
+        }),
+      ],
+      spaces,
+      { ...defaults, groupBy: "none", fields: "titles" },
+    );
+    expect(loading.tabs).toEqual([{ id: 9, title: "gitlab.com", space: "Work", loading: true }]);
+  });
+
   it("includes a tab's traffic-light color when it has one", () => {
     const view = buildTabListView(
       [tab(4, { spaceId: "work", spaceName: "Work", color: "green", active: true })],

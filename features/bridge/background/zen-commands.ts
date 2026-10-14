@@ -270,7 +270,57 @@ export function createBridgeCommandHandler(
     });
   }
 
+  function commandTabIds(command: BridgeCommand): number[] | undefined {
+    switch (command.type) {
+      case "activateTab":
+      case "renameTab":
+        return [command.tabId];
+      case "moveTabBefore":
+      case "moveTabAfter":
+        return [command.tabId, command.targetTabId];
+      case "setEssential":
+      case "clearEssential":
+      case "moveTabsToFolder":
+      case "removeTabsFromFolder":
+      case "moveTabsToSpace":
+      case "setTimer":
+      case "clearTimer":
+      case "setTodo":
+      case "clearTodo":
+      case "setStatus":
+      case "clearStatus":
+        return command.tabIds;
+      default:
+        return undefined;
+    }
+  }
+
+  async function requireOpenTabs(tabIds: number[]): Promise<void> {
+    const tabs = await workspace.listTabs();
+    const open = new Set(tabs.flatMap((tab) => (isUsableTabId(tab.id) ? [tab.id] : [])));
+    const missing: number[] = [];
+    for (const tabId of tabIds.filter((id) => !open.has(id))) {
+      try {
+        await workspace.getTab(tabId);
+      } catch {
+        missing.push(tabId);
+      }
+    }
+    if (missing.length === 0) {
+      return;
+    }
+    const subject =
+      missing.length === 1 ? `Tab ${String(missing[0])} is` : `Tabs ${missing.join(", ")} are`;
+    throw new Error(
+      `${subject} not open. Firefox assigns a new ID if a tab is closed or restored, so marks like todos can drop. Call zen_list_tabs for current IDs.`,
+    );
+  }
+
   return async function handleBridgeCommand(command: BridgeCommand): Promise<unknown> {
+    const tabIds = commandTabIds(command);
+    if (tabIds) {
+      await requireOpenTabs(tabIds);
+    }
     switch (command.type) {
       case "listTimers": {
         const timers = await services.timers.getActiveTimers();

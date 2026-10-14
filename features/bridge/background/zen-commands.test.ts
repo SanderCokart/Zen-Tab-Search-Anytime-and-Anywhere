@@ -85,6 +85,20 @@ describe("createBridgeCommandHandler", () => {
     );
   });
 
+  it("says when a tab ID is gone, so the agent can list tabs again", async () => {
+    const handle = createBridgeCommandHandler(
+      workspace({
+        listTabs: async () => [tab({ id: 1 })],
+        getTab: async () => {
+          throw new Error("No tab with id: 50");
+        },
+      }),
+    );
+    await expect(handle({ type: "renameTab", tabId: 50, label: "gone" })).rejects.toThrow(
+      "Tab 50 is not open. Firefox assigns a new ID if a tab is closed or restored",
+    );
+  });
+
   it("creates folders with no tabs when none are given", async () => {
     const createFolder = vi.fn(async () => "folder-9");
     const handle = createBridgeCommandHandler(workspace({ createFolder }));

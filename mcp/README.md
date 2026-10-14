@@ -255,9 +255,9 @@ port and must still have the token to drive Zen. Only use the tunnel on a server
 | `zen_status`                  | Whether Zen is connected; if not, why (see [Troubleshooting](#troubleshooting))           |
 | `zen_list_spaces`             | Spaces with IDs and which one is active                                                   |
 | `zen_list_tabs`               | Totals per space and folder, then a page of tabs grouped by space or folder, or flat      |
-| `zen_list_folders`            | Folders, including empty ones, with space and parent folder                               |
+| `zen_list_folders`            | Folders, including empty ones, with space, parent, and `path` (`Work / repo / master`)    |
 | `zen_get_selected_tabs`       | Tabs currently multi-selected in the active window                                        |
-| `zen_open_tab`                | Open a URL in the background, in a space or straight into a folder                        |
+| `zen_open_tab`                | Open a URL in the background, in a space or a folder (`folderId` or `path`)               |
 | `zen_open_google_workspace`   | Open Drive, Docs, Sheets, Slides, Calendar or Gmail, skipping any already open there      |
 | `zen_activate_tab`            | Focus a tab, switching space if needed                                                    |
 | `zen_switch_space`            | Switch the active space                                                                   |
@@ -265,11 +265,11 @@ port and must still have the token to drive Zen. Only use the tunnel on a server
 | `zen_rename_space`            | Rename a space                                                                            |
 | `zen_delete_space`            | Delete spaces and the tabs in them (essentials kept); cannot delete the last space        |
 | `zen_rename_tab`              | Set a tab's custom name; an empty name clears it                                          |
-| `zen_create_folder`           | Create a folder (nested with `parentId`), or reuse the one with that name in that place   |
+| `zen_create_folder`           | Create a folder (nested with `parentId` or `parentPath`); reuse returns `reused: true`    |
 | `zen_rename_folder`           | Rename a folder                                                                           |
 | `zen_move_folder`             | Move a folder to another space and/or parent; omit `parentId` for the space root          |
 | `zen_delete_folder`           | Delete empty folders (`folderIds`); nested empties are removed innermost first            |
-| `zen_move_tabs_to_folder`     | Move tabs into a folder (and into the folder's space)                                     |
+| `zen_move_tabs_to_folder`     | Move tabs into a folder (`folderId` or `path`)                                            |
 | `zen_remove_tabs_from_folder` | Take tabs out of their folder; they stay in the same space                                |
 | `zen_move_tabs_to_space`      | Move tabs to another space without switching to it                                        |
 | `zen_move_tab`                | Place a tab directly before or after another tab in the same space                        |
@@ -343,8 +343,11 @@ with a traffic-light color includes `"color": "red"` (or `orange` / `green`).
 
 1. `zen_list_spaces` to find General's `id`.
 2. `zen_create_folder` with `{ "name": "Google", "spaceId": "<General id>" }` returns
-   `{ "created": true, "folderId": "1712…-42", … }`. Calling it again returns the same folder
-   with `"created": false`.
+   `{ "created": true, "folderId": "1712…-42", "path": "General / Google", … }`. Calling it
+   again returns the same folder with `"created": false`, `"reused": true`, and a `note`.
+   When two folders share a name, pass `parentPath` (for example `"Work / repo"`) instead of
+   guessing `parentId`. Firefox tab IDs change if a tab is closed or restored — write tools
+   say so, and `zen_list_tabs` has the current IDs.
 3. `zen_open_google_workspace` with
    `{ "services": ["drive", "docs", "sheets"], "folderId": "1712…-42" }`:
 

@@ -296,9 +296,20 @@ describe("MCP acceptance", () => {
     const general = spaces.find((space: { name: string }) => space.name === "General");
 
     const folder = await call("zen_create_folder", { name: "Google", spaceId: general.id });
-    expect(folder).toMatchObject({ created: true, name: "Google", spaceId: "general" });
+    expect(folder).toMatchObject({
+      created: true,
+      name: "Google",
+      spaceId: "general",
+      path: "General / Google",
+    });
     const again = await call("zen_create_folder", { name: "google ", spaceId: general.id });
-    expect(again).toMatchObject({ created: false, folderId: folder.folderId });
+    expect(again).toMatchObject({
+      created: false,
+      reused: true,
+      folderId: folder.folderId,
+      path: "General / Google",
+    });
+    expect(again.note).toMatch(/Reused existing folder "Google"/);
     expect(zen.folders).toHaveLength(1);
 
     const services = ["drive", "docs", "sheets"];
@@ -394,21 +405,26 @@ describe("MCP acceptance", () => {
     const space = await call("zen_create_space", { name: "Client" });
     expect(space).toMatchObject({ created: true, name: "Client" });
     const again = await call("zen_create_space", { name: "client " });
-    expect(again).toMatchObject({ created: false, spaceId: space.spaceId });
+    expect(again).toMatchObject({ created: false, reused: true, spaceId: space.spaceId });
 
     const parent = await call("zen_create_folder", { name: "Docs", spaceId: space.spaceId });
     const nested = await call("zen_create_folder", {
       name: "API",
-      parentId: parent.folderId,
+      parentPath: "Client / Docs",
     });
     expect(nested).toMatchObject({
       created: true,
       name: "API",
       spaceId: space.spaceId,
       parentId: parent.folderId,
+      path: "Client / Docs / API",
     });
-    const reused = await call("zen_create_folder", { name: "api", parentId: parent.folderId });
-    expect(reused).toMatchObject({ created: false, folderId: nested.folderId });
+    const reused = await call("zen_create_folder", { name: "api", parentPath: "Client / Docs" });
+    expect(reused).toMatchObject({ created: false, reused: true, folderId: nested.folderId });
+    const listed = await call("zen_list_folders");
+    expect(listed.find((entry: { id: string }) => entry.id === nested.folderId)).toMatchObject({
+      path: "Client / Docs / API",
+    });
 
     const patched = await call("zen_apply_patch", {
       nodes: [

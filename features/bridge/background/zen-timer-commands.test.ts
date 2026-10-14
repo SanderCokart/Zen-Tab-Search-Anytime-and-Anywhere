@@ -38,9 +38,13 @@ function workspace(tabs: TabInfo[] = []): BridgeWorkspace {
     deleteSpaces: async () => undefined,
     setEssential: async () => undefined,
     clearEssential: async () => undefined,
-    getTab: async () => {
-      throw new Error("unused");
-    },
+    getTab: async (tabId) => ({
+      id: tabId,
+      title: "Tab",
+      url: "https://example.com",
+      favIconUrl: "",
+      windowId: 1,
+    }),
   };
 }
 

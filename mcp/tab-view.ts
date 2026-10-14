@@ -35,8 +35,53 @@ interface SpaceCount {
 
 type TabView = Record<string, unknown>;
 
+/** One ISSUE/MR/PR prefix as the extension writes it, including a trailing ` - `. */
+const FORGE_LABEL_PREFIX =
+  /^(?:ISSUE:\s*#\d+|MR:\s*(?:#\d+\s*-\s*)?!\d+|PR:\s*(?:#\d+\s*-\s*)?!\d+)\s*-\s*/i;
+
+function unstackForgeTitle(title: string): string {
+  let current = title.replace(/\s+/g, " ").trim();
+  while (true) {
+    const stripped = current.replace(FORGE_LABEL_PREFIX, "").trim();
+    if (stripped === current || !FORGE_LABEL_PREFIX.test(stripped)) {
+      return current;
+    }
+    current = stripped;
+  }
+}
+
+function looksLikeUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value) || value === "about:blank";
+}
+
+function hostTitle(url: string): string | undefined {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return host || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isUnresolvedTitle(title: string, url: string): boolean {
+  return (
+    !title || title === "New Tab" || title === "Untitled" || title === url || looksLikeUrl(title)
+  );
+}
+
 function displayTitle(tab: TabSummary): string {
-  return tab.customLabel || tab.title;
+  const raw = (tab.customLabel || tab.title).trim();
+  if (isUnresolvedTitle(raw, tab.url)) {
+    return hostTitle(tab.url) || raw || tab.url || "Untitled";
+  }
+  return unstackForgeTitle(raw);
+}
+
+function isLoading(tab: TabSummary): boolean {
+  if (tab.customLabel?.trim()) {
+    return false;
+  }
+  return isUnresolvedTitle(tab.title.trim(), tab.url) || tab.url === "about:blank";
 }
 
 function folderPathLabel(tab: TabSummary): string | undefined {
@@ -55,6 +100,7 @@ function viewTab(tab: TabSummary, fields: TabFields, withContext: boolean): TabV
     // Essential tabs are pinned across every space, so they have no space of their own.
     ...(tab.essential ? { essential: true, global: true } : {}),
     ...(tab.color ? { color: tab.color } : {}),
+    ...(isLoading(tab) ? { loading: true } : {}),
   };
 
   if (fields === "full") {

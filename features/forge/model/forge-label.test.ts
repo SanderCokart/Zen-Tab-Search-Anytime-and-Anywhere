@@ -122,6 +122,15 @@ describe("buildForgeLabel", () => {
     ).toBe("MR: !999992 - Example change");
   });
 
+  it("does not stack a prefix that is already on the title", () => {
+    expect(
+      buildForgeLabel(
+        "https://gitlab.com/acme/app/-/merge_requests/19962",
+        "MR: !19962 - MR: !19962 - Example change",
+      ),
+    ).toBe("MR: !19962 - Example change");
+  });
+
   it("formats GitHub pull requests", () => {
     expect(
       buildForgeLabel(

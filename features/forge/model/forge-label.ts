@@ -134,8 +134,24 @@ export function forgeTitleIncludesRefId(title: string, id: string): boolean {
   return new RegExp(`(?:^|[^\\dA-Za-z])(?:#|!)?${escapedId}(?!\\d)`).test(title);
 }
 
-export function cleanForgeTitle(title: string, ref: ForgeRef): string {
+/** One ISSUE/MR/PR prefix as `formatForgeLabel` writes it, including a trailing ` - `. */
+const FORGE_LABEL_PREFIX =
+  /^(?:ISSUE:\s*#\d+|MR:\s*(?:#\d+\s*-\s*)?!\d+|PR:\s*(?:#\d+\s*-\s*)?!\d+)\s*-\s*/i;
+
+/** Unwraps stacked `MR: !12 - MR: !12 - Title` prefixes so labelling can start from the page title. */
+export function stripForgeLabelPrefixes(title: string): string {
   let cleaned = title.replace(/\s+/g, " ").trim();
+  while (true) {
+    const next = cleaned.replace(FORGE_LABEL_PREFIX, "").trim();
+    if (next === cleaned) {
+      return cleaned;
+    }
+    cleaned = next;
+  }
+}
+
+export function cleanForgeTitle(title: string, ref: ForgeRef): string {
+  let cleaned = stripForgeLabelPrefixes(title);
   cleaned = cleaned.replace(/\s*[·|].*$/, "");
   cleaned = cleaned.replace(new RegExp(`\\s*[\\[(][!#]?${ref.id}[\\])]\\s*$`), "");
   cleaned = cleaned.replace(/\s*\((?:#|!)\d+\)\s*$/, "");
