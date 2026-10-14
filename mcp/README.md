@@ -254,7 +254,7 @@ port and must still have the token to drive Zen. Only use the tunnel on a server
 | ----------------------------- | ----------------------------------------------------------------------------------------- |
 | `zen_status`                  | Whether Zen is connected; if not, why (see [Troubleshooting](#troubleshooting))           |
 | `zen_list_spaces`             | Spaces with IDs and which one is active                                                   |
-| `zen_list_tabs`               | Totals per space and folder, then a page of tabs grouped by space or folder, or flat      |
+| `zen_list_tabs`               | Totals per space and folder, then every tab grouped by space or folder, or flat           |
 | `zen_list_folders`            | Folders, including empty ones, with space, parent, and `path` (`Work / repo / master`)    |
 | `zen_get_selected_tabs`       | Tabs currently multi-selected in the active window                                        |
 | `zen_open_tab`                | Open a URL in the background, in a space or a folder (`folderId` or `path`)               |
@@ -317,9 +317,8 @@ use for.
 Folder counts count each tab in its innermost folder only; `path` shows where that folder sits,
 for example `Docs / API`.
 
-**Every tab in one call.** `{ "groupBy": "none", "fields": "titles", "limit": 500 }`. The result
-adds `page: { "offset": 0, "limit": 500, "returned": 42, "nextOffset": null }` and a flat `tabs`
-list. When `nextOffset` is a number, call again with `offset` set to it.
+**Every tab in one call.** `{ "groupBy": "none", "fields": "titles" }` returns a flat `tabs`
+list. There is no paging: one call always includes every matching tab.
 
 `zen_list_tabs` options:
 
@@ -327,8 +326,6 @@ list. When `nextOffset` is a number, call again with `offset` set to it.
 | ---------- | ---------------------------------------------------------- | ------------- |
 | `fields`   | `counts`, `titles`, `titles_urls`, `full`                  | `titles_urls` |
 | `groupBy`  | `space`, `folder` (space, then folder), `none` (flat list) | `space`       |
-| `limit`    | 1–500 tabs per page                                        | 100           |
-| `offset`   | tabs to skip                                               | 0             |
 | `spaceId`  | only this space                                            |               |
 | `folderId` | only this folder, including its subfolders                 |               |
 

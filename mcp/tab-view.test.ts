@@ -43,8 +43,6 @@ const tabs: TabSummary[] = [
 const defaults: TabListOptions = {
   fields: "titles_urls",
   groupBy: "space",
-  limit: 100,
-  offset: 0,
   filtered: false,
 };
 
@@ -144,22 +142,11 @@ describe("buildTabListView", () => {
     ]);
   });
 
-  it("pages through the ordered list and keeps the totals for the whole set", () => {
-    const first = buildTabListView(tabs, spaces, { ...defaults, groupBy: "none", limit: 2 });
-    expect(first.totalTabs).toBe(5);
-    expect(first.page).toEqual({ offset: 0, limit: 2, returned: 2, nextOffset: 2 });
-    expect((first.tabs as { id: number }[]).map((entry) => entry.id)).toEqual([3, 2]);
-
-    const last = buildTabListView(tabs, spaces, {
-      ...defaults,
-      groupBy: "none",
-      limit: 2,
-      offset: 4,
-    });
-    expect(last.page).toEqual({ offset: 4, limit: 2, returned: 1, nextOffset: null });
-    expect(last.tabs).toEqual([
-      { id: 1, title: "Tab 1", url: "https://example.com/1", space: "Home" },
-    ]);
+  it("returns every tab in order, without paging", () => {
+    const view = buildTabListView(tabs, spaces, { ...defaults, groupBy: "none" });
+    expect(view.totalTabs).toBe(5);
+    expect(view).not.toHaveProperty("page");
+    expect((view.tabs as { id: number }[]).map((entry) => entry.id)).toEqual([3, 2, 4, 5, 1]);
   });
 
   it("unstacks a repeated forge prefix and uses the host while a new tab is still loading", () => {

@@ -284,9 +284,9 @@ describe("MCP acceptance", () => {
     expect(counts).not.toHaveProperty("spaces");
   });
 
-  it("retrieves all tabs in one paginated request", async () => {
-    const all = await call("zen_list_tabs", { groupBy: "none", fields: "titles", limit: 500 });
-    expect(all.page).toEqual({ offset: 0, limit: 500, returned: 4, nextOffset: null });
+  it("retrieves all tabs in one request", async () => {
+    const all = await call("zen_list_tabs", { groupBy: "none", fields: "titles" });
+    expect(all).not.toHaveProperty("page");
     expect(all.tabs.map((tab: { id: number }) => tab.id).sort()).toEqual([1, 2, 3, 4]);
     expect(all.tabs.find((tab: { id: number }) => tab.id === 3)).toMatchObject({ global: true });
   });

@@ -10,8 +10,6 @@ export type TabGrouping = (typeof TAB_GROUPINGS)[number];
 export interface TabListOptions {
   fields: TabFields;
   groupBy: TabGrouping;
-  limit: number;
-  offset: number;
   /** Whether a space or folder filter was applied; empty spaces are then left out of the counts. */
   filtered: boolean;
 }
@@ -190,10 +188,10 @@ function countBySpace(tabs: TabSummary[], spaces: SpaceInfo[], filtered: boolean
   return filtered ? all.filter((space) => space.tabCount > 0) : all;
 }
 
-function groupBySpace(page: TabSummary[], fields: TabFields, byFolder: boolean) {
-  const essentials = page.filter((tab) => tab.essential);
+function groupBySpace(tabs: TabSummary[], fields: TabFields, byFolder: boolean) {
+  const essentials = tabs.filter((tab) => tab.essential);
   const spaces = new Map<string, { spaceId: string; spaceName: string; tabs: TabSummary[] }>();
-  for (const tab of page) {
+  for (const tab of tabs) {
     if (tab.essential) {
       continue;
     }
@@ -251,7 +249,7 @@ function groupBySpace(page: TabSummary[], fields: TabFields, byFolder: boolean) 
 
 /**
  * Builds the `zen_list_tabs` result: totals for the whole (filtered) tab set,
- * then one page of tabs, flat or grouped, at the requested detail level.
+ * then every matching tab, flat or grouped, at the requested detail level.
  */
 export function buildTabListView(
   tabs: TabSummary[],
@@ -269,26 +267,15 @@ export function buildTabListView(
     return summary;
   }
 
-  const page = ordered.slice(options.offset, options.offset + options.limit);
-  const end = options.offset + page.length;
-  const pageInfo = {
-    offset: options.offset,
-    limit: options.limit,
-    returned: page.length,
-    nextOffset: end < ordered.length ? end : null,
-  };
-
   if (options.groupBy === "none") {
     return {
       ...summary,
-      page: pageInfo,
-      tabs: page.map((tab) => viewTab(tab, options.fields, true)),
+      tabs: ordered.map((tab) => viewTab(tab, options.fields, true)),
     };
   }
 
   return {
     ...summary,
-    page: pageInfo,
-    ...groupBySpace(page, options.fields, options.groupBy === "folder"),
+    ...groupBySpace(ordered, options.fields, options.groupBy === "folder"),
   };
 }

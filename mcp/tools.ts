@@ -190,7 +190,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   workflow(
     "zen_list_tabs",
-    'List open tabs across Zen spaces. Every result starts with totals: totalTabs, essentialTabs and tabsBySpace (tab counts per space and per folder). Tabs come grouped by space by default, 100 per page; follow page.nextOffset for more, or pass limit: 500 to get a typical session in one call. Essential tabs are shared by all spaces, so they are marked global and listed under essentials. A tab with a traffic-light color includes `color` (`red`, `orange` or `green`). Firefox tab IDs change if a tab is closed or restored, so always use IDs from the latest call. Filter with spaceId or folderId (a folder includes its subfolders). Examples: { "fields": "counts" } for totals only; { "groupBy": "none", "fields": "titles", "limit": 500 } for every tab at once.',
+    'List every open tab across Zen spaces in one call. Every result starts with totals: totalTabs, essentialTabs and tabsBySpace (tab counts per space and per folder). Tabs come grouped by space by default. Essential tabs are shared by all spaces, so they are marked global and listed under essentials. A tab with a traffic-light color includes `color` (`red`, `orange` or `green`). Firefox tab IDs change if a tab is closed or restored, so always use IDs from the latest call. Filter with spaceId or folderId (a folder includes its subfolders). Examples: { "fields": "counts" } for totals only; { "groupBy": "none", "fields": "titles" } for every tab as a flat list.',
     z.object({
       spaceId: spaceId.optional(),
       folderId: folderId.optional(),
@@ -204,13 +204,6 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
         .enum(TAB_GROUPINGS)
         .default("space")
         .describe('"space" (default), "folder" (space, then folder), or "none" for a flat list'),
-      limit: z.number().int().min(1).max(500).default(100).describe("Tabs per page (max 500)"),
-      offset: z
-        .number()
-        .int()
-        .min(0)
-        .default(0)
-        .describe("Tabs to skip; pass the previous page's nextOffset"),
     }),
     readOnly,
     async (input) => {
@@ -221,8 +214,6 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
       return buildTabListView(tabs, spaces, {
         fields: input.fields,
         groupBy: input.groupBy,
-        limit: input.limit,
-        offset: input.offset,
         filtered: Boolean(input.spaceId || input.folderId),
       });
     },
