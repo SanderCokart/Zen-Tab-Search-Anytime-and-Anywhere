@@ -7,7 +7,7 @@ import {
   type BridgeCommand,
   type TabSummary,
 } from "@/shared/messaging/bridge-protocol";
-import { spaceInfoSchema, type SpaceInfo } from "@/shared/messaging/protocol";
+import { spaceInfoSchema, TRAFFIC_LIGHTS, type SpaceInfo } from "@/shared/messaging/protocol";
 import type { ZenBridge } from "./bridge-server";
 import { findReusableFolder } from "./folders";
 import { applyPatchTree, type PatchTreeNode } from "./patch-tree";
@@ -180,7 +180,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   workflow(
     "zen_list_tabs",
-    'List open tabs across Zen spaces. Every result starts with totals: totalTabs, essentialTabs and tabsBySpace (tab counts per space and per folder). Tabs come grouped by space by default, 100 per page; follow page.nextOffset for more, or pass limit: 500 to get a typical session in one call. Essential tabs are shared by all spaces, so they are marked global and listed under essentials. Filter with spaceId or folderId (a folder includes its subfolders). Examples: { "fields": "counts" } for totals only; { "groupBy": "none", "fields": "titles", "limit": 500 } for every tab at once.',
+    'List open tabs across Zen spaces. Every result starts with totals: totalTabs, essentialTabs and tabsBySpace (tab counts per space and per folder). Tabs come grouped by space by default, 100 per page; follow page.nextOffset for more, or pass limit: 500 to get a typical session in one call. Essential tabs are shared by all spaces, so they are marked global and listed under essentials. A tab with a traffic-light color includes `color` (`red`, `orange` or `green`). Filter with spaceId or folderId (a folder includes its subfolders). Examples: { "fields": "counts" } for totals only; { "groupBy": "none", "fields": "titles", "limit": 500 } for every tab at once.',
     z.object({
       spaceId: spaceId.optional(),
       folderId: folderId.optional(),
@@ -634,6 +634,33 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
     { tabIds },
     idempotentWrites,
     (input) => ({ type: "clearTodo", tabIds: input.tabIds }),
+  );
+
+  tool(
+    "zen_list_colors",
+    "List tabs that have a traffic-light color (red, orange or green), in tab order, with the tab, its title and where it sits. Colors also appear as `color` on zen_list_tabs. Independent of todos.",
+    {},
+    readOnly,
+    () => ({ type: "listStatuses" }),
+  );
+
+  tool(
+    "zen_set_color",
+    'Set the same traffic-light color on one or more tabs, replacing any color they already have. Colors are independent of todos. Example: { "tabIds": [118, 119], "color": "green" }.',
+    {
+      tabIds,
+      color: z.enum(TRAFFIC_LIGHTS).describe("red, orange or green"),
+    },
+    idempotentWrites,
+    (input) => ({ type: "setStatus", tabIds: input.tabIds, light: input.color }),
+  );
+
+  tool(
+    "zen_clear_color",
+    "Clear traffic-light colors from tabs. Reports how many of those tabs actually had a color.",
+    { tabIds },
+    idempotentWrites,
+    (input) => ({ type: "clearStatus", tabIds: input.tabIds }),
   );
 
   tool(

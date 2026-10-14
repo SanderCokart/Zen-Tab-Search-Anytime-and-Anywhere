@@ -5,9 +5,11 @@ import type { BridgeCommand, TabSummary } from "@/shared/messaging/bridge-protoc
 import {
   isUsableTabId,
   type TabInfo,
+  type TabStatus,
   type TabTimer,
   type TabTodo,
   type TodoStatus,
+  type TrafficLight,
 } from "@/shared/types";
 
 export type BridgeWorkspace = Pick<
@@ -51,10 +53,17 @@ export interface BridgeTodos {
   getTodos(tabIds: number[]): Promise<TabTodo[]>;
 }
 
+/** Status color operations, backed by the same service the traffic-light UI uses. */
+export interface BridgeStatuses {
+  setStatus(tabId: number, light: TrafficLight | "none"): Promise<void>;
+  getStatuses(tabIds: number[]): Promise<TabStatus[]>;
+}
+
 /** Everything beyond the Zen workspace that a bridge command may need. */
 export interface BridgeServices {
   timers: BridgeTimers;
   todos: BridgeTodos;
+  statuses: BridgeStatuses;
   /** Labels the given tabs (or only reports them when `dryRun`). */
   detectForgeLabels(tabs: TabInfo[], options: { dryRun: boolean }): Promise<ForgeDetection[]>;
 }
@@ -68,6 +77,10 @@ const unavailableServices: BridgeServices = {
   todos: {
     setTodo: async () => unavailable("todos"),
     getTodos: async () => unavailable("todos"),
+  },
+  statuses: {
+    setStatus: async () => unavailable("status colors"),
+    getStatuses: async () => [],
   },
   detectForgeLabels: async () => unavailable("forge detection"),
 };
@@ -90,6 +103,20 @@ function todoView(todo: TabTodo, tab: TabInfo | undefined) {
   return {
     tabId: todo.tabId,
     status: todo.status,
+    title: tab?.title ?? "",
+    label: tab?.customLabel?.trim() || null,
+    url: tab?.url ?? "",
+    spaceId: tab?.workspaceId ?? null,
+    spaceName: tab?.workspaceName ?? null,
+    folderId: tab?.folderId ?? null,
+    folderName: tab?.folderName ?? null,
+  };
+}
+
+function statusView(status: TabStatus, tab: TabInfo | undefined) {
+  return {
+    tabId: status.tabId,
+    color: status.light,
     title: tab?.title ?? "",
     label: tab?.customLabel?.trim() || null,
     url: tab?.url ?? "",
@@ -228,6 +255,21 @@ export function createBridgeCommandHandler(
   const pendingUrls = createPendingUrls();
   const summarize = (tab: TabInfo) => pendingUrls.apply(summarizeTab(tab));
 
+  async function withColors(tabs: TabSummary[]): Promise<TabSummary[]> {
+    if (tabs.length === 0) {
+      return tabs;
+    }
+    const marked = await services.statuses.getStatuses(tabs.map((tab) => tab.id));
+    if (marked.length === 0) {
+      return tabs;
+    }
+    const byId = new Map(marked.map((status) => [status.tabId, status.light]));
+    return tabs.map((tab) => {
+      const color = byId.get(tab.id);
+      return color ? { ...tab, color } : tab;
+    });
+  }
+
   return async function handleBridgeCommand(command: BridgeCommand): Promise<unknown> {
     switch (command.type) {
       case "listTimers": {
@@ -297,6 +339,43 @@ export function createBridgeCommandHandler(
         };
       }
 
+      case "listStatuses": {
+        const tabs = await workspace.listTabs();
+        const byId = new Map(
+          tabs.flatMap((tab) => (isUsableTabId(tab.id) ? [[tab.id, tab] as const] : [])),
+        );
+        const marked = await services.statuses.getStatuses([...byId.keys()]);
+        const lights = new Map(marked.map((status) => [status.tabId, status.light]));
+        const statuses: ReturnType<typeof statusView>[] = [];
+        for (const [tabId, tab] of byId) {
+          const light = lights.get(tabId);
+          if (light) {
+            statuses.push(statusView({ tabId, light }, tab));
+          }
+        }
+        return { statusCount: statuses.length, statuses };
+      }
+
+      case "setStatus": {
+        for (const tabId of command.tabIds) {
+          await services.statuses.setStatus(tabId, command.light);
+        }
+        return { tabIds: command.tabIds, color: command.light };
+      }
+
+      case "clearStatus": {
+        const existing = new Set(
+          (await services.statuses.getStatuses(command.tabIds)).map((status) => status.tabId),
+        );
+        for (const tabId of command.tabIds) {
+          await services.statuses.setStatus(tabId, "none");
+        }
+        return {
+          tabIds: command.tabIds,
+          cleared: command.tabIds.filter((tabId) => existing.has(tabId)).length,
+        };
+      }
+
       case "detectForgeTabs": {
         const wanted = command.tabIds ? new Set(command.tabIds) : undefined;
         const tabs = (await workspace.listTabs()).filter(
@@ -319,7 +398,7 @@ export function createBridgeCommandHandler(
 
       case "listTabs": {
         const tabs = await workspace.listTabs();
-        return tabs.filter((tab) => matchesListFilter(tab, command)).map(summarize);
+        return withColors(tabs.filter((tab) => matchesListFilter(tab, command)).map(summarize));
       }
 
       case "listFolders":
@@ -327,7 +406,7 @@ export function createBridgeCommandHandler(
 
       case "getSelectedTabs": {
         const tabs = await workspace.listSelectedTabs();
-        return tabs.map(summarize);
+        return withColors(tabs.map(summarize));
       }
 
       case "activateTab":

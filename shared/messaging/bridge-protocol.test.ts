@@ -68,6 +68,31 @@ describe("todo commands", () => {
   });
 });
 
+describe("status color commands", () => {
+  it("accepts list, set and clear", () => {
+    expect(parseBridgeRequest({ id: "1", command: { type: "listStatuses" } })?.command).toEqual({
+      type: "listStatuses",
+    });
+    expect(
+      parseBridgeRequest({
+        id: "1",
+        command: { type: "setStatus", tabIds: [4], light: "red" },
+      })?.command,
+    ).toEqual({ type: "setStatus", tabIds: [4], light: "red" });
+    expect(
+      parseBridgeRequest({ id: "1", command: { type: "clearStatus", tabIds: [4] } })?.command,
+    ).toEqual({ type: "clearStatus", tabIds: [4] });
+  });
+
+  it("rejects a color that is not red, orange or green, including none", () => {
+    for (const light of ["none", "blue", "yellow"]) {
+      expect(
+        parseBridgeRequest({ id: "1", command: { type: "setStatus", tabIds: [4], light } }),
+      ).toBeUndefined();
+    }
+  });
+});
+
 describe("layout commands", () => {
   it("accepts createSpace, nested createFolder, essentials and closeTab", () => {
     expect(

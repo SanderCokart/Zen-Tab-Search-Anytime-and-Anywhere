@@ -3,7 +3,8 @@
 Lets Claude, Cursor and other MCP clients read and organise Zen Browser: list spaces, folders
 and tabs, create and rename spaces, create nested folders, apply a PATCH-style layout tree,
 move tabs and folders, mark tabs essential, close tabs, delete empty folders and spaces, set
-tab timers, and mark tabs as todo and tick them off. Most write tools take id arrays.
+tab timers, mark tabs as todo and tick them off, and set tab colors. Most write tools take
+id arrays.
 
 ```
 MCP client ──stdio──▶ zen-tab-search-mcp ◀──WebSocket (127.0.0.1:47652)── Zen Tab Search extension ──▶ Zen
@@ -282,6 +283,9 @@ port and must still have the token to drive Zen. Only use the tunnel on a server
 | `zen_list_todos`              | Tabs marked as todo, with title, URL and where they sit                                   |
 | `zen_set_todo`                | Mark tabs as todo                                                                         |
 | `zen_clear_todo`              | Mark tabs' todos as done, which removes them                                              |
+| `zen_list_colors`             | Tabs with a traffic-light color, with title, URL and where they sit                       |
+| `zen_set_color`               | Set the same color on tabs (`tabIds` + `color`: red, orange or green)                     |
+| `zen_clear_color`             | Clear traffic-light colors from tabs                                                      |
 | `zen_detect_forge_tabs`       | Label every open GitHub and GitLab tab (issue, PR or MR number and title); `dryRun` previews it |
 
 Tool results are JSON. Tab lists leave out favicons, which are large data URLs an agent has no
@@ -329,7 +333,11 @@ list. When `nextOffset` is a number, call again with `offset` set to it.
 | `folderId` | only this folder, including its subfolders                 |               |
 
 Essential tabs are shared by every space, so they never appear under a space. They are listed
-under `essentials`, marked `"global": true`, and in `full` mode have `"spaceId": null`.
+under `essentials`, marked `"global": true`, and in `full` mode have `"spaceId": null`. A tab
+with a traffic-light color includes `"color": "red"` (or `orange` / `green`).
+
+**Color tabs red, orange or green.** `zen_set_color` with `{ "tabIds": [118, 119], "color": "green" }`.
+`zen_clear_color` removes it. `zen_list_colors` lists only the tabs that have a color.
 
 **A Google folder in the General space, with Drive, Docs and Sheets in it.**
 
@@ -427,10 +435,11 @@ or `folderId`. New tabs need a `url`. Patching an existing tab does not change i
   Deleting a space closes the tabs in it (essentials are kept) and refuses to remove the last
   space. The tools still cannot navigate an existing tab or read page contents.
   `zen_apply_patch` does not delete.
-- **One server owns the bridge.** Only one process can listen on port 47652. If two MCP clients
-  (say, Claude and Cursor) both start the server, the second one reports who holds the port and
-  takes over as soon as that server exits. A server exits on its own when its MCP client closes,
-  so an old one can't hold the port forever. `ZEN_BRIDGE_PORT` changes the server's port for
+- **One server owns the bridge.** Only one process can listen on port 47652. A server that starts
+  takes the port over from one already running (for example from another Cursor window or MCP
+  client). The older server then reports that it was taken over and stays passive, and it takes the
+  port back once the newer server exits. Restart that client to use it again. A server only takes
+  over with the token, and only from a build of the same bridge protocol. `ZEN_BRIDGE_PORT` changes the server's port for
   testing only; the extension always connects to 47652.
 
 ## Troubleshooting

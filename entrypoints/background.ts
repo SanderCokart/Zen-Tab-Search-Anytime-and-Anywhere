@@ -193,6 +193,13 @@ export default defineBackground(() => {
         },
         getTodos: todoService.getTodos,
       },
+      statuses: {
+        setStatus: async (tabId, light) => {
+          await statusService.setStatus(tabId, light);
+          notify();
+        },
+        getStatuses: statusService.getStatuses,
+      },
       detectForgeLabels: async (tabs, options) => {
         const detections = await detectForgeLabels(workspace, tabs, options);
         if (detections.some((detection) => detection.applied)) {

@@ -4,7 +4,14 @@ import {
   type BridgeServices,
   type BridgeWorkspace,
 } from "@/features/bridge/background/zen-commands";
-import type { TabInfo, TabTimer, TabTodo, TodoStatus } from "@/shared/types";
+import type {
+  TabInfo,
+  TabStatus,
+  TabTimer,
+  TabTodo,
+  TodoStatus,
+  TrafficLight,
+} from "@/shared/types";
 
 function workspace(tabs: TabInfo[] = []): BridgeWorkspace {
   return {
@@ -44,6 +51,7 @@ function timer(tabId: number, endAt: number): TabTimer {
 function services(
   partial: Partial<BridgeServices["timers"]> = {},
   todos: Partial<BridgeServices["todos"]> = {},
+  statuses: Partial<BridgeServices["statuses"]> = {},
 ): BridgeServices {
   return {
     timers: {
@@ -56,6 +64,11 @@ function services(
       setTodo: vi.fn(async () => undefined),
       getTodos: vi.fn(async () => []),
       ...todos,
+    },
+    statuses: {
+      setStatus: vi.fn(async () => undefined),
+      getStatuses: vi.fn(async () => []),
+      ...statuses,
     },
     detectForgeLabels: vi.fn(async () => []),
   };
@@ -269,6 +282,110 @@ describe("bridge todo commands", () => {
     const handle = createBridgeCommandHandler(workspace(tabs));
     await expect(handle({ type: "listTodos" })).rejects.toThrow(
       "todos are not available in this context.",
+    );
+  });
+});
+
+describe("bridge status color commands", () => {
+  const tabs: TabInfo[] = [
+    { id: 1, title: "Docs", url: "https://example.com/docs", favIconUrl: "", windowId: 1 },
+    {
+      id: 2,
+      title: "Mail",
+      customLabel: "Inbox",
+      url: "https://mail.example/",
+      favIconUrl: "",
+      windowId: 1,
+      workspaceId: "work",
+      workspaceName: "Work",
+    },
+    { id: 3, title: "Notes", url: "https://notes.example/", favIconUrl: "", windowId: 1 },
+  ];
+
+  it("lists status colors in tab order with the tab's title and location", async () => {
+    const marked: TabStatus[] = [
+      { tabId: 2, light: "orange" },
+      { tabId: 1, light: "red" },
+    ];
+    const handle = createBridgeCommandHandler(
+      workspace(tabs),
+      services({}, {}, { getStatuses: vi.fn(async () => marked) }),
+    );
+
+    await expect(handle({ type: "listStatuses" })).resolves.toEqual({
+      statusCount: 2,
+      statuses: [
+        expect.objectContaining({
+          tabId: 1,
+          color: "red",
+          title: "Docs",
+          url: "https://example.com/docs",
+        }),
+        expect.objectContaining({
+          tabId: 2,
+          color: "orange",
+          title: "Mail",
+          label: "Inbox",
+          spaceName: "Work",
+        }),
+      ],
+    });
+  });
+
+  it("includes colors on listed tabs", async () => {
+    const handle = createBridgeCommandHandler(
+      workspace(tabs),
+      services({}, {}, { getStatuses: vi.fn(async () => [{ tabId: 1, light: "red" as const }]) }),
+    );
+
+    const listed = (await handle({ type: "listTabs" })) as { id: number; color?: string }[];
+    expect(listed.find((tab) => tab.id === 1)).toMatchObject({ color: "red" });
+    expect(listed.find((tab) => tab.id === 2)).not.toHaveProperty("color");
+  });
+
+  it("sets a status color and reports whether a clear removed one", async () => {
+    const store = new Map<number, TrafficLight>();
+    const handle = createBridgeCommandHandler(
+      workspace(tabs),
+      services(
+        {},
+        {},
+        {
+          setStatus: vi.fn(async (tabId: number, light: TrafficLight | "none") => {
+            if (light === "none") {
+              store.delete(tabId);
+            } else {
+              store.set(tabId, light);
+            }
+          }),
+          getStatuses: vi.fn(async (tabIds: number[]) =>
+            tabIds.flatMap((tabId) => {
+              const light = store.get(tabId);
+              return light ? [{ tabId, light }] : [];
+            }),
+          ),
+        },
+      ),
+    );
+
+    await expect(handle({ type: "setStatus", tabIds: [1, 2], light: "green" })).resolves.toEqual({
+      tabIds: [1, 2],
+      color: "green",
+    });
+    await expect(handle({ type: "clearStatus", tabIds: [1] })).resolves.toEqual({
+      tabIds: [1],
+      cleared: 1,
+    });
+    await expect(handle({ type: "clearStatus", tabIds: [1] })).resolves.toEqual({
+      tabIds: [1],
+      cleared: 0,
+    });
+  });
+
+  it("fails clearly when the handler was built without status services", async () => {
+    const handle = createBridgeCommandHandler(workspace(tabs));
+    await expect(handle({ type: "setStatus", tabIds: [1], light: "red" })).rejects.toThrow(
+      "status colors are not available in this context.",
     );
   });
 });

@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { folderInfoSchema, TODO_STATUSES } from "@/shared/messaging/protocol";
+import { folderInfoSchema, TODO_STATUSES, TRAFFIC_LIGHTS } from "@/shared/messaging/protocol";
 
 /**
  * Wire protocol between the Zen extension and the local MCP server
@@ -12,7 +12,7 @@ export const BRIDGE_PORT = 47652;
 export const BRIDGE_URL = `ws://127.0.0.1:${BRIDGE_PORT}`;
 export const BRIDGE_TOKEN_STORAGE_KEY = "mcpBridgeToken";
 // Bump when a command is added or changed, so mismatched releases say so.
-export const BRIDGE_PROTOCOL_VERSION = 5;
+export const BRIDGE_PROTOCOL_VERSION = 6;
 
 const tabIdSchema = v.pipe(v.number(), v.integer(), v.minValue(0));
 const tabIdsSchema = v.pipe(v.array(tabIdSchema), v.minLength(1), v.maxLength(200));
@@ -52,6 +52,8 @@ export const tabSummarySchema = v.object({
   folderPath: v.optional(v.array(folderInfoSchema)),
   essential: v.optional(v.boolean()),
   active: v.optional(v.boolean()),
+  /** Traffic-light color the user (or an agent) set on the tab. */
+  color: v.optional(v.picklist(TRAFFIC_LIGHTS)),
 });
 
 export const bridgeCommandSchema = v.variant("type", [
@@ -148,6 +150,13 @@ export const bridgeCommandSchema = v.variant("type", [
     status: v.picklist(TODO_STATUSES),
   }),
   v.object({ type: v.literal("clearTodo"), tabIds: tabIdsSchema }),
+  v.object({ type: v.literal("listStatuses") }),
+  v.object({
+    type: v.literal("setStatus"),
+    tabIds: tabIdsSchema,
+    light: v.picklist(TRAFFIC_LIGHTS),
+  }),
+  v.object({ type: v.literal("clearStatus"), tabIds: tabIdsSchema }),
   v.object({
     type: v.literal("detectForgeTabs"),
     // Empty or missing means every open tab.

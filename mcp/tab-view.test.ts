@@ -162,6 +162,17 @@ describe("buildTabListView", () => {
     ]);
   });
 
+  it("includes a tab's traffic-light color when it has one", () => {
+    const view = buildTabListView(
+      [tab(4, { spaceId: "work", spaceName: "Work", color: "green", active: true })],
+      spaces,
+      { ...defaults, groupBy: "none", fields: "titles" },
+    );
+    expect(view.tabs).toEqual([
+      { id: 4, title: "Tab 4", space: "Work", active: true, color: "green" },
+    ]);
+  });
+
   it("adds space and folder context to flat lists, but not to essentials", () => {
     const view = buildTabListView(tabs, spaces, { ...defaults, groupBy: "none", fields: "titles" });
     expect(view.tabs).toEqual([
