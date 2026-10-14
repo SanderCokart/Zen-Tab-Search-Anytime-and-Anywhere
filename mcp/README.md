@@ -450,6 +450,7 @@ something is wrong, a `problem` that says what to do:
 | `bridge` or `problem`                                 | Meaning and fix                                                                                                                       |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `held`: "held by another zen-tab-search MCP server"   | Another MCP client's server owns the port (`portHolder` has its process ID). Quit that client or remove the server from its config.   |
+| `yielded`: "taken over by another zen-tab-search MCP server" | A newer server with the same token took this port. This process stays passive and retries when the other exits. Restart this MCP client to take it back. |
 | `transient`: "briefly unavailable"                    | The port was released moments ago, for example a connection in TIME_WAIT. It retries every second.                                    |
 | `other-program`                                       | Something else is using port 47652. Stop that program.                                                                                |
 | "has not connected since this server started"         | Zen isn't open, the installed extension has no bridge, or "AI agents (MCP)" is off.                                                   |

@@ -12,6 +12,8 @@ import {
 const AUTH_TIMEOUT_MS = 5_000;
 const REQUEST_TIMEOUT_MS = 15_000;
 const PROBE_TIMEOUT_MS = 1_500;
+/** Before a server that yielded the port retries it, so the newer server's handover wins the race. */
+const YIELD_GRACE_MS = 1_000;
 /** Retry delays while the port cannot be bound, by cause. */
 const DEFAULT_RETRY_MS = { held: 5_000, transient: 1_000, other: 5_000 };
 
@@ -34,6 +36,8 @@ type ListenState =
   | { kind: "starting" }
   | { kind: "listening" }
   | { kind: "held"; holder: BridgeHolder }
+  /** A newer server took the port; this one stays passive until the port is free. */
+  | { kind: "yielded"; to: number }
   | { kind: "transient" }
   | { kind: "other-program" }
   | { kind: "failed"; message: string }
@@ -113,11 +117,54 @@ export function probePort(port: number, timeoutMs = PROBE_TIMEOUT_MS): Promise<P
 }
 
 /**
+ * Asks the zen-tab-search server holding `port` to hand it over. Only a peer
+ * with the right token can make it yield. Resolves true once the holder has
+ * released the port; false for anything else (wrong token, an older server
+ * that does not understand yield, or no answer).
+ */
+export function requestYield(
+  port: number,
+  token: string,
+  pid: number,
+  timeoutMs = PROBE_TIMEOUT_MS,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new WebSocket(`ws://127.0.0.1:${port}`);
+    let settled = false;
+    const finish = (yielded: boolean) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      socket.removeAllListeners();
+      socket.on("error", () => {});
+      socket.terminate();
+      resolve(yielded);
+    };
+    const timer = setTimeout(() => finish(false), timeoutMs);
+
+    socket.on("open", () => socket.send(JSON.stringify({ type: "yield", token, pid })));
+    socket.on("message", (data) => {
+      try {
+        finish((JSON.parse(data.toString()) as { type?: unknown }).type === "yielded");
+      } catch {
+        finish(false);
+      }
+    });
+    socket.on("close", () => finish(false));
+    socket.on("error", () => finish(false));
+  });
+}
+
+/**
  * Loopback WebSocket server that the Zen extension dials into.
  *
- * Only one process can own the port. When another zen-tab-search server
- * already holds it (typically started by a second MCP client), this one keeps
- * running, reports who holds the port, and takes over as soon as it is free.
+ * Only one process can own the port. A server started at launch takes it over
+ * from an older zen-tab-search server (for example one started by another
+ * Cursor window). The older one stays passive and takes the port back only once
+ * it is free. A server that cannot take over keeps running, reports who holds
+ * the port, and takes over as soon as it is free.
  * Only one Zen connection is active at a time: a newer authenticated
  * connection (for example after Zen restarts) replaces the older one.
  */
@@ -181,6 +228,8 @@ export class ZenBridge {
         const { holder } = this.#state;
         return `Port ${port} is held by another zen-tab-search MCP server (process ${holder.pid}, version ${holder.version}, started ${holder.startedAt}, Zen ${holder.zenConnected ? "connected to it" : "not connected"}). It was most likely started by another MCP client such as Claude or Cursor, and only one server can talk to Zen. Quit that client or remove zen-tab-search from its MCP config, or end process ${holder.pid}. This server takes over automatically once the port is free.`;
       }
+      case "yielded":
+        return `Port ${port} was taken over by another zen-tab-search MCP server (process ${this.#state.to}), so this one stays passive. Only one server can talk to Zen at a time. Restart this MCP client to take the port back, or it takes over automatically once the other server exits.`;
       case "listening":
         break;
     }
@@ -217,7 +266,7 @@ export class ZenBridge {
 
   /** Tries to take the port once; keeps retrying in the background when it is not free. */
   async start(): Promise<void> {
-    await this.#tryListen();
+    await this.#tryListen(true);
   }
 
   request(command: BridgeCommand): Promise<unknown> {
@@ -250,13 +299,18 @@ export class ZenBridge {
     this.#server = undefined;
   }
 
-  async #tryListen(): Promise<void> {
+  /**
+   * `takeOver` is true only for the first attempt at startup. A server that
+   * takes over never grabs the port back from a newer one, so two servers
+   * cannot keep displacing each other.
+   */
+  async #tryListen(takeOver: boolean): Promise<void> {
     if (this.#state.kind === "closed") {
       return;
     }
     const error = await this.#listen();
     if (!error) {
-      if (this.#state.kind !== "starting") {
+      if (this.#state.kind !== "starting" && this.#state.kind !== "listening") {
         this.#log(`took over port ${this.port}`);
       }
       this.#state = { kind: "listening" };
@@ -266,24 +320,61 @@ export class ZenBridge {
 
     if (error.code === "EADDRINUSE") {
       const probe = await probePort(this.#requestedPort);
-      this.#state =
-        probe.kind === "zen-server"
-          ? { kind: "held", holder: probe.holder }
-          : probe.kind === "free"
-            ? { kind: "transient" }
-            : { kind: "other-program" };
+      if (takeOver && probe.kind === "zen-server") {
+        const yielded = await requestYield(this.#requestedPort, this.#token, process.pid);
+        if (yielded) {
+          // The holder closes its listener before replying; give the OS a moment.
+          this.#log(
+            `asked MCP server ${probe.holder.pid} to hand over port ${this.#requestedPort}`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          return this.#tryListen(false);
+        }
+      }
+      if (this.#state.kind === "yielded" && probe.kind === "zen-server") {
+        // Still held by a newer server: stay passive.
+      } else {
+        this.#state =
+          probe.kind === "zen-server"
+            ? { kind: "held", holder: probe.holder }
+            : probe.kind === "free"
+              ? { kind: "transient" }
+              : { kind: "other-program" };
+      }
     } else {
       this.#state = { kind: "failed", message: error.message };
     }
     this.#log(this.unavailableReason ?? "");
 
     const delay =
-      this.#state.kind === "held"
+      this.#state.kind === "held" || this.#state.kind === "yielded"
         ? this.#retryMs.held
         : this.#state.kind === "transient"
           ? this.#retryMs.transient
           : this.#retryMs.other;
-    this.#retryTimer = setTimeout(() => void this.#tryListen(), delay);
+    this.#retryTimer = setTimeout(() => void this.#tryListen(false), delay);
+  }
+
+  /** Gives the port to a newer server: stops listening, drops Zen, and keeps retrying only once it is free. */
+  #yieldPort(socket: WebSocket, to: number): void {
+    this.#log(
+      `port ${this.#requestedPort} taken over by MCP server ${to}; this server stays passive`,
+    );
+    this.#dropClient(
+      new Error("Taken over by a newer zen-tab-search MCP server. Try again in a moment."),
+    );
+    this.#server?.close();
+    this.#server = undefined;
+    this.#state = { kind: "yielded", to };
+    // Wait longer than the newer server's handover, so this one cannot rebind
+    // the free port first and make the newer server look like the loser.
+    clearTimeout(this.#retryTimer);
+    this.#retryTimer = setTimeout(
+      () => void this.#tryListen(false),
+      Math.max(this.#retryMs.held, YIELD_GRACE_MS),
+    );
+    socket.send(JSON.stringify({ type: "yielded" }));
+    socket.close();
   }
 
   #listen(): Promise<NodeJS.ErrnoException | undefined> {
@@ -325,7 +416,21 @@ export class ZenBridge {
 
       if (!authenticated) {
         clearTimeout(authTimer);
-        if ((message as { type?: unknown } | null)?.type === "probe") {
+        const kind = (message as { type?: unknown } | null)?.type;
+        if (kind === "yield") {
+          const request = message as { token?: unknown; pid?: unknown };
+          if (
+            this.#state.kind === "listening" &&
+            typeof request.token === "string" &&
+            tokensMatch(this.#token, request.token)
+          ) {
+            this.#yieldPort(socket, Number(request.pid) || 0);
+          } else {
+            socket.close();
+          }
+          return;
+        }
+        if (kind === "probe") {
           // Lets a second server explain who holds the port. Web pages cannot
           // reach this: their origin is refused before any message arrives.
           socket.send(

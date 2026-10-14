@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
 import { BRIDGE_PROTOCOL_VERSION } from "@/shared/messaging/bridge-protocol";
-import { probePort, ZenBridge } from "./bridge-server";
+import { probePort, requestYield, ZenBridge } from "./bridge-server";
 
 const TOKEN = "test-token";
 let bridge: ZenBridge | undefined;
@@ -73,28 +73,42 @@ describe("ZenBridge", () => {
     );
   });
 
-  it("names the server holding the port, then takes over once it exits", async () => {
-    const first = new ZenBridge({ token: TOKEN, port: 0, version: "1.2.3" });
+  it("a newer server takes the port over, and the older one stays passive", async () => {
+    // A fixed port: the bridge retries on the port it was asked for, and port 0 would pick a new one.
+    const port = await freePort();
+    const first = new ZenBridge({ token: TOKEN, port, version: "1.2.3", retryMs: { held: 50 } });
     extraBridges.push(first);
     await first.start();
-    const second = new ZenBridge({ token: TOKEN, port: first.port, retryMs: { held: 50 } });
+    const second = new ZenBridge({ token: TOKEN, port, retryMs: { held: 50 } });
     extraBridges.push(second);
     await second.start();
 
-    expect(second.listening).toBe(false);
-    expect(second.status()).toMatchObject({
-      bridge: "held",
-      portHolder: { pid: process.pid, version: "1.2.3", zenConnected: false },
-    });
-    expect(second.unavailableReason).toContain(
-      `held by another zen-tab-search MCP server (process ${process.pid}, version 1.2.3`,
+    expect(second.listening).toBe(true);
+    await vi.waitFor(() => expect(first.status().bridge).toBe("yielded"));
+    expect(first.listening).toBe(false);
+    expect(first.unavailableReason).toContain(
+      `taken over by another zen-tab-search MCP server (process ${process.pid})`,
     );
-    await expect(second.request({ type: "listSpaces" })).rejects.toThrow("Quit that client");
+    await expect(first.request({ type: "listSpaces" })).rejects.toThrow("stays passive");
 
-    first.close();
-    await vi.waitFor(() => expect(second.listening).toBe(true));
-    expect(second.unavailableReason).toMatch(/has not connected/);
-    await expect(connectZen(second, TOKEN)).resolves.toMatchObject({ reply: { type: "welcome" } });
+    // While the newer server holds the port, the older one must not take it back.
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(first.listening).toBe(false);
+    expect(second.listening).toBe(true);
+
+    second.close();
+    // The yielded server waits a grace period before it retries, so allow for that.
+    await vi.waitFor(() => expect(first.listening).toBe(true), { timeout: 4_000 });
+    await expect(connectZen(first, TOKEN)).resolves.toMatchObject({ reply: { type: "welcome" } });
+  });
+
+  it("refuses to hand over the port to a peer without the token", async () => {
+    const holder = new ZenBridge({ token: TOKEN, port: 0 });
+    extraBridges.push(holder);
+    await holder.start();
+
+    await expect(requestYield(holder.port, "wrong-token", 1)).resolves.toBe(false);
+    expect(holder.listening).toBe(true);
   });
 
   it("names a version mismatch, but only to a peer with the right token", async () => {
