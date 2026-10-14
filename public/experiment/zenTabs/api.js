@@ -839,6 +839,77 @@ this.zenTabs = class extends ExtensionAPI {
       throw new Error(`Zen folder not found: ${folderId}`);
     }
 
+    function expandFolder(folder) {
+      let current = folder;
+      while (current?.isZenFolder) {
+        current.collapsed = false;
+        current = current.group?.isZenFolder ? current.group : null;
+      }
+    }
+
+    function isFolderOrAncestor(folder, maybeAncestor) {
+      let current = maybeAncestor;
+      while (current?.isZenFolder) {
+        if (current === folder) {
+          return true;
+        }
+        current = current.group?.isZenFolder ? current.group : null;
+      }
+      return false;
+    }
+
+    function folderDepth(folder) {
+      let depth = 0;
+      let current = folder;
+      while (current?.group?.isZenFolder) {
+        depth++;
+        current = current.group;
+      }
+      return depth;
+    }
+
+    function folderHasContent(folder) {
+      const items = folder?.allItems;
+      if (!items) {
+        return false;
+      }
+      for (const item of items) {
+        if (item?.isZenFolder) {
+          return true;
+        }
+        if (item?.hasAttribute?.("zen-empty-tab")) {
+          continue;
+        }
+        return true;
+      }
+      return false;
+    }
+
+    function placeFolder(folder, { parent, after, pinnedContainer }) {
+      if (after) {
+        after.after(folder);
+        return;
+      }
+      if (parent?.groupContainer) {
+        expandFolder(parent);
+        const last = parent.groupContainer.lastElementChild;
+        if (last) {
+          last.after(folder);
+        } else {
+          parent.groupContainer.appendChild(folder);
+        }
+        return;
+      }
+      if (!pinnedContainer) {
+        throw new Error("Pinned tabs container not found for that space.");
+      }
+      if (pinnedContainer.lastChild) {
+        pinnedContainer.insertBefore(folder, pinnedContainer.lastChild);
+      } else {
+        pinnedContainer.appendChild(folder);
+      }
+    }
+
     async function zenWorkspacesOf(win) {
       const zenWorkspaces = win?.gZenWorkspaces;
       if (!zenWorkspaces) {
@@ -1204,13 +1275,29 @@ this.zenTabs = class extends ExtensionAPI {
           }
         },
 
-        async createFolder(name, spaceId = "", tabIds = [], anchorTabId = -1) {
+        async createFolder(name, spaceId = "", tabIds = [], parentId = "", anchorTabId = -1) {
           try {
-            const win = getWin(anchorTabId);
+            let win;
+            let parent = null;
+            if (parentId) {
+              const found = findFolder(parentId);
+              win = found.win;
+              parent = found.folder;
+            } else {
+              win = getWin(anchorTabId);
+            }
             const zenWorkspaces = await zenWorkspacesOf(win);
-            const targetSpace = spaceId || String(zenWorkspaces.activeWorkspace || "");
+            const parentSpace = parent ? String(parent.getAttribute("zen-workspace-id") || "") : "";
+            const targetSpace =
+              spaceId || parentSpace || String(zenWorkspaces.activeWorkspace || "");
             if (!targetSpace || !zenWorkspaces.getWorkspaceFromId(targetSpace)) {
-              throw new Error(`Space not found: ${spaceId}`);
+              throw new Error(`Space not found: ${spaceId || targetSpace}`);
+            }
+            if (parentSpace && spaceId && parentSpace !== spaceId) {
+              throw new Error(`Parent folder is in space ${parentSpace}, not ${spaceId}.`);
+            }
+            if (parent && typeof parent.level === "number" && parent.level >= 4) {
+              throw new Error("Cannot nest a folder any deeper.");
             }
 
             const tabs = nativeTabsFor(tabIds);
@@ -1219,11 +1306,19 @@ this.zenTabs = class extends ExtensionAPI {
               zenWorkspaces.moveTabsToWorkspace(tabs, targetSpace);
             }
 
+            if (parent) {
+              expandFolder(parent);
+            }
+
             // Zen pins the tabs it groups into a folder; that is Zen's own rule, not ours.
+            // Nested folders use the same insertAfter as Zen's createSubfolder.
             const folder = win.gZenFolders.createFolder(tabs, {
               label: cleanName(name, "New Folder"),
               workspaceId: targetSpace,
               renameFolder: false,
+              ...(parent?.groupContainer?.lastElementChild
+                ? { insertAfter: parent.groupContainer.lastElementChild }
+                : {}),
             });
             return String(folder.id);
           } catch (error) {
@@ -1334,6 +1429,201 @@ this.zenTabs = class extends ExtensionAPI {
             return true;
           } catch (error) {
             throw new Error(`moveTab failed: ${formatError(error)}`);
+          }
+        },
+
+        async createSpace(name, anchorTabId = -1) {
+          try {
+            const zenWorkspaces = await zenWorkspacesOf(getWin(anchorTabId));
+            const label = cleanName(name, "Space");
+            if (typeof zenWorkspaces.createAndSaveWorkspace !== "function") {
+              throw new Error("Zen cannot create spaces in this window.");
+            }
+            // dontChange keeps MCP from stealing the active space; saveWorkspace
+            // still creates the space's tab strip via workspace propagation.
+            const workspace = await zenWorkspaces.createAndSaveWorkspace(label, undefined, true);
+            if (!workspace?.uuid) {
+              throw new Error("Could not create space.");
+            }
+            if (workspace.name !== label) {
+              workspace.name = label;
+              zenWorkspaces.saveWorkspace(workspace);
+            }
+            return String(workspace.uuid);
+          } catch (error) {
+            throw new Error(`createSpace failed: ${formatError(error)}`);
+          }
+        },
+
+        async renameSpace(spaceId, name) {
+          try {
+            const label = cleanName(name, "");
+            if (!label) {
+              throw new Error("Space name cannot be empty.");
+            }
+            const zenWorkspaces = await zenWorkspacesOf(getWin());
+            const workspace = zenWorkspaces.getWorkspaceFromId(spaceId);
+            if (!workspace) {
+              throw new Error(`Space not found: ${spaceId}`);
+            }
+            workspace.name = label;
+            zenWorkspaces.saveWorkspace(workspace);
+            return true;
+          } catch (error) {
+            throw new Error(`renameSpace failed: ${formatError(error)}`);
+          }
+        },
+
+        async moveFolder(folderId, spaceId = "", parentId = "", afterFolderId = "") {
+          try {
+            const { win, folder } = findFolder(folderId);
+            const zenWorkspaces = await zenWorkspacesOf(win);
+
+            let parent = null;
+            if (parentId) {
+              const found = findFolder(parentId);
+              if (found.win !== win) {
+                throw new Error("Folder and parent must be in the same Zen window.");
+              }
+              parent = found.folder;
+            }
+
+            let after = null;
+            if (afterFolderId) {
+              const found = findFolder(afterFolderId);
+              if (found.win !== win) {
+                throw new Error("Folders must be in the same Zen window.");
+              }
+              after = found.folder;
+              if (after === folder) {
+                throw new Error("Pick a different folder to move next to.");
+              }
+            }
+
+            const parentSpace = parent ? String(parent.getAttribute("zen-workspace-id") || "") : "";
+            const afterSpace = after ? String(after.getAttribute("zen-workspace-id") || "") : "";
+            const currentSpace = String(folder.getAttribute("zen-workspace-id") || "");
+            const targetSpace = spaceId || parentSpace || afterSpace || currentSpace;
+            if (!targetSpace || !zenWorkspaces.getWorkspaceFromId(targetSpace)) {
+              throw new Error(`Space not found: ${spaceId || targetSpace}`);
+            }
+            if (parentSpace && parentSpace !== targetSpace) {
+              throw new Error("Parent folder is not in the target space.");
+            }
+            if (parent && isFolderOrAncestor(folder, parent)) {
+              throw new Error("Cannot move a folder into itself or a descendant.");
+            }
+            if (parent && typeof parent.level === "number" && parent.level >= 4) {
+              throw new Error("Cannot nest a folder any deeper.");
+            }
+
+            if (targetSpace !== currentSpace && win.gZenFolders?.changeFolderToSpace) {
+              // hasDndSwitch updates workspace ids without switching the active space.
+              win.gZenFolders.changeFolderToSpace(folder, targetSpace, { hasDndSwitch: true });
+            }
+            folder.setAttribute("zen-workspace-id", targetSpace);
+
+            const workspaceElement = zenWorkspaces.workspaceElement?.(targetSpace);
+            placeFolder(folder, {
+              parent,
+              after,
+              pinnedContainer: workspaceElement?.pinnedTabsContainer,
+            });
+            return true;
+          } catch (error) {
+            throw new Error(`moveFolder failed: ${formatError(error)}`);
+          }
+        },
+
+        async deleteFolder(folderIds = []) {
+          try {
+            const folders = folderIds.map((folderId) => findFolder(folderId).folder);
+            const leftover = folders.find((folder) => folderHasContent(folder));
+            if (leftover) {
+              throw new Error(
+                `Folder "${leftover.label || leftover.id}" is not empty. Move its tabs and subfolders out first.`,
+              );
+            }
+            const missingDelete = folders.find((folder) => typeof folder.delete !== "function");
+            if (missingDelete) {
+              throw new Error("Folder cannot be deleted.");
+            }
+            // Nested empty folders: innermost first so a parent is empty when its turn comes.
+            folders.sort((left, right) => folderDepth(right) - folderDepth(left));
+            for (const folder of folders) {
+              await folder.delete();
+            }
+            return folders.length;
+          } catch (error) {
+            throw new Error(`deleteFolder failed: ${formatError(error)}`);
+          }
+        },
+
+        async deleteSpace(spaceIds = [], anchorTabId = -1) {
+          try {
+            const zenWorkspaces = await zenWorkspacesOf(getWin(anchorTabId));
+            if (typeof zenWorkspaces.removeWorkspace !== "function") {
+              throw new Error("Zen cannot delete spaces in this window.");
+            }
+            const uniqueIds = [...new Set(spaceIds.filter((id) => typeof id === "string" && id))];
+            if (!uniqueIds.length) {
+              throw new Error("No spaces to delete.");
+            }
+            const existing = zenWorkspaces.getWorkspaces();
+            for (const spaceId of uniqueIds) {
+              if (!zenWorkspaces.getWorkspaceFromId(spaceId)) {
+                throw new Error(`Space not found: ${spaceId}`);
+              }
+            }
+            if (existing.length - uniqueIds.length < 1) {
+              throw new Error("Cannot delete every space. Leave at least one.");
+            }
+            for (const spaceId of uniqueIds) {
+              await zenWorkspaces.removeWorkspace(spaceId);
+            }
+            return uniqueIds.length;
+          } catch (error) {
+            throw new Error(`deleteSpace failed: ${formatError(error)}`);
+          }
+        },
+
+        async setEssential(tabIds = []) {
+          try {
+            const tabs = nativeTabsFor(tabIds);
+            const win = windowForTabs(tabs);
+            if (!win?.gZenPinnedTabManager?.addToEssentials) {
+              throw new Error("Zen essentials are not available in this window.");
+            }
+            const pending = tabs.filter((tab) => tab.getAttribute("zen-essential") !== "true");
+            if (!pending.length) {
+              return tabs.length;
+            }
+            const moved = win.gZenPinnedTabManager.addToEssentials(pending);
+            if (moved === false) {
+              throw new Error("One or more tabs cannot be made essential.");
+            }
+            return tabs.length;
+          } catch (error) {
+            throw new Error(`setEssential failed: ${formatError(error)}`);
+          }
+        },
+
+        async clearEssential(tabIds = []) {
+          try {
+            const tabs = nativeTabsFor(tabIds);
+            for (const tab of tabs) {
+              if (tab.getAttribute("zen-essential") !== "true") {
+                continue;
+              }
+              const win = chromeWindowForNativeTab(tab);
+              if (!win?.gZenPinnedTabManager?.removeEssentials) {
+                throw new Error("Zen essentials are not available in this window.");
+              }
+              win.gZenPinnedTabManager.removeEssentials(tab);
+            }
+            return tabs.length;
+          } catch (error) {
+            throw new Error(`clearEssential failed: ${formatError(error)}`);
           }
         },
       }),

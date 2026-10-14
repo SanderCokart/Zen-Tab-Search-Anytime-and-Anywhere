@@ -37,6 +37,7 @@ export interface ZenTabsApi {
     name: string,
     spaceId: string,
     tabIds: number[],
+    parentId?: string,
     anchorTabId?: number,
   ): Promise<string>;
   renameFolder?(folderId: string, name: string): Promise<boolean>;
@@ -44,6 +45,18 @@ export interface ZenTabsApi {
   removeTabsFromFolder?(tabIds: number[]): Promise<number>;
   moveTabsToSpace?(tabIds: number[], spaceId: string): Promise<number>;
   moveTab?(tabId: number, beforeTabId?: number, afterTabId?: number): Promise<boolean>;
+  createSpace?(name: string, anchorTabId?: number): Promise<string>;
+  renameSpace?(spaceId: string, name: string): Promise<boolean>;
+  moveFolder?(
+    folderId: string,
+    spaceId?: string,
+    parentId?: string,
+    afterFolderId?: string,
+  ): Promise<boolean>;
+  deleteFolder?(folderIds: string[]): Promise<number>;
+  deleteSpace?(spaceIds: string[], anchorTabId?: number): Promise<number>;
+  setEssential?(tabIds: number[]): Promise<number>;
+  clearEssential?(tabIds: number[]): Promise<number>;
 }
 
 export function getZenTabsApi(): ZenTabsApi | undefined {

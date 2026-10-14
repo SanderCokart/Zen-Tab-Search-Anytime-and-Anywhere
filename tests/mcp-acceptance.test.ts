@@ -35,7 +35,7 @@ function createFakeZen() {
     { id: "general", name: "General", isActive: true },
     { id: "work", name: "Work", isActive: false },
   ];
-  const folders: { id: string; name: string; spaceId: string }[] = [];
+  const folders: { id: string; name: string; spaceId: string; parentId?: string }[] = [];
   const tabs: FakeTab[] = [
     { id: 1, url: "https://news.example/", title: "News", spaceId: "general" },
     { id: 2, url: "https://docs.google.com/document/", title: "Docs", spaceId: "work" },
@@ -46,8 +46,20 @@ function createFakeZen() {
   let nextFolderId = 1;
 
   const spaceName = (id?: string) => spaces.find((space) => space.id === id)?.name ?? "";
+  const folderPath = (folderId?: string) => {
+    const path: { id: string; name: string }[] = [];
+    let current = folders.find((entry) => entry.id === folderId);
+    while (current) {
+      path.unshift({ id: current.id, name: current.name });
+      current = current.parentId
+        ? folders.find((entry) => entry.id === current?.parentId)
+        : undefined;
+    }
+    return path;
+  };
   const toInfo = (tab: FakeTab): TabInfo => {
-    const folder = folders.find((entry) => entry.id === tab.folderId);
+    const path = folderPath(tab.folderId);
+    const folder = path[path.length - 1];
     return {
       id: tab.id,
       title: tab.title,
@@ -59,7 +71,7 @@ function createFakeZen() {
         ? {
             folderId: folder.id,
             folderName: folder.name,
-            folderPath: [{ id: folder.id, name: folder.name }],
+            folderPath: path,
           }
         : {}),
       ...(tab.essential ? { essential: true } : {}),
@@ -83,15 +95,91 @@ function createFakeZen() {
         name: folder.name,
         spaceId: folder.spaceId,
         spaceName: spaceName(folder.spaceId),
+        ...(folder.parentId ? { parentId: folder.parentId } : {}),
         collapsed: false,
       })),
     activateTab: async () => undefined,
     switchSpace: async () => undefined,
     setLabel: async () => true,
-    createFolder: async (name, spaceId) => {
+    createFolder: async (name, spaceId, _tabIds, parentId) => {
       const id = `folder-${nextFolderId++}`;
-      folders.push({ id, name, spaceId: spaceId ?? "general" });
+      folders.push({
+        id,
+        name,
+        spaceId: spaceId ?? "general",
+        ...(parentId ? { parentId } : {}),
+      });
       return id;
+    },
+    createSpace: async (name) => {
+      const id = `space-${spaces.length + 1}`;
+      spaces.push({ id, name, isActive: false });
+      return id;
+    },
+    renameSpace: async (spaceId, name) => {
+      const space = spaces.find((entry) => entry.id === spaceId);
+      if (space) {
+        space.name = name;
+      }
+    },
+    moveFolder: async (folderId, placement) => {
+      const folder = folders.find((entry) => entry.id === folderId);
+      if (!folder) {
+        throw new Error(`Zen folder not found: ${folderId}`);
+      }
+      if (placement.spaceId) {
+        folder.spaceId = placement.spaceId;
+      }
+      folder.parentId = placement.parentId;
+    },
+    deleteFolders: async (folderIds) => {
+      for (const folderId of folderIds) {
+        const folder = folders.find((entry) => entry.id === folderId);
+        if (!folder) {
+          throw new Error(`Zen folder not found: ${folderId}`);
+        }
+        if (
+          tabs.some((tab) => tab.folderId === folderId) ||
+          folders.some((entry) => entry.parentId === folderId)
+        ) {
+          throw new Error(
+            `Folder "${folder.name}" is not empty. Move its tabs and subfolders out first.`,
+          );
+        }
+        folders.splice(folders.indexOf(folder), 1);
+      }
+    },
+    deleteSpaces: async (spaceIds) => {
+      if (spaces.length - spaceIds.length < 1) {
+        throw new Error("Cannot delete every space. Leave at least one.");
+      }
+      for (const spaceId of spaceIds) {
+        const space = spaces.find((entry) => entry.id === spaceId);
+        if (!space) {
+          throw new Error(`Space not found: ${spaceId}`);
+        }
+        for (const tab of [...tabs]) {
+          if (tab.spaceId === spaceId && !tab.essential) {
+            tabs.splice(tabs.indexOf(tab), 1);
+          }
+        }
+        for (const folder of [...folders]) {
+          if (folder.spaceId === spaceId) {
+            folders.splice(folders.indexOf(folder), 1);
+          }
+        }
+        spaces.splice(spaces.indexOf(space), 1);
+      }
+    },
+    setEssential: async (tabIds) => {
+      for (const id of tabIds) {
+        Object.assign(findTab(id), { essential: true, folderId: undefined, spaceId: undefined });
+      }
+    },
+    clearEssential: async (tabIds) => {
+      for (const id of tabIds) {
+        Object.assign(findTab(id), { essential: false, spaceId: "general" });
+      }
     },
     renameFolder: async () => undefined,
     moveTabsToFolder: async (tabIds, folderId) => {
@@ -120,10 +208,15 @@ function createFakeZen() {
     closeTab: async (id) => {
       tabs.splice(tabs.indexOf(findTab(id)), 1);
     },
+    closeTabs: async (tabIds) => {
+      for (const id of tabIds) {
+        tabs.splice(tabs.indexOf(findTab(id)), 1);
+      }
+    },
     getTab: async (id) => toInfo(findTab(id)),
   };
 
-  return { workspace, tabs, folders };
+  return { workspace, tabs, folders, spaces };
 }
 
 const TOKEN = "acceptance-token";
@@ -295,5 +388,75 @@ describe("MCP acceptance", () => {
     const status = await call("zen_status");
     expect(status.connected).toBe(false);
     expect(status.problem).toMatch(/Zen disconnected at .* reconnects within a minute/);
+  });
+
+  it("creates a nested folder, applies a patch tree, then closes a tab and deletes the empty folder", async () => {
+    const space = await call("zen_create_space", { name: "Client" });
+    expect(space).toMatchObject({ created: true, name: "Client" });
+    const again = await call("zen_create_space", { name: "client " });
+    expect(again).toMatchObject({ created: false, spaceId: space.spaceId });
+
+    const parent = await call("zen_create_folder", { name: "Docs", spaceId: space.spaceId });
+    const nested = await call("zen_create_folder", {
+      name: "API",
+      parentId: parent.folderId,
+    });
+    expect(nested).toMatchObject({
+      created: true,
+      name: "API",
+      spaceId: space.spaceId,
+      parentId: parent.folderId,
+    });
+    const reused = await call("zen_create_folder", { name: "api", parentId: parent.folderId });
+    expect(reused).toMatchObject({ created: false, folderId: nested.folderId });
+
+    const patched = await call("zen_apply_patch", {
+      nodes: [
+        {
+          type: "space",
+          id: space.spaceId,
+          children: [
+            {
+              type: "folder",
+              id: parent.folderId,
+              children: [
+                {
+                  type: "folder",
+                  id: nested.folderId,
+                  children: [{ type: "tab", name: "Spec", url: "https://example.com/spec" }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    expect(patched.results.map((entry: { status: string }) => entry.status)).toEqual([
+      "patched",
+      "patched",
+      "patched",
+      "created",
+    ]);
+    const tabId = patched.results[3].id as number;
+    expect(zen.tabs.find((tab) => tab.id === tabId)).toMatchObject({
+      spaceId: space.spaceId,
+      folderId: nested.folderId,
+    });
+
+    await call("zen_set_essential", { tabIds: [tabId] });
+    await call("zen_clear_essential", { tabIds: [tabId] });
+    await call("zen_close_tab", { tabIds: [tabId] });
+    await expect(
+      call("zen_delete_folder", { folderIds: [nested.folderId] }),
+    ).resolves.toMatchObject({
+      deleted: 1,
+    });
+    expect(zen.folders.find((folder) => folder.id === nested.folderId)).toBeUndefined();
+
+    await expect(call("zen_delete_space", { spaceIds: [space.spaceId] })).resolves.toMatchObject({
+      deleted: 1,
+      spaceIds: [space.spaceId],
+    });
+    expect(zen.spaces.find((entry) => entry.id === space.spaceId)).toBeUndefined();
   });
 });

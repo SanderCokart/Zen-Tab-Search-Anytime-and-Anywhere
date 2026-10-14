@@ -12,12 +12,14 @@ export const BRIDGE_PORT = 47652;
 export const BRIDGE_URL = `ws://127.0.0.1:${BRIDGE_PORT}`;
 export const BRIDGE_TOKEN_STORAGE_KEY = "mcpBridgeToken";
 // Bump when a command is added or changed, so mismatched releases say so.
-export const BRIDGE_PROTOCOL_VERSION = 4;
+export const BRIDGE_PROTOCOL_VERSION = 5;
 
 const tabIdSchema = v.pipe(v.number(), v.integer(), v.minValue(0));
 const tabIdsSchema = v.pipe(v.array(tabIdSchema), v.minLength(1), v.maxLength(200));
 const idSchema = v.pipe(v.string(), v.minLength(1));
+const idsSchema = v.pipe(v.array(idSchema), v.minLength(1), v.maxLength(200));
 const folderNameSchema = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120));
+const spaceNameSchema = folderNameSchema;
 // Agents may only open ordinary web pages: no javascript:, file:, about: or extension URLs.
 const webUrlSchema = v.pipe(
   v.string(),
@@ -73,8 +75,30 @@ export const bridgeCommandSchema = v.variant("type", [
     type: v.literal("createFolder"),
     name: folderNameSchema,
     spaceId: v.optional(idSchema),
+    parentId: v.optional(idSchema),
     tabIds: v.optional(tabIdsSchema),
   }),
+  v.object({
+    type: v.literal("createSpace"),
+    name: spaceNameSchema,
+  }),
+  v.object({
+    type: v.literal("renameSpace"),
+    spaceId: idSchema,
+    name: spaceNameSchema,
+  }),
+  v.object({
+    type: v.literal("moveFolder"),
+    folderId: idSchema,
+    spaceId: v.optional(idSchema),
+    parentId: v.optional(idSchema),
+    afterFolderId: v.optional(idSchema),
+  }),
+  v.object({ type: v.literal("deleteFolder"), folderIds: idsSchema }),
+  v.object({ type: v.literal("deleteSpace"), spaceIds: idsSchema }),
+  v.object({ type: v.literal("setEssential"), tabIds: tabIdsSchema }),
+  v.object({ type: v.literal("clearEssential"), tabIds: tabIdsSchema }),
+  v.object({ type: v.literal("closeTab"), tabIds: tabIdsSchema }),
   v.object({
     type: v.literal("renameFolder"),
     folderId: idSchema,
@@ -112,18 +136,18 @@ export const bridgeCommandSchema = v.variant("type", [
   v.object({ type: v.literal("listTimers") }),
   v.object({
     type: v.literal("setTimer"),
-    tabId: tabIdSchema,
+    tabIds: tabIdsSchema,
     // Same text the timer popup accepts: "30m", "1h 30m", "tomorrow at 9am", or a preset label.
     when: v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(100)),
   }),
-  v.object({ type: v.literal("clearTimer"), tabId: tabIdSchema }),
+  v.object({ type: v.literal("clearTimer"), tabIds: tabIdsSchema }),
   v.object({ type: v.literal("listTodos") }),
   v.object({
     type: v.literal("setTodo"),
-    tabId: tabIdSchema,
+    tabIds: tabIdsSchema,
     status: v.picklist(TODO_STATUSES),
   }),
-  v.object({ type: v.literal("clearTodo"), tabId: tabIdSchema }),
+  v.object({ type: v.literal("clearTodo"), tabIds: tabIdsSchema }),
   v.object({
     type: v.literal("detectForgeTabs"),
     // Empty or missing means every open tab.

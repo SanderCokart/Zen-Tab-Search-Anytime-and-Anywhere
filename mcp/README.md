@@ -1,8 +1,9 @@
 # Zen Tab Search MCP server
 
 Lets Claude, Cursor and other MCP clients read and organise Zen Browser: list spaces, folders
-and tabs, rename tabs, create and rename folders, move tabs into and out of folders, move tabs
-between spaces, reorder tabs, set tab timers, and mark tabs as todo and tick them off.
+and tabs, create and rename spaces, create nested folders, apply a PATCH-style layout tree,
+move tabs and folders, mark tabs essential, close tabs, delete empty folders and spaces, set
+tab timers, and mark tabs as todo and tick them off. Most write tools take id arrays.
 
 ```
 MCP client ──stdio──▶ zen-tab-search-mcp ◀──WebSocket (127.0.0.1:47652)── Zen Tab Search extension ──▶ Zen
@@ -259,19 +260,28 @@ port and must still have the token to drive Zen. Only use the tunnel on a server
 | `zen_open_google_workspace`   | Open Drive, Docs, Sheets, Slides, Calendar or Gmail, skipping any already open there      |
 | `zen_activate_tab`            | Focus a tab, switching space if needed                                                    |
 | `zen_switch_space`            | Switch the active space                                                                   |
+| `zen_create_space`            | Create a space without switching to it, or reuse the one with that name                   |
+| `zen_rename_space`            | Rename a space                                                                            |
+| `zen_delete_space`            | Delete spaces and the tabs in them (essentials kept); cannot delete the last space        |
 | `zen_rename_tab`              | Set a tab's custom name; an empty name clears it                                          |
-| `zen_create_folder`           | Create a folder in a space, or reuse the one with that name; optionally move tabs into it |
+| `zen_create_folder`           | Create a folder (nested with `parentId`), or reuse the one with that name in that place   |
 | `zen_rename_folder`           | Rename a folder                                                                           |
+| `zen_move_folder`             | Move a folder to another space and/or parent; omit `parentId` for the space root          |
+| `zen_delete_folder`           | Delete empty folders (`folderIds`); nested empties are removed innermost first            |
 | `zen_move_tabs_to_folder`     | Move tabs into a folder (and into the folder's space)                                     |
 | `zen_remove_tabs_from_folder` | Take tabs out of their folder; they stay in the same space                                |
 | `zen_move_tabs_to_space`      | Move tabs to another space without switching to it                                        |
 | `zen_move_tab`                | Place a tab directly before or after another tab in the same space                        |
+| `zen_set_essential`           | Mark tabs as essential (`tabIds`)                                                         |
+| `zen_clear_essential`         | Remove tabs from Essentials so they can be moved                                          |
+| `zen_close_tab`               | Close tabs (`tabIds`)                                                                     |
+| `zen_apply_patch`             | Apply a PATCH-style tree of spaces, folders and tabs; `dryRun` returns the plan           |
 | `zen_list_timers`             | Running tab timers with the tab, its label and when it ends                               |
-| `zen_set_timer`               | Set a timer on a tab from the same text the timer field takes, such as `45m` or `tomorrow at 9am` |
-| `zen_clear_timer`             | Remove a tab's timer                                                                      |
+| `zen_set_timer`               | Set the same timer on tabs (`tabIds` + `when`, such as `45m`)                             |
+| `zen_clear_timer`             | Remove timers from tabs                                                                   |
 | `zen_list_todos`              | Tabs marked as todo, with title, URL and where they sit                                   |
-| `zen_set_todo`                | Mark a tab as todo                                                                        |
-| `zen_clear_todo`              | Mark a tab's todo as done, which removes it                                               |
+| `zen_set_todo`                | Mark tabs as todo                                                                         |
+| `zen_clear_todo`              | Mark tabs' todos as done, which removes them                                              |
 | `zen_detect_forge_tabs`       | Label every open GitHub and GitLab tab (issue, PR or MR number and title); `dryRun` previews it |
 
 Tool results are JSON. Tab lists leave out favicons, which are large data URLs an agent has no
@@ -373,18 +383,50 @@ page, and neither does the same service open in another space.
 out `folderId` to open in the active space, or pass `spaceId`. `activate: true` switches to the
 tab. Only `http` and `https` URLs can be opened.
 
+**A nested layout in one call.** `zen_apply_patch` with a space whose children inherit its id:
+
+```json
+{
+  "nodes": [
+    {
+      "type": "space",
+      "name": "Client",
+      "children": [
+        {
+          "type": "folder",
+          "name": "Docs",
+          "children": [
+            { "type": "tab", "name": "Drive", "url": "https://drive.google.com/" }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Each node in the result is `created`, `patched`, `moved` or `failed`, with the resolved id.
+`dryRun: true` returns that plan without changing Zen. Nested children do not need `spaceId`
+or `folderId`. New tabs need a `url`. Patching an existing tab does not change its URL.
+
 ## Behaviour worth knowing
 
 - **Folders hold pinned tabs.** That is Zen's model, so creating a folder with tabs, or opening
   or moving tabs into one, pins them.
 - **New tabs open in the background** unless you pass `activate: true`. Their title stays
   "New Tab" until the page loads.
-- **Repeating a call is safe** for folder creation, opening Google services, renaming, and
-  moving tabs. `zen_open_tab` always opens a new tab.
-- **Essential tabs cannot be moved** to a folder or another space.
+- **Repeating a call is safe** for space and folder creation, opening Google services, renaming,
+  and moving tabs. `zen_open_tab` always opens a new tab. `zen_apply_patch` creates when a node
+  has no `id`, so repeating a create-heavy tree will duplicate unless you pass the ids back.
+- **Essential tabs cannot be moved** to a folder or another space until `zen_clear_essential`.
+  After that, the existing move tools work; `zen_set_essential` last if you want them marked
+  again.
 - **Reordering stays within a space.** Move the tab to the target's space first.
-- **Nothing destructive.** The tools cannot close tabs, delete folders, navigate existing tabs,
-  or read page contents.
+- **Closing and deleting are explicit.** `zen_close_tab`, `zen_delete_folder`, and
+  `zen_delete_space` take id arrays. Empty folders are deleted innermost first.
+  Deleting a space closes the tabs in it (essentials are kept) and refuses to remove the last
+  space. The tools still cannot navigate an existing tab or read page contents.
+  `zen_apply_patch` does not delete.
 - **One server owns the bridge.** Only one process can listen on port 47652. If two MCP clients
   (say, Claude and Cursor) both start the server, the second one reports who holds the port and
   takes over as soon as that server exits. A server exits on its own when its MCP client closes,

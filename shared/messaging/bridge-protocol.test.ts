@@ -51,20 +51,50 @@ describe("todo commands", () => {
       type: "listTodos",
     });
     expect(
-      parseBridgeRequest({ id: "1", command: { type: "setTodo", tabId: 4, status: "todo" } })
+      parseBridgeRequest({ id: "1", command: { type: "setTodo", tabIds: [4], status: "todo" } })
         ?.command,
-    ).toEqual({ type: "setTodo", tabId: 4, status: "todo" });
+    ).toEqual({ type: "setTodo", tabIds: [4], status: "todo" });
     expect(
-      parseBridgeRequest({ id: "1", command: { type: "clearTodo", tabId: 4 } })?.command,
-    ).toEqual({ type: "clearTodo", tabId: 4 });
+      parseBridgeRequest({ id: "1", command: { type: "clearTodo", tabIds: [4] } })?.command,
+    ).toEqual({ type: "clearTodo", tabIds: [4] });
   });
 
   it("rejects any status but todo, since done means cleared", () => {
     for (const status of ["none", "done"]) {
       expect(
-        parseBridgeRequest({ id: "1", command: { type: "setTodo", tabId: 4, status } }),
+        parseBridgeRequest({ id: "1", command: { type: "setTodo", tabIds: [4], status } }),
       ).toBeUndefined();
     }
+  });
+});
+
+describe("layout commands", () => {
+  it("accepts createSpace, nested createFolder, essentials and closeTab", () => {
+    expect(
+      parseBridgeRequest({ id: "1", command: { type: "createSpace", name: "  Work  " } })?.command,
+    ).toEqual({ type: "createSpace", name: "Work" });
+    expect(
+      parseBridgeRequest({
+        id: "1",
+        command: { type: "createFolder", name: "Nested", spaceId: "s1", parentId: "f1" },
+      })?.command,
+    ).toMatchObject({ type: "createFolder", name: "Nested", parentId: "f1" });
+    expect(
+      parseBridgeRequest({ id: "1", command: { type: "setEssential", tabIds: [3, 4] } })?.command,
+    ).toEqual({ type: "setEssential", tabIds: [3, 4] });
+    expect(
+      parseBridgeRequest({ id: "1", command: { type: "closeTab", tabIds: [3] } })?.command,
+    ).toEqual({ type: "closeTab", tabIds: [3] });
+    expect(
+      parseBridgeRequest({ id: "1", command: { type: "deleteSpace", spaceIds: ["s1", "s2"] } })
+        ?.command,
+    ).toEqual({ type: "deleteSpace", spaceIds: ["s1", "s2"] });
+  });
+
+  it("rejects a blank space name", () => {
+    expect(
+      parseBridgeRequest({ id: "1", command: { type: "createSpace", name: "   " } }),
+    ).toBeUndefined();
   });
 });
 

@@ -32,7 +32,15 @@ function workspace(partial: Partial<BridgeWorkspace> = {}): BridgeWorkspace {
     moveTab: async () => undefined,
     openTab: async () => 77,
     closeTab: async () => undefined,
+    closeTabs: async () => undefined,
     getTab: async (tabId) => tab({ id: tabId, url: "about:blank", workspaceId: "work" }),
+    createSpace: async () => "space-1",
+    renameSpace: async () => undefined,
+    moveFolder: async () => undefined,
+    deleteFolders: async () => undefined,
+    deleteSpaces: async () => undefined,
+    setEssential: async () => undefined,
+    clearEssential: async () => undefined,
     ...partial,
   };
 }
@@ -83,7 +91,7 @@ describe("createBridgeCommandHandler", () => {
     await expect(handle({ type: "createFolder", name: "Reading" })).resolves.toEqual({
       folderId: "folder-9",
     });
-    expect(createFolder).toHaveBeenCalledWith("Reading", undefined, []);
+    expect(createFolder).toHaveBeenCalledWith("Reading", undefined, [], undefined);
   });
 
   it("maps before/after moves onto the adapter's placement", async () => {
@@ -222,5 +230,52 @@ describe("createBridgeCommandHandler", () => {
       const loaded = (await handle({ type: "listTabs" })) as { url: string }[];
       expect(loaded[0]?.url).toBe("https://drive.google.com/drive/my-drive");
     });
+  });
+
+  it("creates a space, closes a tab and marks a tab essential", async () => {
+    const createSpace = vi.fn(async () => "space-9");
+    const closeTabs = vi.fn(async () => undefined);
+    const setEssential = vi.fn(async () => undefined);
+    const handle = createBridgeCommandHandler(workspace({ createSpace, closeTabs, setEssential }));
+    await expect(handle({ type: "createSpace", name: "Work" })).resolves.toEqual({
+      spaceId: "space-9",
+      name: "Work",
+    });
+    await expect(handle({ type: "closeTab", tabIds: [4, 5] })).resolves.toEqual({
+      tabIds: [4, 5],
+      closed: 2,
+    });
+    await expect(handle({ type: "setEssential", tabIds: [4] })).resolves.toEqual({
+      tabIds: [4],
+      essential: true,
+    });
+    expect(createSpace).toHaveBeenCalledWith("Work");
+    expect(closeTabs).toHaveBeenCalledWith([4, 5]);
+    expect(setEssential).toHaveBeenCalledWith([4]);
+  });
+
+  it("deletes folders and spaces in bulk", async () => {
+    const deleteFolders = vi.fn(async () => undefined);
+    const deleteSpaces = vi.fn(async () => undefined);
+    const handle = createBridgeCommandHandler(workspace({ deleteFolders, deleteSpaces }));
+    await expect(handle({ type: "deleteFolder", folderIds: ["f1", "f2"] })).resolves.toEqual({
+      folderIds: ["f1", "f2"],
+      deleted: 2,
+    });
+    await expect(handle({ type: "deleteSpace", spaceIds: ["s1"] })).resolves.toEqual({
+      spaceIds: ["s1"],
+      deleted: 1,
+    });
+    expect(deleteFolders).toHaveBeenCalledWith(["f1", "f2"]);
+    expect(deleteSpaces).toHaveBeenCalledWith(["s1"]);
+  });
+
+  it("creates a nested folder by passing parentId through", async () => {
+    const createFolder = vi.fn(async () => "folder-2");
+    const handle = createBridgeCommandHandler(workspace({ createFolder }));
+    await expect(
+      handle({ type: "createFolder", name: "Nested", spaceId: "work", parentId: "folder-1" }),
+    ).resolves.toEqual({ folderId: "folder-2" });
+    expect(createFolder).toHaveBeenCalledWith("Nested", "work", [], "folder-1");
   });
 });

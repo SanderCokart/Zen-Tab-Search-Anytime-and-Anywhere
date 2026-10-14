@@ -23,6 +23,14 @@ function workspace(tabs: TabInfo[] = []): BridgeWorkspace {
     moveTab: async () => undefined,
     openTab: async () => 1,
     closeTab: async () => undefined,
+    closeTabs: async () => undefined,
+    createSpace: async () => "space-1",
+    renameSpace: async () => undefined,
+    moveFolder: async () => undefined,
+    deleteFolders: async () => undefined,
+    deleteSpaces: async () => undefined,
+    setEssential: async () => undefined,
+    clearEssential: async () => undefined,
     getTab: async () => {
       throw new Error("unused");
     },
@@ -59,24 +67,37 @@ describe("bridge timer commands", () => {
     const handle = createBridgeCommandHandler(workspace(), svc);
     const before = Date.now();
 
-    const result = (await handle({ type: "setTimer", tabId: 9, when: "30m" })) as {
-      tabId: number;
+    const result = (await handle({ type: "setTimer", tabIds: [9], when: "30m" })) as {
       endAt: number;
       endsAt: string;
+      timers: { tabId: number }[];
     };
 
-    expect(result.tabId).toBe(9);
+    expect(result.timers.map((entry) => entry.tabId)).toEqual([9]);
     const endAt = vi.mocked(svc.timers.setTabTimer).mock.calls[0]?.[1] ?? 0;
     expect(endAt - before).toBeGreaterThan(29 * 60_000);
     expect(endAt - before).toBeLessThan(31 * 60_000);
     expect(result.endsAt).toBe(new Date(result.endAt).toISOString());
   });
 
+  it("sets the same timer on several tabs", async () => {
+    const svc = services();
+    const handle = createBridgeCommandHandler(workspace(), svc);
+    const result = (await handle({ type: "setTimer", tabIds: [9, 10], when: "30m" })) as {
+      timers: { tabId: number }[];
+    };
+    expect(svc.timers.setTabTimer).toHaveBeenCalledTimes(2);
+    expect(result.timers.map((entry) => entry.tabId)).toEqual([9, 10]);
+    const firstEnd = vi.mocked(svc.timers.setTabTimer).mock.calls[0]?.[1];
+    const secondEnd = vi.mocked(svc.timers.setTabTimer).mock.calls[1]?.[1];
+    expect(firstEnd).toBe(secondEnd);
+  });
+
   it("rejects text it cannot read as a time, without touching the timer service", async () => {
     const svc = services();
     const handle = createBridgeCommandHandler(workspace(), svc);
 
-    await expect(handle({ type: "setTimer", tabId: 9, when: "whenever" })).rejects.toThrow(
+    await expect(handle({ type: "setTimer", tabIds: [9], when: "whenever" })).rejects.toThrow(
       'Could not read "whenever" as a time.',
     );
     expect(svc.timers.setTabTimer).not.toHaveBeenCalled();
@@ -90,18 +111,20 @@ describe("bridge timer commands", () => {
     const listed = (await handle({ type: "listTimers" })) as { tabId: number; label: string }[];
     expect(listed).toEqual([expect.objectContaining({ tabId: 4, label: "Docs" })]);
 
-    await expect(handle({ type: "clearTimer", tabId: 4 })).resolves.toEqual({
-      tabId: 4,
-      cleared: true,
+    await expect(handle({ type: "clearTimer", tabIds: [4] })).resolves.toEqual({
+      tabIds: [4],
+      cleared: 1,
+      tabs: [{ tabId: 4, cleared: true }],
     });
   });
 
   it("reports a clear of a tab without a timer as cleared: false", async () => {
     const svc = services({ clearTabTimer: async () => false });
     const handle = createBridgeCommandHandler(workspace(), svc);
-    await expect(handle({ type: "clearTimer", tabId: 4 })).resolves.toEqual({
-      tabId: 4,
-      cleared: false,
+    await expect(handle({ type: "clearTimer", tabIds: [4] })).resolves.toEqual({
+      tabIds: [4],
+      cleared: 0,
+      tabs: [{ tabId: 4, cleared: false }],
     });
   });
 
@@ -228,17 +251,17 @@ describe("bridge todo commands", () => {
       ),
     );
 
-    await expect(handle({ type: "setTodo", tabId: 1, status: "todo" })).resolves.toEqual({
-      tabId: 1,
+    await expect(handle({ type: "setTodo", tabIds: [1, 2], status: "todo" })).resolves.toEqual({
+      tabIds: [1, 2],
       status: "todo",
     });
-    await expect(handle({ type: "clearTodo", tabId: 1 })).resolves.toEqual({
-      tabId: 1,
-      cleared: true,
+    await expect(handle({ type: "clearTodo", tabIds: [1] })).resolves.toEqual({
+      tabIds: [1],
+      cleared: 1,
     });
-    await expect(handle({ type: "clearTodo", tabId: 1 })).resolves.toEqual({
-      tabId: 1,
-      cleared: false,
+    await expect(handle({ type: "clearTodo", tabIds: [1] })).resolves.toEqual({
+      tabIds: [1],
+      cleared: 0,
     });
   });
 

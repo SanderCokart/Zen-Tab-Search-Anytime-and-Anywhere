@@ -42,6 +42,14 @@ function workspace(partial: Partial<WorkspaceAdapter> = {}): WorkspaceAdapter {
     moveTab: async () => undefined,
     openTab: async () => 1,
     closeTab: async () => undefined,
+    closeTabs: async () => undefined,
+    createSpace: async () => "space-1",
+    renameSpace: async () => undefined,
+    moveFolder: async () => undefined,
+    deleteFolders: async () => undefined,
+    deleteSpaces: async () => undefined,
+    setEssential: async () => undefined,
+    clearEssential: async () => undefined,
     ...partial,
   };
 }
