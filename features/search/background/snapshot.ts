@@ -1,4 +1,4 @@
-import type { SpaceInfo, TabInfo, TabTimer, TabTodo } from "@/shared/types";
+import type { SpaceInfo, TabInfo, TabStatus, TabTimer, TabTodo } from "@/shared/types";
 import { tabBrowserId } from "@/shared/types";
 import { SNAPSHOT_CHANGED_TYPE } from "@/shared/messaging/protocol";
 import { mergeTabLastOpened, TAB_LAST_OPENED_STORAGE_KEY } from "@/features/zen/tab-last-opened";
@@ -8,6 +8,7 @@ export interface SearchSnapshotPayload {
   spaces: SpaceInfo[];
   timers: TabTimer[];
   todos: TabTodo[];
+  statuses: TabStatus[];
 }
 
 export function createSnapshotReader(deps: {
@@ -15,6 +16,7 @@ export function createSnapshotReader(deps: {
   getSpaces(anchorTabId?: number): Promise<SpaceInfo[]>;
   getTimers(tabIds?: number[]): Promise<TabTimer[]>;
   getTodos?(tabIds: number[]): Promise<TabTodo[]>;
+  getStatuses?(tabIds: number[]): Promise<TabStatus[]>;
   readLastOpened?(): Promise<Record<string, number>>;
 }): (anchorTabId?: number) => Promise<SearchSnapshotPayload> {
   return async (anchorTabId?: number): Promise<SearchSnapshotPayload> => {
@@ -27,11 +29,12 @@ export function createSnapshotReader(deps: {
       const id = tabBrowserId(tab);
       return id === undefined ? [] : [id];
     });
-    const [timers, todos] = await Promise.all([
+    const [timers, todos, statuses] = await Promise.all([
       deps.getTimers(tabIds),
       deps.getTodos ? deps.getTodos(tabIds) : Promise.resolve([]),
+      deps.getStatuses ? deps.getStatuses(tabIds) : Promise.resolve([]),
     ]);
-    return { tabs: mergeTabLastOpened(tabs, lastOpened), spaces, timers, todos };
+    return { tabs: mergeTabLastOpened(tabs, lastOpened), spaces, timers, todos, statuses };
   };
 }
 

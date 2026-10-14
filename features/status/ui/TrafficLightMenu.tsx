@@ -1,7 +1,7 @@
 import { useRef } from "preact/hooks";
 import { useClampedPosition } from "@/features/search/ui/hooks/useClampedPosition";
-import { TRAFFIC_LIGHT_OPTIONS } from "@/features/todos/model/todo";
-import { trafficLightDotClass } from "@/features/todos/ui/traffic-light";
+import { TRAFFIC_LIGHT_OPTIONS } from "@/features/status/model/status";
+import { trafficLightDotClass } from "@/features/status/ui/traffic-light";
 import type { TrafficLight } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
@@ -13,14 +13,14 @@ export interface TrafficLightMenuProps {
   x: number;
   y: number;
   light?: TrafficLight;
-  /** "none" clears the todo's traffic light. */
+  /** "none" clears the tab's status color. */
   onSelect: (light: TrafficLight | "none") => void;
 }
 
 const itemClass =
   "hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] border-0 bg-transparent px-[var(--zen-space-3)] py-[var(--zen-space-2)] text-left font-[inherit] text-inherit text-[length:var(--zen-text-md)]";
 
-/** The dropdown under a todo's traffic-light button: pick red, orange or green, or clear it. */
+/** The dropdown under a tab's status button: pick red, orange or green, or clear it. */
 export function TrafficLightMenu({ x, y, light, onSelect }: TrafficLightMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const position = useClampedPosition(menuRef, x, y);
@@ -42,7 +42,7 @@ export function TrafficLightMenu({ x, y, light, onSelect }: TrafficLightMenuProp
           class={cn(itemClass, light === option.light && "bg-zen-line-soft")}
           role="menuitemradio"
           aria-checked={light === option.light}
-          title={`Mark this todo ${option.label.toLowerCase()}`}
+          title={`Set the status to ${option.label.toLowerCase()}`}
           data-traffic-light={option.light}
           onClick={() => onSelect(option.light)}
         >
@@ -63,7 +63,7 @@ export function TrafficLightMenu({ x, y, light, onSelect }: TrafficLightMenuProp
             type="button"
             class={itemClass}
             role="menuitem"
-            title="Remove this todo's status color"
+            title="Clear this tab's status color"
             data-traffic-light="none"
             onClick={() => onSelect("none")}
           >

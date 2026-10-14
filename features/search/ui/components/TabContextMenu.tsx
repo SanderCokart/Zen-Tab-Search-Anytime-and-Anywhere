@@ -1,17 +1,30 @@
 import { useRef } from "preact/hooks";
 import { useClampedPosition } from "@/features/search/ui/hooks/useClampedPosition";
 import { TimerIcon } from "@/features/search/ui/components/TimerIcon";
-import { canRenameTab, tabBrowserId, isEssentialTab, type TabInfo } from "@/shared/types";
+import { TRAFFIC_LIGHT_OPTIONS } from "@/features/status/model/status";
+import { trafficLightDotClass } from "@/features/status/ui/traffic-light";
+import {
+  canRenameTab,
+  tabBrowserId,
+  isEssentialTab,
+  type TabInfo,
+  type TrafficLight,
+} from "@/shared/types";
+import { cn } from "@/shared/ui/cn";
 
 export interface TabContextMenuProps {
   tab: TabInfo;
   x: number;
   y: number;
   isTodo: boolean;
+  /** The tab's status color, if it has one. */
+  light?: TrafficLight;
   onRename: () => void;
   onOpenTimer: (tabId: number) => void;
   /** "none" marks the todo done, which removes it. */
   onSetTodo: (status: "todo" | "none") => void;
+  /** Sets the tab's status color; "none" clears it. */
+  onSetLight: (light: TrafficLight | "none") => void;
 }
 
 const itemClass =
@@ -27,9 +40,11 @@ export function TabContextMenu({
   x,
   y,
   isTodo,
+  light,
   onRename,
   onOpenTimer,
   onSetTodo,
+  onSetLight,
 }: TabContextMenuProps) {
   const tabId = tabBrowserId(tab);
   const canTodo = tabId !== undefined && !isEssentialTab(tab);
@@ -69,6 +84,48 @@ export function TabContextMenu({
           >
             {isTodo ? "Mark as done" : "Mark as todo"}
           </button>
+        </>
+      )}
+      {tabId !== undefined && (
+        <>
+          <div class="bg-zen-line-soft my-1 h-px" role="separator" />
+          <div
+            class="text-zen-subtle px-[var(--zen-space-3)] pt-[var(--zen-space-1)] text-[length:var(--zen-text-xs)] font-semibold uppercase"
+            role="presentation"
+          >
+            Status
+          </div>
+          {TRAFFIC_LIGHT_OPTIONS.map((option) => (
+            <button
+              key={option.light}
+              type="button"
+              class={cn(itemClass, light === option.light && "bg-zen-line-soft")}
+              role="menuitemradio"
+              aria-checked={light === option.light}
+              data-traffic-light={option.light}
+              onClick={() => onSetLight(option.light)}
+            >
+              <span
+                aria-hidden="true"
+                class={cn(
+                  "size-[var(--zen-icon-sm)] shrink-0 rounded-full",
+                  trafficLightDotClass[option.light],
+                )}
+              />
+              {option.label}
+            </button>
+          ))}
+          {light !== undefined && (
+            <button
+              type="button"
+              class={itemClass}
+              role="menuitem"
+              data-traffic-light="none"
+              onClick={() => onSetLight("none")}
+            >
+              No status
+            </button>
+          )}
         </>
       )}
     </div>

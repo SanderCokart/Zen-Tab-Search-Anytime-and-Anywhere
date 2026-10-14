@@ -222,6 +222,12 @@
             "description": "Extension tab IDs to put in the folder"
           },
           {
+            "name": "parentId",
+            "type": "string",
+            "optional": true,
+            "description": "Parent folder ID for a nested folder; omit for a top-level folder"
+          },
+          {
             "name": "anchorTabId",
             "type": "integer",
             "optional": true,
@@ -321,6 +327,136 @@
             "type": "integer",
             "optional": true,
             "description": "Place the tab after this extension tab ID"
+          }
+        ]
+      },
+      {
+        "name": "createSpace",
+        "type": "function",
+        "description": "Create a Zen space without switching to it. Returns the space UUID",
+        "async": true,
+        "parameters": [
+          {
+            "name": "name",
+            "type": "string",
+            "description": "Space name"
+          },
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Active extension tab ID used to locate the Zen browser window"
+          }
+        ]
+      },
+      {
+        "name": "renameSpace",
+        "type": "function",
+        "description": "Rename a Zen space by UUID",
+        "async": true,
+        "parameters": [
+          {
+            "name": "spaceId",
+            "type": "string",
+            "description": "Zen space UUID"
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "description": "New space name"
+          }
+        ]
+      },
+      {
+        "name": "moveFolder",
+        "type": "function",
+        "description": "Move a folder to another space and/or parent folder without switching space. Omitting parentId places it at the space root",
+        "async": true,
+        "parameters": [
+          {
+            "name": "folderId",
+            "type": "string",
+            "description": "Folder ID from listFolders"
+          },
+          {
+            "name": "spaceId",
+            "type": "string",
+            "optional": true,
+            "description": "Zen space UUID; defaults to the parent folder's space or the folder's current space"
+          },
+          {
+            "name": "parentId",
+            "type": "string",
+            "optional": true,
+            "description": "Parent folder ID; omit to place the folder at the space root"
+          },
+          {
+            "name": "afterFolderId",
+            "type": "string",
+            "optional": true,
+            "description": "Place the folder directly after this folder"
+          }
+        ]
+      },
+      {
+        "name": "deleteFolder",
+        "type": "function",
+        "description": "Delete empty Zen folders. Fails if any folder still has tabs or subfolders",
+        "async": true,
+        "parameters": [
+          {
+            "name": "folderIds",
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Folder IDs from listFolders"
+          }
+        ]
+      },
+      {
+        "name": "deleteSpace",
+        "type": "function",
+        "description": "Delete Zen spaces and the tabs in them. Essentials are kept. Cannot delete the last space",
+        "async": true,
+        "parameters": [
+          {
+            "name": "spaceIds",
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Zen space UUIDs"
+          },
+          {
+            "name": "anchorTabId",
+            "type": "integer",
+            "optional": true,
+            "description": "Active extension tab ID used to locate the Zen browser window"
+          }
+        ]
+      },
+      {
+        "name": "setEssential",
+        "type": "function",
+        "description": "Mark tabs as essential",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabIds",
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "Extension tab IDs"
+          }
+        ]
+      },
+      {
+        "name": "clearEssential",
+        "type": "function",
+        "description": "Remove tabs from Essentials so they can be moved",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabIds",
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "Extension tab IDs"
           }
         ]
       }

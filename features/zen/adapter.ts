@@ -37,7 +37,7 @@ export interface WorkspaceBrowserHost {
     active: boolean;
     pinned: boolean;
   }): Promise<BrowserTabSnapshot>;
-  removeTab(tabId: number): Promise<void>;
+  removeTab(tabId: number | number[]): Promise<void>;
 }
 
 export interface WorkspaceAdapter {
@@ -59,6 +59,7 @@ export interface WorkspaceAdapter {
     name: string,
     spaceId: string | undefined,
     tabIds: number[],
+    parentId?: string,
     anchorTabId?: number,
   ): Promise<string>;
   renameFolder(folderId: string, name: string): Promise<void>;
@@ -72,6 +73,17 @@ export interface WorkspaceAdapter {
   /** Opens a background tab in the current window's active space and returns its ID. */
   openTab(url: string, options: { pinned: boolean }): Promise<number>;
   closeTab(tabId: number): Promise<void>;
+  closeTabs(tabIds: number[]): Promise<void>;
+  createSpace(name: string, anchorTabId?: number): Promise<string>;
+  renameSpace(spaceId: string, name: string): Promise<void>;
+  moveFolder(
+    folderId: string,
+    placement: { spaceId?: string; parentId?: string; afterFolderId?: string },
+  ): Promise<void>;
+  deleteFolders(folderIds: string[]): Promise<void>;
+  deleteSpaces(spaceIds: string[], anchorTabId?: number): Promise<void>;
+  setEssential(tabIds: number[]): Promise<void>;
+  clearEssential(tabIds: number[]): Promise<void>;
 }
 
 export interface ZenWorkspaceAdapterOptions {
@@ -97,7 +109,13 @@ function defaultBrowserHost(): WorkspaceBrowserHost {
       await browser.tabs.update(tabId, { active: true });
     },
     createTab: (options) => browser.tabs.create(options),
-    removeTab: (tabId) => browser.tabs.remove(tabId),
+    removeTab: async (tabId) => {
+      if (Array.isArray(tabId)) {
+        await browser.tabs.remove(tabId);
+        return;
+      }
+      await browser.tabs.remove(tabId);
+    },
   };
 }
 
@@ -466,7 +484,7 @@ export function createZenWorkspaceAdapter(
       return zenTabs.listFolders(zenAnchorTabId(await resolveAnchor(anchorTabId)));
     },
 
-    async createFolder(name, spaceId, tabIds, anchorTabId) {
+    async createFolder(name, spaceId, tabIds, parentId, anchorTabId) {
       const zenTabs = getApi();
       if (!zenTabs?.createFolder) {
         throw new Error("Zen folders API unavailable");
@@ -475,6 +493,7 @@ export function createZenWorkspaceAdapter(
         name,
         spaceId ?? "",
         tabIds,
+        parentId ?? "",
         zenAnchorTabId(await resolveAnchor(anchorTabId)),
       );
     },
@@ -523,6 +542,10 @@ export function createZenWorkspaceAdapter(
       await host.removeTab(tabId);
     },
 
+    async closeTabs(tabIds) {
+      await host.removeTab(tabIds);
+    },
+
     async moveTab(tabId, placement) {
       const zenTabs = getApi();
       if (!zenTabs?.moveTab) {
@@ -535,6 +558,73 @@ export function createZenWorkspaceAdapter(
       if (!moved) {
         throw new Error("Could not move tab");
       }
+    },
+
+    async createSpace(name, anchorTabId) {
+      const zenTabs = getApi();
+      if (!zenTabs?.createSpace) {
+        throw new Error("Zen spaces API unavailable");
+      }
+      return zenTabs.createSpace(name, zenAnchorTabId(await resolveAnchor(anchorTabId)));
+    },
+
+    async renameSpace(spaceId, name) {
+      const zenTabs = getApi();
+      if (!zenTabs?.renameSpace) {
+        throw new Error("Zen spaces API unavailable");
+      }
+      await zenTabs.renameSpace(spaceId, name);
+    },
+
+    async moveFolder(folderId, placement) {
+      const zenTabs = getApi();
+      if (!zenTabs?.moveFolder) {
+        throw new Error("Zen folders API unavailable");
+      }
+      const moved = await zenTabs.moveFolder(
+        folderId,
+        placement.spaceId ?? "",
+        placement.parentId ?? "",
+        placement.afterFolderId ?? "",
+      );
+      if (!moved) {
+        throw new Error("Could not move folder");
+      }
+    },
+
+    async deleteFolders(folderIds) {
+      const zenTabs = getApi();
+      if (!zenTabs?.deleteFolder) {
+        throw new Error("Zen folders API unavailable");
+      }
+      await zenTabs.deleteFolder(folderIds);
+    },
+
+    async deleteSpaces(spaceIds, anchorTabId) {
+      const zenTabs = getApi();
+      if (!zenTabs?.deleteSpace) {
+        throw new Error("Zen spaces API unavailable");
+      }
+      await zenTabs.deleteSpace(spaceIds, zenAnchorTabId(await resolveAnchor(anchorTabId)));
+    },
+
+    async setEssential(tabIds) {
+      const zenTabs = getApi();
+      if (!zenTabs?.setEssential) {
+        throw new Error("Zen essentials API unavailable");
+      }
+      const marked = await zenTabs.setEssential(tabIds);
+      if (!marked) {
+        throw new Error("One or more tabs cannot be made essential.");
+      }
+    },
+
+    async clearEssential(tabIds) {
+      const zenTabs = getApi();
+      if (!zenTabs?.clearEssential) {
+        throw new Error("Zen essentials API unavailable");
+      }
+      await zenTabs.clearEssential(tabIds);
     },
   };
 }

@@ -20,6 +20,7 @@ describe("createSnapshotReader", () => {
       spaces: [{ id: "space-a", name: "Work", isActive: true }],
       timers: [{ tabId: 1, endAt: 99, originalLabel: "", title: "Tab" }],
       todos: [],
+      statuses: [],
     });
   });
 
@@ -39,6 +40,24 @@ describe("createSnapshotReader", () => {
 
     expect(getTodos).toHaveBeenCalledWith([4]);
     expect(snapshot.todos).toEqual([{ tabId: 4, status: "todo" }]);
+  });
+
+  it("asks for status colors for the browser IDs of the open tabs", async () => {
+    const getStatuses = vi.fn(async () => [{ tabId: 4, light: "red" as const }]);
+    const getSnapshot = createSnapshotReader({
+      queryTabs: vi.fn(async () => [
+        { id: 4, title: "Tab", url: "https://x.test", favIconUrl: "", windowId: 1 },
+        { id: null, title: "Essential", url: "https://x.test", favIconUrl: "", windowId: 1 },
+      ]),
+      getSpaces: vi.fn(async () => []),
+      getTimers: vi.fn(async () => []),
+      getStatuses,
+    });
+
+    const snapshot = await getSnapshot();
+
+    expect(getStatuses).toHaveBeenCalledWith([4]);
+    expect(snapshot.statuses).toEqual([{ tabId: 4, light: "red" }]);
   });
 
   it("merges stored last-opened times onto tabs", async () => {
@@ -85,6 +104,7 @@ describe("createCachedSnapshotReader", () => {
       spaces: [],
       timers: [],
       todos: [],
+      statuses: [],
     }));
     const cache = createCachedSnapshotReader(read);
 

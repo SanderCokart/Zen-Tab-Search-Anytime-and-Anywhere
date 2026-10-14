@@ -27,7 +27,15 @@ export type BridgeWorkspace = Pick<
   | "moveTab"
   | "openTab"
   | "closeTab"
+  | "closeTabs"
   | "getTab"
+  | "createSpace"
+  | "renameSpace"
+  | "moveFolder"
+  | "deleteFolders"
+  | "deleteSpaces"
+  | "setEssential"
+  | "clearEssential"
 >;
 
 /** Timer operations, backed by the same service the timer UI uses. */
@@ -237,12 +245,20 @@ export function createBridgeCommandHandler(
         if (!isAllowedTimerEnd(endAt)) {
           throw new Error("Timer duration must be between 1 minute and 31 days.");
         }
-        return timerView(await services.timers.setTabTimer(command.tabId, endAt));
+        const timers: ReturnType<typeof timerView>[] = [];
+        for (const tabId of command.tabIds) {
+          timers.push(timerView(await services.timers.setTabTimer(tabId, endAt)));
+        }
+        return { endAt, endsAt: new Date(endAt).toISOString(), timers };
       }
 
       case "clearTimer": {
-        const cleared = await services.timers.clearTabTimer(command.tabId);
-        return { tabId: command.tabId, cleared };
+        const tabs: { tabId: number; cleared: boolean }[] = [];
+        for (const tabId of command.tabIds) {
+          const cleared = await services.timers.clearTabTimer(tabId);
+          tabs.push({ tabId, cleared });
+        }
+        return { tabIds: command.tabIds, cleared: tabs.filter((tab) => tab.cleared).length, tabs };
       }
 
       case "listTodos": {
@@ -252,7 +268,7 @@ export function createBridgeCommandHandler(
         );
         const marked = await services.todos.getTodos([...byId.keys()]);
         const todoIds = new Set(marked.map((todo) => todo.tabId));
-        const todo = [];
+        const todo: ReturnType<typeof todoView>[] = [];
         for (const [tabId, tab] of byId) {
           if (todoIds.has(tabId)) {
             todo.push(todoView({ tabId, status: "todo" }, tab));
@@ -262,14 +278,23 @@ export function createBridgeCommandHandler(
       }
 
       case "setTodo": {
-        await services.todos.setTodo(command.tabId, command.status);
-        return { tabId: command.tabId, status: command.status };
+        for (const tabId of command.tabIds) {
+          await services.todos.setTodo(tabId, command.status);
+        }
+        return { tabIds: command.tabIds, status: command.status };
       }
 
       case "clearTodo": {
-        const existing = await services.todos.getTodos([command.tabId]);
-        await services.todos.setTodo(command.tabId, "none");
-        return { tabId: command.tabId, cleared: existing.length > 0 };
+        const existing = new Set(
+          (await services.todos.getTodos(command.tabIds)).map((todo) => todo.tabId),
+        );
+        for (const tabId of command.tabIds) {
+          await services.todos.setTodo(tabId, "none");
+        }
+        return {
+          tabIds: command.tabIds,
+          cleared: command.tabIds.filter((tabId) => existing.has(tabId)).length,
+        };
       }
 
       case "detectForgeTabs": {
@@ -326,9 +351,51 @@ export function createBridgeCommandHandler(
           command.name,
           command.spaceId,
           command.tabIds ?? [],
+          command.parentId,
         );
         return { folderId };
       }
+
+      case "createSpace": {
+        const spaceId = await workspace.createSpace(command.name);
+        return { spaceId, name: command.name };
+      }
+
+      case "renameSpace":
+        await workspace.renameSpace(command.spaceId, command.name);
+        return { spaceId: command.spaceId, name: command.name };
+
+      case "moveFolder":
+        await workspace.moveFolder(command.folderId, {
+          spaceId: command.spaceId,
+          parentId: command.parentId,
+          afterFolderId: command.afterFolderId,
+        });
+        return {
+          folderId: command.folderId,
+          spaceId: command.spaceId,
+          parentId: command.parentId ?? null,
+        };
+
+      case "deleteFolder":
+        await workspace.deleteFolders(command.folderIds);
+        return { folderIds: command.folderIds, deleted: command.folderIds.length };
+
+      case "deleteSpace":
+        await workspace.deleteSpaces(command.spaceIds);
+        return { spaceIds: command.spaceIds, deleted: command.spaceIds.length };
+
+      case "setEssential":
+        await workspace.setEssential(command.tabIds);
+        return { tabIds: command.tabIds, essential: true };
+
+      case "clearEssential":
+        await workspace.clearEssential(command.tabIds);
+        return { tabIds: command.tabIds, essential: false };
+
+      case "closeTab":
+        await workspace.closeTabs(command.tabIds);
+        return { tabIds: command.tabIds, closed: command.tabIds.length };
 
       case "renameFolder":
         await workspace.renameFolder(command.folderId, command.name);

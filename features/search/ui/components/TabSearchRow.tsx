@@ -5,7 +5,7 @@ import { TimerForm } from "@/features/timers/ui/TimerForm";
 import { hostname } from "@/features/search/ui/lib/format";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { TabActions } from "@/features/search/ui/components/TabActions";
-import type { TabInfo, TabTimer } from "@/shared/types";
+import type { TabInfo, TabTimer, TrafficLight } from "@/shared/types";
 import { formatTabDisplayTitle, isEssentialTab, tabBrowserId } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
@@ -14,6 +14,8 @@ export const TabSearchRow = memo(function TabSearchRow({
   timer,
   timerOpen,
   isTodo,
+  light,
+  statusMenuOpen,
   truncate,
   displayTitle,
   onToggleTimer,
@@ -21,11 +23,14 @@ export const TabSearchRow = memo(function TabSearchRow({
   onSetTimer,
   onClearTimer,
   onToggleTodo,
+  onOpenStatusMenu,
 }: {
   tab: TabInfo;
   timer?: TabTimer;
   timerOpen: boolean;
   isTodo: boolean;
+  light?: TrafficLight;
+  statusMenuOpen: boolean;
   truncate: boolean;
   displayTitle?: string;
   onToggleTimer: (tabId: number) => void;
@@ -34,6 +39,7 @@ export const TabSearchRow = memo(function TabSearchRow({
   onClearTimer: (tabId: number) => void;
   /** Marks the tab as todo, or as done (which removes the todo). */
   onToggleTodo: (tabId: number) => void;
+  onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
 }) {
   const tabId = tabBrowserId(tab);
 
@@ -86,7 +92,10 @@ export const TabSearchRow = memo(function TabSearchRow({
             timer={timer}
             timerOpen={timerOpen}
             isTodo={isTodo}
+            light={light}
+            statusMenuOpen={statusMenuOpen}
             onToggleTodo={onToggleTodo}
+            onOpenStatusMenu={onOpenStatusMenu}
             onToggleTimer={onToggleTimer}
             onOpenTimerPopup={onOpenTimerPopup}
           />

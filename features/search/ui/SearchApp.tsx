@@ -7,7 +7,7 @@ import {
   TRAFFIC_LIGHT_MENU_SELECTOR,
   TRAFFIC_LIGHT_TRIGGER_SELECTOR,
   TrafficLightMenu,
-} from "@/features/todos/ui/TrafficLightMenu";
+} from "@/features/status/ui/TrafficLightMenu";
 import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersPanel";
 import { RenameTabDialog } from "@/features/search/ui/components/RenameTabDialog";
 import { SearchInput } from "@/features/search/ui/components/SearchInput";
@@ -23,6 +23,7 @@ import { useSearchResults } from "@/features/search/ui/hooks/useSearchResults";
 import { useSearchSnapshot } from "@/features/search/ui/hooks/useSearchSnapshot";
 import { useTabRename } from "@/features/search/ui/hooks/useTabRename";
 import { useTimerActions } from "@/features/search/ui/hooks/useTimerActions";
+import { useStatusActions } from "@/features/search/ui/hooks/useStatusActions";
 import { useTodoActions } from "@/features/search/ui/hooks/useTodoActions";
 import { stripTimerPrefixFromTab } from "@/features/search/ui/lib/format";
 import { primaryButtonClass } from "@/features/search/ui/lib/styles";
@@ -57,10 +58,22 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     null,
   );
 
-  const [lightMenu, setLightMenu] = useState<{ tabId: number; x: number; y: number } | null>(null);
+  const [statusMenu, setStatusMenu] = useState<{ tabId: number; x: number; y: number } | null>(
+    null,
+  );
 
-  const { tabs, spaces, timers, todos, loadError, setTabs, setTimers, setTodos } =
-    useSearchSnapshot();
+  const {
+    tabs,
+    spaces,
+    timers,
+    todos,
+    statuses,
+    loadError,
+    setTabs,
+    setTimers,
+    setTodos,
+    setStatuses,
+  } = useSearchSnapshot();
   const displaySettings = useDisplaySettings();
   const { essentialNames, setEssentialNames } = useEssentialTabNames();
 
@@ -82,6 +95,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
 
   const rename = useTabRename({ essentialNames, setEssentialNames, setTabs });
   const todoActions = useTodoActions({ setTodos });
+  const statusActions = useStatusActions({ setStatuses });
   const todoTabs = useMemo(
     () => collectTodoTabs(results.labeledTabs, todos),
     [results.labeledTabs, todos],
@@ -92,21 +106,21 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
   );
 
   useCloseOnOutsideClick(
-    lightMenu !== null,
+    statusMenu !== null,
     `${TRAFFIC_LIGHT_MENU_SELECTOR}, ${TRAFFIC_LIGHT_TRIGGER_SELECTOR}`,
-    () => setLightMenu(null),
+    () => setStatusMenu(null),
   );
 
   const openContextMenu = useCallback((tab: TabInfo, event: MouseEvent) => {
     event.preventDefault();
-    setLightMenu(null);
+    setStatusMenu(null);
     setContextMenu({ tab, x: event.clientX, y: event.clientY });
   }, []);
 
-  const toggleLightMenu = useCallback((tab: TabInfo, anchor: DOMRect) => {
+  const toggleStatusMenu = useCallback((tab: TabInfo, anchor: DOMRect) => {
     const tabId = tabBrowserId(tab);
     setContextMenu(null);
-    setLightMenu((current) =>
+    setStatusMenu((current) =>
       tabId === undefined || current?.tabId === tabId
         ? null
         : { tabId, x: anchor.left, y: anchor.bottom + 4 },
@@ -270,7 +284,9 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               displaySettings={displaySettings}
               timers={timers}
               todos={todos}
+              statuses={statuses}
               timerTabId={timerTabId}
+              statusMenuTabId={statusMenu?.tabId ?? null}
               registerOption={navigation.registerOption}
               onActivate={activateItem}
               onContextMenu={openContextMenu}
@@ -279,6 +295,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               onOpenTimerPopup={timerActions.openTimerPopup}
               onSetTimer={timerActions.setTimer}
               onClearTimer={timerActions.clearTimer}
+              onOpenStatusMenu={toggleStatusMenu}
             />
           </ul>
           {(loadError ||
@@ -314,13 +331,16 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             onOpenTimerPopup={timerActions.openTimerPopup}
             onSetTimer={timerActions.setTimer}
             onClearTimer={timerActions.clearTimer}
+            statuses={statuses}
+            statusMenuTabId={statusMenu?.tabId ?? null}
+            onOpenStatusMenu={toggleStatusMenu}
           />
         )}
         {layout === "overlay" && todoTabs.length > 0 && (
           <TodoNavigator
             tabs={todoTabs}
-            todos={todos}
-            lightMenuTabId={lightMenu?.tabId ?? null}
+            statuses={statuses}
+            statusMenuTabId={statusMenu?.tabId ?? null}
             backgroundColor={displaySettings.issueBackgroundColor}
             truncate={displaySettings.truncateIssueTitles}
             selectedIndex={navigation.activePane === "todos" ? navigation.selectedTodoIndex : -1}
@@ -332,20 +352,20 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
                 todoActions.setTodo(tabId, "none");
               }
             }}
-            onOpenLightMenu={toggleLightMenu}
+            onOpenStatusMenu={toggleStatusMenu}
             onContextMenu={openContextMenu}
           />
         )}
       </div>
 
-      {lightMenu && todos.has(lightMenu.tabId) && (
+      {statusMenu && (
         <TrafficLightMenu
-          x={lightMenu.x}
-          y={lightMenu.y}
-          light={todos.get(lightMenu.tabId)?.light}
+          x={statusMenu.x}
+          y={statusMenu.y}
+          light={statuses.get(statusMenu.tabId)}
           onSelect={(light) => {
-            setLightMenu(null);
-            todoActions.setTodo(lightMenu.tabId, "todo", light);
+            setStatusMenu(null);
+            statusActions.setStatus(statusMenu.tabId, light);
           }}
         />
       )}
@@ -356,6 +376,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           x={contextMenu.x}
           y={contextMenu.y}
           isTodo={todos.has(tabBrowserId(contextMenu.tab) ?? -1)}
+          light={statuses.get(tabBrowserId(contextMenu.tab) ?? -1)}
           onRename={() => {
             rename.open(contextMenu.tab, stripTimerPrefixFromTab(contextMenu.tab));
             setContextMenu(null);
@@ -369,6 +390,13 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             setContextMenu(null);
             if (tabId !== undefined) {
               todoActions.setTodo(tabId, status);
+            }
+          }}
+          onSetLight={(light) => {
+            const tabId = tabBrowserId(contextMenu.tab);
+            setContextMenu(null);
+            if (tabId !== undefined) {
+              statusActions.setStatus(tabId, light);
             }
           }}
         />

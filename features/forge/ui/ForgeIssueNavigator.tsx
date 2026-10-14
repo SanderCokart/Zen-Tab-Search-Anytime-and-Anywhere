@@ -13,7 +13,14 @@ import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import { formatForgeKind, formatForgePlatform } from "@/features/forge/model/forge-label";
 import { TimerCountdown } from "@/features/timers/ui/TimerCountdown";
 import { TimerForm } from "@/features/timers/ui/TimerForm";
-import { tabBrowserId, type TabInfo, type TabTimer, type TabTodo } from "@/shared/types";
+import { statusRowClass } from "@/features/status/ui/traffic-light";
+import {
+  tabBrowserId,
+  type TabInfo,
+  type TabTimer,
+  type TabTodo,
+  type TrafficLight,
+} from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
 export function ForgeIssueNavigator({
@@ -34,6 +41,9 @@ export function ForgeIssueNavigator({
   onOpenTimerPopup,
   onSetTimer,
   onClearTimer,
+  statuses,
+  statusMenuTabId,
+  onOpenStatusMenu,
 }: {
   entries: ForgeIssueEntry[];
   backgroundColor: string;
@@ -54,6 +64,10 @@ export function ForgeIssueNavigator({
   onOpenTimerPopup: (tabId: number) => void;
   onSetTimer: (tabId: number, endAt: number) => void;
   onClearTimer: (tabId: number) => void;
+  statuses: Map<number, TrafficLight>;
+  /** The tab whose status menu is open, if any. */
+  statusMenuTabId: number | null;
+  onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
 }) {
   const providers = useMemo(() => groupForgeIssueEntries(entries, sortMode), [entries, sortMode]);
   // Index once instead of an indexOf scan per rendered row.
@@ -73,6 +87,7 @@ export function ForgeIssueNavigator({
         const tabId = tabBrowserId(entry.tab);
         const timer = timers.get(tabId ?? -1);
         const timerOpen = tabId !== undefined && timerTabId === tabId;
+        const light = tabId === undefined ? undefined : statuses.get(tabId);
         const entryDate = formatForgeEntryDate(entry);
         const tabTitle = `${entry.tab.customLabel || ""} ${entry.tab.title || ""}`;
         const showRef = !forgeTitleIncludesRefId(tabTitle, entry.ref.id);
@@ -80,10 +95,11 @@ export function ForgeIssueNavigator({
           <div
             key={`${entry.ref.url}:${entry.tab.id ?? entry.tab.domId ?? entry.title}`}
             class={cn(
-              "hover:bg-zen-line-soft flex w-full max-w-full min-w-0 flex-col overflow-hidden rounded-[var(--zen-radius)]",
-              selected && "bg-zen-line-soft",
+              "flex w-full max-w-full min-w-0 flex-col overflow-hidden rounded-[var(--zen-radius)]",
+              statusRowClass(light, selected),
             )}
             data-testid="zen-issue-entry"
+            data-status-light={light}
             data-issue-selected={selected ? "true" : undefined}
             ref={(element) => {
               if (selected) {
@@ -133,6 +149,9 @@ export function ForgeIssueNavigator({
                   timer={timer}
                   timerOpen={timerOpen}
                   isTodo={todos.has(tabId ?? -1)}
+                  light={light}
+                  statusMenuOpen={tabId !== undefined && statusMenuTabId === tabId}
+                  onOpenStatusMenu={onOpenStatusMenu}
                   onToggleTodo={onToggleTodo}
                   onToggleTimer={onToggleTimerForm}
                   onOpenTimerPopup={onOpenTimerPopup}

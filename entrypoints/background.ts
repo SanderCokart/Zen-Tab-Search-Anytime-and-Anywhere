@@ -31,6 +31,7 @@ import { startBridgeClient } from "@/features/bridge/background/bridge-client";
 import { createBridgeCommandHandler } from "@/features/bridge/background/zen-commands";
 import { BRIDGE_TOKEN_STORAGE_KEY } from "@/shared/messaging/bridge-protocol";
 import { createTodoService } from "@/features/todos/background/todo-service";
+import { createStatusService } from "@/features/status/background/status-service";
 import { detectForgeLabels } from "@/features/forge/background/label-command";
 
 export default defineBackground(() => {
@@ -46,6 +47,7 @@ export default defineBackground(() => {
   });
 
   const todoService = createTodoService();
+  const statusService = createStatusService();
 
   const snapshotCache = createCachedSnapshotReader(
     createSnapshotReader({
@@ -53,6 +55,7 @@ export default defineBackground(() => {
       getSpaces,
       getTimers: timerService.getActiveTimers,
       getTodos: todoService.getTodos,
+      getStatuses: statusService.getStatuses,
       readLastOpened: readTabLastOpened,
     }),
   );
@@ -120,19 +123,22 @@ export default defineBackground(() => {
     if (isUsableTabId(tab.id)) {
       void timerService.adoptRestoredTab(tab.id);
       void todoService.hydrate([tab.id]);
+      void statusService.hydrate([tab.id]);
     }
   });
   void browser.tabs
     .query({})
-    .then((tabs) =>
-      todoService.hydrate(tabs.flatMap((tab) => (isUsableTabId(tab.id) ? [tab.id] : []))),
-    )
+    .then((tabs) => {
+      const tabIds = tabs.flatMap((tab) => (isUsableTabId(tab.id) ? [tab.id] : []));
+      return Promise.all([todoService.hydrate(tabIds), statusService.hydrate(tabIds)]);
+    })
     .catch((error) => {
-      debugWarn(`${LOG_PREFIX} Could not hydrate todos:`, formatError(error));
+      debugWarn(`${LOG_PREFIX} Could not hydrate todos and statuses:`, formatError(error));
     });
 
   browser.tabs.onRemoved.addListener((tabId, removeInfo) => {
     todoService.forget(tabId);
+    statusService.forget(tabId);
     void timerService.handleTabRemoved(tabId, removeInfo.isWindowClosing);
   });
 
@@ -162,8 +168,12 @@ export default defineBackground(() => {
       }
       notify();
     },
-    setTodo: async (tabId, status, light) => {
-      await todoService.setTodo(tabId, status, light);
+    setTodo: async (tabId, status) => {
+      await todoService.setTodo(tabId, status);
+      notify();
+    },
+    setTabStatus: async (tabId, light) => {
+      await statusService.setStatus(tabId, light);
       notify();
     },
     isAllowedTimerEnd: (endAt) => isAllowedTimerEnd(endAt),

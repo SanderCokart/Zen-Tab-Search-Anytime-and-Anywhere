@@ -79,6 +79,10 @@ export function useSearchNavigation({
     (forgeNavigatorQuery.active ||
       (Boolean(searchQuery) && bestForgeWordCount > 0 && bestForgeWordCount >= bestTabWordCount));
 
+  // With no query, a current tab that is a todo starts highlighted in the todo
+  // column, where it is listed first, rather than in the tab list.
+  const shouldFocusCurrentTodo = canFocusTodos && !query.trim() && todoTabs[0]?.active === true;
+
   const userPane = paneOverride?.query === query ? paneOverride.pane : null;
 
   const panes: SearchPane[] = [
@@ -94,15 +98,17 @@ export function useSearchNavigation({
         ? "forge"
         : userPane === "todos" && canFocusTodos
           ? "todos"
-          : shouldFocusForge
-            ? "forge"
-            : canFocusTabs
-              ? "tabs"
-              : canFocusForge
-                ? "forge"
-                : canFocusTodos
-                  ? "todos"
-                  : "tabs";
+          : shouldFocusCurrentTodo
+            ? "todos"
+            : shouldFocusForge
+              ? "forge"
+              : canFocusTabs
+                ? "tabs"
+                : canFocusForge
+                  ? "forge"
+                  : canFocusTodos
+                    ? "todos"
+                    : "tabs";
 
   const defaultTabIndex = (): number => {
     if (activePane !== "tabs" || !items.length) {

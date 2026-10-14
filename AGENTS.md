@@ -38,7 +38,7 @@ each violation so far has been a genuine misplacement.
 | `shared/`      | Wire protocol, domain types, logging, debug, `cn`, global styles                  |
 | `mcp/`         | Node MCP server (outside the extension bundle); may import `shared/` only         |
 
-Features: `search`, `timers`, `todos`, `forge`, `settings`, `zen`, `bridge`.
+Features: `search`, `timers`, `todos`, `status`, `forge`, `settings`, `zen`, `bridge`.
 
 Inside a feature:
 

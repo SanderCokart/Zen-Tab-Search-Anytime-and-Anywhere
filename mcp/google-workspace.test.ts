@@ -75,4 +75,9 @@ describe("findReusableFolder", () => {
     expect(findReusableFolder(folders, "Google", "home")).toBeUndefined();
     expect(findReusableFolder(folders.slice(1, 2), "Google", "general")).toBeUndefined();
   });
+
+  it("reuses a nested folder keyed by parentId, not a same-named sibling at the root", () => {
+    expect(findReusableFolder(folders, "Google", "general", "a")?.id).toBe("b");
+    expect(findReusableFolder(folders, "Google", "general", "missing")).toBeUndefined();
+  });
 });
