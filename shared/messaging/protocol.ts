@@ -45,14 +45,19 @@ export const tabTimerSchema = v.object({
 
 export const TODO_STATUSES = ["todo"] as const;
 
-/** The traffic-light colors a todo can be marked with. */
-export const TRAFFIC_LIGHTS = ["red", "orange", "green"] as const;
-
 /** A tab the user marked as a todo. Marking it done removes the entry. */
 export const tabTodoSchema = v.object({
   tabId: tabIdSchema,
   status: v.picklist(TODO_STATUSES),
-  light: v.optional(v.picklist(TRAFFIC_LIGHTS)),
+});
+
+/** The traffic-light colors a tab's status can be set to. */
+export const TRAFFIC_LIGHTS = ["red", "orange", "green"] as const;
+
+/** A status color the user gave a tab. Any tab can have one, whether or not it is a todo. */
+export const tabStatusSchema = v.object({
+  tabId: tabIdSchema,
+  light: v.picklist(TRAFFIC_LIGHTS),
 });
 
 export const forgePageInfoSchema = v.object({
@@ -129,8 +134,12 @@ export const extensionRequestSchema = v.variant("type", [
     tabId: tabIdSchema,
     /** "none" removes the tab from the todo list, which is what marking it done means. */
     status: v.picklist([...TODO_STATUSES, "none"]),
-    /** Sets the todo's traffic light; "none" clears it and leaving it out keeps the current one. */
-    light: v.optional(v.picklist([...TRAFFIC_LIGHTS, "none"])),
+  }),
+  v.object({
+    type: v.literal("setTabStatus"),
+    tabId: tabIdSchema,
+    /** "none" clears the tab's status color. */
+    light: v.picklist([...TRAFFIC_LIGHTS, "none"]),
   }),
 ]);
 
@@ -158,6 +167,7 @@ export const searchSnapshotSchema = v.object({
   spaces: v.array(spaceInfoSchema),
   timers: v.array(tabTimerSchema),
   todos: v.fallback(v.array(tabTodoSchema), []),
+  statuses: v.fallback(v.array(tabStatusSchema), []),
 });
 
 export const EXTENSION_REQUEST_TYPES = [
@@ -176,6 +186,7 @@ export const EXTENSION_REQUEST_TYPES = [
   "openSettings",
   "setTabLabel",
   "setTodo",
+  "setTabStatus",
 ] as const;
 
 /**
@@ -190,6 +201,7 @@ export type TabTimer = v.InferOutput<typeof tabTimerSchema>;
 export type SpaceInfo = v.InferOutput<typeof spaceInfoSchema>;
 export type TabTodo = v.InferOutput<typeof tabTodoSchema>;
 export type TodoStatus = (typeof TODO_STATUSES)[number];
+export type TabStatus = v.InferOutput<typeof tabStatusSchema>;
 export type TrafficLight = (typeof TRAFFIC_LIGHTS)[number];
 
 export type ExtensionRequestType = (typeof EXTENSION_REQUEST_TYPES)[number];
@@ -217,6 +229,7 @@ export type ExtensionSuccessMap = {
   openSettings: void;
   setTabLabel: void;
   setTodo: void;
+  setTabStatus: void;
 };
 
 const clearTimerResponseSchema = v.object({
@@ -304,6 +317,7 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
     case "openSettings":
     case "setTabLabel":
     case "setTodo":
+    case "setTabStatus":
       return undefined as ExtensionSuccessMap[T];
     default: {
       const exhaustive: never = type;

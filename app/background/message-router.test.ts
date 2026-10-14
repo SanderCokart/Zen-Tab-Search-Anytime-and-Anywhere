@@ -34,6 +34,7 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
     openTimerPopup: vi.fn(async () => undefined),
     setTabLabel: vi.fn(async () => undefined),
     setTodo: vi.fn(async () => undefined),
+    setTabStatus: vi.fn(async () => undefined),
     isAllowedTimerEnd: vi.fn(() => true),
     ...overrides,
   };
@@ -161,38 +162,27 @@ describe("dispatchExtensionMessage", () => {
       throw new Error("expected async dispatch");
     }
     await Promise.all([marked.promise, cleared.promise]);
-    expect(api.setTodo).toHaveBeenNthCalledWith(1, 4, "todo", undefined);
-    expect(api.setTodo).toHaveBeenNthCalledWith(2, 4, "none", undefined);
+    expect(api.setTodo).toHaveBeenNthCalledWith(1, 4, "todo");
+    expect(api.setTodo).toHaveBeenNthCalledWith(2, 4, "none");
   });
 
-  it("passes a todo's traffic light through to setTodo", async () => {
+  it("dispatches setTabStatus, including clearing it with none", async () => {
     const api = handlers();
-    const lit = dispatchExtensionMessage(api, {
-      type: "setTodo",
-      tabId: 4,
-      status: "todo",
-      light: "orange",
-    });
-    const unlit = dispatchExtensionMessage(api, {
-      type: "setTodo",
-      tabId: 4,
-      status: "todo",
-      light: "none",
-    });
+    const lit = dispatchExtensionMessage(api, { type: "setTabStatus", tabId: 4, light: "orange" });
+    const unlit = dispatchExtensionMessage(api, { type: "setTabStatus", tabId: 4, light: "none" });
     if (!lit.handled || !lit.async || !unlit.handled || !unlit.async) {
       throw new Error("expected async dispatch");
     }
     await Promise.all([lit.promise, unlit.promise]);
-    expect(api.setTodo).toHaveBeenNthCalledWith(1, 4, "todo", "orange");
-    expect(api.setTodo).toHaveBeenNthCalledWith(2, 4, "todo", "none");
+    expect(api.setTabStatus).toHaveBeenNthCalledWith(1, 4, "orange");
+    expect(api.setTabStatus).toHaveBeenNthCalledWith(2, 4, "none");
   });
 
-  it("rejects a setTodo traffic light that is not red, orange, green or none", () => {
+  it("rejects a status color that is not red, orange, green or none", () => {
     const api = handlers();
     const result = dispatchExtensionMessage(api, {
-      type: "setTodo",
+      type: "setTabStatus",
       tabId: 4,
-      status: "todo",
       light: "purple",
     });
     expect(result).toEqual({
@@ -200,7 +190,7 @@ describe("dispatchExtensionMessage", () => {
       async: false,
       response: { error: "Invalid message." },
     });
-    expect(api.setTodo).not.toHaveBeenCalled();
+    expect(api.setTabStatus).not.toHaveBeenCalled();
   });
 
   it("rejects a setTodo status that is not todo or none", () => {

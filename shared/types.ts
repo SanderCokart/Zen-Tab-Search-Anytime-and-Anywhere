@@ -10,6 +10,7 @@ export type {
   SpaceInfo,
   TabInfo,
   TabTimer,
+  TabStatus,
   TabTodo,
   TodoStatus,
   TrafficLight,

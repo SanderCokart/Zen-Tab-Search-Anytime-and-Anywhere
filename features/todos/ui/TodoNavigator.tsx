@@ -1,41 +1,47 @@
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { hostname } from "@/features/search/ui/lib/format";
 import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
-import { TrafficLightIcon } from "@/features/todos/ui/TrafficLightIcon";
-import { trafficLightRowClass } from "@/features/todos/ui/traffic-light";
-import { formatTabDisplayTitle, tabBrowserId, type TabInfo, type TabTodo } from "@/shared/types";
+import { StatusButton } from "@/features/status/ui/StatusButton";
+import { statusRowClass } from "@/features/status/ui/traffic-light";
+import {
+  formatTabDisplayTitle,
+  tabBrowserId,
+  type TabInfo,
+  type TrafficLight,
+} from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
 /**
- * The third overlay column: tabs marked as todo. Clicking a row switches to
- * its tab, its traffic light sets a status color that tints the row, its "Mark as done"
- * link removes the todo, and right-clicking opens the tab context menu. Only rendered while there is at least one todo.
+ * The third overlay column: tabs marked as todo. Clicking a row switches to its
+ * tab, its "Mark as done" link removes the todo, the status button beside it
+ * sets the tab's status color, and right-clicking opens the tab context menu.
+ * Only rendered while there is at least one todo.
  */
 export function TodoNavigator({
   tabs,
-  todos,
-  lightMenuTabId,
+  statuses,
+  statusMenuTabId,
   backgroundColor,
   truncate,
   selectedIndex,
   onActivate,
   onSelect,
   onDone,
-  onOpenLightMenu,
+  onOpenStatusMenu,
   onContextMenu,
 }: {
   tabs: TabInfo[];
-  todos: Map<number, TabTodo>;
-  /** The tab whose traffic-light menu is open, if any. */
-  lightMenuTabId: number | null;
+  statuses: Map<number, TrafficLight>;
+  /** The tab whose status menu is open, if any. */
+  statusMenuTabId: number | null;
   backgroundColor: string;
   truncate: boolean;
   selectedIndex: number;
   onActivate: (tab: TabInfo) => void;
   onSelect: (index: number) => void;
   onDone: (tab: TabInfo) => void;
-  /** Opens the traffic-light menu under the button at `anchor`. */
-  onOpenLightMenu: (tab: TabInfo, anchor: DOMRect) => void;
+  /** Opens the status menu under the button at `anchor`. */
+  onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
   onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
 }) {
   return (
@@ -54,18 +60,15 @@ export function TodoNavigator({
         {tabs.map((tab, index) => {
           const selected = selectedIndex === index;
           const tabId = tabBrowserId(tab);
-          const light = todos.get(tabId ?? -1)?.light;
-          const rowClass = light
-            ? trafficLightRowClass[light][selected ? "selected" : "idle"]
-            : cn("hover:bg-zen-line-soft", selected && "bg-zen-line-soft");
+          const light = tabId === undefined ? undefined : statuses.get(tabId);
           return (
             <div
               key={tab.id ?? tab.domId ?? tab.url}
               class={cn(
                 "flex w-full max-w-full min-w-0 shrink-0 items-end overflow-hidden rounded-[var(--zen-radius)]",
-                rowClass,
+                statusRowClass(light, selected),
               )}
-              data-todo-light={light}
+              data-status-light={light}
               data-todo-selected={selected ? "true" : undefined}
               ref={(element) => {
                 if (selected) {
@@ -95,25 +98,12 @@ export function TodoNavigator({
                     entryTextClass(truncate),
                   )}
                 >
-                  {tab.workspaceName || hostname(tab.url)}
+                  {tab.active
+                    ? `${tab.workspaceName || hostname(tab.url)} · Current tab`
+                    : tab.workspaceName || hostname(tab.url)}
                 </span>
               </button>
               <span class="flex shrink-0 items-center">
-                <TooltipButton
-                  label={light ? `Status: ${light}` : "Set status color"}
-                  tooltip={light ? `Status: ${light}. Change color` : "Set a status color"}
-                  aria-haspopup="menu"
-                  aria-expanded={tabId !== undefined && lightMenuTabId === tabId}
-                  data-testid="zen-todo-light-button"
-                  data-traffic-light-trigger=""
-                  class="text-zen-subtle hover:text-zen-text inline-flex cursor-pointer items-center border-0 bg-transparent p-[var(--zen-space-2)]"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onOpenLightMenu(tab, event.currentTarget.getBoundingClientRect());
-                  }}
-                >
-                  <TrafficLightIcon light={light} class="size-[var(--zen-icon-md)]" />
-                </TooltipButton>
                 <TooltipButton
                   label="Mark as done"
                   tooltip="Mark as done and remove from your todos"
@@ -123,6 +113,14 @@ export function TodoNavigator({
                 >
                   Mark as done
                 </TooltipButton>
+                <StatusButton
+                  tab={tab}
+                  light={light}
+                  open={tabId !== undefined && statusMenuTabId === tabId}
+                  onOpenMenu={onOpenStatusMenu}
+                  class="text-zen-subtle hover:text-zen-text p-[var(--zen-space-2)]"
+                  iconClass="size-[var(--zen-icon-md)]"
+                />
               </span>
             </div>
           );

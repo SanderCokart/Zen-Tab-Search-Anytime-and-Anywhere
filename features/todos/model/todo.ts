@@ -1,4 +1,4 @@
-import { isUsableTabId, type TabInfo, type TabTodo, type TrafficLight } from "@/shared/types";
+import { isUsableTabId, type TabInfo, type TabTodo } from "@/shared/types";
 
 /** Turns the snapshot's todo list into a lookup by tab ID. */
 export function todosByTabId(todos: TabTodo[]): Map<number, TabTodo> {
@@ -6,16 +6,17 @@ export function todosByTabId(todos: TabTodo[]): Map<number, TabTodo> {
 }
 
 /**
- * The tabs marked as todo, in the order the tab list already has. Tabs without
- * a browser ID (essential tabs) can't carry a todo, so they are skipped.
+ * The tabs marked as todo, in the order the tab list already has, except that
+ * the current tab goes first when it is one. Tabs without a browser ID
+ * (essential tabs) can't carry a todo, so they are skipped.
  */
 export function collectTodoTabs(tabs: TabInfo[], todos: Map<number, TabTodo>): TabInfo[] {
-  return tabs.filter((tab) => isUsableTabId(tab.id) && todos.get(tab.id)?.status === "todo");
+  const todoTabs = tabs.filter(
+    (tab) => isUsableTabId(tab.id) && todos.get(tab.id)?.status === "todo",
+  );
+  const currentIndex = todoTabs.findIndex((tab) => tab.active === true);
+  if (currentIndex <= 0) {
+    return todoTabs;
+  }
+  return [todoTabs[currentIndex]!, ...todoTabs.filter((_, index) => index !== currentIndex)];
 }
-
-/** The traffic lights in the order the picker lists them. */
-export const TRAFFIC_LIGHT_OPTIONS: { light: TrafficLight; label: string }[] = [
-  { light: "red", label: "Red" },
-  { light: "orange", label: "Orange" },
-  { light: "green", label: "Green" },
-];

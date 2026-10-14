@@ -1,4 +1,4 @@
-import { trafficLightLampClass } from "@/features/todos/ui/traffic-light";
+import { trafficLightLampClass } from "@/features/status/ui/traffic-light";
 import type { TrafficLight } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 

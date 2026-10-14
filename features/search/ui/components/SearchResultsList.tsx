@@ -2,6 +2,7 @@ import type { SearchItemGroup } from "@/features/search/model/ranking";
 import { TabSearchRow } from "@/features/search/ui/components/TabSearchRow";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import type { DisplaySettings } from "@/features/settings/model/display-settings";
+import { statusRowClass } from "@/features/status/ui/traffic-light";
 import {
   formatSpaceDisplayTitle,
   isEssentialTab,
@@ -10,6 +11,7 @@ import {
   type TabInfo,
   type TabTimer,
   type TabTodo,
+  type TrafficLight,
 } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
@@ -23,7 +25,10 @@ export interface SearchResultsListProps {
   displaySettings: DisplaySettings;
   timers: Map<number, TabTimer>;
   todos: Map<number, TabTodo>;
+  statuses: Map<number, TrafficLight>;
   timerTabId: number | null;
+  /** The tab whose status menu is open, if any. */
+  statusMenuTabId: number | null;
   registerOption: (index: number, element: HTMLLIElement | null) => void;
   onActivate: (item: SearchItem) => void;
   /** Right-click on a tab row; spaces have no menu. */
@@ -33,6 +38,7 @@ export interface SearchResultsListProps {
   onOpenTimerPopup: (tabId: number) => void;
   onSetTimer: (tabId: number, endAt: number) => void;
   onClearTimer: (tabId: number) => void;
+  onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
 }
 
 const sectionHeaderClass =
@@ -161,11 +167,15 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
     onOpenTimerPopup,
     onSetTimer,
     onClearTimer,
+    statuses,
+    statusMenuTabId,
+    onOpenStatusMenu,
   } = props;
 
   const index = itemIndices.get(item) ?? -1;
   const selected = !navigateForge && selectedIndex === index;
   const tabId = item.kind === "tab" ? tabBrowserId(item.data) : undefined;
+  const light = tabId === undefined ? undefined : statuses.get(tabId);
 
   return (
     <li
@@ -173,11 +183,12 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
       ref={(element) => registerOption(index, element)}
       data-testid="zen-search-item"
       data-selected={selected ? "true" : undefined}
+      data-status-light={light}
       class={cn(
         "zen-search-row flex min-w-0 cursor-pointer items-start transition-colors",
         item.kind === "space" && "items-center justify-center text-center",
         "gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] p-[var(--zen-space-2)] text-[length:var(--zen-text-md)]",
-        selected ? "bg-zen-line-soft" : "hover:bg-zen-line-soft",
+        statusRowClass(light, selected),
         item.kind === "space" && item.data.isActive && "bg-zen-accent",
       )}
       role="option"
@@ -210,6 +221,9 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
           tab={item.data}
           timer={timers.get(tabId ?? -1)}
           isTodo={tabId !== undefined && todos.has(tabId)}
+          light={light}
+          statusMenuOpen={tabId !== undefined && statusMenuTabId === tabId}
+          onOpenStatusMenu={onOpenStatusMenu}
           timerOpen={timerTabId !== null && timerTabId === tabId}
           truncate={props.displaySettings.truncateTabTitles}
           displayTitle={

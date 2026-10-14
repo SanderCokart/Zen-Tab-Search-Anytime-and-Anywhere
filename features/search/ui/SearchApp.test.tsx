@@ -1,7 +1,7 @@
 import { render } from "preact";
 import { describe, expect, it, vi } from "vitest";
 import { SearchApp } from "@/features/search/ui/SearchApp";
-import type { SpaceInfo, TabInfo, TabTodo } from "@/shared/types";
+import type { SpaceInfo, TabInfo, TabStatus, TabTodo } from "@/shared/types";
 
 const tabs: TabInfo[] = [
   {
@@ -30,10 +30,17 @@ function mountSearchApp(
   displaySettings?: Record<string, unknown>,
   snapshotSpaces: Partial<SpaceInfo>[] = [],
   snapshotTodos: TabTodo[] = [],
+  snapshotStatuses: TabStatus[] = [],
 ) {
   const sendMessage = vi.fn(async ({ type }: { type: string }) => {
     if (type === "getSnapshot") {
-      return { tabs: snapshotTabs, spaces: snapshotSpaces, timers: [], todos: snapshotTodos };
+      return {
+        tabs: snapshotTabs,
+        spaces: snapshotSpaces,
+        timers: [],
+        todos: snapshotTodos,
+        statuses: snapshotStatuses,
+      };
     }
     return undefined;
   });
@@ -346,9 +353,10 @@ describe("SearchApp", () => {
   });
 
   it("moves arrow navigation to the todo column with Tab, then activates with Enter", async () => {
+    // No tab is current here, so the tab list keeps the keyboard until Tab.
     const { root, onClose, sendMessage } = mountSearchApp(
       vi.fn(),
-      tabs,
+      tabs.map((tab) => ({ ...tab, active: false })),
       "overlay",
       undefined,
       [],
@@ -423,14 +431,85 @@ describe("SearchApp", () => {
     root.remove();
   });
 
-  it("swaps the row's todo icon between outline and solid", async () => {
+  it("lists the current tab first in the todo column and highlights it there", async () => {
+    const { root, onClose, sendMessage } = mountSearchApp(
+      vi.fn(),
+      [
+        { ...tabs[1], active: false },
+        { ...tabs[0], active: true },
+      ],
+      "overlay",
+      undefined,
+      [],
+      [
+        { tabId: 2, status: "todo" },
+        { tabId: 1, status: "todo" },
+      ],
+    );
+    const todoRows = () => [
+      ...root.querySelectorAll("[data-testid='zen-todo-column'] .zen-scroll > div"),
+    ];
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-todo-selected='true']")?.textContent).toContain("First tab"),
+    );
+    expect(todoRows()[0]?.textContent).toContain("First tab");
+    expect(todoRows()[0]?.textContent).toContain("Current tab");
+    expect(todoRows()[1]?.textContent).toContain("Second tab");
+    // The todo column has the keyboard, so nothing in the tab list is selected.
+    expect(root.querySelector("[data-selected='true']")).toBeNull();
+
+    // Typing hands the keyboard back to the search results.
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.value = "Second";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-selected='true']")?.textContent).toContain("Second tab"),
+    );
+    expect(root.querySelector("[data-todo-selected='true']")).toBeNull();
+
+    input.value = "";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-todo-selected='true']")?.textContent).toContain("First tab"),
+    );
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "switchTab", tabId: 1, domId: undefined }),
+    );
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("keeps the tab list highlighted when the current tab is not a todo", async () => {
+    const { root } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [{ tabId: 2, status: "todo" }],
+    );
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-selected='true']")?.textContent).toContain("First tab"),
+    );
+    expect(root.querySelector("[data-todo-selected='true']")).toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("shows an empty checkbox for a tab that is not a todo and a checked one for a todo", async () => {
     const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-todo-button']")).not.toBeNull(),
     );
     const button = () => root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-button']")!;
 
-    // The outline icon has no cut-out mask; the solid one does.
+    // The empty checkbox has no cut-out tick; the checked one does.
     expect(button().querySelector("mask")).toBeNull();
     button().click();
     await vi.waitFor(() => expect(button().getAttribute("aria-pressed")).toBe("true"));
@@ -496,8 +575,86 @@ describe("SearchApp", () => {
     root.remove();
   });
 
-  it("sets a todo's traffic light from its dropdown, which tints the row", async () => {
-    const { root, sendMessage } = mountSearchApp(
+  it("sets a status color on a tab row from its status button, without making it a todo", async () => {
+    const { root, sendMessage } = mountSearchApp(vi.fn(), tabs, "overlay");
+    const row = () => root.querySelector("[data-testid='zen-search-item']")!;
+    const statusButton = () =>
+      row().querySelector<HTMLButtonElement>("[data-testid='zen-status-button']");
+    const menu = () => root.querySelector("[data-testid='zen-traffic-light-menu']");
+
+    await vi.waitFor(() => expect(statusButton()).toBeTruthy());
+    expect(row().getAttribute("data-status-light")).toBeNull();
+
+    statusButton()!.click();
+    await vi.waitFor(() => expect(menu()).not.toBeNull());
+    expect(statusButton()!.getAttribute("aria-expanded")).toBe("true");
+    expect(
+      [...menu()!.querySelectorAll("[role='menuitemradio']")].map((item) => item.textContent),
+    ).toEqual(["Red", "Orange", "Green"]);
+
+    menu()!.querySelector<HTMLButtonElement>("[data-traffic-light='orange']")!.click();
+    await vi.waitFor(() => expect(menu()).toBeNull());
+    expect(sendMessage).toHaveBeenCalledWith({ type: "setTabStatus", tabId: 1, light: "orange" });
+    await vi.waitFor(() => expect(row().getAttribute("data-status-light")).toBe("orange"));
+    expect(row().className).toContain("bg-orange-500/");
+    // A status color is independent of todos.
+    expect(root.querySelector("[data-testid='zen-todo-column']")).toBeNull();
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "setTodo" }));
+
+    // Clearing it from the same dropdown removes the tint.
+    statusButton()!.click();
+    await vi.waitFor(() => expect(menu()).not.toBeNull());
+    menu()!.querySelector<HTMLButtonElement>("[data-traffic-light='none']")!.click();
+    await vi.waitFor(() => expect(row().getAttribute("data-status-light")).toBeNull());
+    expect(sendMessage).toHaveBeenCalledWith({ type: "setTabStatus", tabId: 1, light: "none" });
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("tints tab rows, issue entries and todo rows by their tab's status color", async () => {
+    const { root } = mountSearchApp(
+      vi.fn(),
+      [
+        { ...tabs[0], title: "Fix search", url: "https://github.com/acme/project/issues/42" },
+        { ...tabs[1] },
+      ],
+      "overlay",
+      { detectForgeIssues: true, filterIssuesInOverlay: false },
+      [],
+      [{ tabId: 2, status: "todo" }],
+      [
+        { tabId: 1, light: "red" },
+        { tabId: 2, light: "green" },
+      ],
+    );
+
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector("[data-testid='zen-issue-entry']")?.getAttribute("data-status-light"),
+      ).toBe("red"),
+    );
+    const issue = root.querySelector("[data-testid='zen-issue-entry']")!;
+    expect(issue.className).toContain("bg-red-500/");
+    expect(issue.querySelector("[data-testid='zen-status-button']")).not.toBeNull();
+
+    const todoRow = root.querySelector("[data-testid='zen-todo-column'] [data-status-light]")!;
+    expect(todoRow.getAttribute("data-status-light")).toBe("green");
+    expect(todoRow.className).toContain("bg-green-500/");
+
+    const tabRows = [...root.querySelectorAll("[data-testid='zen-search-item']")];
+    expect(
+      tabRows
+        .find((row) => row.textContent?.includes("Second tab"))
+        ?.getAttribute("data-status-light"),
+    ).toBe("green");
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("puts the status button to the right of Mark as done", async () => {
+    const { root } = mountSearchApp(
       vi.fn(),
       tabs,
       "overlay",
@@ -505,73 +662,111 @@ describe("SearchApp", () => {
       [],
       [{ tabId: 2, status: "todo" }],
     );
-    const lightButton = () =>
-      root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-light-button']");
-    const menu = () => root.querySelector("[data-testid='zen-traffic-light-menu']");
-    const row = () => root.querySelector("[data-testid='zen-todo-column'] [data-todo-light]");
+    const column = () => root.querySelector("[data-testid='zen-todo-column']");
+    await vi.waitFor(() =>
+      expect(column()?.querySelector("[data-testid='zen-status-button']")).toBeTruthy(),
+    );
 
-    await vi.waitFor(() => expect(lightButton()).not.toBeNull());
-    expect(row()).toBeNull();
-
-    lightButton()!.click();
-    await vi.waitFor(() => expect(menu()).not.toBeNull());
-    expect(lightButton()!.getAttribute("aria-expanded")).toBe("true");
-    expect(
-      [...menu()!.querySelectorAll("[role='menuitemradio']")].map((item) => item.textContent),
-    ).toEqual(["Red", "Orange", "Green"]);
-
-    menu()!.querySelector<HTMLButtonElement>("[data-traffic-light='orange']")!.click();
-    await vi.waitFor(() => expect(menu()).toBeNull());
-    expect(sendMessage).toHaveBeenCalledWith({
-      type: "setTodo",
-      tabId: 2,
-      status: "todo",
-      light: "orange",
-    });
-    await vi.waitFor(() => expect(row()?.getAttribute("data-todo-light")).toBe("orange"));
-    expect(row()!.className).toContain("bg-orange-500/15");
-
-    // Clearing it from the same dropdown removes the tint.
-    lightButton()!.click();
-    await vi.waitFor(() => expect(menu()).not.toBeNull());
-    menu()!.querySelector<HTMLButtonElement>("[data-traffic-light='none']")!.click();
-    await vi.waitFor(() => expect(row()).toBeNull());
-    expect(sendMessage).toHaveBeenCalledWith({
-      type: "setTodo",
-      tabId: 2,
-      status: "todo",
-      light: "none",
-    });
+    const done = column()!.querySelector("[data-testid='zen-todo-done-button']")!;
+    const status = column()!.querySelector("[data-testid='zen-status-button']")!;
+    expect(done.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     render(null, root);
     root.remove();
   });
 
-  it("closes the traffic-light dropdown when its button is clicked again", async () => {
+  it("sets a status color from the context menu without making the tab a todo", async () => {
+    const { root, sendMessage } = mountSearchApp(vi.fn(), tabs, "overlay");
+    const menu = () => root.querySelector("[data-testid='zen-tab-context-menu']");
+    const row = () => root.querySelector("[data-testid='zen-search-item']")!;
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-search-item']")).toBeTruthy(),
+    );
+    row().dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 20, clientY: 20 }),
+    );
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Status"));
+    expect(
+      [...menu()!.querySelectorAll("[role='menuitemradio']")].map((item) => item.textContent),
+    ).toEqual(["Red", "Orange", "Green"]);
+    // No color yet, so there is nothing to clear.
+    expect(menu()!.querySelector("[data-traffic-light='none']")).toBeNull();
+
+    menu()!.querySelector<HTMLButtonElement>("[data-traffic-light='green']")!.click();
+    await vi.waitFor(() => expect(menu()).toBeNull());
+    expect(sendMessage).toHaveBeenCalledWith({ type: "setTabStatus", tabId: 1, light: "green" });
+    await vi.waitFor(() => expect(row().getAttribute("data-status-light")).toBe("green"));
+    expect(root.querySelector("[data-testid='zen-todo-column']")).toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("shows a tab's status color in the context menu and can clear it", async () => {
+    const { root, sendMessage } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [],
+      [{ tabId: 2, light: "red" }],
+    );
+    const menu = () => root.querySelector("[data-testid='zen-tab-context-menu']");
+
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector("[data-testid='zen-search-item'][data-status-light='red']"),
+      ).toBeTruthy(),
+    );
+    root.querySelector("[data-testid='zen-search-item'][data-status-light='red']")!.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Status"));
+    expect(menu()!.querySelector("[data-traffic-light='red']")!.getAttribute("aria-checked")).toBe(
+      "true",
+    );
+
+    menu()!.querySelector<HTMLButtonElement>("[data-traffic-light='none']")!.click();
+    await vi.waitFor(() => expect(root.querySelector("[data-status-light]")).toBeNull());
+    expect(sendMessage).toHaveBeenCalledWith({ type: "setTabStatus", tabId: 2, light: "none" });
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("closes the status dropdown when its button is clicked again", async () => {
     const { root } = mountSearchApp(
       vi.fn(),
       tabs,
       "overlay",
       undefined,
       [],
-      [{ tabId: 2, status: "todo", light: "red" }],
+      [],
+      [{ tabId: 1, light: "red" }],
     );
-    const lightButton = () =>
-      root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-light-button']")!;
+    const statusButton = () =>
+      root.querySelector<HTMLButtonElement>(
+        "[data-testid='zen-search-item'] [data-testid='zen-status-button']",
+      )!;
     const menu = () => root.querySelector("[data-testid='zen-traffic-light-menu']");
 
-    await vi.waitFor(() =>
-      expect(root.querySelector("[data-todo-light='red']")?.className).toContain("bg-red-500/15"),
-    );
-    lightButton().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-    lightButton().click();
+    await vi.waitFor(() => expect(root.querySelector("[data-status-light='red']")).toBeTruthy());
+    statusButton().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    statusButton().click();
     await vi.waitFor(() => expect(menu()).not.toBeNull());
     expect(menu()!.querySelector("[data-traffic-light='red']")!.getAttribute("aria-checked")).toBe(
       "true",
     );
 
-    lightButton().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-    lightButton().click();
+    statusButton().dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    statusButton().click();
     await vi.waitFor(() => expect(menu()).toBeNull());
 
     render(null, root);
