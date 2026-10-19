@@ -13,7 +13,13 @@ export default defineContentScript({
   async main(ctx) {
     debugLog("Zen Tab Search content script loaded at", new Date().toISOString());
 
-    let omnibar: Awaited<ReturnType<typeof createShadowRootUi>> | undefined;
+    type OmnibarUi = Awaited<ReturnType<typeof createShadowRootUi>>;
+    // Built once and remounted on every open: creating it fetches and parses the
+    // whole stylesheet and builds a new shadow root, which made each Alt+F slow.
+    let omnibarUi: Promise<OmnibarUi> | undefined;
+    let omnibar: OmnibarUi | undefined;
+    // Set while an open is waiting for the UI, so a second toggle cancels it.
+    let opening = false;
 
     function collectForgePageInfo() {
       const titleEl = document.querySelector(
@@ -42,9 +48,12 @@ export default defineContentScript({
     }
 
     const hideOmnibar = () => {
+      opening = false;
       document.removeEventListener("keydown", escapeListener, true);
       document.removeEventListener("visibilitychange", visibilityListener);
-      omnibar?.shadowHost.hidePopover();
+      if (omnibar?.shadowHost.isConnected) {
+        omnibar.shadowHost.hidePopover();
+      }
       omnibar?.remove();
       omnibar = undefined;
     };
@@ -60,10 +69,8 @@ export default defineContentScript({
       if (document.hidden) hideOmnibar();
     };
 
-    async function showOmnibar(): Promise<void> {
-      if (omnibar) return;
-
-      omnibar = await createShadowRootUi(ctx, {
+    function createOmnibarUi(): Promise<OmnibarUi> {
+      return createShadowRootUi(ctx, {
         name: "zen-tab-search",
         position: "modal",
         zIndex: OMNIBAR_Z_INDEX,
@@ -94,13 +101,29 @@ export default defineContentScript({
           if (app) render(null, app);
         },
       });
+    }
+
+    async function showOmnibar(): Promise<void> {
+      if (omnibar || opening) return;
+
+      opening = true;
+      omnibarUi ??= createOmnibarUi().catch((error: unknown) => {
+        omnibarUi = undefined;
+        throw error;
+      });
+      const ui = await omnibarUi;
+      if (!opening) return;
+      opening = false;
+      omnibar = ui;
 
       document.addEventListener("keydown", escapeListener, true);
       document.addEventListener("visibilitychange", visibilityListener);
-      omnibar.shadowHost.setAttribute("popover", "manual");
-      omnibar.mount();
-      omnibar.shadowHost.showPopover();
+      ui.shadowHost.setAttribute("popover", "manual");
+      ui.mount();
+      ui.shadowHost.showPopover();
     }
+
+    const isOmnibarShown = () => omnibar !== undefined || opening;
 
     browser.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (
@@ -121,7 +144,7 @@ export default defineContentScript({
         return;
       }
       if (command.type === "toggleOmnibar") {
-        if (omnibar) hideOmnibar();
+        if (isOmnibarShown()) hideOmnibar();
         else void showOmnibar();
       }
       if (command.type === "showOmnibar") void showOmnibar();

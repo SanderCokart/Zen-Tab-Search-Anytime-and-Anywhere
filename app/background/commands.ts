@@ -7,7 +7,10 @@ import { isUsableBrowserTabId } from "@/features/zen/anchor";
 import { changeSelectedTabLabel } from "@/features/forge/background/label-command";
 import { toggleOmnibar } from "@/features/search/background/omnibar";
 
-export function registerCommands(workspace: WorkspaceAdapter): void {
+export function registerCommands(
+  workspace: WorkspaceAdapter,
+  options: { warmSnapshot?: (anchorTabId: number) => void } = {},
+): void {
   browser.commands.onCommand.addListener((command, tab) => {
     const commandTabId = isUsableBrowserTabId(tab?.id, tab?.url) ? tab?.id : undefined;
     debugLog(`${LOG_PREFIX} command ${command}`, {
@@ -17,7 +20,10 @@ export function registerCommands(workspace: WorkspaceAdapter): void {
     });
 
     if (command === "show-omnibar") {
-      void toggleOmnibar(commandTabId).catch((error) => {
+      void toggleOmnibar(commandTabId, {
+        preferredUrl: commandTabId === undefined ? undefined : tab?.url,
+        warmSnapshot: options.warmSnapshot,
+      }).catch((error) => {
         console.error(`${LOG_PREFIX} Error handling show-omnibar command:`, formatError(error));
       });
       return;

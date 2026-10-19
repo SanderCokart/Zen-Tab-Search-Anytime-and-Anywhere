@@ -170,6 +170,10 @@ export function useSearchNavigation({
   }, [selectedIndex]);
 
   useEffect(() => {
+    // Focus at once so keys typed straight after Alt+F reach the input rather
+    // than the page; the delayed retry covers the toolbar popup, which can
+    // take focus back while it opens.
+    inputRef.current?.focus();
     const timer = window.setTimeout(() => inputRef.current?.focus(), 100);
     return () => window.clearTimeout(timer);
   }, []);

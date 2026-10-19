@@ -87,7 +87,13 @@ export default defineBackground(() => {
     removeTab: (tabId) => browser.tabs.remove(tabId),
     recordOpened: recordTabLastOpened,
   });
-  registerCommands(workspace);
+  registerCommands(workspace, {
+    warmSnapshot: (anchorTabId) => {
+      void snapshotCache.getSnapshot(anchorTabId).catch(() => {
+        // The overlay's own request reports the failure.
+      });
+    },
+  });
   registerSnapshotChangeNotifications(150, snapshotCache.invalidate);
   registerTabLastOpenedTracking();
 

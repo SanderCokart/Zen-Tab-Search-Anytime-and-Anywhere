@@ -70,4 +70,31 @@ describe("toggleOmnibar", () => {
       anchorTabId: 20,
     });
   });
+
+  it("skips the tab lookup when the command tab's URL is known, and warms the snapshot", async () => {
+    resolveAnchorTabIdMock.mockResolvedValue(20);
+    const get = vi.fn(async () => ({ id: 20, url: "https://second.test" }));
+    Object.assign(globalThis, { browser: { tabs: { get } } });
+    const warmSnapshot = vi.fn();
+
+    await toggleOmnibar(20, { preferredUrl: "https://second.test", warmSnapshot });
+
+    expect(get).not.toHaveBeenCalled();
+    expect(warmSnapshot).toHaveBeenCalledWith(20);
+    expect(sendTabMessageMock).toHaveBeenCalledWith(20, {
+      type: "toggleOmnibar",
+      anchorTabId: 20,
+    });
+  });
+
+  it("does not warm the snapshot for a page the overlay cannot open on", async () => {
+    resolveAnchorTabIdMock.mockResolvedValue(20);
+    Object.assign(globalThis, { browser: { tabs: { get: vi.fn() } } });
+    const warmSnapshot = vi.fn();
+
+    await toggleOmnibar(20, { preferredUrl: "about:config", warmSnapshot });
+
+    expect(warmSnapshot).not.toHaveBeenCalled();
+    expect(toggleSearchPopupMock).toHaveBeenCalled();
+  });
 });

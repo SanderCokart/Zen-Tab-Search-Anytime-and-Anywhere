@@ -6,7 +6,20 @@ import { toggleSearchPopup } from "@/features/search/background/popup";
 import { isContentScriptInjectableUrl } from "@/shared/urls";
 import { resolveAnchorTabId } from "@/features/zen/anchor";
 
-export async function toggleOmnibar(preferredTabId?: number): Promise<void> {
+export interface ToggleOmnibarOptions {
+  /** The command tab's URL, which saves a `tabs.get` when it is the anchor. */
+  preferredUrl?: string;
+  /**
+   * Starts the snapshot read for the anchor tab, so it runs while the content
+   * script builds the overlay instead of after the overlay asks for it.
+   */
+  warmSnapshot?: (anchorTabId: number) => void;
+}
+
+export async function toggleOmnibar(
+  preferredTabId?: number,
+  options: ToggleOmnibarOptions = {},
+): Promise<void> {
   const tabId = await resolveAnchorTabId(preferredTabId);
   if (!isUsableTabId(tabId)) {
     await toggleSearchPopup();
@@ -14,13 +27,18 @@ export async function toggleOmnibar(preferredTabId?: number): Promise<void> {
   }
 
   let url: string | undefined;
-  try {
-    url = (await browser.tabs.get(tabId)).url;
-  } catch {
-    url = undefined;
+  if (tabId === preferredTabId && options.preferredUrl !== undefined) {
+    url = options.preferredUrl;
+  } else {
+    try {
+      url = (await browser.tabs.get(tabId)).url;
+    } catch {
+      url = undefined;
+    }
   }
 
   if (isContentScriptInjectableUrl(url)) {
+    options.warmSnapshot?.(tabId);
     try {
       await sendTabMessage(tabId, { type: "toggleOmnibar", anchorTabId: tabId });
       return;
