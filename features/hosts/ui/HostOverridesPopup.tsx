@@ -48,7 +48,14 @@ function formatProxyStatus(status: HostProxyStatus | undefined): string {
     : parts.join(" · ");
 }
 
-export function HostOverridesPopup({ tabId, onClose }: { tabId: number; onClose: () => void }) {
+export interface HostOverridesPopupProps {
+  tabId: number;
+  onClose: () => void;
+  /** Shown inside the omnibar, which already sets the sizing tokens and text colour. */
+  embedded?: boolean;
+}
+
+export function HostOverridesPopup({ tabId, onClose, embedded = false }: HostOverridesPopupProps) {
   const [tab, setTab] = useState<TabInfo>();
   const [tabGroups, setTabGroups] = useState<HostOverrideGroup[]>([]);
   const [globalGroups, setGlobalGroups] = useState<HostOverrideGroup[]>([]);
@@ -251,8 +258,12 @@ export function HostOverridesPopup({ tabId, onClose }: { tabId: number; onClose:
   return (
     <div
       class="flex flex-col gap-[var(--zen-space-3)]"
-      data-zen-ui
-      style={{ ...uiScaleStyle(displaySettings, "popup"), color: displaySettings.textColor }}
+      data-zen-ui={embedded ? undefined : true}
+      style={
+        embedded
+          ? undefined
+          : { ...uiScaleStyle(displaySettings, "popup"), color: displaySettings.textColor }
+      }
     >
       <header class="flex flex-col gap-[var(--zen-space-1)]">
         <h1 class="m-0 text-[length:var(--zen-text-md)] font-semibold">Host overrides</h1>

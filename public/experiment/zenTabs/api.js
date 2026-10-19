@@ -996,9 +996,55 @@ this.zenTabs = class extends ExtensionAPI {
     const omnibarOverlays = (extensionApi.omnibarOverlays ??= new Map());
     let nextOverlayId = 1;
 
+    // Popup windows (settings, timer, hosts) are navigator:browser windows too,
+    // so "most recent" alone would put the omnibar in whichever one is open.
+    function isPopupWindow(win) {
+      try {
+        return win.toolbar?.visible === false;
+      } catch {
+        return false;
+      }
+    }
+
+    /** Browser windows front to back, so skipping a popup lands on the window behind it. */
+    function windowsByZOrder() {
+      try {
+        const windows = [];
+        const enumerator = getServices().wm.getZOrderDOMWindowEnumerator("navigator:browser", true);
+        while (enumerator.hasMoreElements()) {
+          windows.push(enumerator.getNext());
+        }
+        if (windows.length) {
+          return windows;
+        }
+      } catch {
+        // Not every platform keeps a z-order; fall back to most recent first.
+      }
+      return enumerateMediatorWindows();
+    }
+
     function omnibarWindow() {
-      const recent = getServices().wm.getMostRecentWindow("navigator:browser");
-      return isBrowserWindow(recent) ? recent : null;
+      for (const win of windowsByZOrder()) {
+        if (isBrowserWindow(win) && !isPopupWindow(win)) {
+          return win;
+        }
+      }
+      return null;
+    }
+
+    /** A tab in the overlay's window, so the background reads that window's spaces. */
+    function omnibarAnchorTabId(win) {
+      const selected = getExtTabId(win.gBrowser.selectedTab);
+      if (selected >= 0) {
+        return selected;
+      }
+      for (const tab of win.gBrowser.tabs) {
+        const id = getExtTabId(tab);
+        if (id >= 0) {
+          return id;
+        }
+      }
+      return -1;
     }
 
     function loadExtensionPage(browser, url) {
@@ -1187,7 +1233,12 @@ this.zenTabs = class extends ExtensionAPI {
           // remounts it first and then calls showOmnibarOverlay.
           const created = !current?.container.isConnected;
           const entry = ensureOmnibarOverlay(win, pageUrl, true);
-          return { state: "ready", overlayId: entry.id, created };
+          return {
+            state: "ready",
+            overlayId: entry.id,
+            created,
+            anchorTabId: omnibarAnchorTabId(win),
+          };
         },
 
         async showOmnibarOverlay(overlayId) {

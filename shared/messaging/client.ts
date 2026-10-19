@@ -4,6 +4,7 @@ import {
   type ExtensionRequestType,
   type ExtensionSuccessMap,
   type ForgePageInfo,
+  type OmnibarShown,
   forgePageInfoSchema,
   isErrorResponse,
   isSnapshotChangedMessage,
@@ -60,14 +61,14 @@ export function subscribeToSnapshotChanged(onChanged: () => void): () => void {
 }
 
 /**
- * Calls `onShown` with the overlay ID before the window-hosted omnibar is shown.
- * When it returns true, the reply waits a task so the re-render commits before
- * the background makes the overlay visible.
+ * Calls `onShown` before the window-hosted omnibar is shown. When it returns
+ * true, the reply waits a task so the re-render commits before the background
+ * makes the overlay visible.
  */
-export function subscribeToOmnibarShown(onShown: (overlayId: string) => boolean): () => void {
+export function subscribeToOmnibarShown(onShown: (shown: OmnibarShown) => boolean): () => void {
   const listener = (message: unknown) => {
-    const overlayId = parseOmnibarShownMessage(message);
-    if (overlayId === undefined || !onShown(overlayId)) {
+    const shown = parseOmnibarShownMessage(message);
+    if (shown === undefined || !onShown(shown)) {
       return undefined;
     }
     return new Promise<true>((resolve) => setTimeout(() => resolve(true), 0));

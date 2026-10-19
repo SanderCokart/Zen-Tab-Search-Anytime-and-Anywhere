@@ -124,7 +124,7 @@ describe("SearchApp", () => {
     root.remove();
   });
 
-  it("opens host overrides for a row from its context menu", async () => {
+  it("swaps the overlay columns for a row's host overrides from its context menu", async () => {
     const { root, sendMessage } = mountSearchApp(vi.fn(), tabs, "overlay");
     const menu = () => root.querySelector("[data-testid='zen-tab-context-menu']");
     await vi.waitFor(() =>
@@ -145,9 +145,16 @@ describe("SearchApp", () => {
       .click();
 
     await vi.waitFor(() =>
-      expect(sendMessage).toHaveBeenCalledWith({ type: "openHostOverridesPopup", tabId: 1 }),
+      expect(sendMessage).toHaveBeenCalledWith({ type: "getHostOverrides", tabId: 1 }),
     );
+    expect(sendMessage).not.toHaveBeenCalledWith({ type: "openHostOverridesPopup", tabId: 1 });
     expect(menu()).toBeNull();
+    expect(root.querySelector("h1")?.textContent).toBe("Host overrides");
+
+    [...root.querySelectorAll<HTMLButtonElement>("button")]
+      .find((button) => button.textContent?.includes("Back to search"))!
+      .click();
+    await vi.waitFor(() => expect(root.querySelector("h1")).toBeNull());
 
     render(null, root);
     root.remove();
@@ -962,9 +969,8 @@ describe("SearchApp", () => {
     [...root.querySelectorAll("[role='menuitem']")]
       .find((node) => node.textContent?.includes("Timer"))
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    await vi.waitFor(() =>
-      expect(sendMessage).toHaveBeenCalledWith({ type: "openTimerPopup", tabId: 2 }),
-    );
+    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: "getTab", tabId: 2 }));
+    expect(sendMessage).not.toHaveBeenCalledWith({ type: "openTimerPopup", tabId: 2 });
     expect(menu()).toBeNull();
 
     render(null, root);

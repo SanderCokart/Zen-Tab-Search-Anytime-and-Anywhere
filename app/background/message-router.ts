@@ -37,6 +37,8 @@ export interface MessageRouterHandlers {
   getHostProxyStatus(): Promise<HostProxyReport>;
   openHostOverridesPopup(tabId: number): Promise<void>;
   hideOmnibar(): Promise<void>;
+  /** Anchor for a sender that is not a tab, such as the window-hosted omnibar. */
+  anchorTabIdForSender?(sender: MessageSender): number | undefined;
   isAllowedTimerEnd(endAt: number): boolean;
 }
 
@@ -45,6 +47,7 @@ export interface MessageSender {
     id?: number;
     url?: string;
   };
+  url?: string;
 }
 
 export type DispatchResult =
@@ -90,7 +93,9 @@ function handleParsedRequest(
   message: ExtensionRequest,
   sender: MessageSender,
 ): Promise<unknown> {
-  const senderTabId = isUsableSenderTab(sender.tab) ? sender.tab?.id : undefined;
+  const senderTabId = isUsableSenderTab(sender.tab)
+    ? sender.tab?.id
+    : handlers.anchorTabIdForSender?.(sender);
   const anchorTabId =
     "anchorTabId" in message && message.anchorTabId !== undefined
       ? message.anchorTabId

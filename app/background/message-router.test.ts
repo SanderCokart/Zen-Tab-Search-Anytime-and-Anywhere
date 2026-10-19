@@ -113,6 +113,18 @@ describe("dispatchExtensionMessage", () => {
     expect(api.getSnapshot).toHaveBeenCalledWith(8);
   });
 
+  it("anchors a sender that is not a tab through anchorTabIdForSender", async () => {
+    const api = handlers({ anchorTabIdForSender: vi.fn(() => 12) });
+    const sender = { url: "moz-extension://id/omnibar.html?overlay=a" };
+    const result = dispatchExtensionMessage(api, { type: "getSnapshot" }, sender);
+    if (!result.handled || !result.async) {
+      throw new Error("expected async dispatch");
+    }
+    await result.promise;
+    expect(api.anchorTabIdForSender).toHaveBeenCalledWith(sender);
+    expect(api.getSnapshot).toHaveBeenCalledWith(12);
+  });
+
   it("rejects an out-of-range timer before calling the handler", async () => {
     const api = handlers({ isAllowedTimerEnd: () => false });
     const result = dispatchExtensionMessage(api, {

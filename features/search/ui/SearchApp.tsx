@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "preact/hooks";
+import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
 import type { ForgeIssueSortMode } from "@/features/search/model/ranking";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
@@ -8,6 +8,7 @@ import {
   TrafficLightMenu,
 } from "@/features/status/ui/TrafficLightMenu";
 import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersPanel";
+import { OmnibarViewPanel } from "@/features/search/ui/components/OmnibarViewPanel";
 import { RenameTabDialog } from "@/features/search/ui/components/RenameTabDialog";
 import { SearchInput } from "@/features/search/ui/components/SearchInput";
 import { SearchResultsList } from "@/features/search/ui/components/SearchResultsList";
@@ -30,6 +31,7 @@ import { primaryButtonClass } from "@/features/search/ui/lib/styles";
 import type { SearchLayout } from "@/features/search/ui/types";
 import { debugError } from "@/shared/debug";
 import { sendExtensionMessage } from "@/shared/messaging/client";
+import type { OmnibarView } from "@/shared/messaging/protocol";
 import { isActivatableTab, tabBrowserId, type SearchItem, type TabInfo } from "@/shared/types";
 import { type ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import { cn } from "@/shared/ui/cn";
@@ -40,6 +42,8 @@ export interface SearchAppProps {
   onClose: () => void;
   pageJump?: number;
   layout?: SearchLayout;
+  /** The overlay view to open on instead of the tab, issue and todo columns. */
+  initialView?: OmnibarView;
 }
 
 /**
@@ -47,8 +51,17 @@ export interface SearchAppProps {
  * overlay. State lives in the hooks under `hooks/`; this component wires them
  * to the presentational pieces under `components/`.
  */
-export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchAppProps) {
+export function SearchApp({
+  onClose,
+  pageJump = 5,
+  layout = "popup",
+  initialView,
+}: SearchAppProps) {
   const compact = layout === "popup";
+  // The overlay has room to swap its columns for the timer and host override
+  // controls; the toolbar popup still opens those in their own windows.
+  const swapsViews = layout === "overlay";
+  const [view, setView] = useState<OmnibarView | undefined>(swapsViews ? initialView : undefined);
 
   const [query, setQuery] = useState("");
   const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("recent");
@@ -116,11 +129,26 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     return current ? tabBrowserId(current) : undefined;
   }, [tabs]);
 
-  const openHostOverrides = useCallback((tabId: number) => {
-    void sendExtensionMessage({ type: "openHostOverridesPopup", tabId }).catch((error) =>
-      debugError("Could not open host overrides:", error),
-    );
-  }, []);
+  const openHostOverrides = useCallback(
+    (tabId: number) => {
+      if (swapsViews) {
+        setView({ kind: "hosts", tabId });
+        return;
+      }
+      void sendExtensionMessage({ type: "openHostOverridesPopup", tabId }).catch((error) =>
+        debugError("Could not open host overrides:", error),
+      );
+    },
+    [swapsViews],
+  );
+
+  const openTimer = useCallback(
+    (tabId: number) => {
+      if (swapsViews) setView({ kind: "timer", tabId });
+      else timerActions.openTimerPopup(tabId);
+    },
+    [swapsViews, timerActions],
+  );
 
   const openContextMenu = useCallback((tab: TabInfo, event: MouseEvent) => {
     event.preventDefault();
@@ -213,6 +241,31 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     onActivateTodoTab: activateTodoTab,
   });
 
+  const closeView = useCallback(() => {
+    setView(undefined);
+    navigation.inputRef.current?.focus();
+  }, [navigation.inputRef]);
+
+  // The timer and host override panels handle Escape themselves (stepping out
+  // of an open form first); the timers list has no form, so it is handled here.
+  useEffect(() => {
+    if (view?.kind !== "timers") return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      closeView();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [view, closeView]);
+
+  const timersOpen = swapsViews ? view?.kind === "timers" : showTimers;
+  const toggleTimers = () => {
+    if (swapsViews) setView(view?.kind === "timers" ? undefined : { kind: "timers" });
+    else setShowTimers(!showTimers);
+  };
+
   const iconButtonClass = cn(
     primaryButtonClass,
     "inline-flex shrink-0 items-center justify-center p-0",
@@ -231,17 +284,21 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
         <SearchInput
           inputRef={navigation.inputRef}
           compact={compact}
-          onQueryChange={setQuery}
+          onQueryChange={(next) => {
+            setQuery(next);
+            // Typing goes back to the search the input is for.
+            if (view) setView(undefined);
+          }}
           onKeyDown={navigation.onKeyDown}
         />
         <button
           type="button"
           class={cn(iconButtonClass, "relative")}
-          title={showTimers ? "Close active timers" : "Show active timers"}
-          onClick={() => setShowTimers(!showTimers)}
+          title={timersOpen ? "Close active timers" : "Show active timers"}
+          onClick={toggleTimers}
         >
-          <TimerIcon close={showTimers} class="size-[var(--zen-icon-md)]" />
-          {!showTimers && timers.size > 0 && (
+          <TimerIcon close={timersOpen} class="size-[var(--zen-icon-md)]" />
+          {!timersOpen && timers.size > 0 && (
             <span
               class={cn(
                 "bg-zen-badge absolute -top-1 -right-1 rounded-full text-center",
@@ -286,7 +343,21 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
         </button>
       </div>
 
-      {showTimers && (
+      {view && (
+        <OmnibarViewPanel
+          view={view}
+          timers={timers}
+          onBack={closeView}
+          onClearAll={timerActions.clearAllTimers}
+          onClearTimer={timerActions.clearTimer}
+          onOpenTimer={openTimer}
+          onActivateTimer={(tabId) => {
+            void sendExtensionMessage({ type: "switchTab", tabId }).then(onClose);
+          }}
+        />
+      )}
+
+      {!swapsViews && showTimers && (
         <ActiveTimersPanel
           timers={timers}
           onClearAll={timerActions.clearAllTimers}
@@ -297,7 +368,11 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
         />
       )}
 
-      <div class={cn(layout === "overlay" && "flex min-h-0 min-w-0 flex-1 gap-4 overflow-hidden")}>
+      <div
+        class={cn(layout === "overlay" && "flex min-h-0 min-w-0 flex-1 gap-4 overflow-hidden")}
+        // Kept mounted under a view so the lists keep their scroll and selection.
+        style={view ? { display: "none" } : undefined}
+      >
         <div class={cn(layout === "overlay" && "flex min-h-0 min-w-0 flex-1 flex-col")}>
           <ul
             class={cn(
@@ -323,7 +398,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               onContextMenu={openContextMenu}
               onToggleTodo={onToggleTodo}
               onToggleTimerForm={onToggleTimerForm}
-              onOpenTimerPopup={timerActions.openTimerPopup}
+              onOpenTimerPopup={openTimer}
               onSetTimer={timerActions.setTimer}
               onClearTimer={timerActions.clearTimer}
               onOpenStatusMenu={toggleStatusMenu}
@@ -360,7 +435,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             timerTabId={timerTabId}
             onToggleTodo={onToggleTodo}
             onToggleTimerForm={onToggleTimerForm}
-            onOpenTimerPopup={timerActions.openTimerPopup}
+            onOpenTimerPopup={openTimer}
             onSetTimer={timerActions.setTimer}
             onClearTimer={timerActions.clearTimer}
             statuses={statuses}
@@ -417,7 +492,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           }}
           onOpenTimer={(tabId) => {
             setContextMenu(null);
-            timerActions.openTimerPopup(tabId);
+            openTimer(tabId);
           }}
           onOpenHostOverrides={(tabId) => {
             setContextMenu(null);

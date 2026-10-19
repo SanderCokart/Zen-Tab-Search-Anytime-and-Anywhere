@@ -1,5 +1,6 @@
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { isUsableTabId } from "@/shared/types";
+import { openOmnibarView } from "@/features/search/background/omnibar";
 
 let hostsPopupWindowId: number | undefined;
 
@@ -11,6 +12,12 @@ export function forgetHostOverridesPopupWindow(windowId: number): void {
 
 /** Opens the host override editor for a tab, replacing one already open. */
 export async function openHostOverridesPopup(tabId: number): Promise<void> {
+  // The window-hosted omnibar shows these controls in place of its columns;
+  // the popup window is only for when the experiment cannot host it.
+  if (await openOmnibarView({ kind: "hosts", tabId }).catch(() => false)) {
+    return;
+  }
+
   if (isUsableTabId(hostsPopupWindowId)) {
     try {
       await browser.windows.remove(hostsPopupWindowId);

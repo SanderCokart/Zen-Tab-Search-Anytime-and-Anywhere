@@ -255,9 +255,17 @@ export const snapshotChangedSchema = v.object({
 /** Broadcast when the window-hosted omnibar is shown, so its page remounts fresh. */
 export const OMNIBAR_SHOWN_TYPE = "omnibarShown" as const;
 
+/** A panel the omnibar shows in place of its tab, issue and todo columns. */
+export const omnibarViewSchema = v.variant("kind", [
+  v.object({ kind: v.literal("timers") }),
+  v.object({ kind: v.literal("timer"), tabId: tabIdSchema }),
+  v.object({ kind: v.literal("hosts"), tabId: tabIdSchema }),
+]);
+
 export const omnibarShownSchema = v.object({
   type: v.literal(OMNIBAR_SHOWN_TYPE),
   overlayId: v.string(),
+  view: v.optional(omnibarViewSchema),
 });
 
 export const searchSnapshotSchema = v.object({
@@ -317,6 +325,8 @@ export type ExtensionRequestType = (typeof EXTENSION_REQUEST_TYPES)[number];
 export type ExtensionRequest = v.InferOutput<typeof extensionRequestSchema>;
 export type ContentCommand = v.InferOutput<typeof contentCommandSchema>;
 export type ErrorResponse = v.InferOutput<typeof errorResponseSchema>;
+export type OmnibarView = v.InferOutput<typeof omnibarViewSchema>;
+export type OmnibarShown = v.InferOutput<typeof omnibarShownSchema>;
 
 export type ClearTimerResponse = { success: true; cleared: boolean };
 export type ClearAllTimersResponse = { success: true; cleared: number };
@@ -382,9 +392,14 @@ export function isSnapshotChangedMessage(value: unknown): boolean {
   return v.is(snapshotChangedSchema, value);
 }
 
-export function parseOmnibarShownMessage(value: unknown): string | undefined {
+export function parseOmnibarShownMessage(value: unknown): OmnibarShown | undefined {
   const parsed = v.safeParse(omnibarShownSchema, value);
-  return parsed.success ? parsed.output.overlayId : undefined;
+  return parsed.success ? parsed.output : undefined;
+}
+
+export function parseOmnibarView(value: unknown): OmnibarView | undefined {
+  const parsed = v.safeParse(omnibarViewSchema, value);
+  return parsed.success ? parsed.output : undefined;
 }
 
 export function parseStoredTimer(value: unknown): TabTimer | undefined {

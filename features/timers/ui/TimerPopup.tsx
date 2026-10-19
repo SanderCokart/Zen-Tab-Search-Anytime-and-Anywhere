@@ -21,7 +21,14 @@ function hostname(url: string): string {
   }
 }
 
-export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => void }) {
+export interface TimerPopupProps {
+  tabId: number;
+  onClose: () => void;
+  /** Shown inside the omnibar, which already sets the sizing tokens and text colour. */
+  embedded?: boolean;
+}
+
+export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps) {
   const [tab, setTab] = useState<TabInfo>();
   const [timer, setTimer] = useState<TabTimer>();
   const [now, setNow] = useState(Date.now());
@@ -105,8 +112,12 @@ export function TimerPopup({ tabId, onClose }: { tabId: number; onClose: () => v
   return (
     <div
       class="flex flex-col gap-[var(--zen-space-2)]"
-      data-zen-ui
-      style={{ ...uiScaleStyle(displaySettings, "popup"), color: displaySettings.textColor }}
+      data-zen-ui={embedded ? undefined : true}
+      style={
+        embedded
+          ? undefined
+          : { ...uiScaleStyle(displaySettings, "popup"), color: displaySettings.textColor }
+      }
     >
       <h1 class="m-0 truncate text-[length:var(--zen-text-md)] font-semibold">
         {tab

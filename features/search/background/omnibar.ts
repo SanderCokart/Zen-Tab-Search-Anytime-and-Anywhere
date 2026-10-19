@@ -11,7 +11,7 @@ import {
   showOmnibarOverlay,
   toggleOmnibarOverlay,
 } from "@/features/zen/omnibar-overlay";
-import { OMNIBAR_SHOWN_TYPE } from "@/shared/messaging/protocol";
+import { OMNIBAR_SHOWN_TYPE, type OmnibarView } from "@/shared/messaging/protocol";
 
 export interface ToggleOmnibarOptions {
   /** The command tab's URL, which saves a `tabs.get` when it is the anchor. */
@@ -24,10 +24,12 @@ export interface ToggleOmnibarOptions {
 }
 
 /** The search page the window-hosted overlay loads. */
-const OMNIBAR_PAGE = "/omnibar.html";
+export const OMNIBAR_PAGE = "/omnibar.html";
 
-function omnibarPageUrl(): string {
-  return browser.runtime.getURL(OMNIBAR_PAGE);
+/** A newly built page reads its first view from the URL, since it misses the broadcast. */
+function omnibarPageUrl(view?: OmnibarView): string {
+  const url = browser.runtime.getURL(OMNIBAR_PAGE);
+  return view ? `${url}?view=${encodeURIComponent(JSON.stringify(view))}` : url;
 }
 
 /** Builds the hidden window-hosted overlay so the first Alt+F is already warm. */
@@ -39,8 +41,44 @@ export async function preloadOmnibar(): Promise<void> {
   }
 }
 
+let omnibarAnchorTabId: number | undefined;
+
+/**
+ * A tab in the window the window-hosted omnibar is showing in. Its page is not
+ * a tab, so without this its requests anchor to the last focused window, which
+ * is an open settings or timer popup and has no spaces to show.
+ */
+export function getOmnibarAnchorTabId(): number | undefined {
+  return omnibarAnchorTabId;
+}
+
 export async function hideOmnibar(): Promise<void> {
   await hideOmnibarOverlay();
+}
+
+type OverlayToggle = Awaited<ReturnType<typeof toggleOmnibarOverlay>>;
+
+/** Undefined when the experiment cannot host the omnibar, so callers fall back. */
+async function toggleOverlay(view?: OmnibarView): Promise<OverlayToggle> {
+  try {
+    return await toggleOmnibarOverlay(omnibarPageUrl(view));
+  } catch (error) {
+    debugLog(`${LOG_PREFIX} Window omnibar unavailable:`, formatError(error));
+    return undefined;
+  }
+}
+
+async function showReadyOverlay(
+  result: Extract<NonNullable<OverlayToggle>, { state: "ready" }>,
+  view?: OmnibarView,
+): Promise<void> {
+  omnibarAnchorTabId = isUsableTabId(result.anchorTabId) ? result.anchorTabId : undefined;
+  // The hidden page still shows the last search. Showing it before the
+  // remount flashed old results, then the loading fade, then the new ones.
+  const remounted = result.created || (await remountOmnibarPage(result.overlayId, view));
+  await showOmnibarOverlay(result.overlayId);
+  // A preloaded page still loading missed the broadcast; keep asking until it mounts.
+  if (!remounted) void retryRemount(result.overlayId, view);
 }
 
 /**
@@ -48,22 +86,23 @@ export async function hideOmnibar(): Promise<void> {
  * when the experiment cannot, so the caller falls back to the in-page overlay.
  */
 async function toggleWindowOmnibar(): Promise<boolean> {
-  let result;
-  try {
-    result = await toggleOmnibarOverlay(omnibarPageUrl());
-  } catch (error) {
-    debugLog(`${LOG_PREFIX} Window omnibar unavailable:`, formatError(error));
-    return false;
-  }
+  const result = await toggleOverlay();
   if (!result) return false;
-  if (result.state === "ready") {
-    // The hidden page still shows the last search. Showing it before the
-    // remount flashed old results, then the loading fade, then the new ones.
-    const remounted = result.created || (await remountOmnibarPage(result.overlayId));
-    await showOmnibarOverlay(result.overlayId);
-    // A preloaded page still loading missed the broadcast; keep asking until it mounts.
-    if (!remounted) void retryRemount(result.overlayId);
-  }
+  if (result.state === "ready") await showReadyOverlay(result);
+  return true;
+}
+
+/**
+ * Opens the window-hosted omnibar on a timer or host overrides view, so those
+ * controls replace its columns instead of opening a window. Returns false when
+ * the experiment cannot host it, so the caller opens the popup window instead.
+ */
+export async function openOmnibarView(view: OmnibarView): Promise<boolean> {
+  let result = await toggleOverlay(view);
+  // Already showing: that toggle hid it, so show it again on the new view.
+  if (result?.state === "hidden") result = await toggleOverlay(view);
+  if (result?.state !== "ready") return false;
+  await showReadyOverlay(result, view);
   return true;
 }
 
@@ -71,9 +110,9 @@ async function toggleWindowOmnibar(): Promise<boolean> {
 const REMOUNT_TIMEOUT_MS = 250;
 const REMOUNT_RETRIES = 20;
 
-async function remountOmnibarPage(overlayId: string): Promise<boolean> {
+async function remountOmnibarPage(overlayId: string, view?: OmnibarView): Promise<boolean> {
   const remounted = browser.runtime
-    .sendMessage({ type: OMNIBAR_SHOWN_TYPE, overlayId })
+    .sendMessage({ type: OMNIBAR_SHOWN_TYPE, overlayId, view })
     .then((reply: unknown) => reply === true)
     .catch(() => false);
   const timeout = new Promise<boolean>((resolve) =>
@@ -82,11 +121,11 @@ async function remountOmnibarPage(overlayId: string): Promise<boolean> {
   return Promise.race([remounted, timeout]);
 }
 
-async function retryRemount(overlayId: string): Promise<void> {
+async function retryRemount(overlayId: string, view?: OmnibarView): Promise<void> {
   for (let attempt = 0; attempt < REMOUNT_RETRIES; attempt += 1) {
     // With no page listening yet, sendMessage rejects at once, so space the tries.
     await new Promise((resolve) => setTimeout(resolve, 100));
-    if (await remountOmnibarPage(overlayId)) return;
+    if (await remountOmnibarPage(overlayId, view)) return;
   }
 }
 

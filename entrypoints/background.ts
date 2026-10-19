@@ -7,7 +7,12 @@ import { registerPopupWindowTracking } from "@/app/background/popup-tracking";
 import { openSettingsPopup } from "@/features/settings/background/popup";
 import { openCustomTimerPopup } from "@/features/timers/background/popup";
 import { openHostOverridesPopup } from "@/features/hosts/background/popup";
-import { hideOmnibar, preloadOmnibar } from "@/features/search/background/omnibar";
+import {
+  getOmnibarAnchorTabId,
+  hideOmnibar,
+  OMNIBAR_PAGE,
+  preloadOmnibar,
+} from "@/features/search/background/omnibar";
 import {
   createCachedSnapshotReader,
   createSnapshotReader,
@@ -236,6 +241,10 @@ export default defineBackground(() => {
     getHostProxyStatus: hostOverrideService.getStatus,
     openHostOverridesPopup,
     hideOmnibar,
+    anchorTabIdForSender: (sender) =>
+      sender.tab === undefined && sender.url?.startsWith(browser.runtime.getURL(OMNIBAR_PAGE))
+        ? getOmnibarAnchorTabId()
+        : undefined,
     isAllowedTimerEnd: (endAt) => isAllowedTimerEnd(endAt),
   });
 

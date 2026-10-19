@@ -8,6 +8,8 @@ export interface ActiveTimersPanelProps {
   onClearAll: () => void;
   onClearTimer: (tabId: number) => void;
   onActivateTimer: (tabId: number) => void;
+  /** Opens the timer controls for that tab; the button is left out without it. */
+  onEditTimer?: (tabId: number) => void;
 }
 
 /** The "Active timers" drawer under the search input. */
@@ -16,6 +18,7 @@ export function ActiveTimersPanel({
   onClearAll,
   onClearTimer,
   onActivateTimer,
+  onEditTimer,
 }: ActiveTimersPanelProps) {
   const sorted = [...timers.values()].sort((a, b) => a.endAt - b.endAt);
 
@@ -51,6 +54,15 @@ export function ActiveTimersPanel({
                   <TimerCountdown endAt={timer.endAt} />
                 </span>
               </button>
+              {onEditTimer && (
+                <button
+                  type="button"
+                  class={cn(clearButtonClass, "px-[var(--zen-space-2)] py-[var(--zen-space-1)]")}
+                  onClick={() => onEditTimer(timer.tabId)}
+                >
+                  Edit
+                </button>
+              )}
               <button
                 type="button"
                 class={cn(clearButtonClass, "px-[var(--zen-space-2)] py-[var(--zen-space-1)]")}

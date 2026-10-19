@@ -26,7 +26,7 @@ export type RenameSelection = "all" | "start";
 export type OmnibarOverlayToggle =
   | { state: "hidden"; overlayId: string }
   /** Built and focused-to-be but still invisible; `created` when its page is still loading. */
-  | { state: "ready"; overlayId: string; created: boolean };
+  | { state: "ready"; overlayId: string; created: boolean; anchorTabId: number };
 
 export interface ZenTabsApi {
   toggleOmnibarOverlay?(pageUrl: string): Promise<OmnibarOverlayToggle>;
