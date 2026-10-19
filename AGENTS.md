@@ -124,8 +124,9 @@ context menu and popup, and its own UI — all in one directory.
 
 - **Firefox only.** MV2, `browser.*` namespace. There is no Chrome build.
 - **Four keyboard commands maximum.** Firefox allows only four `suggested_key`
-  entries and all four are used; WXT's own reload shortcut is disabled for this
-  reason (`dev.reloadCommand: false` in `wxt.config.ts`).
+  entries. Three are used (Alt+F omnibar, Alt+R rename, Alt+T timer); the toolbar
+  popup command ships unmapped. WXT's own reload shortcut is disabled because it
+  is Alt+R (`dev.reloadCommand: false` in `wxt.config.ts`).
 - **The Zen experiment API is privileged.** `web-ext lint` reports
   `MANIFEST_FIELD_PRIVILEGED`; `scripts/lint-web-ext.mjs` allows that one code
   and nothing else.

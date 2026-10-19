@@ -10,7 +10,7 @@ Display options open from the gear on either search surface. Change or assign sh
 
 ### Omnibar search
 
-`Ctrl+Shift+F` opens the in-page search overlay when the active tab is an `http`, `https`, or `file` page the extension can attach to. Search matches tab titles, URLs, and custom labels, including tabs in another Zen space. Spaces and essential tabs sit in their own grids above the tab list. While the search field is focused, `Up` and `Down` move one result, `Left` and `Right` jump several results, `Enter` activates the selected result, and `Escape` closes the overlay.
+`Alt+F` opens the in-page search overlay when the active tab is an `http`, `https`, or `file` page the extension can attach to. Search matches tab titles, URLs, and custom labels, including tabs in another Zen space. Spaces and essential tabs sit in their own grids above the tab list. While the search field is focused, `Up` and `Down` move one result, `Left` and `Right` jump several results, `Enter` activates the selected result, and `Escape` closes the overlay.
 
 As you can see here you can search tabs, spaces, and essential tabs from the omnibar.
 
@@ -18,7 +18,7 @@ As you can see here you can search tabs, spaces, and essential tabs from the omn
 
 ### Popup search
 
-The toolbar popup is the fallback when the active page has no DOM the overlay can attach to. `Ctrl+Shift+F` opens the popup on browser pages and anywhere the in-page overlay cannot attach. `Ctrl+Alt+F` opens the popup directly, including when no web page is active, and pressing it again closes the popup. The same `Up`, `Down`, `Left`, `Right`, `Enter`, and `Escape` keys work while the search field is focused. Features that exist on both surfaces are shown once below.
+The toolbar popup is the fallback when the active page has no DOM the overlay can attach to. `Alt+F` opens the popup on browser pages and anywhere the in-page overlay cannot attach. The **Open Zen Tab Search popup** command opens the popup directly, including when no web page is active, and pressing it again closes the popup. It has no key by default; assign one in `about:addons` → **Manage Extension Shortcuts**. The same `Up`, `Down`, `Left`, `Right`, `Enter`, and `Escape` keys work while the search field is focused. Features that exist on both surfaces are shown once below.
 
 As you can see here you can search from the toolbar popup when the omnibar has no page to attach to.
 
@@ -94,7 +94,7 @@ As you can see here you can group results by folders and by the subfolders insid
 
 ### Timers
 
-`Ctrl+Alt+T` opens the timer for the current tab when Zen has a current tab. Right-click a tab and use **Tab timer** to add 30 minutes, 1 hour, 7 hours, 8 hours, or a custom time, or choose **Clear timer**.
+`Alt+T` opens the timer for the current tab when Zen has a current tab. Right-click a tab and use **Tab timer** to add 30 minutes, 1 hour, 7 hours, 8 hours, or a custom time, or choose **Clear timer**.
 
 From either search surface, the clock on a result opens the same controls, and **Timer** in the result menu does too. The clock beside the search field lists every running timer so you can jump to that tab, clear one, or clear all of them.
 
@@ -137,7 +137,7 @@ The zip will be produced by WXT. Install it using the same `about:addons` → ge
 
 ## At a glance
 
-- Omnibar search with `Ctrl+Shift+F`, and a toolbar popup when the page has no DOM
+- Omnibar search with `Alt+F`, and a toolbar popup when the page has no DOM
 - GitHub and GitLab issues in the issue navigator
 - Hide essentials, spaces, or specific spaces from results
 - Truncated or wrapping tab and issue titles
@@ -145,7 +145,7 @@ The zip will be produced by WXT. Install it using the same `about:addons` → ge
 - Theme colors for text, issues, folders, and spaces
 - Reuse of an already open tab for external links
 - Folder and subfolder sections
-- Timers you can add and clear from search, the tab menu, or `Ctrl+Alt+T`
+- Timers you can add and clear from search, the tab menu, or `Alt+T`
 
 
 

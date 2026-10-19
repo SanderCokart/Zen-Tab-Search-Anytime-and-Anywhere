@@ -158,14 +158,14 @@ the repo, and it lives here because it is the only context that can see the page
 
 ## 4. A keystroke, end to end
 
-Follow `Ctrl+Shift+F` — "open the omnibar" — all the way through. This single path
+Follow `Alt+F` — "open the omnibar" — all the way through. This single path
 touches most of the architecture.
 
-**1. The manifest.** [wxt.config.ts](wxt.config.ts) declares four commands with
-suggested keys. Firefox allows only four, and all four are spent
-(`show-omnibar`, `toggle-popup`, `change-tab-label`, `set-tab-timer`). This is why
-WXT's own dev-reload shortcut is disabled with `dev.reloadCommand: false` — it
-wanted a fifth.
+**1. The manifest.** [wxt.config.ts](wxt.config.ts) declares four commands
+(`show-omnibar`, `toggle-popup`, `change-tab-label`, `set-tab-timer`); Firefox allows
+at most four with suggested keys. Three have one (Alt+F, Alt+R, Alt+T) and
+`toggle-popup` ships unmapped. WXT's own dev-reload shortcut is disabled with
+`dev.reloadCommand: false` because it is Alt+R too.
 
 **2. The command listener.** [app/background/commands.ts](app/background/commands.ts)
 receives `"show-omnibar"` and calls `toggleOmnibar()`. This file is in `app/` rather
@@ -363,7 +363,7 @@ and formats a label like `MR: #123 - !45 - Improve tab search`. Pure and
 well-covered.
 
 The background half is [label-command.ts](features/forge/background/label-command.ts),
-bound to `Ctrl+Alt+R`. It asks the content script for page info, builds a label, and
+bound to `Alt+R`. It asks the content script for page info, builds a label, and
 writes it via the adapter. On a page that is not an issue or MR, it falls through to
 Zen's own native "Change Label" dialog — again, try the good thing, fall back.
 

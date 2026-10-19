@@ -35,7 +35,7 @@ If a `npm run dev` / `wxt -b firefox` process is already running for this repo, 
 npm run dev
 ```
 
-It stays running. File changes rebuild into `.output/firefox-mv2/`. WXT's reload shortcut is disabled (`dev.reloadCommand: false`) because all four `suggested_key` slots are used; the file watcher still rebuilds.
+It stays running. File changes rebuild into `.output/firefox-mv2/`. WXT's reload shortcut is disabled (`dev.reloadCommand: false`) because it is Alt+R, which the label command uses; the file watcher still rebuilds.
 
 Wait until the log reports a successful build and this file exists:
 
@@ -51,10 +51,10 @@ Tell the user to:
 
 Shortcuts (change them in `about:addons` → **Manage Extension Shortcuts**):
 
-- `Ctrl+Shift+F` — in-page search overlay
-- `Ctrl+Alt+F` — toolbar popup
-- `Ctrl+Alt+T` — timer for the current tab
-- `Ctrl+Alt+R` — forge label, or Zen's Change Label editor
+- `Alt+F` — in-page search overlay
+- toolbar popup — unmapped by default
+- `Alt+T` — timer for the current tab
+- `Alt+R` — forge label, or Zen's Change Label editor
 
 ## Step 5: Report
 

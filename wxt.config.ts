@@ -37,31 +37,25 @@ export default defineConfig({
     commands: {
       "show-omnibar": {
         suggested_key: {
-          default: "Ctrl+Shift+F",
-          mac: "MacCtrl+Shift+F",
+          default: "Alt+F",
         },
         description: "Open tab search omnibar (in-page overlay when possible)",
       },
       // Custom command so the background script can toggle the popup closed when pressed again.
       // (_execute_browser_action is handled by the browser and cannot be intercepted.)
+      // Unmapped by default; assign a key in about:addons → Manage Extension Shortcuts.
       "toggle-popup": {
-        suggested_key: {
-          default: "Ctrl+Alt+F",
-          mac: "MacCtrl+Alt+F",
-        },
         description: "Open Zen Tab Search popup",
       },
       "change-tab-label": {
         suggested_key: {
-          default: "Ctrl+Alt+R",
-          mac: "MacCtrl+Alt+R",
+          default: "Alt+R",
         },
         description: "Change Zen labels of the selected tabs",
       },
       "set-tab-timer": {
         suggested_key: {
-          default: "Ctrl+Alt+T",
-          mac: "MacCtrl+Alt+T",
+          default: "Alt+T",
         },
         description: "Set a timer on the current tab",
       },
@@ -109,8 +103,8 @@ export default defineConfig({
       files.push({ relativeDest: MCP_SERVER_ASSET, absoluteSrc: MCP_OUTFILE });
     },
   },
-  // Browsers allow only 4 commands with suggested_key; all four are used above.
-  // File-watch still rebuilds/reloads; this only skips WXT's Alt+R shortcut.
+  // WXT's dev reload shortcut is Alt+R, which change-tab-label uses.
+  // File-watch still rebuilds/reloads; this only skips WXT's shortcut.
   dev: {
     reloadCommand: false,
   },
