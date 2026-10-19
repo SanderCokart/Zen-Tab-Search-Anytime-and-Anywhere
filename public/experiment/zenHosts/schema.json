@@ -1,0 +1,41 @@
+[
+  {
+    "namespace": "zenHosts",
+    "description": "Loopback proxies that route a tab's traffic for chosen hostnames to a fixed IP",
+    "functions": [
+      {
+        "name": "startHostProxy",
+        "type": "function",
+        "description": "Starts (or reuses) the loopback proxy for an IP and returns its port",
+        "async": true,
+        "parameters": [
+          {
+            "name": "ip",
+            "type": "string",
+            "description": "IPv4 or IPv6 address every proxied connection goes to"
+          }
+        ]
+      },
+      {
+        "name": "getHostProxyStatus",
+        "type": "function",
+        "description": "Returns the log file path and each running proxy's port, connection counts and last error",
+        "async": true,
+        "parameters": []
+      },
+      {
+        "name": "stopHostProxy",
+        "type": "function",
+        "description": "Stops the loopback proxy for an IP and closes its open connections",
+        "async": true,
+        "parameters": [
+          {
+            "name": "ip",
+            "type": "string",
+            "description": "IP whose proxy to stop"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -65,6 +65,65 @@ export const forgePageInfoSchema = v.object({
   bodyText: v.optional(v.string()),
 });
 
+/** A hostname a host override matches: exact, or `*.example.com` for every subdomain. */
+const HOST_PATTERN =
+  /^(\*\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+export const hostPatternSchema = v.pipe(
+  v.string(),
+  v.trim(),
+  v.toLowerCase(),
+  v.transform((value) => value.replace(/\.$/, "")),
+  v.regex(HOST_PATTERN, "Hostnames look like example.com or *.example.com."),
+);
+
+/**
+ * One IP and every hostname a tab sends to it instead of what DNS says, like a
+ * block of lines in a hosts file. The description names the target ("Staging")
+ * in notifications and tooltips.
+ */
+export const hostOverrideGroupSchema = v.object({
+  id: v.pipe(v.string(), v.minLength(1), v.maxLength(64)),
+  ip: v.pipe(
+    v.string(),
+    v.trim(),
+    // Accept "[::1]" as typed in a URL.
+    v.transform((value) => value.replace(/^\[(.*)\]$/, "$1")),
+    v.ip("Enter a valid IPv4 or IPv6 address."),
+  ),
+  description: v.pipe(v.string(), v.trim(), v.maxLength(120, "Keep the description short.")),
+  hostnames: v.pipe(
+    v.array(hostPatternSchema),
+    v.minLength(1, "Add at least one hostname."),
+    v.maxLength(100, "Use at most 100 hostnames per IP."),
+  ),
+  enabled: v.boolean(),
+});
+
+export const hostOverrideListSchema = v.pipe(
+  v.array(hostOverrideGroupSchema),
+  v.maxLength(50, "Use at most 50 IPs per tab."),
+);
+
+/**
+ * How a host override IP's loopback proxy is doing, for the editor's status line.
+ * `routed` counts requests the background sent to it; the rest come from the proxy.
+ */
+export const hostProxyStatusSchema = v.object({
+  ip: v.string(),
+  port: v.optional(v.number()),
+  routed: v.number(),
+  connected: v.number(),
+  open: v.number(),
+  lastError: v.fallback(v.string(), ""),
+});
+
+/** Every host override proxy's status, plus the file the proxies log failures to. */
+export const hostProxyReportSchema = v.object({
+  logPath: v.fallback(v.string(), ""),
+  proxies: v.array(hostProxyStatusSchema),
+});
+
 export const errorResponseSchema = v.object({
   error: v.string(),
 });
@@ -141,6 +200,29 @@ export const extensionRequestSchema = v.variant("type", [
     /** "none" clears the tab's status color. */
     light: v.picklist([...TRAFFIC_LIGHTS, "none"]),
   }),
+  v.object({
+    type: v.literal("getHostOverrides"),
+    tabId: tabIdSchema,
+  }),
+  v.object({
+    type: v.literal("setHostOverrides"),
+    tabId: tabIdSchema,
+    groups: hostOverrideListSchema,
+  }),
+  v.object({
+    type: v.literal("getGlobalHostOverrides"),
+  }),
+  v.object({
+    type: v.literal("setGlobalHostOverrides"),
+    groups: hostOverrideListSchema,
+  }),
+  v.object({
+    type: v.literal("getHostProxyStatus"),
+  }),
+  v.object({
+    type: v.literal("openHostOverridesPopup"),
+    tabId: tabIdSchema,
+  }),
 ]);
 
 export const contentCommandSchema = v.variant("type", [
@@ -187,6 +269,12 @@ export const EXTENSION_REQUEST_TYPES = [
   "setTabLabel",
   "setTodo",
   "setTabStatus",
+  "getHostOverrides",
+  "setHostOverrides",
+  "getGlobalHostOverrides",
+  "setGlobalHostOverrides",
+  "getHostProxyStatus",
+  "openHostOverridesPopup",
 ] as const;
 
 /**
@@ -203,6 +291,9 @@ export type TabTodo = v.InferOutput<typeof tabTodoSchema>;
 export type TodoStatus = (typeof TODO_STATUSES)[number];
 export type TabStatus = v.InferOutput<typeof tabStatusSchema>;
 export type TrafficLight = (typeof TRAFFIC_LIGHTS)[number];
+export type HostOverrideGroup = v.InferOutput<typeof hostOverrideGroupSchema>;
+export type HostProxyStatus = v.InferOutput<typeof hostProxyStatusSchema>;
+export type HostProxyReport = v.InferOutput<typeof hostProxyReportSchema>;
 
 export type ExtensionRequestType = (typeof EXTENSION_REQUEST_TYPES)[number];
 export type ExtensionRequest = v.InferOutput<typeof extensionRequestSchema>;
@@ -230,6 +321,12 @@ export type ExtensionSuccessMap = {
   setTabLabel: void;
   setTodo: void;
   setTabStatus: void;
+  getHostOverrides: HostOverrideGroup[];
+  setHostOverrides: HostOverrideGroup[];
+  getGlobalHostOverrides: HostOverrideGroup[];
+  setGlobalHostOverrides: HostOverrideGroup[];
+  getHostProxyStatus: HostProxyReport;
+  openHostOverridesPopup: void;
 };
 
 const clearTimerResponseSchema = v.object({
@@ -319,6 +416,15 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
     case "setTodo":
     case "setTabStatus":
       return undefined as ExtensionSuccessMap[T];
+    case "getHostOverrides":
+    case "setHostOverrides":
+    case "getGlobalHostOverrides":
+    case "setGlobalHostOverrides":
+      return v.parse(hostOverrideListSchema, value) as ExtensionSuccessMap[T];
+    case "getHostProxyStatus":
+      return v.parse(hostProxyReportSchema, value) as ExtensionSuccessMap[T];
+    case "openHostOverridesPopup":
+      return undefined as ExtensionSuccessMap[T];
     default: {
       const exhaustive: never = type;
       throw new Error(`Unhandled message type: ${String(exhaustive)}`);
@@ -338,6 +444,9 @@ export function invalidRequestMessage(type: ExtensionRequestType): string {
     case "switchTab":
     case "setTabLabel":
       return "Invalid tab ID.";
+    case "setHostOverrides":
+    case "setGlobalHostOverrides":
+      return "Invalid host override.";
     default:
       return "Invalid message.";
   }

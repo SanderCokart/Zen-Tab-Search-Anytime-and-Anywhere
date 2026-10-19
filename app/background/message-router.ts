@@ -1,4 +1,10 @@
-import { isUsableTabId, type TodoStatus, type TrafficLight } from "@/shared/types";
+import {
+  isUsableTabId,
+  type HostOverrideGroup,
+  type HostProxyReport,
+  type TodoStatus,
+  type TrafficLight,
+} from "@/shared/types";
 import {
   type ExtensionRequest,
   invalidRequestMessage,
@@ -23,6 +29,12 @@ export interface MessageRouterHandlers {
   setTabLabel(tabId: number, label: string): Promise<void>;
   setTodo(tabId: number, status: TodoStatus | "none"): Promise<void>;
   setTabStatus(tabId: number, light: TrafficLight | "none"): Promise<void>;
+  getHostOverrides(tabId: number): Promise<HostOverrideGroup[]>;
+  setHostOverrides(tabId: number, groups: HostOverrideGroup[]): Promise<HostOverrideGroup[]>;
+  getGlobalHostOverrides(): Promise<HostOverrideGroup[]>;
+  setGlobalHostOverrides(groups: HostOverrideGroup[]): Promise<HostOverrideGroup[]>;
+  getHostProxyStatus(): Promise<HostProxyReport>;
+  openHostOverridesPopup(tabId: number): Promise<void>;
   isAllowedTimerEnd(endAt: number): boolean;
 }
 
@@ -122,6 +134,18 @@ function handleParsedRequest(
       return handlers.setTodo(message.tabId, message.status);
     case "setTabStatus":
       return handlers.setTabStatus(message.tabId, message.light);
+    case "getHostOverrides":
+      return handlers.getHostOverrides(message.tabId);
+    case "setHostOverrides":
+      return handlers.setHostOverrides(message.tabId, message.groups);
+    case "getGlobalHostOverrides":
+      return handlers.getGlobalHostOverrides();
+    case "setGlobalHostOverrides":
+      return handlers.setGlobalHostOverrides(message.groups);
+    case "getHostProxyStatus":
+      return handlers.getHostProxyStatus();
+    case "openHostOverridesPopup":
+      return handlers.openHostOverridesPopup(message.tabId);
   }
 }
 

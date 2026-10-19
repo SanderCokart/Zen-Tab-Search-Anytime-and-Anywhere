@@ -38,7 +38,8 @@ each violation so far has been a genuine misplacement.
 | `shared/`      | Wire protocol, domain types, logging, debug, `cn`, global styles                  |
 | `mcp/`         | Node MCP server (outside the extension bundle); may import `shared/` only         |
 
-Features: `search`, `timers`, `todos`, `status`, `forge`, `settings`, `zen`, `bridge`.
+Features: `search`, `timers`, `todos`, `status`, `forge`, `settings`, `zen`, `bridge`,
+`hosts`, `intercept`.
 
 Inside a feature:
 
@@ -101,6 +102,10 @@ surface asks it for data.
 - **Zen access**: only through `features/zen/adapter.ts`, which falls back to
   `browser.tabs` when the Zen experiment API is unavailable. Do not call
   `browser.zenTabs` anywhere else.
+- **Per-tab host overrides** (`features/hosts/`): `proxy.onRequest` sends a tab's
+  matching requests to a loopback proxy started by the second experiment,
+  `zenHosts` (`public/experiment/zenHosts/`), which tunnels every connection to
+  the group's fixed IP. Only `features/hosts/background/host-proxy.ts` calls it.
 
 ## Adding a feature
 

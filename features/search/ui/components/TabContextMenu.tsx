@@ -21,6 +21,7 @@ export interface TabContextMenuProps {
   light?: TrafficLight;
   onRename: () => void;
   onOpenTimer: (tabId: number) => void;
+  onOpenHostOverrides: (tabId: number) => void;
   /** "none" marks the todo done, which removes it. */
   onSetTodo: (status: "todo" | "none") => void;
   /** Sets the tab's status color; "none" clears it. */
@@ -43,6 +44,7 @@ export function TabContextMenu({
   light,
   onRename,
   onOpenTimer,
+  onOpenHostOverrides,
   onSetTodo,
   onSetLight,
 }: TabContextMenuProps) {
@@ -71,6 +73,17 @@ export function TabContextMenu({
         <button type="button" class={itemClass} role="menuitem" onClick={() => onOpenTimer(tabId)}>
           <TimerIcon class="size-[var(--zen-icon-md)]" />
           Timer
+        </button>
+      )}
+      {tabId !== undefined && (
+        <button
+          type="button"
+          class={itemClass}
+          role="menuitem"
+          onClick={() => onOpenHostOverrides(tabId)}
+        >
+          <span aria-hidden="true">⇄</span>
+          Host overrides…
         </button>
       )}
       {canTodo && (

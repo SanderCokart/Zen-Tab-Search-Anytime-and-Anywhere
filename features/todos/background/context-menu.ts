@@ -1,11 +1,7 @@
 import { formatError, LOG_PREFIX } from "@/shared/log";
+import { TAB_CONTEXT } from "@/shared/context-menus";
 import type { TodoService } from "@/features/todos/background/todo-service";
 import type { TodoStatus } from "@/shared/types";
-
-type ContextMenuContext = NonNullable<
-  Parameters<typeof browser.contextMenus.create>[0]["contexts"]
->[number];
-const TAB_CONTEXT = "tab" as unknown as ContextMenuContext;
 
 /** Menu item ID to the status it sets. Marking a todo done removes it. */
 const TODO_MENU_ACTIONS: Record<string, TodoStatus | "none"> = {
@@ -14,8 +10,8 @@ const TODO_MENU_ACTIONS: Record<string, TodoStatus | "none"> = {
 };
 
 /**
- * Adds the todo submenu to the tab context menu. Called from inside the same
- * `removeAll` reset as the timer menu, so the two cannot wipe each other out.
+ * Adds the todo submenu to the tab context menu. Called from inside the shared
+ * `removeAll` reset in `app/background/context-menus.ts`, so menus cannot wipe each other out.
  */
 export function createTodoContextMenuItems(): void {
   browser.contextMenus.create({

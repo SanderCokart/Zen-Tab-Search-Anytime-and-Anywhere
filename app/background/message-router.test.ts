@@ -35,6 +35,12 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
     setTabLabel: vi.fn(async () => undefined),
     setTodo: vi.fn(async () => undefined),
     setTabStatus: vi.fn(async () => undefined),
+    getHostOverrides: vi.fn(async () => []),
+    setHostOverrides: vi.fn(async (_tabId, groups) => groups),
+    getGlobalHostOverrides: vi.fn(async () => []),
+    setGlobalHostOverrides: vi.fn(async (groups) => groups),
+    getHostProxyStatus: vi.fn(async () => ({ logPath: "", proxies: [] })),
+    openHostOverridesPopup: vi.fn(async () => undefined),
     isAllowedTimerEnd: vi.fn(() => true),
     ...overrides,
   };
@@ -202,5 +208,50 @@ describe("dispatchExtensionMessage", () => {
       response: { error: "Invalid message." },
     });
     expect(api.setTodo).not.toHaveBeenCalled();
+  });
+
+  it("dispatches setHostOverrides with normalized groups", async () => {
+    const api = handlers();
+    const result = dispatchExtensionMessage(api, {
+      type: "setHostOverrides",
+      tabId: 4,
+      groups: [
+        {
+          id: "a",
+          ip: " [::1] ",
+          description: " Local ",
+          hostnames: ["Example.COM.", "*.example.com"],
+          enabled: true,
+        },
+      ],
+    });
+    if (!result.handled || !result.async) {
+      throw new Error("expected async dispatch");
+    }
+    await result.promise;
+    expect(api.setHostOverrides).toHaveBeenCalledWith(4, [
+      {
+        id: "a",
+        ip: "::1",
+        description: "Local",
+        hostnames: ["example.com", "*.example.com"],
+        enabled: true,
+      },
+    ]);
+  });
+
+  it("rejects a host override with an invalid IP", () => {
+    const api = handlers();
+    const result = dispatchExtensionMessage(api, {
+      type: "setHostOverrides",
+      tabId: 4,
+      groups: [{ id: "a", ip: "999.1.1.1", description: "", hostnames: ["x.test"], enabled: true }],
+    });
+    expect(result).toEqual({
+      handled: true,
+      async: false,
+      response: { error: "Invalid host override." },
+    });
+    expect(api.setHostOverrides).not.toHaveBeenCalled();
   });
 });

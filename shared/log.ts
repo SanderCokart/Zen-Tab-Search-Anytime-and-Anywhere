@@ -15,3 +15,11 @@ export function formatError(error: unknown): string {
 
   return String(error);
 }
+
+/** An error's own message, without the name and stack `formatError` adds. */
+export function errorMessage(error: unknown, fallback?: string): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return fallback ?? String(error);
+}

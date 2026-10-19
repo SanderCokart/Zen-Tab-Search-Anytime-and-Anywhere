@@ -103,6 +103,58 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("puts the host overrides button between the timer and settings buttons", async () => {
+    const { root, sendMessage } = mountSearchApp();
+    await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
+
+    const timer = root.querySelector("button[title='Show active timers']")!;
+    const hosts = root.querySelector<HTMLButtonElement>(
+      "button[title='Host overrides for this tab']",
+    )!;
+    const settings = root.querySelector("button[title='Open display settings']")!;
+    expect(timer.nextElementSibling).toBe(hosts);
+    expect(hosts.nextElementSibling).toBe(settings);
+
+    hosts.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "openHostOverridesPopup", tabId: 1 }),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("opens host overrides for a row from its context menu", async () => {
+    const { root, sendMessage } = mountSearchApp(vi.fn(), tabs, "overlay");
+    const menu = () => root.querySelector("[data-testid='zen-tab-context-menu']");
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-search-item']")).toBeTruthy(),
+    );
+
+    root
+      .querySelector("[data-testid='zen-search-item']")!
+      .dispatchEvent(
+        new MouseEvent("contextmenu", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 20,
+          clientY: 20,
+        }),
+      );
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Host overrides…"));
+    [...menu()!.querySelectorAll<HTMLButtonElement>("[role='menuitem']")]
+      .find((item) => item.textContent?.includes("Host overrides"))!
+      .click();
+
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "openHostOverridesPopup", tabId: 1 }),
+    );
+    expect(menu()).toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
   it("opens display settings directly from the gear button", async () => {
     const { root, sendMessage } = mountSearchApp();
     await vi.waitFor(() => expect(root.textContent).toContain("First tab"));

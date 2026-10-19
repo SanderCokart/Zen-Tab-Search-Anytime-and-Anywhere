@@ -7,6 +7,9 @@ import type { SpaceInfo, TabInfo } from "@/shared/messaging/protocol";
  */
 export type {
   FolderInfo,
+  HostOverrideGroup,
+  HostProxyReport,
+  HostProxyStatus,
   SpaceInfo,
   TabInfo,
   TabTimer,

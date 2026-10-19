@@ -1,11 +1,12 @@
 import { DEBUG, debugLog, debugWarn } from "@/shared/debug";
 import { registerCommands } from "@/app/background/commands";
 import { registerMessageRouter } from "@/app/background/message-router";
-import { registerTimerContextMenus } from "@/features/timers/background/context-menu";
+import { registerContextMenus } from "@/app/background/context-menus";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { registerPopupWindowTracking } from "@/app/background/popup-tracking";
 import { openSettingsPopup } from "@/features/settings/background/popup";
 import { openCustomTimerPopup } from "@/features/timers/background/popup";
+import { openHostOverridesPopup } from "@/features/hosts/background/popup";
 import {
   createCachedSnapshotReader,
   createSnapshotReader,
@@ -33,6 +34,11 @@ import { BRIDGE_TOKEN_STORAGE_KEY } from "@/shared/messaging/bridge-protocol";
 import { createTodoService } from "@/features/todos/background/todo-service";
 import { createStatusService } from "@/features/status/background/status-service";
 import { detectForgeLabels } from "@/features/forge/background/label-command";
+import {
+  createHostOverrideService,
+  parseHostOverrideNotificationTabId,
+  registerHostOverrides,
+} from "@/features/hosts/background/host-override-service";
 
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());
@@ -48,6 +54,7 @@ export default defineBackground(() => {
 
   const todoService = createTodoService();
   const statusService = createStatusService();
+  const hostOverrideService = createHostOverrideService();
 
   const snapshotCache = createCachedSnapshotReader(
     createSnapshotReader({
@@ -66,7 +73,13 @@ export default defineBackground(() => {
   const getSnapshot = async (anchorTabId?: number) =>
     v.parse(searchSnapshotSchema, await snapshotCache.getSnapshot(anchorTabId));
 
-  registerTimerContextMenus(timerService, todoService, notify);
+  registerContextMenus({
+    timers: timerService,
+    todos: todoService,
+    hosts: hostOverrideService,
+    onChanged: notify,
+  });
+  registerHostOverrides(hostOverrideService);
   registerPopupWindowTracking();
   registerBrowserExternalTabReuse({
     listTabs: (anchorTabId) => workspace.listTabs(anchorTabId),
@@ -98,6 +111,13 @@ export default defineBackground(() => {
   }, 1000);
 
   browser.notifications.onClicked.addListener((notificationId) => {
+    const hostOverrideTabId = parseHostOverrideNotificationTabId(notificationId);
+    if (hostOverrideTabId !== undefined) {
+      void switchToTab(hostOverrideTabId, undefined, hostOverrideTabId).catch((error) => {
+        debugWarn(`${LOG_PREFIX} Could not open routed tab from notification:`, formatError(error));
+      });
+      return;
+    }
     if (!notificationId.startsWith("tab-timer-")) {
       return;
     }
@@ -124,21 +144,30 @@ export default defineBackground(() => {
       void timerService.adoptRestoredTab(tab.id);
       void todoService.hydrate([tab.id]);
       void statusService.hydrate([tab.id]);
+      void hostOverrideService.load([tab.id]);
     }
   });
   void browser.tabs
     .query({})
     .then((tabs) => {
       const tabIds = tabs.flatMap((tab) => (isUsableTabId(tab.id) ? [tab.id] : []));
-      return Promise.all([todoService.hydrate(tabIds), statusService.hydrate(tabIds)]);
+      return Promise.all([
+        todoService.hydrate(tabIds),
+        statusService.hydrate(tabIds),
+        hostOverrideService.load(tabIds),
+      ]);
     })
     .catch((error) => {
-      debugWarn(`${LOG_PREFIX} Could not hydrate todos and statuses:`, formatError(error));
+      debugWarn(
+        `${LOG_PREFIX} Could not hydrate todos, statuses and host overrides:`,
+        formatError(error),
+      );
     });
 
   browser.tabs.onRemoved.addListener((tabId, removeInfo) => {
     todoService.forget(tabId);
     statusService.forget(tabId);
+    hostOverrideService.forget(tabId);
     void timerService.handleTabRemoved(tabId, removeInfo.isWindowClosing);
   });
 
@@ -176,6 +205,20 @@ export default defineBackground(() => {
       await statusService.setStatus(tabId, light);
       notify();
     },
+    getHostOverrides: hostOverrideService.getOverrides,
+    setHostOverrides: async (tabId, groups) => {
+      const saved = await hostOverrideService.setOverrides(tabId, groups);
+      notify();
+      return saved;
+    },
+    getGlobalHostOverrides: hostOverrideService.getGlobalOverrides,
+    setGlobalHostOverrides: async (groups) => {
+      const saved = await hostOverrideService.setGlobalOverrides(groups);
+      notify();
+      return saved;
+    },
+    getHostProxyStatus: hostOverrideService.getStatus,
+    openHostOverridesPopup,
     isAllowedTimerEnd: (endAt) => isAllowedTimerEnd(endAt),
   });
 

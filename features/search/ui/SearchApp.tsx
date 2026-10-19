@@ -111,6 +111,18 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     () => setStatusMenu(null),
   );
 
+  /** The tab the omnibar or popup was opened over, which the header buttons act on. */
+  const currentTabId = useMemo(() => {
+    const current = tabs.find((tab) => tab.active === true);
+    return current ? tabBrowserId(current) : undefined;
+  }, [tabs]);
+
+  const openHostOverrides = useCallback((tabId: number) => {
+    void sendExtensionMessage({ type: "openHostOverridesPopup", tabId }).catch((error) =>
+      debugError("Could not open host overrides:", error),
+    );
+  }, []);
+
   const openContextMenu = useCallback((tab: TabInfo, event: MouseEvent) => {
     event.preventDefault();
     setStatusMenu(null);
@@ -237,6 +249,22 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
               {timers.size}
             </span>
           )}
+        </button>
+        <button
+          type="button"
+          class={iconButtonClass}
+          title="Host overrides for this tab"
+          aria-label="Host overrides for this tab"
+          disabled={currentTabId === undefined}
+          onClick={() => {
+            if (currentTabId !== undefined) {
+              openHostOverrides(currentTabId);
+            }
+          }}
+        >
+          <span aria-hidden="true" class="text-[length:var(--zen-text-base)]">
+            ⇄
+          </span>
         </button>
         <button
           type="button"
@@ -384,6 +412,10 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
           onOpenTimer={(tabId) => {
             setContextMenu(null);
             timerActions.openTimerPopup(tabId);
+          }}
+          onOpenHostOverrides={(tabId) => {
+            setContextMenu(null);
+            openHostOverrides(tabId);
           }}
           onSetTodo={(status) => {
             const tabId = tabBrowserId(contextMenu.tab);

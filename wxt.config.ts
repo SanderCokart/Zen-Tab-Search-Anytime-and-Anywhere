@@ -31,6 +31,8 @@ export default defineConfig({
       "storage",
       "sessions",
       "contextMenus",
+      // Routes a tab's traffic for overridden hostnames to the loopback host proxy.
+      "proxy",
     ],
     commands: {
       "show-omnibar": {
@@ -75,6 +77,14 @@ export default defineConfig({
           scopes: ["addon_parent"],
           paths: [["zenTabs"]],
           script: "experiment/zenTabs/api.js",
+        },
+      },
+      zenHosts: {
+        schema: "experiment/zenHosts/schema.json",
+        parent: {
+          scopes: ["addon_parent"],
+          paths: [["zenHosts"]],
+          script: "experiment/zenHosts/api.js",
         },
       },
     },
