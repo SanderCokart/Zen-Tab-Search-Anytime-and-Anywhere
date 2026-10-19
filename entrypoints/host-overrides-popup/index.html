@@ -8,12 +8,19 @@
       :root {
         color-scheme: dark;
       }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
       body {
         margin: 0;
         padding: 12px;
-        width: 480px;
+        min-width: 0;
         background: #1e1e1e;
         color: #fff;
+        /* Long titles, URLs and hostnames wrap instead of widening the window. */
+        overflow-wrap: anywhere;
       }
     </style>
   </head>

@@ -41,14 +41,6 @@ export const GAP_SETTINGS = [
 export type GapSettingKey = (typeof GAP_SETTINGS)[number][0];
 
 /**
- * The timer popup (`surface: "popup"`) is a small browser-UI window, so it runs
- * a notch tighter than the overlay. The toolbar search popup does not use this
- * factor: it pins fixed tokens under `[data-zen-ui="popup"]` and never calls
- * `uiScaleStyle`.
- */
-const POPUP_FONT_FACTOR = 0.8;
-
-/**
  * Panel size the zoom-independent ramp is tuned against — the overlay is
  * `min(80vw, 90dvh)`, which is 720px on a 800px-tall window. At that size both
  * modes agree, and the UI grows or shrinks from there with the window.
@@ -103,12 +95,13 @@ function css(value: number): string {
  * Neither mode needs to know the zoom factor, so neither has to wait on the
  * background to tell it — the size is right on the first paint.
  *
- * The timer popup is browser UI rather than page content, so it is never zoomed
- * and always takes the plain px length. The toolbar search popup does not come
- * through here.
+ * The timer and host override windows (`"popup"`) are extension pages in their
+ * own resizable windows: they take the plain px length at the full font size,
+ * and the window's own zoom scales it like any page. The toolbar search popup
+ * does not come through here; it pins fixed tokens under `[data-zen-ui="popup"]`.
  */
 export function resolveBaseFontSize(settings: DisplaySettings, surface: UiSurface): string {
-  const fontSize = clampFontSize(settings.fontSize) * (surface === "popup" ? POPUP_FONT_FACTOR : 1);
+  const fontSize = clampFontSize(settings.fontSize);
 
   if (settings.respectZoom || surface === "popup") {
     return `${css(fontSize)}px`;

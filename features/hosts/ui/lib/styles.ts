@@ -19,7 +19,7 @@ export const secondaryButtonClass = cn(clearButtonClass, controlSize);
 export function toggleButtonClass(enabled: boolean): string {
   return cn(
     "cursor-pointer rounded-full border font-[inherit] font-semibold",
-    "px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-[length:var(--zen-text-xs)]",
+    "px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-[length:var(--zen-text-sm)]",
     enabled
       ? "border-amber-500 bg-amber-700 text-white hover:bg-amber-600"
       : "border-zen-line bg-zen-chip text-zen-subtle hover:border-zen-border",
@@ -30,7 +30,7 @@ export function toggleButtonClass(enabled: boolean): string {
 export function scopeButtonClass(selected: boolean): string {
   return cn(
     "flex-1 cursor-pointer rounded-md border font-[inherit]",
-    "px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-[length:var(--zen-text-xs)]",
+    "px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-[length:var(--zen-text-sm)]",
     selected
       ? "border-zen-border bg-zen-accent text-inherit"
       : "border-zen-line bg-zen-chip text-zen-subtle hover:border-zen-border",

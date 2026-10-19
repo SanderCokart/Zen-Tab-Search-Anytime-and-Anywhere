@@ -202,11 +202,11 @@ export function HostOverridesPopup({ tabId, onClose }: { tabId: number; onClose:
     const groups = listFor(scope);
     return (
       <section class="flex flex-col gap-[var(--zen-space-1)]">
-        <h2 class="text-zen-subtle m-0 text-[length:var(--zen-text-xs)] font-semibold tracking-wide uppercase">
+        <h2 class="text-zen-subtle m-0 text-[length:var(--zen-text-sm)] font-semibold tracking-wide uppercase">
           {title}
         </h2>
         {groups.length === 0 && (
-          <p class="text-zen-faint m-0 text-[length:var(--zen-text-xs)]">{empty}</p>
+          <p class="text-zen-faint m-0 text-[length:var(--zen-text-sm)]">{empty}</p>
         )}
         <ul class="m-0 flex list-none flex-col gap-[var(--zen-space-2)] p-0">
           {groups.map((group) =>
@@ -256,7 +256,7 @@ export function HostOverridesPopup({ tabId, onClose }: { tabId: number; onClose:
     >
       <header class="flex flex-col gap-[var(--zen-space-1)]">
         <h1 class="m-0 text-[length:var(--zen-text-md)] font-semibold">Host overrides</h1>
-        <p class="text-zen-subtle m-0 truncate text-[length:var(--zen-text-xs)]">
+        <p class="text-zen-subtle m-0 truncate text-[length:var(--zen-text-sm)]">
           {tab ? formatTabDisplayTitle(tab) : validTab ? "Loading tab…" : ""}
           {tabHostname && ` · ${tabHostname}`}
         </p>
@@ -264,7 +264,7 @@ export function HostOverridesPopup({ tabId, onClose }: { tabId: number; onClose:
 
       {active.length > 0 && (
         <section
-          class="flex flex-col gap-[var(--zen-space-1)] rounded-[var(--zen-radius)] border border-amber-500/60 bg-amber-900/30 p-[var(--zen-space-2)] text-[length:var(--zen-text-xs)]"
+          class="flex flex-col gap-[var(--zen-space-1)] rounded-[var(--zen-radius)] border border-amber-500/60 bg-amber-900/30 p-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]"
           role="status"
         >
           <strong>This tab's traffic is being rerouted</strong>
@@ -313,10 +313,10 @@ export function HostOverridesPopup({ tabId, onClose }: { tabId: number; onClose:
         </button>
       )}
 
-      {error && <p class="text-zen-danger m-0 text-[length:var(--zen-text-xs)]">{error}</p>}
+      {error && <p class="text-zen-danger m-0 text-[length:var(--zen-text-sm)]">{error}</p>}
 
       {proxyReport.logPath && (
-        <p class="text-zen-muted m-0 text-[length:var(--zen-text-xs)] break-all select-all">
+        <p class="text-zen-muted m-0 text-[length:var(--zen-text-sm)] break-all select-all">
           Error log: {proxyReport.logPath}
         </p>
       )}

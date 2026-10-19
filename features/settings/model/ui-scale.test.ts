@@ -52,11 +52,11 @@ describe("ui scale", () => {
     }
   });
 
-  it("keeps the popup on a fixed px size a notch smaller, in both modes", () => {
-    // The popup is browser UI with a fixed width, so page zoom never touches it.
-    expect(resolveBaseFontSize(settings({ fontSize: 20 }), "popup")).toBe("16px");
+  it("keeps the popup windows on the plain px font size, in both modes", () => {
+    // Their own window zoom scales a px length, so no viewport maths is needed.
+    expect(resolveBaseFontSize(settings({ fontSize: 20 }), "popup")).toBe("20px");
     expect(resolveBaseFontSize(settings({ fontSize: 20, respectZoom: true }), "popup")).toBe(
-      "16px",
+      "20px",
     );
   });
 

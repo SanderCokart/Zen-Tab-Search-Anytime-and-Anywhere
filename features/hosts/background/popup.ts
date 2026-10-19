@@ -24,8 +24,8 @@ export async function openHostOverridesPopup(tabId: number): Promise<void> {
     const popupWindow = await browser.windows.create({
       url: `${browser.runtime.getURL("/host-overrides-popup.html")}?tabId=${tabId}`,
       type: "popup",
-      width: 520,
-      height: 640,
+      width: 560,
+      height: 680,
       focused: true,
     });
     const popupWindowId = popupWindow?.id;

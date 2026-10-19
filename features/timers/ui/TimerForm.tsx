@@ -116,8 +116,8 @@ export function TimerForm({ timer, disabled = false, error, onSet, onClear }: Ti
           Use a time like “tomorrow at 9am” or “1d 30m”.
         </p>
       )}
-      <div class="flex items-end gap-[var(--zen-space-2)]">
-        <label class="text-zen-faint flex flex-1 flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-xs)]">
+      <div class="flex flex-wrap items-end gap-[var(--zen-space-2)]">
+        <label class="text-zen-faint flex min-w-0 flex-[1_1_12em] flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-xs)]">
           Ends at
           <input
             class={cn(

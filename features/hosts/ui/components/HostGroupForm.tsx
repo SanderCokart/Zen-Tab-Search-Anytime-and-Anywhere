@@ -71,8 +71,8 @@ export function HostGroupForm({ initial, submitLabel, onSubmit, onCancel }: Host
           </button>
         ))}
       </div>
-      <div class="flex gap-[var(--zen-space-2)]">
-        <label class="text-zen-faint flex flex-1 flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-xs)]">
+      <div class="flex flex-wrap gap-[var(--zen-space-2)]">
+        <label class="text-zen-faint flex min-w-0 flex-[1_1_9em] flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-sm)]">
           IP address
           <input
             ref={ipRef}
@@ -84,7 +84,7 @@ export function HostGroupForm({ initial, submitLabel, onSubmit, onCancel }: Host
             onInput={(event) => update({ ip: event.currentTarget.value })}
           />
         </label>
-        <label class="text-zen-faint flex flex-[1.4] flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-xs)]">
+        <label class="text-zen-faint flex min-w-0 flex-[1.4_1_11em] flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-sm)]">
           Description
           <input
             class={fieldClass}
@@ -95,7 +95,7 @@ export function HostGroupForm({ initial, submitLabel, onSubmit, onCancel }: Host
           />
         </label>
       </div>
-      <label class="text-zen-faint flex flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-xs)]">
+      <label class="text-zen-faint flex flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-sm)]">
         Hostnames (one per line, *.example.com for subdomains)
         <textarea
           class={cn(
@@ -109,8 +109,8 @@ export function HostGroupForm({ initial, submitLabel, onSubmit, onCancel }: Host
           onInput={(event) => update({ hostnames: event.currentTarget.value })}
         />
       </label>
-      {error && <p class="text-zen-danger m-0 text-[length:var(--zen-text-xs)]">{error}</p>}
-      <div class="flex justify-end gap-[var(--zen-space-2)]">
+      {error && <p class="text-zen-danger m-0 text-[length:var(--zen-text-sm)]">{error}</p>}
+      <div class="flex flex-wrap justify-end gap-[var(--zen-space-2)]">
         <button class={secondaryButtonClass} type="button" onClick={onCancel}>
           Cancel
         </button>
