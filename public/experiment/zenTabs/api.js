@@ -1191,10 +1191,18 @@ this.zenTabs = class extends ExtensionAPI {
               return false;
             }
 
-            const renameState = () => ({
-              renaming: win.document.documentElement.hasAttribute("zen-renaming-tab"),
-              hasInput: !!win.document.getElementById("tab-label-input"),
-            });
+            const renameState = () => {
+              const field = win.document.getElementById("tab-label-input");
+              return {
+                renaming: win.document.documentElement.hasAttribute("zen-renaming-tab"),
+                hasInput: !!field,
+                selection,
+                selectionStart: field?.selectionStart ?? null,
+                selectionEnd: field?.selectionEnd ?? null,
+                length: field?.value.length ?? null,
+                focused: !!field && win.document.activeElement === field,
+              };
+            };
             debugLog("changeLabel: target", () => ({
               anchorTabId,
               foundById,
@@ -1243,9 +1251,25 @@ this.zenTabs = class extends ExtensionAPI {
             // is more likely to be extended, so that one starts with the caret first.
             const input = win.document.getElementById("tab-label-input");
             if (input) {
-              const end = selection === "start" ? 0 : input.value.length;
-              input.setSelectionRange(0, end, "backward");
-              input.scrollLeft = 0;
+              const wanted = selection === "start" ? 0 : input.value.length;
+              const apply = () => {
+                // Only while the field still shows Zen's own whole-label selection,
+                // so a caret the user already moved is left alone.
+                const untouched =
+                  input.isConnected &&
+                  ((input.selectionStart === 0 && input.selectionEnd === input.value.length) ||
+                    (input.selectionStart === 0 && input.selectionEnd === wanted));
+                if (untouched) {
+                  input.setSelectionRange(0, wanted, "backward");
+                  input.scrollLeft = 0;
+                }
+              };
+              apply();
+              // Focus can land, and the compact-mode sidebar slide in, after this
+              // call returns; either may reselect the label, so apply once more
+              // when the field gets focus and after the next frame.
+              input.addEventListener("focus", apply, { once: true });
+              win.requestAnimationFrame(() => win.requestAnimationFrame(apply));
             }
 
             const after = renameState();
