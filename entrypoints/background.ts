@@ -205,6 +205,10 @@ export default defineBackground(() => {
       await statusService.setStatus(tabId, light);
       notify();
     },
+    clearTodos: async (tabIds) => {
+      await Promise.all(tabIds.map((tabId) => todoService.setTodo(tabId, "none")));
+      notify();
+    },
     getHostOverrides: hostOverrideService.getOverrides,
     setHostOverrides: async (tabId, groups) => {
       const saved = await hostOverrideService.setOverrides(tabId, groups);

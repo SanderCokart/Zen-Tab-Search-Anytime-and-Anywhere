@@ -201,6 +201,11 @@ export const extensionRequestSchema = v.variant("type", [
     light: v.picklist([...TRAFFIC_LIGHTS, "none"]),
   }),
   v.object({
+    type: v.literal("clearTodos"),
+    /** The todo tabs to mark done, as the todo column chose them. */
+    tabIds: v.array(tabIdSchema),
+  }),
+  v.object({
     type: v.literal("getHostOverrides"),
     tabId: tabIdSchema,
   }),
@@ -269,6 +274,7 @@ export const EXTENSION_REQUEST_TYPES = [
   "setTabLabel",
   "setTodo",
   "setTabStatus",
+  "clearTodos",
   "getHostOverrides",
   "setHostOverrides",
   "getGlobalHostOverrides",
@@ -321,6 +327,7 @@ export type ExtensionSuccessMap = {
   setTabLabel: void;
   setTodo: void;
   setTabStatus: void;
+  clearTodos: void;
   getHostOverrides: HostOverrideGroup[];
   setHostOverrides: HostOverrideGroup[];
   getGlobalHostOverrides: HostOverrideGroup[];
@@ -415,6 +422,7 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
     case "setTabLabel":
     case "setTodo":
     case "setTabStatus":
+    case "clearTodos":
       return undefined as ExtensionSuccessMap[T];
     case "getHostOverrides":
     case "setHostOverrides":

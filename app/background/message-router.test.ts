@@ -35,6 +35,7 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
     setTabLabel: vi.fn(async () => undefined),
     setTodo: vi.fn(async () => undefined),
     setTabStatus: vi.fn(async () => undefined),
+    clearTodos: vi.fn(async () => undefined),
     getHostOverrides: vi.fn(async () => []),
     setHostOverrides: vi.fn(async (_tabId, groups) => groups),
     getGlobalHostOverrides: vi.fn(async () => []),

@@ -131,16 +131,14 @@ describe("SearchApp", () => {
       expect(root.querySelector("[data-testid='zen-search-item']")).toBeTruthy(),
     );
 
-    root
-      .querySelector("[data-testid='zen-search-item']")!
-      .dispatchEvent(
-        new MouseEvent("contextmenu", {
-          bubbles: true,
-          cancelable: true,
-          clientX: 20,
-          clientY: 20,
-        }),
-      );
+    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
     await vi.waitFor(() => expect(menu()?.textContent).toContain("Host overrides…"));
     [...menu()!.querySelectorAll<HTMLButtonElement>("[role='menuitem']")]
       .find((item) => item.textContent?.includes("Host overrides"))!
@@ -701,6 +699,73 @@ describe("SearchApp", () => {
         ?.getAttribute("data-status-light"),
     ).toBe("green");
 
+    render(null, root);
+    root.remove();
+  });
+
+  it("clears the todos of one status color after confirming", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const { root, sendMessage } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [
+        { tabId: 1, status: "todo" },
+        { tabId: 2, status: "todo" },
+      ],
+      [{ tabId: 2, light: "red" }],
+    );
+    const select = () => root.querySelector<HTMLSelectElement>("[data-testid='zen-todo-clear']")!;
+    await vi.waitFor(() => expect(select()).toBeTruthy());
+    expect([...select().options].map((option) => option.textContent)).toEqual([
+      "Clear…",
+      "All (2)",
+      "Red (1)",
+      "Orange (0)",
+      "Green (0)",
+    ]);
+
+    select().value = "red";
+    select().dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(confirm).toHaveBeenCalledWith("Mark 1 todo with status red as done?");
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "clearTodos", tabIds: [2] }),
+    );
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-column']")?.textContent).not.toContain(
+        "Second tab",
+      ),
+    );
+
+    confirm.mockRestore();
+    render(null, root);
+    root.remove();
+  });
+
+  it("keeps the todos when the clear confirmation is declined", async () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const { root, sendMessage } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [{ tabId: 1, status: "todo" }],
+    );
+    const select = () => root.querySelector<HTMLSelectElement>("[data-testid='zen-todo-clear']")!;
+    await vi.waitFor(() => expect(select()).toBeTruthy());
+
+    select().value = "all";
+    select().dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(confirm).toHaveBeenCalledWith("Mark 1 todo as done?");
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "clearTodos" }));
+    expect(select().value).toBe("");
+
+    confirm.mockRestore();
     render(null, root);
     root.remove();
   });

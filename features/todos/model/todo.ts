@@ -1,4 +1,7 @@
-import { isUsableTabId, type TabInfo, type TabTodo } from "@/shared/types";
+import { isUsableTabId, type TabInfo, type TabTodo, type TrafficLight } from "@/shared/types";
+
+/** Which todos the column's "Clear" menu removes: every one, or those with one status color. */
+export type TodoClearFilter = "all" | TrafficLight;
 
 /** Turns the snapshot's todo list into a lookup by tab ID. */
 export function todosByTabId(todos: TabTodo[]): Map<number, TabTodo> {
@@ -19,4 +22,19 @@ export function collectTodoTabs(tabs: TabInfo[], todos: Map<number, TabTodo>): T
     return todoTabs;
   }
   return [todoTabs[currentIndex]!, ...todoTabs.filter((_, index) => index !== currentIndex)];
+}
+
+/** The browser IDs of the todo tabs `filter` picks, in the column's order. */
+export function todoTabIdsToClear(
+  todoTabs: TabInfo[],
+  statuses: Map<number, TrafficLight>,
+  filter: TodoClearFilter,
+): number[] {
+  return todoTabs.flatMap((tab) => {
+    const tabId = tab.id;
+    if (!isUsableTabId(tabId)) {
+      return [];
+    }
+    return filter === "all" || statuses.get(tabId) === filter ? [tabId] : [];
+  });
 }

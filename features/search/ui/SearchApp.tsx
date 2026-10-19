@@ -380,6 +380,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
                 todoActions.setTodo(tabId, "none");
               }
             }}
+            onClear={todoActions.clearTodos}
             onOpenStatusMenu={toggleStatusMenu}
             onContextMenu={openContextMenu}
           />

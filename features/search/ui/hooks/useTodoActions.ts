@@ -30,5 +30,22 @@ export function useTodoActions({ setTodos }: UseTodoActionsOptions) {
     [setTodos],
   );
 
-  return { setTodo };
+  /** Marks every tab in `tabIds` done in one background call. */
+  const clearTodos = useCallback(
+    (tabIds: number[]) => {
+      setTodos((current) => {
+        const next = new Map(current);
+        for (const tabId of tabIds) {
+          next.delete(tabId);
+        }
+        return next;
+      });
+      void sendExtensionMessage({ type: "clearTodos", tabIds }).catch((error) =>
+        debugError("Could not clear todos:", error),
+      );
+    },
+    [setTodos],
+  );
+
+  return { setTodo, clearTodos };
 }
