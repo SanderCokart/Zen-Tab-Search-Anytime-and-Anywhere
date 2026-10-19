@@ -1150,16 +1150,39 @@ this.zenTabs = class extends ExtensionAPI {
             if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
               tab = getNativeTabByExtId(anchorTabId);
             }
+            const foundById = Boolean(tab);
             const win = chromeWindowForNativeTab(tab) || getWin(anchorTabId);
             if (!win?.gBrowser) {
+              debugLog("changeLabel: no browser window", { anchorTabId, foundById });
               return false;
             }
             if (!tab) {
               tab = win.gBrowser.selectedTab;
             }
             if (!tab || (typeof win.gBrowser.isTab === "function" && !win.gBrowser.isTab(tab))) {
+              debugLog("changeLabel: no usable tab", { anchorTabId, foundById, hasTab: !!tab });
               return false;
             }
+
+            const renameState = () => ({
+              renaming: win.document.documentElement.hasAttribute("zen-renaming-tab"),
+              hasInput: !!win.document.getElementById("tab-label-input"),
+            });
+            debugLog("changeLabel: target", () => ({
+              anchorTabId,
+              foundById,
+              isSelectedTab: tab === win.gBrowser.selectedTab,
+              label: tab.label,
+              pinned: !!tab.pinned,
+              essential: tab.hasAttribute?.("zen-essential") ?? false,
+              hidden: !!tab.hidden,
+              windowFocused: win.document.hasFocus?.() ?? null,
+              // Zen's window-level state: compact mode, sidebar expanded, …
+              zenWindowAttributes: [...win.document.documentElement.attributes]
+                .map((attribute) => attribute.name)
+                .filter((name) => name.startsWith("zen-")),
+              before: renameState(),
+            }));
 
             const renameTabStart = win.gZenVerticalTabsManager?.renameTabStart;
             if (typeof renameTabStart !== "function") {
@@ -1179,10 +1202,13 @@ this.zenTabs = class extends ExtensionAPI {
 
             renameTabStart.call(win.gZenVerticalTabsManager, { target: tab });
 
-            return (
-              win.document.documentElement.hasAttribute("zen-renaming-tab") ||
-              !!win.document.getElementById("tab-label-input")
-            );
+            const after = renameState();
+            debugLog("changeLabel: after renameTabStart", after);
+            if (DEBUG) {
+              // A rename that starts late reports false here; this shows whether it did.
+              win.setTimeout(() => debugLog("changeLabel: 250ms later", renameState()), 250);
+            }
+            return after.renaming || after.hasInput;
           } catch (error) {
             throw new Error(`changeLabel failed: ${formatError(error)}`);
           }

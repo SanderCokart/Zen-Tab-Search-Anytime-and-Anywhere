@@ -109,10 +109,20 @@ export async function changeSelectedTabLabel(
     return;
   }
 
-  const selected = (await workspace.listSelectedTabs(preferredTabId)).filter((tab) =>
-    isUsableTabId(tab.id),
-  );
+  const listed = await workspace.listSelectedTabs(preferredTabId);
+  const selected = listed.filter((tab) => isUsableTabId(tab.id));
   const bulk = selected.length > 1;
+  debugLog(`${LOG_PREFIX} change-tab-label: selection`, {
+    preferredTabId,
+    listed: listed.map((tab) => ({
+      id: tab.id,
+      domId: tab.domId,
+      active: tab.active,
+      essential: tab.essential,
+      url: tab.url,
+    })),
+    usable: selected.map((tab) => tab.id),
+  });
   let applied = 0;
 
   for (const tab of selected) {
@@ -122,11 +132,19 @@ export async function changeSelectedTabLabel(
   }
 
   if (bulk && applied > 0) {
+    debugLog(`${LOG_PREFIX} change-tab-label: labelled ${applied} forge tabs, no editor`);
     return;
   }
 
-  const tabId = editorTabId(selected) ?? (await workspace.resolveAnchorTabId(preferredTabId));
+  const editorId = editorTabId(selected);
+  const tabId = editorId ?? (await workspace.resolveAnchorTabId(preferredTabId));
+  debugLog(`${LOG_PREFIX} change-tab-label: opening Zen's rename editor`, {
+    applied,
+    editorTabId: editorId,
+    anchorTabId: editorId === undefined ? tabId : undefined,
+  });
   const changed = await workspace.changeLabel(tabId);
+  debugLog(`${LOG_PREFIX} change-tab-label: Zen editor started: ${changed}`);
   if (!changed) {
     debugWarn(
       `${LOG_PREFIX} change-tab-label: Zen did not start renaming (sidebar collapsed, essentials, or API unavailable)`,

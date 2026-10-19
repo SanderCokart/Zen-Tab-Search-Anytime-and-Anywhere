@@ -1,3 +1,4 @@
+import { debugLog } from "@/shared/debug";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { openCustomTimerPopup } from "@/features/timers/background/popup";
 import { toggleSearchPopup } from "@/features/search/background/popup";
@@ -9,6 +10,11 @@ import { toggleOmnibar } from "@/features/search/background/omnibar";
 export function registerCommands(workspace: WorkspaceAdapter): void {
   browser.commands.onCommand.addListener((command, tab) => {
     const commandTabId = isUsableBrowserTabId(tab?.id, tab?.url) ? tab?.id : undefined;
+    debugLog(`${LOG_PREFIX} command ${command}`, {
+      tabId: tab?.id,
+      url: tab?.url,
+      commandTabId,
+    });
 
     if (command === "show-omnibar") {
       void toggleOmnibar(commandTabId).catch((error) => {
