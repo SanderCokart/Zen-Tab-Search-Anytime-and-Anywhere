@@ -228,6 +228,9 @@ export const extensionRequestSchema = v.variant("type", [
     type: v.literal("openHostOverridesPopup"),
     tabId: tabIdSchema,
   }),
+  v.object({
+    type: v.literal("hideOmnibar"),
+  }),
 ]);
 
 export const contentCommandSchema = v.variant("type", [
@@ -247,6 +250,14 @@ export const SNAPSHOT_CHANGED_TYPE = "snapshotChanged" as const;
 
 export const snapshotChangedSchema = v.object({
   type: v.literal(SNAPSHOT_CHANGED_TYPE),
+});
+
+/** Broadcast when the window-hosted omnibar is shown, so its page remounts fresh. */
+export const OMNIBAR_SHOWN_TYPE = "omnibarShown" as const;
+
+export const omnibarShownSchema = v.object({
+  type: v.literal(OMNIBAR_SHOWN_TYPE),
+  overlayId: v.string(),
 });
 
 export const searchSnapshotSchema = v.object({
@@ -281,6 +292,7 @@ export const EXTENSION_REQUEST_TYPES = [
   "setGlobalHostOverrides",
   "getHostProxyStatus",
   "openHostOverridesPopup",
+  "hideOmnibar",
 ] as const;
 
 /**
@@ -334,6 +346,7 @@ export type ExtensionSuccessMap = {
   setGlobalHostOverrides: HostOverrideGroup[];
   getHostProxyStatus: HostProxyReport;
   openHostOverridesPopup: void;
+  hideOmnibar: void;
 };
 
 const clearTimerResponseSchema = v.object({
@@ -367,6 +380,11 @@ export function parseContentCommand(value: unknown): ContentCommand | undefined 
 
 export function isSnapshotChangedMessage(value: unknown): boolean {
   return v.is(snapshotChangedSchema, value);
+}
+
+export function parseOmnibarShownMessage(value: unknown): string | undefined {
+  const parsed = v.safeParse(omnibarShownSchema, value);
+  return parsed.success ? parsed.output.overlayId : undefined;
 }
 
 export function parseStoredTimer(value: unknown): TabTimer | undefined {
@@ -432,6 +450,7 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
     case "getHostProxyStatus":
       return v.parse(hostProxyReportSchema, value) as ExtensionSuccessMap[T];
     case "openHostOverridesPopup":
+    case "hideOmnibar":
       return undefined as ExtensionSuccessMap[T];
     default: {
       const exhaustive: never = type;

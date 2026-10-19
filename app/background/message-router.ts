@@ -36,6 +36,7 @@ export interface MessageRouterHandlers {
   setGlobalHostOverrides(groups: HostOverrideGroup[]): Promise<HostOverrideGroup[]>;
   getHostProxyStatus(): Promise<HostProxyReport>;
   openHostOverridesPopup(tabId: number): Promise<void>;
+  hideOmnibar(): Promise<void>;
   isAllowedTimerEnd(endAt: number): boolean;
 }
 
@@ -149,6 +150,8 @@ function handleParsedRequest(
       return handlers.getHostProxyStatus();
     case "openHostOverridesPopup":
       return handlers.openHostOverridesPopup(message.tabId);
+    case "hideOmnibar":
+      return handlers.hideOmnibar();
   }
 }
 

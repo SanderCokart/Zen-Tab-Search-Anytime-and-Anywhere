@@ -7,6 +7,7 @@ import { registerPopupWindowTracking } from "@/app/background/popup-tracking";
 import { openSettingsPopup } from "@/features/settings/background/popup";
 import { openCustomTimerPopup } from "@/features/timers/background/popup";
 import { openHostOverridesPopup } from "@/features/hosts/background/popup";
+import { hideOmnibar, preloadOmnibar } from "@/features/search/background/omnibar";
 import {
   createCachedSnapshotReader,
   createSnapshotReader,
@@ -95,6 +96,11 @@ export default defineBackground(() => {
     },
   });
   registerSnapshotChangeNotifications(150, snapshotCache.invalidate);
+  // Each window gets its overlay built while idle, so Alt+F only has to show it.
+  void preloadOmnibar();
+  browser.windows.onFocusChanged.addListener((windowId) => {
+    if (windowId !== browser.windows.WINDOW_ID_NONE) void preloadOmnibar();
+  });
   registerTabLastOpenedTracking();
 
   if (DEBUG) {
@@ -229,6 +235,7 @@ export default defineBackground(() => {
     },
     getHostProxyStatus: hostOverrideService.getStatus,
     openHostOverridesPopup,
+    hideOmnibar,
     isAllowedTimerEnd: (endAt) => isAllowedTimerEnd(endAt),
   });
 

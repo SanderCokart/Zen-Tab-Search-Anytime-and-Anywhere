@@ -7,6 +7,7 @@ import {
   forgePageInfoSchema,
   isErrorResponse,
   isSnapshotChangedMessage,
+  parseOmnibarShownMessage,
   parseExtensionSuccess,
 } from "@/shared/messaging/protocol";
 import * as v from "valibot";
@@ -51,6 +52,25 @@ export function subscribeToSnapshotChanged(onChanged: () => void): () => void {
     if (isSnapshotChangedMessage(message)) {
       onChanged();
     }
+  };
+  browser.runtime.onMessage.addListener(listener);
+  return () => {
+    browser.runtime.onMessage.removeListener(listener);
+  };
+}
+
+/**
+ * Calls `onShown` with the overlay ID before the window-hosted omnibar is shown.
+ * When it returns true, the reply waits a task so the re-render commits before
+ * the background makes the overlay visible.
+ */
+export function subscribeToOmnibarShown(onShown: (overlayId: string) => boolean): () => void {
+  const listener = (message: unknown) => {
+    const overlayId = parseOmnibarShownMessage(message);
+    if (overlayId === undefined || !onShown(overlayId)) {
+      return undefined;
+    }
+    return new Promise<true>((resolve) => setTimeout(() => resolve(true), 0));
   };
   browser.runtime.onMessage.addListener(listener);
   return () => {

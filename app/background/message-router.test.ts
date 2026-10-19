@@ -42,6 +42,7 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
     setGlobalHostOverrides: vi.fn(async (groups) => groups),
     getHostProxyStatus: vi.fn(async () => ({ logPath: "", proxies: [] })),
     openHostOverridesPopup: vi.fn(async () => undefined),
+    hideOmnibar: vi.fn(async () => undefined),
     isAllowedTimerEnd: vi.fn(() => true),
     ...overrides,
   };

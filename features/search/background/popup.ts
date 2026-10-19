@@ -14,7 +14,10 @@ export async function closeSearchPopup(): Promise<boolean> {
   let closed = false;
 
   for (const view of browser.extension.getViews({ type: "popup" })) {
-    (view as unknown as { close(): void }).close();
+    const page = view as unknown as { close(): void; location: { pathname: string } };
+    // The window-hosted omnibar registers as a popup view but is not one.
+    if (page.location.pathname === "/omnibar.html") continue;
+    page.close();
     closed = true;
   }
 

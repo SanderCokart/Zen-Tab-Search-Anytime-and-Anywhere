@@ -4,6 +4,52 @@
     "description": "Access Zen Browser spaces, tabs, and custom tab labels",
     "functions": [
       {
+        "name": "toggleOmnibarOverlay",
+        "type": "function",
+        "description": "Hides the shown omnibar overlay, or readies the most recent window's overlay to be shown",
+        "async": true,
+        "parameters": [
+          {
+            "name": "pageUrl",
+            "type": "string",
+            "description": "moz-extension URL of the omnibar page"
+          }
+        ]
+      },
+      {
+        "name": "showOmnibarOverlay",
+        "type": "function",
+        "description": "Shows the omnibar overlay a toggle left ready",
+        "async": true,
+        "parameters": [
+          {
+            "name": "overlayId",
+            "type": "string",
+            "description": "Overlay ID returned by toggleOmnibarOverlay"
+          }
+        ]
+      },
+      {
+        "name": "preloadOmnibarOverlay",
+        "type": "function",
+        "description": "Builds the hidden omnibar overlay for the most recent browser window",
+        "async": true,
+        "parameters": [
+          {
+            "name": "pageUrl",
+            "type": "string",
+            "description": "moz-extension URL of the omnibar page"
+          }
+        ]
+      },
+      {
+        "name": "hideOmnibarOverlay",
+        "type": "function",
+        "description": "Hides every shown omnibar overlay",
+        "async": true,
+        "parameters": []
+      },
+      {
         "name": "getDebugInfo",
         "type": "function",
         "description": "Return diagnostic info for Zen experiment API debugging",

@@ -3,7 +3,19 @@
 const DEBUG = false;
 
 this.zenTabs = class extends ExtensionAPI {
+  onShutdown() {
+    for (const entry of this.omnibarOverlays?.values() ?? []) {
+      try {
+        entry.dispose();
+      } catch {
+        // The window may already be gone.
+      }
+    }
+    this.omnibarOverlays?.clear();
+  }
+
   getAPI(context) {
+    const extensionApi = this;
     const { tabManager } = context.extension;
     const LOG_PREFIX = "[zen-tab-search experiment]";
 
@@ -976,6 +988,120 @@ this.zenTabs = class extends ExtensionAPI {
       debugLog("external tab hook install failed", { error: formatError(error) });
     }
 
+    // Omnibar hosted in the browser window itself rather than in a page, so it
+    // opens on about: pages, new tabs and empty windows too. One extension
+    // <browser> per window is built once and kept loaded but hidden; showing it
+    // is a visibility flip, which is what makes it fast.
+    const HTML_NS = "http://www.w3.org/1999/xhtml";
+    const omnibarOverlays = (extensionApi.omnibarOverlays ??= new Map());
+    let nextOverlayId = 1;
+
+    function omnibarWindow() {
+      const recent = getServices().wm.getMostRecentWindow("navigator:browser");
+      return isBrowserWindow(recent) ? recent : null;
+    }
+
+    function loadExtensionPage(browser, url) {
+      const options = { triggeringPrincipal: context.extension.principal };
+      if (typeof browser.fixupAndLoadURIString === "function") {
+        browser.fixupAndLoadURIString(url, options);
+      } else {
+        browser.loadURI(getServices().io.newURI(url), options);
+      }
+    }
+
+    function createOmnibarOverlay(win, pageUrl, shown) {
+      const doc = win.document;
+      const extension = context.extension;
+      const id = `${Date.now().toString(36)}-${nextOverlayId++}`;
+
+      const container = doc.createElementNS(HTML_NS, "div");
+      container.id = `zen-tab-search-omnibar-${id}`;
+      container.style.cssText =
+        "position:fixed;inset:0;z-index:2147483647;display:flex;visibility:hidden;pointer-events:none;background:transparent;";
+
+      // Mirrors how Firefox builds extension popup browsers (ExtensionPopups.sys.mjs).
+      const browser = doc.createXULElement("browser");
+      browser.setAttribute("type", "content");
+      browser.setAttribute("disableglobalhistory", "true");
+      browser.setAttribute("messagemanagergroup", "webext-browsers");
+      browser.setAttribute("webextension-view-type", "popup");
+      browser.setAttribute("transparent", "true");
+      browser.setAttribute("tooltip", "aHTMLTooltip");
+      browser.setAttribute("autocompletepopup", "PopupAutoComplete");
+      if (extension.remote) {
+        browser.setAttribute("remote", "true");
+        browser.setAttribute("remoteType", extension.remoteType);
+        browser.setAttribute(
+          "initialBrowsingContextGroupId",
+          String(extension.policy.browsingContextGroupId),
+        );
+      }
+      browser.style.cssText = "flex:1;width:100%;height:100%;background:transparent;";
+      container.append(browser);
+      (doc.body || doc.documentElement).append(container);
+
+      try {
+        ChromeUtils.importESModule(
+          "resource://gre/modules/ExtensionParent.sys.mjs",
+        ).ExtensionParent.apiManager.emit("extension-browser-inserted", browser);
+      } catch (error) {
+        debugLog("extension-browser-inserted failed", { error: formatError(error) });
+      }
+
+      const separator = pageUrl.includes("?") ? "&" : "?";
+      loadExtensionPage(browser, `${pageUrl}${separator}overlay=${id}${shown ? "&shown=1" : ""}`);
+
+      const entry = { id, container, browser, shown: false };
+      const onTabSelect = () => hideOmnibarOverlay(win, entry);
+      win.gBrowser.tabContainer?.addEventListener("TabSelect", onTabSelect);
+      win.addEventListener(
+        "unload",
+        () => {
+          omnibarOverlays.delete(win);
+        },
+        { once: true },
+      );
+      entry.dispose = () => {
+        win.gBrowser?.tabContainer?.removeEventListener("TabSelect", onTabSelect);
+        container.remove();
+      };
+      omnibarOverlays.set(win, entry);
+      return entry;
+    }
+
+    function ensureOmnibarOverlay(win, pageUrl, shown) {
+      const existing = omnibarOverlays.get(win);
+      if (existing?.container.isConnected) {
+        return existing;
+      }
+      return createOmnibarOverlay(win, pageUrl, shown);
+    }
+
+    function showOmnibarOverlay(entry) {
+      entry.shown = true;
+      entry.container.style.visibility = "visible";
+      entry.container.style.pointerEvents = "auto";
+      entry.browser.focus();
+    }
+
+    function hideOmnibarOverlay(win, entry) {
+      if (!entry.shown) {
+        return false;
+      }
+      entry.shown = false;
+      entry.container.style.visibility = "hidden";
+      entry.container.style.pointerEvents = "none";
+      try {
+        if (entry.container.contains(win.document.activeElement)) {
+          win.gBrowser.selectedBrowser.focus();
+        }
+      } catch {
+        // Focus restore is best-effort.
+      }
+      return true;
+    }
+
     function getExtensionError() {
       try {
         return ChromeUtils.importESModule("resource://gre/modules/ExtensionUtils.sys.mjs")
@@ -1042,6 +1168,53 @@ this.zenTabs = class extends ExtensionAPI {
 
         async getDebugInfo(anchorTabId = -1) {
           return buildDebugInfo(anchorTabId);
+        },
+
+        async toggleOmnibarOverlay(pageUrl) {
+          const win = omnibarWindow();
+          if (!win) {
+            throw new Error("No browser window to show the omnibar in.");
+          }
+          const current = omnibarOverlays.get(win);
+          if (current?.shown && current.container.isConnected) {
+            hideOmnibarOverlay(win, current);
+            return { state: "hidden", overlayId: current.id };
+          }
+          for (const [otherWin, entry] of omnibarOverlays) {
+            hideOmnibarOverlay(otherWin, entry);
+          }
+          // Not shown yet: the page still holds the last search, so the caller
+          // remounts it first and then calls showOmnibarOverlay.
+          const created = !current?.container.isConnected;
+          const entry = ensureOmnibarOverlay(win, pageUrl, true);
+          return { state: "ready", overlayId: entry.id, created };
+        },
+
+        async showOmnibarOverlay(overlayId) {
+          for (const entry of omnibarOverlays.values()) {
+            if (entry.id === overlayId && entry.container.isConnected) {
+              showOmnibarOverlay(entry);
+              return true;
+            }
+          }
+          return false;
+        },
+
+        async preloadOmnibarOverlay(pageUrl) {
+          const win = omnibarWindow();
+          if (!win) {
+            return false;
+          }
+          ensureOmnibarOverlay(win, pageUrl, false);
+          return true;
+        },
+
+        async hideOmnibarOverlay() {
+          let hidden = false;
+          for (const [win, entry] of omnibarOverlays) {
+            hidden = hideOmnibarOverlay(win, entry) || hidden;
+          }
+          return hidden;
         },
 
         async getCustomLabels(tabIds = []) {
