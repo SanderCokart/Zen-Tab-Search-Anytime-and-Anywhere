@@ -73,6 +73,7 @@ const GAP_CONTROLS: readonly (readonly [GapSettingKey, string, string])[] = [
     "Separates the spaces block, the essential-tabs block and the tab list from each other.",
   ],
   ["issueGap", "Between issues", "Separates one issue-navigator entry from the next."],
+  ["todoGap", "Between todos", "Separates one todo-column entry from the next."],
 ];
 
 const rangeClass =

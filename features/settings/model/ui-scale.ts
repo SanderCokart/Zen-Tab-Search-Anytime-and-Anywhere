@@ -17,7 +17,7 @@ export const GAP_STEP = 4;
  * pixels exactly; if the font size or the zoom-independent sizing moves, the gap
  * follows the rest of the UI instead of stranding itself at a fixed pixel value.
  */
-const GAP_REFERENCE_PX = 16;
+const GAP_REFERENCE_PX = 12;
 
 /**
  * Every gap in the search UI, paired with the custom property it feeds. Each one
@@ -36,6 +36,7 @@ export const GAP_SETTINGS = [
   ["essentialGap", "--zen-essential-gap-ratio"],
   ["spaceGap", "--zen-space-gap-ratio"],
   ["issueGap", "--zen-issue-gap-ratio"],
+  ["todoGap", "--zen-todo-gap-ratio"],
 ] as const;
 
 export type GapSettingKey = (typeof GAP_SETTINGS)[number][0];

@@ -121,7 +121,7 @@ export function TodoNavigator({
           </select>
         </span>
       </div>
-      <div class="zen-scroll flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+      <div class="zen-scroll flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--zen-todo-gap)] overflow-x-hidden overflow-y-auto">
         {tabs.length === 0 && (
           <p class="text-zen-muted m-0 py-[var(--zen-space-3)] text-center text-[length:var(--zen-text-sm)]">
             No matching todos.

@@ -20,7 +20,7 @@ const DEFAULTS = {
   hideEssentialsInPopup: false,
   hideEssentialsInOverlay: false,
   /** Base font size in px, before the surface and relative-mode adjustments. */
-  fontSize: 16,
+  fontSize: 12,
   /** Density multiplier for padding, gaps, icons and tiles. */
   uiScale: 1,
   /** Overlay only: follow the page zoom level instead of holding a constant size. */
@@ -34,6 +34,7 @@ const DEFAULTS = {
   essentialGap: 8,
   spaceGap: 8,
   issueGap: 4,
+  todoGap: 4,
   /** Focus an already-open tab when another app opens the same address. */
   reuseExternalTabs: false,
   textColor: "#f5f5f5",
@@ -106,6 +107,7 @@ const displaySettingsSchema = v.pipe(
       essentialGap: gap(DEFAULTS.essentialGap),
       spaceGap: gap(DEFAULTS.spaceGap),
       issueGap: gap(DEFAULTS.issueGap),
+      todoGap: gap(DEFAULTS.todoGap),
       reuseExternalTabs: boolean(DEFAULTS.reuseExternalTabs),
       textColor: color(DEFAULTS.textColor),
       issueBackgroundColor: color(DEFAULTS.issueBackgroundColor),

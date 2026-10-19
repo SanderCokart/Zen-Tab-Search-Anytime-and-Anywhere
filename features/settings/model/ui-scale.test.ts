@@ -71,16 +71,16 @@ describe("ui scale", () => {
     expect(clampGap(Number.NaN, 12)).toBe(12);
   });
 
-  it("stores gaps as a ratio of the 16px reference, so the slider reads as pixels", () => {
+  it("stores gaps as a ratio of the 12px reference, so the slider reads as pixels", () => {
     const style = uiScaleStyle(
-      settings({ fontSize: 12, uiScale: 1.25, respectZoom: true, tabGap: 0, folderGap: 16 }),
+      settings({ fontSize: 12, uiScale: 1.25, respectZoom: true, tabGap: 0, folderGap: 12 }),
       "overlay",
     );
 
     expect(style["--zen-font-size"]).toBe("12px");
     expect(style["--zen-scale"]).toBe("1.25");
     expect(style["--zen-tab-gap-ratio"]).toBe("0");
-    // 16px at the 16px reference is exactly one base font size.
+    // 12px at the 12px reference is exactly one base font size.
     expect(style["--zen-folder-gap-ratio"]).toBe("1");
     expect(Object.keys(style)).toHaveLength(2 + GAP_SETTINGS.length);
   });
