@@ -6,105 +6,71 @@ Zen Tab Search is a fast fuzzy search overlay and popup for tabs, spaces, and cu
 
 ## Features
 
-Display options open from the gear on either search surface. Change or assign shortcuts in `about:addons` → **Zen Tab Search** → **Manage Extension Shortcuts**. Shortcuts below use `Ctrl` on Windows and Linux, and the Control key on macOS.
+Open **Display options** from the gear on either search surface. Change or assign shortcuts in `about:addons` → **Zen Tab Search** → **Manage Extension Shortcuts**.
 
-### Omnibar search
+### Omnibar
 
-`Alt+F` opens the in-page search overlay when the active tab is an `http`, `https`, or `file` page the extension can attach to. Search matches tab titles, URLs, and custom labels, including tabs in another Zen space. Spaces and essential tabs sit in their own grids above the tab list. While the search field is focused, `Up` and `Down` move one result, `Left` and `Right` jump several results, `Enter` activates the selected result, and `Escape` closes the overlay.
+`Alt+F` opens the omnibar. On a page the extension can attach to it draws over that tab; otherwise it hosts the same UI in the browser chrome, so search still works with no content tab and no page DOM. It searches titles, URLs, and custom labels across every Zen space. Spaces and essential tabs sit in grids above the list; Zen folders become their own sections. GitHub and GitLab issues open in a navigator beside the tabs, and tabs you marked as todo sit in a third column. `Up` / `Down` move one result, `Left` / `Right` jump several, `Enter` activates, `Escape` closes. `Tab` moves between the tab list and the issue navigator; a query that starts with `#` or `!` jumps straight to issues.
 
-As you can see here you can search tabs, spaces, and essential tabs from the omnibar.
+![Omnibar with spaces, folders, GitHub/GitLab issues, and todos](docs/screenshots/search-omnibar.png)
 
-![Omnibar search across tabs, spaces, and essential tabs](docs/gifs/search-omnibar.gif)
+Type to filter. With **Show issues only in the issue navigator** on, issue and MR/PR tabs stay in the middle column and drop out of the tab list.
 
-### Popup search
+![Filtering the omnibar to GitLab issues and merge requests](docs/screenshots/search-query.png)
 
-The toolbar popup is the fallback when the active page has no DOM the overlay can attach to. `Alt+F` opens the popup on browser pages and anywhere the in-page overlay cannot attach. The **Open Zen Tab Search popup** command opens the popup directly, including when no web page is active, and pressing it again closes the popup. It has no key by default; assign one in `about:addons` → **Manage Extension Shortcuts**. The same `Up`, `Down`, `Left`, `Right`, `Enter`, and `Escape` keys work while the search field is focused. Features that exist on both surfaces are shown once below.
+### Toolbar popup
 
-As you can see here you can search from the toolbar popup when the omnibar has no page to attach to.
+The toolbar popup is a compact legacy surface. `Alt+F` no longer opens it; the window-hosted omnibar covers pages with no attachable DOM. It stays fully functional. **Open Zen Tab Search popup** toggles it and ships with no key; assign one in `about:addons` → **Manage Extension Shortcuts**.
 
-![Popup search used when the page has no DOM for the omnibar](docs/gifs/search-popup.gif)
+<p align="center">
+  <img src="docs/screenshots/search-popup.png" alt="Toolbar popup search" width="420" />
+</p>
 
-### Auto-detect GitLab and GitHub issues
+### Status, rename, and the tab menu
 
-**Auto-detect GitHub and GitLab issues** finds issue, pull request, and merge request tabs and shows them in the issue navigator beside the tab results, sorted by when you last opened them. The omnibar is a wide panel while detection is on. **Show issues only in the issue navigator** keeps those tabs in the navigator and out of the tab list, and is available while detection is on.
+Right-click a result for rename, timer, host overrides, todo, and a red / orange / green status. `Alt+R` auto-labels GitLab and GitHub issues and MRs/PRs, or opens Zen's Change Label editor on other pages.
 
-While the omnibar is open and both lists have results, `Tab` moves the keyboard between the tab list and the issue navigator. Typing `#` or `!` at the start of the query moves the keyboard to the issue navigator. `Enter` opens the selected issue.
+| Context menu | Status |
+| :----------: | :----: |
+| ![Tab context menu](docs/screenshots/tab-context-menu.png) | ![Traffic-light status menu](docs/screenshots/tab-status.png) |
 
-As you can see here you can keep GitHub and GitLab issues beside your tabs and move between the two lists from the keyboard.
-
-![Issue navigator beside tab results in the omnibar](docs/gifs/omnibar-shape.gif)
-
-### Hide essentials and spaces
-
-You can leave the spaces grid, the essential-tabs grid, or both out of the omnibar, the popup, or each surface on its own. Hiding a grid on one surface leaves the other surface unchanged, including while you search.
-
-As you can see here you can hide spaces, essential tabs, or both from search.
-
-![Hiding the spaces grid and the essential-tabs grid](docs/gifs/hide-spaces-and-essentials.gif)
-
-### Truncate titles
-
-**Tab titles** keeps each tab and space title on one line. **Issue titles** does the same for the issue navigator. Leave either option off and long titles wrap onto as many lines as they need. Section headers stay on one line either way.
-
-As you can see here you can truncate tab titles, issue titles, or both, and let them wrap when you want the full text.
-
-![Tab and issue titles truncated to one line, then wrapping](docs/gifs/display-truncation.gif)
-
-### Spacing, size, and zoom
-
-**Font size** is the base the omnibar is built from. **Density** scales padding, icons, and the space and essential-tab tiles. Six gap sliders, in pixels at the default font size, each move one gap: between sections, tabs, folders, essential tabs, spaces, and issues. Padding inside rows and tiles follows density.
-
-**Follow the page zoom level** lets the omnibar grow and shrink with the page. Leave it off and the omnibar keeps the same size on screen at every zoom level. The toolbar popup stays a compact fixed size; these controls apply to the omnibar.
-
-As you can see here you can set the gaps, font size, and density, and choose whether the omnibar follows the page zoom.
-
-![Font size, density, gaps, and page-zoom behavior on the omnibar](docs/gifs/spacing-size-and-zoom.gif)
-
-### Theme colors
-
-Set the text color and the background of issues, folders, and spaces. Each color has its own reset. The picker accepts HEX, HSL, and RGB. Text color applies to the omnibar and the toolbar popup. Folder and space backgrounds apply on both surfaces. The issue background applies in the omnibar navigator.
-
-As you can see here you can theme the text and the issue, folder, and space backgrounds.
-
-![Choosing text, issue, folder, and space colors](docs/gifs/display-colors.gif)
-
-### Hide spaces from results
-
-Uncheck a space in Display options to leave that space, and the tabs in it, out of search. A space you add later stays included.
-
-As you can see here you can hide specific spaces from the results.
-
-![Unchecking spaces so they drop out of search results](docs/gifs/hide-spaces-from-results.gif)
-
-### Reuse an open tab
-
-**Reuse an open tab**, under External links, focuses a tab that already has an address when another app opens that link in Zen, such as a mail client.
-
-As you can see here you can land on the tab that already has the address.
-
-![An external link focusing the tab that already has that address](docs/gifs/tab-reuse.gif)
-
-### Folder groups
-
-**Group tabs by folders** turns each Zen folder into its own section. **Group by subfolders** nests those sections inside the parent folder, and is available while folder grouping is on.
-
-As you can see here you can group results by folders and by the subfolders inside them.
-
-![Tab results grouped by folders and subfolders](docs/gifs/folder-groups.gif)
+![Rename dialog on a result](docs/screenshots/rename-tab.png)
 
 ### Timers
 
-`Alt+T` opens the timer for the current tab when Zen has a current tab. Right-click a tab and use **Tab timer** to add 30 minutes, 1 hour, 7 hours, 8 hours, or a custom time, or choose **Clear timer**.
+`Alt+T` sets a timer on the current tab. The clock on a result, **Timer** in the tab menu, and the clock beside the search field open the same controls. Running timers show a countdown on the row; the list lets you jump to a tab, edit one, or clear them all.
 
-From either search surface, the clock on a result opens the same controls, and **Timer** in the result menu does too. The clock beside the search field lists every running timer so you can jump to that tab, clear one, or clear all of them.
+| Active timers | Set a timer |
+| :-----------: | :---------: |
+| ![Active timers list](docs/screenshots/timers-from-search.png) | ![Timer presets and custom time](docs/screenshots/timer-popup.png) |
 
-As you can see here you can add a timer and clear it from search, from the tab menu, or with the timer shortcut.
+### Host overrides
 
-![Adding a tab timer and clearing it](docs/gifs/timers-from-search.gif)
+Pin a tab’s hostnames to a fixed IP, like a per-tab hosts file. The overlay and the result menu both open the editor.
+
+<p align="center">
+  <img src="docs/screenshots/host-popup.png" alt="Host overrides for a staging tab" width="560" />
+</p>
+
+### Layout and theme
+
+Hide the spaces grid, the essential-tabs grid, or both, independently on the omnibar and the toolbar popup. Turn wrapping on when you want the full title. Font size, density, and the gap sliders reshape the omnibar; the popup stays a compact fixed size. Text, issue, folder, and space colors each have their own reset.
+
+| Hidden grids | Wrapping titles |
+| :----------: | :-------------: |
+| ![Omnibar without spaces or essential tabs](docs/screenshots/hide-spaces-and-essentials.png) | ![Long titles wrapping onto several lines](docs/screenshots/display-truncation.png) |
+
+| Larger type and density | Custom colors |
+| :---------------------: | :-----------: |
+| ![Omnibar with a larger font size and density](docs/screenshots/spacing-size-and-zoom.png) | ![Omnibar with themed panel colors](docs/screenshots/display-colors.png) |
+
+**Reuse an open tab**, under External links, focuses a tab that already has an address when another app opens that link in Zen.
 
 ### AI agents (MCP)
 
-Claude, Cursor and other MCP clients can read and organise Zen through a local MCP server that ships in this repo: list spaces, folders and tabs, rename tabs, create and rename folders, move tabs into folders or other spaces, reorder them, and set tab colors. Turn it on under **AI agents (MCP)** in the settings, then follow [mcp/README.md](mcp/README.md) to register the server with your client. It only listens on this computer and only accepts the token from your settings. To run the agent on another machine, such as a server, tunnel the bridge port over SSH: see [Remote agents over SSH](mcp/README.md#remote-agents-over-ssh).
+Claude, Cursor, and other MCP clients can list spaces, folders, and tabs, rename tabs, create and rename folders, move tabs, reorder them, and set tab colors. Turn the bridge on in Display options, then follow [mcp/README.md](mcp/README.md). It only listens on this computer and only accepts the token from your settings. For an agent on another machine, see [Remote agents over SSH](mcp/README.md#remote-agents-over-ssh).
+
+![AI agents (MCP) setting](docs/screenshots/mcp-settings.png)
 
 
 
@@ -137,15 +103,16 @@ The zip will be produced by WXT. Install it using the same `about:addons` → ge
 
 ## At a glance
 
-- Omnibar search with `Alt+F`, and a toolbar popup when the page has no DOM
-- GitHub and GitLab issues in the issue navigator
-- Hide essentials, spaces, or specific spaces from results
-- Truncated or wrapping tab and issue titles
-- Omnibar font size, density, gaps, and page zoom
-- Theme colors for text, issues, folders, and spaces
-- Reuse of an already open tab for external links
+- Omnibar search with `Alt+F`, including when no page DOM is available
+- A legacy toolbar popup that stays fully functional, with an unmapped shortcut
+- GitHub and GitLab issues in a navigator beside the tabs
+- Todos, traffic-light status, and rename from the result menu
 - Folder and subfolder sections
-- Timers you can add and clear from search, the tab menu, or `Alt+T`
+- Timers from search, the tab menu, or `Alt+T`
+- Per-tab host overrides
+- Hide essentials or spaces, wrap or truncate titles, and theme the omnibar
+- Reuse of an already open tab for external links
+- Optional local MCP server for AI agents
 
 
 
@@ -209,6 +176,14 @@ npm run dev
 
 While the dev server is running, WXT rebuilds and reloads the extension on file changes.
 
+README stills come from a mocked UI harness, not from Zen itself. Generate them with:
+
+```bash
+npm run screenshots
+```
+
+That writes PNGs to `docs/screenshots/`. `npm run screenshots:dev` serves the harness at `http://127.0.0.1:4177/screenshots/index.html?scene=search-omnibar` so you can inspect a scene before capturing it.
+
 Load in Zen Browser:
 
 1. Open `about:debugging`
@@ -238,7 +213,8 @@ mcp/                  MCP server that lets AI agents drive Zen through the exten
 public/experiment/    Privileged Experiment API (zenTabs) — required for cross-space Zen support
 public/icon/          Extension icons
 scripts/              Build and release helpers
-docs/gifs/            Feature recordings used above
+docs/screenshots/     Feature stills used above, generated by `npm run screenshots`
+screenshots/          Mocked UI harness that Playwright captures from
 ```
 
 

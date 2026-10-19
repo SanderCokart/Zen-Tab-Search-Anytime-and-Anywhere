@@ -15,7 +15,8 @@ is type-clean and lint-clean, so any error you see is one you introduced.
 Other scripts: `npm run dev` (live-reloading dev build), `npm run build`,
 `npm run format`, `npm run lint:web-ext` (builds, then runs the Firefox
 add-on linter), `npm run mcp:build` (bundles the MCP server to
-`mcp/dist/zen-tab-search-mcp.mjs`).
+`mcp/dist/zen-tab-search-mcp.mjs`), `npm run screenshots` (Playwright captures
+of the mocked UI harness into `docs/screenshots/`).
 
 ## Layout
 

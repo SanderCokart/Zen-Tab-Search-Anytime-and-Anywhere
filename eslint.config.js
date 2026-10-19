@@ -3,7 +3,14 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [".output/**", ".wxt/**", "node_modules/**", "mcp/dist/**"],
+    ignores: [
+      ".output/**",
+      ".wxt/**",
+      "node_modules/**",
+      "mcp/dist/**",
+      "playwright-report/**",
+      "test-results/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -13,6 +20,7 @@ export default tseslint.config(
       "entrypoints/**/*.{ts,tsx}",
       "features/**/*.{ts,tsx}",
       "mcp/**/*.{ts,tsx}",
+      "screenshots/**/*.{ts,tsx}",
       "shared/**/*.{ts,tsx}",
     ],
     languageOptions: {

@@ -6,6 +6,8 @@ node_modules/
 .wxt/
 web-ext-artifacts/
 dist/
+playwright-report/
+test-results/
 
 # Accidental non-Firefox build output
 .output/chrome-mv3/
