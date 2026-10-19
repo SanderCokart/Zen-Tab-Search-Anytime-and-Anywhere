@@ -16,6 +16,7 @@ import {
   prioritizeCurrentTab,
   rankForgeIssueEntries,
   sortForgeIssueEntries,
+  splitCurrentForgeEntry,
 } from "@/features/search/model/ranking";
 import type { SearchItem, TabInfo } from "@/shared/types";
 
@@ -535,5 +536,27 @@ describe("filterTodoTabs", () => {
 
   it("keeps only the todos that match", () => {
     expect(filterTodoTabs(todos, "deploy").map((entry) => entry.id)).toEqual([2]);
+  });
+});
+
+describe("splitCurrentForgeEntry", () => {
+  const entries = buildForgeIssueEntries([
+    { ...tab(1), url: "https://github.com/acme/project/issues/42", lastOpenedAt: 500 },
+    { ...tab(2, true), url: "https://github.com/acme/project/issues/7", lastOpenedAt: 100 },
+  ]);
+
+  it("splits off the active tab's entry and lists it first", () => {
+    const { current, rest } = splitCurrentForgeEntry(entries);
+
+    expect(current?.ref.id).toBe("7");
+    expect(rest.map((entry) => entry.ref.id)).toEqual(["42"]);
+    expect(
+      flattenForgeNavigatorEntries(rest, "recent", current).map((entry) => entry.ref.id),
+    ).toEqual(["7", "42"]);
+  });
+
+  it("returns no current entry when the active tab is not an issue", () => {
+    const [first] = entries;
+    expect(splitCurrentForgeEntry(first ? [first] : [])).toEqual({ rest: entries.slice(0, 1) });
   });
 });

@@ -342,7 +342,8 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
 
         {layout === "overlay" && results.forgeIssueEntries.length > 0 && (
           <ForgeIssueNavigator
-            entries={results.filteredForgeIssueEntries}
+            entries={results.listedForgeIssueEntries}
+            currentEntry={results.currentForgeEntry}
             backgroundColor={displaySettings.issueBackgroundColor}
             truncate={displaySettings.truncateIssueTitles}
             sortMode={forgeSortMode}

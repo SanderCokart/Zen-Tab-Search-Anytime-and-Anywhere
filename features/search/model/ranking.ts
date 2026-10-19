@@ -603,13 +603,33 @@ export function groupForgeIssueEntries(
   }));
 }
 
+/**
+ * The navigator's keyboard order: the pinned current entry, if any, then each
+ * provider's projects with their issues before their requests.
+ */
 export function flattenForgeNavigatorEntries(
   entries: ForgeIssueEntry[],
   sortMode: ForgeIssueSortMode,
+  currentEntry?: ForgeIssueEntry,
 ): ForgeIssueEntry[] {
-  return groupForgeIssueEntries(entries, sortMode).flatMap((provider) =>
+  const grouped = groupForgeIssueEntries(entries, sortMode).flatMap((provider) =>
     provider.projects.flatMap((project) => [...project.issues, ...project.requests]),
   );
+  return currentEntry ? [currentEntry, ...grouped] : grouped;
+}
+
+/**
+ * Splits off the entry for the tab the overlay was opened over, so the
+ * navigator can list it first the way the tab list lists the current tab.
+ */
+export function splitCurrentForgeEntry(entries: ForgeIssueEntry[]): {
+  current?: ForgeIssueEntry;
+  rest: ForgeIssueEntry[];
+} {
+  const current = entries.find((entry) => entry.tab.active === true);
+  return current
+    ? { current, rest: entries.filter((entry) => entry !== current) }
+    : { rest: entries };
 }
 
 export function prioritizeCurrentTab(

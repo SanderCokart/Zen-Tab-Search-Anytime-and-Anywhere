@@ -13,6 +13,7 @@ import {
   parseTodoNavigatorQuery,
   prioritizeCurrentTab,
   rankForgeIssueEntries,
+  splitCurrentForgeEntry,
   type ForgeIssueSortMode,
 } from "@/features/search/model/ranking";
 import type { DisplaySettings } from "@/features/settings/model/display-settings";
@@ -108,9 +109,26 @@ export function useSearchResults({
     [forgeIssueEntries, forgeNavigatorQuery.filterQuery, rankedForgeIssueEntries],
   );
 
+  // With issue tabs kept out of the tab list, the current tab can only show up
+  // here, so it is listed first, as the tab list does, until a query re-ranks.
+  const { current: currentForgeEntry, rest: listedForgeIssueEntries } = useMemo(
+    () =>
+      layout === "overlay" &&
+      displaySettings.filterIssuesInOverlay &&
+      !forgeNavigatorQuery.filterQuery.trim()
+        ? splitCurrentForgeEntry(filteredForgeIssueEntries)
+        : { current: undefined, rest: filteredForgeIssueEntries },
+    [
+      displaySettings.filterIssuesInOverlay,
+      filteredForgeIssueEntries,
+      forgeNavigatorQuery.filterQuery,
+      layout,
+    ],
+  );
+
   const navigatorEntries = useMemo(
-    () => flattenForgeNavigatorEntries(filteredForgeIssueEntries, forgeSortMode),
-    [filteredForgeIssueEntries, forgeSortMode],
+    () => flattenForgeNavigatorEntries(listedForgeIssueEntries, forgeSortMode, currentForgeEntry),
+    [currentForgeEntry, forgeSortMode, listedForgeIssueEntries],
   );
 
   const bestForgeIndex = useMemo(
@@ -189,7 +207,8 @@ export function useSearchResults({
     allTodoTabs,
     todoTabs,
     rankedForgeIssueEntries,
-    filteredForgeIssueEntries,
+    listedForgeIssueEntries,
+    currentForgeEntry,
     navigatorEntries,
     bestForgeIndex,
     items,

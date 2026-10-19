@@ -296,9 +296,11 @@ describe("SearchApp", () => {
   });
 
   it("shows forge tabs in the overlay navigator and filters them", async () => {
+    // Neither is current, so no entry is pinned above the provider groups.
     const forgeTabs = [
       {
         ...tabs[0],
+        active: false,
         title: "Fix search",
         url: "https://github.com/acme/project/issues/42",
         lastOpenedAt: Date.now() - 3 * 24 * 60 * 60 * 1000,
@@ -1145,6 +1147,58 @@ describe("SearchApp", () => {
       expect(sendMessage).toHaveBeenCalledWith({ type: "switchTab", tabId: 3, domId: undefined }),
     );
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("lists the current issue tab first in the navigator while issues are kept out of the tab list", async () => {
+    const issueTabs = [
+      { ...tabs[1], active: false },
+      {
+        id: 3,
+        title: "Newer issue",
+        url: "https://github.com/acme/project/issues/42",
+        favIconUrl: "",
+        windowId: 1,
+        lastOpenedAt: Date.now(),
+      },
+      {
+        id: 4,
+        title: "Older issue",
+        url: "https://github.com/acme/project/issues/7",
+        favIconUrl: "",
+        windowId: 1,
+        active: true,
+        lastOpenedAt: Date.now() - 24 * 60 * 60 * 1000,
+      },
+    ];
+    const { root } = mountSearchApp(vi.fn(), issueTabs, "overlay", {
+      detectForgeIssues: true,
+      filterIssuesInOverlay: true,
+    });
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-current-issue']")?.textContent).toContain(
+        "Older issue",
+      ),
+    );
+    const entries = [...root.querySelectorAll("[data-testid='zen-issue-entry']")];
+    expect(entries.map((entry) => entry.textContent)).toEqual([
+      expect.stringContaining("Older issue"),
+      expect.stringContaining("Newer issue"),
+    ]);
+    expect(
+      [...root.querySelectorAll("[data-testid='zen-prefix-hint']")].map((hint) => hint.textContent),
+    ).toContain("! / # - ");
+
+    // A query re-ranks the navigator, so the current entry is no longer pinned.
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.value = "#issue";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-current-issue']")).toBeNull(),
+    );
 
     render(null, root);
     root.remove();

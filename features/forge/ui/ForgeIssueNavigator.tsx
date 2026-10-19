@@ -27,6 +27,7 @@ import { cn } from "@/shared/ui/cn";
 
 export function ForgeIssueNavigator({
   entries,
+  currentEntry,
   backgroundColor,
   truncate,
   sortMode,
@@ -48,6 +49,8 @@ export function ForgeIssueNavigator({
   onOpenStatusMenu,
 }: {
   entries: ForgeIssueEntry[];
+  /** The current tab's entry, listed above the providers; not part of `entries`. */
+  currentEntry?: ForgeIssueEntry;
   backgroundColor: string;
   truncate: boolean;
   sortMode: ForgeIssueSortMode;
@@ -76,10 +79,14 @@ export function ForgeIssueNavigator({
   const entryIndices = useMemo(
     () =>
       new Map(
-        flattenForgeNavigatorEntries(entries, sortMode).map((entry, index) => [entry, index]),
+        flattenForgeNavigatorEntries(entries, sortMode, currentEntry).map((entry, index) => [
+          entry,
+          index,
+        ]),
       ),
-    [entries, sortMode],
+    [currentEntry, entries, sortMode],
   );
+  const count = entries.length + (currentEntry ? 1 : 0);
 
   const renderEntries = (groupEntries: ForgeIssueEntry[]) => (
     <div class="flex min-w-0 flex-col gap-[var(--zen-issue-gap)]">
@@ -194,11 +201,22 @@ export function ForgeIssueNavigator({
           onClick={onToggleSort}
           title="Change issue sorting"
         >
-          {sortMode === "recent" ? "Recent" : "Old"} · {entries.length}
+          {sortMode === "recent" ? "Recent" : "Old"} · {count}
         </button>
       </div>
       <div class="zen-scroll min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
-        {providers.length === 0 ? (
+        {currentEntry && (
+          <section
+            class="border-zen-line-soft mb-[var(--zen-space-3)] min-w-0 border-b pb-[var(--zen-space-3)]"
+            data-testid="zen-current-issue"
+          >
+            <div class="text-zen-lavender mb-[var(--zen-space-2)] truncate text-[length:var(--zen-text-sm)] font-semibold uppercase">
+              Current tab
+            </div>
+            {renderEntries([currentEntry])}
+          </section>
+        )}
+        {providers.length === 0 && !currentEntry ? (
           <p class="text-zen-muted m-0 py-[var(--zen-space-3)] text-center text-[length:var(--zen-text-sm)]">
             No matching issues or requests.
           </p>
