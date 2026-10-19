@@ -47,7 +47,7 @@ Tell the user to:
 
 1. Open `about:debugging` → **This Firefox** → **Load Temporary Add-on…**
 2. Select `.output/firefox-mv2/manifest.json`
-3. For Zen workspace APIs, set `extensions.experiments.enabled` to `true` in `about:config` and restart. `xpinstall.signatures.required` is only for installing a release zip, not for this temporary load.
+3. For Zen workspace APIs, set `extensions.experiments.enabled` to `true` in `about:config` and restart. `xpinstall.signatures.required` is only for installing a release zip (set it to `false`); it is not needed for this temporary load.
 
 Shortcuts (change them in `about:addons` → **Manage Extension Shortcuts**):
 

@@ -77,7 +77,7 @@ The supported way to distribute this extension is via GitHub Releases as a zip f
 When filing a bug, please include:
 
 - Zen Browser version
-- Whether you have set `extensions.experiments.enabled` and `xpinstall.signatures.required` in `about:config` and restarted
+- Whether you have set `extensions.experiments.enabled` to `true` (and, for a release zip, `xpinstall.signatures.required` to `false`) in `about:config` and restarted
 - Steps to reproduce
 - Any relevant console output from the background page or popup
 

@@ -116,9 +116,9 @@ Claude, Cursor and other MCP clients can read and organise Zen through a local M
 
 1. Download the latest `.zip` from the [Releases page](https://github.com/SanderCokart/Zen-Tab-Search-Anytime-and-Anywhere/releases).
 2. Open `about:config` in Zen Browser.
-3. Set these preferences to `true` and restart Zen:
-  - `extensions.experiments.enabled`
-  - `xpinstall.signatures.required`
+3. Set these preferences and restart Zen:
+  - `extensions.experiments.enabled` = `true`
+  - `xpinstall.signatures.required` = `false`
 4. Open `about:addons`, click the gear icon, and choose **Install Add-on From File…**.
 5. Select the downloaded `.zip` (you can also drag it onto the page).
 
@@ -153,7 +153,8 @@ The zip will be produced by WXT. Install it using the same `about:addons` → ge
 
 - This extension is exclusive to Zen Browser and relies on Zen's internal workspace and tab APIs.
 - It uses privileged `experiment_apis`, so it cannot be published on addons.mozilla.org (AMO) and must be installed from a zip file.
-- The two `about:config` preferences above are required for Zen's extension APIs to be available.
+- `extensions.experiments.enabled` must be `true` for Zen's extension APIs to be available.
+- `xpinstall.signatures.required` must be `false` to install the unsigned zip.
 
 
 
@@ -167,7 +168,7 @@ See [LICENSE](LICENSE) for the full MIT license text.
 
 ## Why this cannot be published on AMO
 
-Mozilla intentionally blocks extensions that declare `experiment_apis` (privileged Experiment APIs) from being submitted to addons.mozilla.org, so this repository does not maintain an AMO signing flow. End users still need the two `about:config` changes for the Zen-specific APIs (`browser.zenTabs`) to be available.
+Mozilla intentionally blocks extensions that declare `experiment_apis` (privileged Experiment APIs) from being submitted to addons.mozilla.org, so this repository does not maintain an AMO signing flow. End users still need `extensions.experiments.enabled` set to `true` for the Zen-specific APIs (`browser.zenTabs`) to be available, and `xpinstall.signatures.required` set to `false` to install the unsigned zip.
 
 The only supported distribution method for this extension is sideloading a zip (or XPI) as described above.
 
