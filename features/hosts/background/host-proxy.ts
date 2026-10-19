@@ -24,6 +24,11 @@ export interface HostProxyPorts {
   /** Stops every proxy whose IP is not in `keep`. */
   release(keep: ReadonlySet<string>): Promise<void>;
   /**
+   * Forgets every cached port without stopping anything, so the next request
+   * asks the experiment again; it restarts a proxy whose listener died.
+   */
+  forgetPorts(): void;
+  /**
    * The running proxies, the error of each IP whose proxy could not start, and
    * the log file the proxies write failures to ("" without the experiment).
    */
@@ -99,5 +104,5 @@ export function createHostProxyPorts(api = getZenHostsApi): HostProxyPorts {
     };
   }
 
-  return { ensure, peek: (ip) => ports.get(ip), release, status };
+  return { ensure, peek: (ip) => ports.get(ip), release, status, forgetPorts: () => ports.clear() };
 }

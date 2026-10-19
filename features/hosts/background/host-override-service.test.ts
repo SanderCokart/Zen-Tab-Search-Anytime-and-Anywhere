@@ -46,6 +46,7 @@ function fakePorts(): HostProxyPorts & { running: Map<string, number> } {
         }
       }
     }),
+    forgetPorts: vi.fn(() => running.clear()),
     status: async () => ({
       logPath: "C:\\Temp\\zen-tab-search-hosts.log",
       running: [...running].map(([ip, port]) => ({
@@ -303,5 +304,18 @@ describe("host override service", () => {
         },
       ],
     });
+  });
+
+  it("looks the port up again after Firefox reports a proxy error", async () => {
+    const { service, ports } = setup();
+    await service.setOverrides(1, [staging]);
+    await service.resolveProxy({ tabId: 1, url: "https://example.com/" });
+    expect(ports.ensure).toHaveBeenCalledTimes(1);
+
+    service.proxyFailed();
+    await expect(
+      Promise.resolve(service.resolveProxy({ tabId: 1, url: "https://example.com/" })),
+    ).resolves.toEqual(expect.objectContaining({ host: "127.0.0.1" }));
+    expect(ports.ensure).toHaveBeenCalledTimes(2);
   });
 });

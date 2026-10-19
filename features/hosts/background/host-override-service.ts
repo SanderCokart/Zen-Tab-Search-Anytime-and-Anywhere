@@ -376,6 +376,14 @@ export function createHostOverrideService({
     }
   }
 
+  /**
+   * Firefox could not use a proxy. A cached port may belong to a listener that
+   * has since stopped, so look every port up again on the next request.
+   */
+  function proxyFailed(): void {
+    ports.forgetPorts();
+  }
+
   /** One entry per IP an enabled group routes to or whose proxy still runs, plus the log path. */
   async function getStatus(): Promise<HostProxyReport> {
     await globalReady;
@@ -422,6 +430,7 @@ export function createHostOverrideService({
     setEnabled,
     disableAll,
     reapplyIndicator,
+    proxyFailed,
     getStatus,
     forget,
   };
@@ -455,6 +464,7 @@ export function registerHostOverrides(service: HostOverrideService): void {
   proxy.onRequest.addListener(service.resolveProxy, { urls: ["<all_urls>"] });
   proxy.onError?.addListener((error) => {
     console.error(`${LOG_PREFIX} Host override proxy error:`, formatError(error));
+    service.proxyFailed();
   });
 
   browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
