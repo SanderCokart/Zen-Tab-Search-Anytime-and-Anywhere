@@ -6,7 +6,7 @@ import {
   resolveAnchorTabId as resolveBrowserAnchorTabId,
   zenAnchorTabId,
 } from "@/features/zen/anchor";
-import { getZenTabsApi, type ZenTabsApi } from "@/features/zen/api";
+import { getZenTabsApi, type RenameSelection, type ZenTabsApi } from "@/features/zen/api";
 import type { ZenFolderInfo } from "@/shared/messaging/bridge-protocol";
 
 export interface BrowserTabSnapshot {
@@ -52,7 +52,7 @@ export interface WorkspaceAdapter {
   activateTab(tabId?: number, domId?: string, anchorTabId?: number): Promise<void>;
   switchSpace(spaceId: string, anchorTabId?: number): Promise<void>;
   setLabel(label: string, anchorTabId?: number, silent?: boolean): Promise<boolean>;
-  changeLabel(anchorTabId?: number): Promise<boolean>;
+  changeLabel(anchorTabId?: number, selection?: RenameSelection): Promise<boolean>;
   getDebugInfo(anchorTabId?: number): Promise<unknown>;
   listFolders(anchorTabId?: number): Promise<ZenFolderInfo[]>;
   createFolder(
@@ -463,12 +463,12 @@ export function createZenWorkspaceAdapter(
       return zenTabs.setLabel(label, zenAnchorTabId(anchorTabId), silent);
     },
 
-    async changeLabel(anchorTabId?: number) {
+    async changeLabel(anchorTabId?: number, selection: RenameSelection = "all") {
       const zenTabs = getApi();
       if (!zenTabs?.changeLabel) {
         return false;
       }
-      return zenTabs.changeLabel(zenAnchorTabId(anchorTabId));
+      return zenTabs.changeLabel(zenAnchorTabId(anchorTabId), selection);
     },
 
     async getDebugInfo(anchorTabId?: number) {

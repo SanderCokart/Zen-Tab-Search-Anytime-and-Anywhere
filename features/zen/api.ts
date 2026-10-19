@@ -20,6 +20,9 @@ export interface ZenDebugInfo {
   errors: string[];
 }
 
+/** What Zen's rename field selects when it opens: the whole label, or nothing with the caret first. */
+export type RenameSelection = "all" | "start";
+
 export interface ZenTabsApi {
   getDebugInfo(anchorTabId?: number): Promise<ZenDebugInfo>;
   getCustomLabels(tabIds?: number[]): Promise<Record<number, string>>;
@@ -29,7 +32,7 @@ export interface ZenTabsApi {
   switchSpace(spaceId: string, anchorTabId?: number): Promise<boolean>;
   activateTab(tabId: number, anchorTabId?: number): Promise<boolean>;
   activateTabByDomId(domId: string, anchorTabId?: number): Promise<boolean>;
-  changeLabel(anchorTabId?: number): Promise<boolean>;
+  changeLabel(anchorTabId?: number, selection?: RenameSelection): Promise<boolean>;
   setLabel(label: string, anchorTabId?: number, silent?: boolean): Promise<boolean>;
   consumeExternalTab?(tabId: number): Promise<string>;
   listFolders?(anchorTabId?: number): Promise<ZenFolderInfo[]>;

@@ -1171,7 +1171,7 @@ this.zenTabs = class extends ExtensionAPI {
           }
         },
 
-        async changeLabel(anchorTabId = -1) {
+        async changeLabel(anchorTabId = -1, selection = "all") {
           try {
             let tab = null;
             if (Number.isInteger(anchorTabId) && anchorTabId >= 0) {
@@ -1238,6 +1238,15 @@ this.zenTabs = class extends ExtensionAPI {
             }
 
             startRename({ target: tab });
+
+            // Zen selects the whole label; a label just filled in automatically
+            // is more likely to be extended, so that one starts with the caret first.
+            const input = win.document.getElementById("tab-label-input");
+            if (input) {
+              const end = selection === "start" ? 0 : input.value.length;
+              input.setSelectionRange(0, end, "backward");
+              input.scrollLeft = 0;
+            }
 
             const after = renameState();
             debugLog("changeLabel: after starting the rename", after);

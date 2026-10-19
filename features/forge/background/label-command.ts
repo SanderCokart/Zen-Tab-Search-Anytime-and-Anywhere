@@ -123,11 +123,11 @@ export async function changeSelectedTabLabel(
     })),
     usable: selected.map((tab) => tab.id),
   });
-  let applied = 0;
+  const labelled = new Set<number>();
 
   for (const tab of selected) {
-    if (await applyForgeLabel(workspace, tab)) {
-      applied += 1;
+    if (isUsableTabId(tab.id) && (await applyForgeLabel(workspace, tab))) {
+      labelled.add(tab.id);
     }
   }
 
@@ -136,12 +136,16 @@ export async function changeSelectedTabLabel(
 
   const editorId = editorTabId(selected);
   const tabId = editorId ?? (await workspace.resolveAnchorTabId(preferredTabId));
+  // An automatic label is usually kept and extended, so the caret goes to its
+  // start; a label typed by hand is usually replaced, so all of it is selected.
+  const selection = tabId !== undefined && labelled.has(tabId) ? "start" : "all";
   debugLog(`${LOG_PREFIX} change-tab-label: opening Zen's rename editor`, {
-    applied,
+    labelled: [...labelled],
     editorTabId: editorId,
     anchorTabId: editorId === undefined ? tabId : undefined,
+    selection,
   });
-  const changed = await workspace.changeLabel(tabId);
+  const changed = await workspace.changeLabel(tabId, selection);
   debugLog(`${LOG_PREFIX} change-tab-label: Zen editor started: ${changed}`);
   if (!changed) {
     debugWarn(

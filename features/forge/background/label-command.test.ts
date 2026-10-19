@@ -81,7 +81,8 @@ describe("changeSelectedTabLabel", () => {
     );
 
     expect(setLabel).toHaveBeenCalledWith("ISSUE: #12 - Example issue", 4, true);
-    expect(changeLabel).toHaveBeenCalledWith(4);
+    // The tab was just auto-labelled, so the caret starts at the front.
+    expect(changeLabel).toHaveBeenCalledWith(4, "start");
     // The label is set before the editor opens, so the editor starts from it.
     expect(setLabel.mock.invocationCallOrder[0]).toBeLessThan(
       changeLabel.mock.invocationCallOrder[0]!,
@@ -145,7 +146,8 @@ describe("changeSelectedTabLabel", () => {
     );
 
     expect(setLabel).not.toHaveBeenCalled();
-    expect(changeLabel).toHaveBeenCalledWith(5);
+    // Nothing was auto-labelled, so the whole label is selected.
+    expect(changeLabel).toHaveBeenCalledWith(5, "all");
   });
 
   it("reads selected tabs from the preferred window", async () => {
@@ -163,7 +165,7 @@ describe("changeSelectedTabLabel", () => {
     );
 
     expect(listSelectedTabs).toHaveBeenCalledWith(20);
-    expect(changeLabel).toHaveBeenCalledWith(20);
+    expect(changeLabel).toHaveBeenCalledWith(20, "all");
   });
 
   it("does nothing when the Zen API is unavailable", async () => {

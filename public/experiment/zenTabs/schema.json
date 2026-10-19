@@ -123,6 +123,13 @@
             "type": "integer",
             "optional": true,
             "description": "Extension tab ID to rename; defaults to the selected tab in the Zen browser window"
+          },
+          {
+            "name": "selection",
+            "type": "string",
+            "enum": ["all", "start"],
+            "optional": true,
+            "description": "Select the whole label (default), or put the caret at its start"
           }
         ]
       },
