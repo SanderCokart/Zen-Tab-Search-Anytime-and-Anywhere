@@ -1,5 +1,6 @@
 import { render } from "preact";
 import { debugLog } from "@/shared/debug";
+import { formatError, LOG_PREFIX } from "@/shared/log";
 import { parseContentCommand, SNAPSHOT_CHANGED_TYPE } from "@/shared/messaging/protocol";
 import { SearchApp } from "@/features/search/ui/SearchApp";
 import "@/shared/ui/styles.css";
@@ -51,11 +52,17 @@ export default defineContentScript({
       opening = false;
       document.removeEventListener("keydown", escapeListener, true);
       document.removeEventListener("visibilitychange", visibilityListener);
-      if (omnibar?.shadowHost.isConnected) {
-        omnibar.shadowHost.hidePopover();
-      }
-      omnibar?.remove();
+      const shown = omnibar;
+      // Cleared first so a teardown error cannot leave the overlay "open".
       omnibar = undefined;
+      if (shown?.shadowHost.matches(":popover-open")) {
+        shown.shadowHost.hidePopover();
+      }
+      shown?.remove();
+    };
+
+    const logOmnibarError = (error: unknown) => {
+      console.error(`${LOG_PREFIX} Omnibar toggle failed:`, formatError(error));
     };
 
     const escapeListener = (event: KeyboardEvent) => {
@@ -143,11 +150,19 @@ export default defineContentScript({
         sendResponse(collectForgePageInfo());
         return;
       }
-      if (command.type === "toggleOmnibar") {
-        if (isOmnibarShown()) hideOmnibar();
-        else void showOmnibar();
+      // An error thrown here would reject the background's sendMessage, which
+      // reads that as "no overlay on this page" and opens the toolbar popup
+      // too. The overlay did get the command, so log and always acknowledge.
+      try {
+        if (command.type === "toggleOmnibar") {
+          if (isOmnibarShown()) hideOmnibar();
+          else void showOmnibar().catch(logOmnibarError);
+        }
+        if (command.type === "showOmnibar") void showOmnibar().catch(logOmnibarError);
+      } catch (error) {
+        logOmnibarError(error);
       }
-      if (command.type === "showOmnibar") void showOmnibar();
+      sendResponse(true);
     });
   },
 });
