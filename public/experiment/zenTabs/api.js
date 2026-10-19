@@ -75,6 +75,33 @@ this.zenTabs = class extends ExtensionAPI {
       return Boolean(win && !win.closed && win.gBrowser);
     }
 
+    /**
+     * Zen's inline tab rename. Zen 1.23 moved it from
+     * `gZenVerticalTabsManager.renameTabStart` to `gZenTabRenamer.start`; both take
+     * an event-like `{ target }`. Returns undefined when neither exists.
+     */
+    function getRenameStarter(win) {
+      const renamer = win.gZenTabRenamer;
+      if (typeof renamer?.start === "function") {
+        return Object.assign((event) => renamer.start(event), { api: "gZenTabRenamer.start" });
+      }
+      const manager = win.gZenVerticalTabsManager;
+      if (typeof manager?.renameTabStart === "function") {
+        return Object.assign((event) => manager.renameTabStart(event), {
+          api: "gZenVerticalTabsManager.renameTabStart",
+        });
+      }
+      return undefined;
+    }
+
+    function readBoolPref(name) {
+      try {
+        return getServices().prefs.getBoolPref(name);
+      } catch {
+        return null;
+      }
+    }
+
     function chromeWindowForNativeTab(tab) {
       return tab?.ownerGlobal || tab?.ownerDocument?.defaultView || null;
     }
@@ -1184,11 +1211,21 @@ this.zenTabs = class extends ExtensionAPI {
               before: renameState(),
             }));
 
-            const renameTabStart = win.gZenVerticalTabsManager?.renameTabStart;
-            if (typeof renameTabStart !== "function") {
-              debugLog("changeLabel: renameTabStart unavailable", { anchorTabId });
+            const startRename = getRenameStarter(win);
+            if (!startRename) {
+              debugLog("changeLabel: no Zen rename API", {
+                anchorTabId,
+                hasTabRenamer: !!win.gZenTabRenamer,
+                hasVerticalTabsManager: !!win.gZenVerticalTabsManager,
+              });
               return false;
             }
+            // Zen's renamer silently does nothing when either of these is off.
+            debugLog("changeLabel: preconditions", () => ({
+              api: startRename.api,
+              renameTabsPref: readBoolPref("zen.tabs.rename-tabs"),
+              sidebarExpandedPref: win.gZenVerticalTabsManager?._prefsSidebarExpanded ?? null,
+            }));
 
             try {
               win.focus();
@@ -1200,10 +1237,10 @@ this.zenTabs = class extends ExtensionAPI {
               win.TabContextMenu.contextTab = tab;
             }
 
-            renameTabStart.call(win.gZenVerticalTabsManager, { target: tab });
+            startRename({ target: tab });
 
             const after = renameState();
-            debugLog("changeLabel: after renameTabStart", after);
+            debugLog("changeLabel: after starting the rename", after);
             if (DEBUG) {
               // A rename that starts late reports false here; this shows whether it did.
               win.setTimeout(() => debugLog("changeLabel: 250ms later", renameState()), 250);
