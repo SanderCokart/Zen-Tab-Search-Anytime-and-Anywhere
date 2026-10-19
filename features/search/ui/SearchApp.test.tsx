@@ -349,6 +349,21 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("keeps a square overlay when issue detection is on but no issues are open", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", { detectForgeIssues: true });
+
+    await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("1/1");
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-omnibar-stage]")?.getAttribute("data-omnibar-stage")).toBe(
+        "open",
+      ),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
   it("keeps forge tabs in overlay results when issue detection is off", async () => {
     const forgeTabs = [
       {

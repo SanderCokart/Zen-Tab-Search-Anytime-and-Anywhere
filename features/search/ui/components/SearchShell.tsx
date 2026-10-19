@@ -22,12 +22,14 @@ export function SearchShell({
   onClose,
   displaySettings,
   aspect = "1/1",
+  open = true,
   children,
 }: {
   layout: SearchLayout;
   onClose: () => void;
   displaySettings: DisplaySettings;
   aspect?: OmnibarAspect;
+  open?: boolean;
   children: ComponentChildren;
 }) {
   if (layout === "popup") {
@@ -47,10 +49,11 @@ export function SearchShell({
       class="bg-zen-overlay flex h-full w-full items-center justify-center backdrop-blur-[8px]"
       onClick={onClose}
       data-zen-ui
+      data-omnibar-stage={open ? "open" : "loading"}
       style={{ ...uiScaleStyle(displaySettings, "overlay"), color: displaySettings.textColor }}
     >
       <div
-        class="from-zen-bg to-zen-raised flex h-auto shrink-0 flex-col overflow-hidden rounded-2xl bg-linear-to-br p-[var(--zen-space-3)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+        class="from-zen-bg to-zen-raised flex min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl bg-linear-to-br p-[var(--zen-space-3)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
         onClick={(event) => event.stopPropagation()}
         data-omnibar
         data-omnibar-aspect={aspect}

@@ -55,7 +55,7 @@ export function HostOverridesPopup({ tabId, onClose }: { tabId: number; onClose:
   const [proxyReport, setProxyReport] = useState<HostProxyReport>({ logPath: "", proxies: [] });
   const [editing, setEditing] = useState<Editing>({ kind: "none" });
   const [error, setError] = useState<string>();
-  const displaySettings = useDisplaySettings();
+  const { displaySettings } = useDisplaySettings();
   const validTab = isUsableTabId(tabId);
   const routing = [...tabGroups, ...globalGroups].some((group) => group.enabled);
 

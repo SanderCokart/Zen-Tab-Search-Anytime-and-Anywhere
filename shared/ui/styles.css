@@ -206,6 +206,8 @@
   [data-omnibar] {
     aspect-ratio: 1 / 1;
     width: min(80vw, 90dvh);
+    max-height: 90dvh;
+    min-height: 0;
   }
 
   [data-omnibar][data-omnibar-aspect="3/2"] {
@@ -216,5 +218,14 @@
   [data-omnibar][data-omnibar-aspect="2/1"] {
     aspect-ratio: 2 / 1;
     width: min(80vw, calc(90dvh * 2));
+  }
+
+  /*
+   * Hold the overlay invisible until snapshot and display settings have
+   * committed the real size, then show it with no transition.
+   */
+  [data-omnibar-stage="loading"] {
+    opacity: 0;
+    pointer-events: none;
   }
 }

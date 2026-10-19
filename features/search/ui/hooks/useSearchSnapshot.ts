@@ -19,6 +19,8 @@ export interface SearchSnapshotState {
   todos: Map<number, TabTodo>;
   statuses: Map<number, TrafficLight>;
   loadError: string | null;
+  /** True after the first snapshot request finishes, success or failure. */
+  loaded: boolean;
   setStatuses: (
     update:
       | Map<number, TrafficLight>
@@ -85,6 +87,7 @@ export function useSearchSnapshot(): SearchSnapshotState {
   const [todos, setTodos] = useState<Map<number, TabTodo>>(new Map());
   const [statuses, setStatuses] = useState<Map<number, TrafficLight>>(new Map());
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,6 +129,7 @@ export function useSearchSnapshot(): SearchSnapshotState {
           if (cancelled) {
             return;
           }
+          setLoaded(true);
           if (queued) {
             queued = false;
             load();
@@ -148,6 +152,7 @@ export function useSearchSnapshot(): SearchSnapshotState {
     todos,
     statuses,
     loadError,
+    loaded,
     setTabs,
     setTimers,
     setTodos,

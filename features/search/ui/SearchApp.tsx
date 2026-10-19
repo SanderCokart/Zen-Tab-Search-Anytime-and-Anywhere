@@ -17,6 +17,7 @@ import { TabContextMenu } from "@/features/search/ui/components/TabContextMenu";
 import { TimerIcon } from "@/features/search/ui/components/TimerIcon";
 import { useCloseOnOutsideClick } from "@/features/search/ui/hooks/useCloseOnOutsideClick";
 import { useDisplaySettings } from "@/features/search/ui/hooks/useDisplaySettings";
+import { useOverlayEntrance } from "@/features/search/ui/hooks/useOverlayEntrance";
 import { useEssentialTabNames } from "@/features/search/ui/hooks/useEssentialTabNames";
 import { useSearchNavigation } from "@/features/search/ui/hooks/useSearchNavigation";
 import { useSearchResults } from "@/features/search/ui/hooks/useSearchResults";
@@ -69,12 +70,13 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     todos,
     statuses,
     loadError,
+    loaded: snapshotLoaded,
     setTabs,
     setTimers,
     setTodos,
     setStatuses,
   } = useSearchSnapshot();
-  const displaySettings = useDisplaySettings();
+  const { displaySettings, loaded: settingsLoaded } = useDisplaySettings();
   const { essentialNames, setEssentialNames } = useEssentialTabNames();
 
   const results = useSearchResults({
@@ -188,11 +190,13 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     [],
   );
 
-  // The overlay gains an issue column when issue detection is on and a todo
-  // column while any tab is marked as todo. The popup has no columns.
+  // Size the overlay to the columns that are actually on screen. Using the
+  // detection flag here reserved a second column before any issues existed,
+  // so the panel jumped the moment the snapshot arrived.
   const overlayColumns =
-    1 + (displaySettings.detectForgeIssues ? 1 : 0) + (todoTabs.length > 0 ? 1 : 0);
+    1 + (results.forgeIssueEntries.length > 0 ? 1 : 0) + (todoTabs.length > 0 ? 1 : 0);
   const overlayAspect = overlayColumns === 3 ? "2/1" : overlayColumns === 2 ? "3/2" : "1/1";
+  const overlayOpen = useOverlayEntrance(layout === "overlay", snapshotLoaded && settingsLoaded);
 
   const navigation = useSearchNavigation({
     layout,
@@ -223,6 +227,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
       onClose={onClose}
       displaySettings={displaySettings}
       aspect={layout === "overlay" ? overlayAspect : "1/1"}
+      open={layout === "overlay" ? overlayOpen : true}
     >
       <div class="mb-[var(--zen-space-3)] flex items-center gap-[var(--zen-space-2)]">
         <SearchInput
