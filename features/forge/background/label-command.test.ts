@@ -89,7 +89,7 @@ describe("changeSelectedTabLabel", () => {
     );
   });
 
-  it("auto-labels every selected GitHub and GitLab tab, then still opens the editor", async () => {
+  it("only auto-labels when several tabs are selected, without opening the editor", async () => {
     const setLabel = vi.fn(async () => true);
     const changeLabel = vi.fn(async () => true);
     sendTabMessageMock.mockImplementation(async (tabId) => {
@@ -127,10 +127,10 @@ describe("changeSelectedTabLabel", () => {
     expect(setLabel).toHaveBeenCalledTimes(2);
     expect(setLabel).toHaveBeenCalledWith("ISSUE: #12 - Fix search", 4, true);
     expect(setLabel).toHaveBeenCalledWith("MR: #41 - !8 - Example change", 5, true);
-    expect(changeLabel).toHaveBeenCalledTimes(1);
+    expect(changeLabel).not.toHaveBeenCalled();
   });
 
-  it("opens the editor when several selected tabs are not forge pages", async () => {
+  it("does nothing else when several selected tabs are not forge pages", async () => {
     const setLabel = vi.fn(async () => true);
     const changeLabel = vi.fn(async () => true);
 
@@ -146,7 +146,24 @@ describe("changeSelectedTabLabel", () => {
     );
 
     expect(setLabel).not.toHaveBeenCalled();
-    // Nothing was auto-labelled, so the whole label is selected.
+    expect(changeLabel).not.toHaveBeenCalled();
+  });
+
+  it("opens the editor with the whole label selected for one plain tab", async () => {
+    const setLabel = vi.fn(async () => true);
+    const changeLabel = vi.fn(async () => true);
+
+    await changeSelectedTabLabel(
+      workspace({
+        listSelectedTabs: async () => [
+          tab({ id: 5, title: "B", url: "https://example.com/b", active: true }),
+        ],
+        setLabel,
+        changeLabel,
+      }),
+    );
+
+    expect(setLabel).not.toHaveBeenCalled();
     expect(changeLabel).toHaveBeenCalledWith(5, "all");
   });
 

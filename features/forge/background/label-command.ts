@@ -131,8 +131,14 @@ export async function changeSelectedTabLabel(
     }
   }
 
-  // Forge tabs get their label first; the editor then opens on the current tab
-  // either way, starting from that label so it can still be changed.
+  // With several tabs selected the shortcut is a bulk auto-label only: there is
+  // no single tab to edit by hand. One tab gets its label (if any) and the editor.
+  if (selected.length > 1) {
+    debugLog(`${LOG_PREFIX} change-tab-label: ${selected.length} tabs selected, auto-label only`, {
+      labelled: [...labelled],
+    });
+    return;
+  }
 
   const editorId = editorTabId(selected);
   const tabId = editorId ?? (await workspace.resolveAnchorTabId(preferredTabId));
