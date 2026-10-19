@@ -1,5 +1,10 @@
 import type { JSX } from "preact";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import {
+  FORGE_NAVIGATOR_PREFIXES,
+  TODO_NAVIGATOR_PREFIXES,
+  type NavigatorQuery,
+} from "@/features/search/model/ranking";
 import type { SearchLayout } from "@/features/search/ui/types";
 import type { SearchItem, TabInfo } from "@/shared/types";
 import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
@@ -13,7 +18,8 @@ export interface UseSearchNavigationOptions {
   items: SearchItem[];
   navigatorEntries: ForgeIssueEntry[];
   todoTabs: TabInfo[];
-  forgeNavigatorQuery: { active: boolean; filterQuery: string };
+  forgeNavigatorQuery: NavigatorQuery;
+  todoNavigatorQuery: NavigatorQuery;
   bestForgeIndex: number;
   bestTabWordCount: number;
   bestForgeWordCount: number;
@@ -21,6 +27,10 @@ export interface UseSearchNavigationOptions {
   onActivateItem: (item: SearchItem) => void;
   onActivateForgeEntry: (entry: ForgeIssueEntry) => void;
   onActivateTodoTab: (tab: TabInfo) => void;
+}
+
+function isPrefixKey(prefixes: readonly string[], key: string): boolean {
+  return prefixes.includes(key);
 }
 
 function clampIndex(index: number, count: number): number {
@@ -43,6 +53,7 @@ export function useSearchNavigation({
   navigatorEntries,
   todoTabs,
   forgeNavigatorQuery,
+  todoNavigatorQuery,
   bestForgeIndex,
   bestTabWordCount,
   bestForgeWordCount,
@@ -74,8 +85,13 @@ export function useSearchNavigation({
   const canFocusTabs = items.length > 0;
   const searchQuery = forgeNavigatorQuery.filterQuery.trim();
 
+  // "@" hands the keyboard to the todo column the way "!" and "#" hand it to
+  // the issue navigator.
+  const shouldFocusTodoQuery = canFocusTodos && todoNavigatorQuery.active;
+
   const shouldFocusForge =
     canFocusForge &&
+    !todoNavigatorQuery.active &&
     (forgeNavigatorQuery.active ||
       (Boolean(searchQuery) && bestForgeWordCount > 0 && bestForgeWordCount >= bestTabWordCount));
 
@@ -98,7 +114,7 @@ export function useSearchNavigation({
         ? "forge"
         : userPane === "todos" && canFocusTodos
           ? "todos"
-          : shouldFocusCurrentTodo
+          : shouldFocusTodoQuery || shouldFocusCurrentTodo
             ? "todos"
             : shouldFocusForge
               ? "forge"
@@ -182,6 +198,12 @@ export function useSearchNavigation({
     const count = items.length;
     const forgeCount = navigatorEntries.length;
     const todoCount = todoTabs.length;
+    const prefixPane: SearchPane | null =
+      canFocusForge && isPrefixKey(FORGE_NAVIGATOR_PREFIXES, event.key)
+        ? "forge"
+        : canFocusTodos && isPrefixKey(TODO_NAVIGATOR_PREFIXES, event.key)
+          ? "todos"
+          : null;
 
     if (event.key === "Escape") {
       onClose();
@@ -195,14 +217,17 @@ export function useSearchNavigation({
         focusPane(next);
       }
     } else if (
-      (event.key === "#" || event.key === "!") &&
+      prefixPane &&
       !event.ctrlKey &&
       !event.metaKey &&
       !event.altKey &&
-      canFocusForge &&
       (inputRef.current?.selectionStart ?? 0) === 0
     ) {
-      focusForgePane(0);
+      if (prefixPane === "forge") {
+        focusForgePane(0);
+      } else {
+        focusTodosPane(0);
+      }
     } else if (event.key === "Enter") {
       if (activePane === "forge") {
         const selectedForge = navigatorEntries[selectedForgeIndex];

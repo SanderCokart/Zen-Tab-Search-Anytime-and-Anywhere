@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from "preact/hooks";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
 import type { ForgeIssueSortMode } from "@/features/search/model/ranking";
-import { collectTodoTabs } from "@/features/todos/model/todo";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
 import {
   TRAFFIC_LIGHT_MENU_SELECTOR,
@@ -83,6 +82,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     tabs,
     spaces,
     essentialNames,
+    todos,
     displaySettings,
     layout,
     query,
@@ -98,10 +98,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
   const rename = useTabRename({ essentialNames, setEssentialNames, setTabs });
   const todoActions = useTodoActions({ setTodos });
   const statusActions = useStatusActions({ setStatuses });
-  const todoTabs = useMemo(
-    () => collectTodoTabs(results.labeledTabs, todos),
-    [results.labeledTabs, todos],
-  );
+  const todoTabs = results.todoTabs;
 
   useCloseOnOutsideClick(contextMenu !== null, "[data-testid='zen-tab-context-menu']", () =>
     setContextMenu(null),
@@ -194,7 +191,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
   // detection flag here reserved a second column before any issues existed,
   // so the panel jumped the moment the snapshot arrived.
   const overlayColumns =
-    1 + (results.forgeIssueEntries.length > 0 ? 1 : 0) + (todoTabs.length > 0 ? 1 : 0);
+    1 + (results.forgeIssueEntries.length > 0 ? 1 : 0) + (results.allTodoTabs.length > 0 ? 1 : 0);
   const overlayAspect = overlayColumns === 3 ? "2/1" : overlayColumns === 2 ? "3/2" : "1/1";
   const overlayOpen = useOverlayEntrance(layout === "overlay", snapshotLoaded && settingsLoaded);
 
@@ -206,6 +203,7 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
     navigatorEntries: results.navigatorEntries,
     todoTabs,
     forgeNavigatorQuery: results.forgeNavigatorQuery,
+    todoNavigatorQuery: results.todoNavigatorQuery,
     bestForgeIndex: results.bestForgeIndex,
     bestTabWordCount: results.bestTabWordCount,
     bestForgeWordCount: results.bestForgeWordCount,
@@ -369,9 +367,10 @@ export function SearchApp({ onClose, pageJump = 5, layout = "popup" }: SearchApp
             onOpenStatusMenu={toggleStatusMenu}
           />
         )}
-        {layout === "overlay" && todoTabs.length > 0 && (
+        {layout === "overlay" && results.allTodoTabs.length > 0 && (
           <TodoNavigator
             tabs={todoTabs}
+            allTabs={results.allTodoTabs}
             statuses={statuses}
             statusMenuTabId={statusMenu?.tabId ?? null}
             backgroundColor={displaySettings.issueBackgroundColor}

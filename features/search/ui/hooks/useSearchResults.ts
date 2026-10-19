@@ -6,21 +6,25 @@ import {
   buildSearchItems,
   excludePinnedSearchSources,
   filterSearchDocuments,
+  filterTodoTabs,
   flattenForgeNavigatorEntries,
   groupSearchItems,
   parseForgeNavigatorQuery,
+  parseTodoNavigatorQuery,
   prioritizeCurrentTab,
   rankForgeIssueEntries,
   type ForgeIssueSortMode,
 } from "@/features/search/model/ranking";
 import type { DisplaySettings } from "@/features/settings/model/display-settings";
 import type { SearchLayout } from "@/features/search/ui/types";
-import { tabBrowserId, type SpaceInfo, type TabInfo } from "@/shared/types";
+import { collectTodoTabs } from "@/features/todos/model/todo";
+import { tabBrowserId, type SpaceInfo, type TabInfo, type TabTodo } from "@/shared/types";
 
 export interface UseSearchResultsOptions {
   tabs: TabInfo[];
   spaces: SpaceInfo[];
   essentialNames: Record<string, string>;
+  todos: Map<number, TabTodo>;
   displaySettings: DisplaySettings;
   layout: SearchLayout;
   query: string;
@@ -35,6 +39,7 @@ export function useSearchResults({
   tabs,
   spaces,
   essentialNames,
+  todos,
   displaySettings,
   layout,
   query,
@@ -67,7 +72,28 @@ export function useSearchResults({
     return labeledTabs.filter((tab) => !issueTabs.has(tab));
   }, [allForgeEntries, displaySettings.filterIssuesInOverlay, labeledTabs, layout]);
 
-  const forgeNavigatorQuery = useMemo(() => parseForgeNavigatorQuery(query), [query]);
+  // "@" sends the keyboard to the todo column; the rest of the query still
+  // filters the tab list and the issue navigator, as "!" and "#" do.
+  const todoNavigatorQuery = useMemo(() => parseTodoNavigatorQuery(query), [query]);
+
+  const forgeNavigatorQuery = useMemo(
+    () =>
+      todoNavigatorQuery.active
+        ? { active: false, filterQuery: todoNavigatorQuery.filterQuery }
+        : parseForgeNavigatorQuery(query),
+    [query, todoNavigatorQuery],
+  );
+
+  /** Every todo tab, whatever the query; decides whether the column is shown at all. */
+  const allTodoTabs = useMemo(() => collectTodoTabs(labeledTabs, todos), [labeledTabs, todos]);
+
+  const todoTabs = useMemo(
+    () =>
+      todoNavigatorQuery.active
+        ? filterTodoTabs(allTodoTabs, todoNavigatorQuery.filterQuery)
+        : allTodoTabs,
+    [allTodoTabs, todoNavigatorQuery],
+  );
 
   const rankedForgeIssueEntries = useMemo(
     () => rankForgeIssueEntries(forgeIssueEntries, forgeNavigatorQuery.filterQuery),
@@ -115,7 +141,10 @@ export function useSearchResults({
   );
 
   const filtered = useMemo(() => {
-    const effectiveQuery = forgeNavigatorQuery.active ? forgeNavigatorQuery.filterQuery : query;
+    const effectiveQuery =
+      forgeNavigatorQuery.active || todoNavigatorQuery.active
+        ? forgeNavigatorQuery.filterQuery
+        : query;
     const matches = filterSearchDocuments(searchDocuments, effectiveQuery);
     if (effectiveQuery.trim()) {
       return matches;
@@ -127,7 +156,7 @@ export function useSearchResults({
       items: prioritizeCurrentTab(matches.items, activeId),
       bestExactWordCount: 0,
     };
-  }, [forgeNavigatorQuery, query, searchable, searchDocuments]);
+  }, [forgeNavigatorQuery, query, searchable, searchDocuments, todoNavigatorQuery.active]);
 
   const items = filtered.items;
   const bestTabWordCount = filtered.bestExactWordCount;
@@ -156,6 +185,9 @@ export function useSearchResults({
     forgeIssueEntries,
     visibleTabs,
     forgeNavigatorQuery,
+    todoNavigatorQuery,
+    allTodoTabs,
+    todoTabs,
     rankedForgeIssueEntries,
     filteredForgeIssueEntries,
     navigatorEntries,

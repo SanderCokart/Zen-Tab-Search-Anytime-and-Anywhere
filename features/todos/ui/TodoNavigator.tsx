@@ -1,6 +1,8 @@
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { hostname } from "@/features/search/ui/lib/format";
 import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
+import { PrefixHint } from "@/features/search/ui/components/PrefixHint";
+import { TODO_NAVIGATOR_PREFIXES } from "@/features/search/model/ranking";
 import { StatusButton } from "@/features/status/ui/StatusButton";
 import { TRAFFIC_LIGHT_OPTIONS } from "@/features/status/model/status";
 import { todoTabIdsToClear, type TodoClearFilter } from "@/features/todos/model/todo";
@@ -36,6 +38,7 @@ function clearOptions(
 
 export function TodoNavigator({
   tabs,
+  allTabs = tabs,
   statuses,
   statusMenuTabId,
   backgroundColor,
@@ -49,7 +52,10 @@ export function TodoNavigator({
   onContextMenu,
   confirm = (message) => window.confirm(message),
 }: {
+  /** The rows to list: every todo, or the ones an "@" query matches. */
   tabs: TabInfo[];
+  /** Every todo, whatever the query; the count and the "Clear" menu act on these. */
+  allTabs?: TabInfo[];
   statuses: Map<number, TrafficLight>;
   /** The tab whose status menu is open, if any. */
   statusMenuTabId: number | null;
@@ -74,10 +80,13 @@ export function TodoNavigator({
       data-testid="zen-todo-column"
     >
       <div class="mb-[var(--zen-space-2)] flex min-w-0 items-center justify-between gap-[var(--zen-space-2)]">
-        <strong class="min-w-0 truncate text-[length:var(--zen-text-base)]">Todos</strong>
+        <span class="flex min-w-0 items-center">
+          <PrefixHint prefixes={TODO_NAVIGATOR_PREFIXES} column="todos" />
+          <strong class="min-w-0 truncate text-[length:var(--zen-text-base)]">Todos</strong>
+        </span>
         <span class="flex shrink-0 items-center gap-[var(--zen-space-2)]">
           <span class="text-zen-lavender text-[length:var(--zen-text-sm)]">
-            {tabs.length} to do
+            {allTabs.length} to do
           </span>
           <select
             class="border-zen-line bg-zen-chip text-zen-subtle hover:text-zen-text cursor-pointer rounded-[var(--zen-radius)] border px-[var(--zen-space-1)] font-[inherit] text-[length:var(--zen-text-sm)]"
@@ -90,7 +99,7 @@ export function TodoNavigator({
               const filter = select.value as TodoClearFilter;
               // Always back to the "Clear…" prompt, whatever the answer.
               select.value = "";
-              const tabIds = todoTabIdsToClear(tabs, statuses, filter);
+              const tabIds = todoTabIdsToClear(allTabs, statuses, filter);
               if (tabIds.length === 0) {
                 return;
               }
@@ -104,7 +113,7 @@ export function TodoNavigator({
             <option value="" disabled>
               Clear…
             </option>
-            {clearOptions(tabs, statuses).map(({ filter, label, count }) => (
+            {clearOptions(allTabs, statuses).map(({ filter, label, count }) => (
               <option key={filter} value={filter} disabled={count === 0}>
                 {label} ({count})
               </option>
@@ -113,6 +122,11 @@ export function TodoNavigator({
         </span>
       </div>
       <div class="zen-scroll flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+        {tabs.length === 0 && (
+          <p class="text-zen-muted m-0 py-[var(--zen-space-3)] text-center text-[length:var(--zen-text-sm)]">
+            No matching todos.
+          </p>
+        )}
         {tabs.map((tab, index) => {
           const selected = selectedIndex === index;
           const tabId = tabBrowserId(tab);

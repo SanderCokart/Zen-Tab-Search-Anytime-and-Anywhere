@@ -7,10 +7,12 @@ import {
   excludePinnedSearchSources,
   filterForgeIssueEntries,
   filterSearchItems,
+  filterTodoTabs,
   flattenForgeNavigatorEntries,
   fuzzyMatchWithScore,
   groupSearchItems,
   parseForgeNavigatorQuery,
+  parseTodoNavigatorQuery,
   prioritizeCurrentTab,
   rankForgeIssueEntries,
   sortForgeIssueEntries,
@@ -502,5 +504,36 @@ describe("parseForgeNavigatorQuery", () => {
       "42",
       "7",
     ]);
+  });
+});
+
+describe("parseTodoNavigatorQuery", () => {
+  it("activates on a leading @ and strips it", () => {
+    expect(parseTodoNavigatorQuery("@deploy")).toEqual({ active: true, filterQuery: "deploy" });
+    expect(parseTodoNavigatorQuery(" @ fix")).toEqual({ active: true, filterQuery: "fix" });
+    expect(parseTodoNavigatorQuery("mail @home")).toEqual({
+      active: false,
+      filterQuery: "mail @home",
+    });
+  });
+
+  it("leaves the issue prefixes to the forge parser", () => {
+    expect(parseTodoNavigatorQuery("#42").active).toBe(false);
+    expect(parseForgeNavigatorQuery("@42").active).toBe(false);
+  });
+});
+
+describe("filterTodoTabs", () => {
+  const todos = [
+    { ...tab(1), title: "Write release notes" },
+    { ...tab(2), title: "Deploy staging" },
+  ];
+
+  it("keeps the column order for an empty query", () => {
+    expect(filterTodoTabs(todos, " ")).toBe(todos);
+  });
+
+  it("keeps only the todos that match", () => {
+    expect(filterTodoTabs(todos, "deploy").map((entry) => entry.id)).toEqual([2]);
   });
 });

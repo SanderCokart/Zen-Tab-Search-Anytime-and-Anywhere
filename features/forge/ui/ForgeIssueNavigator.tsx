@@ -1,11 +1,13 @@
 import { useMemo } from "preact/hooks";
 import {
+  FORGE_NAVIGATOR_PREFIXES,
   flattenForgeNavigatorEntries,
   forgeEntryDisplayTitle,
   groupForgeIssueEntries,
   type ForgeIssueSortMode,
 } from "@/features/search/model/ranking";
 import { forgeTitleIncludesRefId } from "@/features/forge/model/forge-label";
+import { PrefixHint } from "@/features/search/ui/components/PrefixHint";
 import { TabActions } from "@/features/search/ui/components/TabActions";
 import { formatForgeEntryDate } from "@/features/search/ui/lib/format";
 import { entryTextClass, projectBorderColors } from "@/features/search/ui/lib/styles";
@@ -180,9 +182,12 @@ export function ForgeIssueNavigator({
       style={{ backgroundColor }}
     >
       <div class="mb-[var(--zen-space-2)] flex min-w-0 items-center justify-between gap-[var(--zen-space-2)]">
-        <strong class="min-w-0 truncate text-[length:var(--zen-text-base)]">
-          Issues and requests
-        </strong>
+        <span class="flex min-w-0 items-center">
+          <PrefixHint prefixes={FORGE_NAVIGATOR_PREFIXES} column="issues and requests" />
+          <strong class="min-w-0 truncate text-[length:var(--zen-text-base)]">
+            Issues and requests
+          </strong>
+        </span>
         <button
           type="button"
           class="text-zen-lavender shrink-0 cursor-pointer border-0 bg-transparent p-0 text-[length:var(--zen-text-sm)]"

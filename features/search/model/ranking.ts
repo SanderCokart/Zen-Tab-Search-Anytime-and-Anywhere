@@ -367,15 +367,46 @@ export function buildForgeIssueEntries(allTabs: TabInfo[]): ForgeIssueEntry[] {
   });
 }
 
-export function parseForgeNavigatorQuery(query: string): {
+export interface NavigatorQuery {
+  /** The query starts with one of the column's prefixes, so the column takes the keyboard. */
   active: boolean;
+  /** The query with that prefix removed. */
   filterQuery: string;
-} {
+}
+
+/** Typing one of these first sends the keyboard to the issue navigator. */
+export const FORGE_NAVIGATOR_PREFIXES = ["!", "#"] as const;
+/** Typing this first sends the keyboard to the todo column. */
+export const TODO_NAVIGATOR_PREFIXES = ["@"] as const;
+
+function parseNavigatorQuery(query: string, prefixes: readonly string[]): NavigatorQuery {
   const trimmed = query.trimStart();
-  if (trimmed.startsWith("#") || trimmed.startsWith("!")) {
+  if (prefixes.some((prefix) => trimmed.startsWith(prefix))) {
     return { active: true, filterQuery: trimmed.slice(1).trimStart() };
   }
   return { active: false, filterQuery: query };
+}
+
+export function parseForgeNavigatorQuery(query: string): NavigatorQuery {
+  return parseNavigatorQuery(query, FORGE_NAVIGATOR_PREFIXES);
+}
+
+export function parseTodoNavigatorQuery(query: string): NavigatorQuery {
+  return parseNavigatorQuery(query, TODO_NAVIGATOR_PREFIXES);
+}
+
+/**
+ * Todo tabs that match `query`, best match first. An empty query keeps the
+ * column's own order, which already puts the current tab first.
+ */
+export function filterTodoTabs(todoTabs: TabInfo[], query: string): TabInfo[] {
+  if (!query.trim()) {
+    return todoTabs;
+  }
+  return filterSearchItems(
+    todoTabs.map((tab) => ({ kind: "tab" as const, data: tab })),
+    query,
+  ).flatMap((item) => (item.kind === "tab" ? [item.data] : []));
 }
 
 export function forgeEntrySearchTexts(entry: ForgeIssueEntry): string[] {

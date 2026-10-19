@@ -1104,6 +1104,52 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("moves arrow navigation to the todo column and filters it when the query starts with @", async () => {
+    const todoTabs = [
+      ...tabs,
+      { id: 3, title: "Deploy staging", url: "https://example.net", favIconUrl: "", windowId: 1 },
+    ];
+    const { root, onClose, sendMessage } = mountSearchApp(
+      vi.fn(),
+      todoTabs,
+      "overlay",
+      { detectForgeIssues: false },
+      [],
+      [
+        { tabId: 2, status: "todo" },
+        { tabId: 3, status: "todo" },
+      ],
+    );
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-selected='true']")?.textContent).toContain("First tab"),
+    );
+    const column = root.querySelector("[data-testid='zen-todo-column']")!;
+    expect(column.querySelector("[data-testid='zen-prefix-hint']")?.textContent).toBe("@ - ");
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.value = "@deploy";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-todo-selected='true']")?.textContent).toContain(
+        "Deploy staging",
+      ),
+    );
+    expect(root.querySelector("[data-selected='true']")).toBeNull();
+    expect(column.textContent).not.toContain("Second tab");
+    expect(column.textContent).toContain("2 to do");
+
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "switchTab", tabId: 3, domId: undefined }),
+    );
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
   it("prefers a direct issue match over a direct normal-tab match", async () => {
     const mixedTabs = [
       {
