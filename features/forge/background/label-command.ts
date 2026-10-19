@@ -25,11 +25,12 @@ async function getForgePageInfo(tabId?: number, url?: string): Promise<ForgePage
   return {};
 }
 
-async function applyForgeLabel(
-  workspace: WorkspaceAdapter,
-  tab: TabInfo,
-  silent: boolean,
-): Promise<boolean> {
+/**
+ * Sets a GitHub/GitLab tab's label from its issue, MR or PR. Always silent: the
+ * rename editor opens right after, and Zen's "renamed" toast at that moment can
+ * take focus from the editor's input and end the rename before it starts.
+ */
+async function applyForgeLabel(workspace: WorkspaceAdapter, tab: TabInfo): Promise<boolean> {
   const url = tab.url || "";
   if (!isUsableTabId(tab.id) || !parseForgeUrl(url)) {
     return false;
@@ -41,7 +42,7 @@ async function applyForgeLabel(
     return false;
   }
 
-  const set = await workspace.setLabel(label, tab.id, silent);
+  const set = await workspace.setLabel(label, tab.id, true);
   if (set) {
     debugLog(`${LOG_PREFIX} change-tab-label: auto-set forge label`, {
       label,
@@ -111,7 +112,6 @@ export async function changeSelectedTabLabel(
 
   const listed = await workspace.listSelectedTabs(preferredTabId);
   const selected = listed.filter((tab) => isUsableTabId(tab.id));
-  const bulk = selected.length > 1;
   debugLog(`${LOG_PREFIX} change-tab-label: selection`, {
     preferredTabId,
     listed: listed.map((tab) => ({
@@ -126,15 +126,13 @@ export async function changeSelectedTabLabel(
   let applied = 0;
 
   for (const tab of selected) {
-    if (await applyForgeLabel(workspace, tab, bulk)) {
+    if (await applyForgeLabel(workspace, tab)) {
       applied += 1;
     }
   }
 
-  if (bulk && applied > 0) {
-    debugLog(`${LOG_PREFIX} change-tab-label: labelled ${applied} forge tabs, no editor`);
-    return;
-  }
+  // Forge tabs get their label first; the editor then opens on the current tab
+  // either way, starting from that label so it can still be changed.
 
   const editorId = editorTabId(selected);
   const tabId = editorId ?? (await workspace.resolveAnchorTabId(preferredTabId));

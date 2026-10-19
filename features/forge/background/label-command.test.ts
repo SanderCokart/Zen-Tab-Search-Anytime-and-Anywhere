@@ -80,11 +80,15 @@ describe("changeSelectedTabLabel", () => {
       }),
     );
 
-    expect(setLabel).toHaveBeenCalledWith("ISSUE: #12 - Example issue", 4, false);
+    expect(setLabel).toHaveBeenCalledWith("ISSUE: #12 - Example issue", 4, true);
     expect(changeLabel).toHaveBeenCalledWith(4);
+    // The label is set before the editor opens, so the editor starts from it.
+    expect(setLabel.mock.invocationCallOrder[0]).toBeLessThan(
+      changeLabel.mock.invocationCallOrder[0]!,
+    );
   });
 
-  it("auto-labels every selected GitHub and GitLab tab without opening the editor", async () => {
+  it("auto-labels every selected GitHub and GitLab tab, then still opens the editor", async () => {
     const setLabel = vi.fn(async () => true);
     const changeLabel = vi.fn(async () => true);
     sendTabMessageMock.mockImplementation(async (tabId) => {
@@ -122,7 +126,7 @@ describe("changeSelectedTabLabel", () => {
     expect(setLabel).toHaveBeenCalledTimes(2);
     expect(setLabel).toHaveBeenCalledWith("ISSUE: #12 - Fix search", 4, true);
     expect(setLabel).toHaveBeenCalledWith("MR: #41 - !8 - Example change", 5, true);
-    expect(changeLabel).not.toHaveBeenCalled();
+    expect(changeLabel).toHaveBeenCalledTimes(1);
   });
 
   it("opens the editor when several selected tabs are not forge pages", async () => {
