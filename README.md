@@ -7,6 +7,7 @@ Zen Tab Search is a fast fuzzy search overlay and popup for tabs, spaces, and cu
 ## Features
 
 Open **Display options** from the gear on either search surface. Change or assign shortcuts in `about:addons` → **Zen Tab Search** → **Manage Extension Shortcuts**.
+Or shortcut, **CTRL + Shift + A**.
 
 ### Omnibar
 
