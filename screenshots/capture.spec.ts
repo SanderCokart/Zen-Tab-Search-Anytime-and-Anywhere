@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const outputDir = path.join(fileURLToPath(new URL("..", import.meta.url)), "docs", "screenshots");
 
@@ -13,6 +13,8 @@ type Capture = {
   fullPage?: boolean;
   clip?: "omnibar" | "popup" | "card";
   locator?: string;
+  /** Clips to the box around every element the selector matches, plus a margin. */
+  around?: string;
 };
 
 async function waitForSearch(page: Page, overlay: boolean) {
@@ -27,6 +29,16 @@ async function tabRow(page: Page) {
   const row = page.getByRole("option", { name: /Architecture guide/ });
   await row.scrollIntoViewIfNeeded();
   return row;
+}
+
+/** Outlines a control so a screenshot shows where to find it. */
+async function highlight(target: Locator) {
+  await target.evaluate((element) => {
+    if (element instanceof HTMLElement) {
+      element.style.outline = "3px solid #f97316";
+      element.style.outlineOffset = "-3px";
+    }
+  });
 }
 
 const captures: Capture[] = [
@@ -108,6 +120,7 @@ const captures: Capture[] = [
       await page.locator("[data-omnibar-stage='open']").waitFor();
       await expect(page.getByText("Active timers")).toBeVisible();
     },
+    after: (page) => highlight(page.locator("button[title='Close active timers']")),
     clip: "omnibar",
   },
   {
@@ -182,15 +195,16 @@ const captures: Capture[] = [
     scene: "search-omnibar",
     file: "settings-gear.png",
     ready: (page) => waitForSearch(page, true),
-    after: async (page) => {
-      await page.getByRole("button", { name: "Open display settings" }).evaluate((button) => {
-        if (button instanceof HTMLElement) {
-          button.style.outline = "3px solid #f97316";
-          button.style.outlineOffset = "-3px";
-        }
-      });
-    },
+    after: (page) => highlight(page.getByRole("button", { name: "Open display settings" })),
     clip: "omnibar",
+  },
+  {
+    scene: "search-omnibar",
+    file: "timers-button.png",
+    ready: (page) => waitForSearch(page, true),
+    after: (page) => highlight(page.locator("button[title='Show active timers']")),
+    around:
+      "button[title='Show active timers'], button[title='Host overrides for this tab'], button[title='Open display settings']",
   },
   {
     scene: "display-settings",
@@ -261,6 +275,23 @@ test.describe("README screenshots", () => {
       await capture.after?.(page);
       const target = path.join(outputDir, capture.file);
       const options = { path: target, animations: "disabled" as const };
+      if (capture.around) {
+        const boxes = await page
+          .locator(capture.around)
+          .evaluateAll((elements) =>
+            elements.map((element) => element.getBoundingClientRect().toJSON() as DOMRect),
+          );
+        const margin = 12;
+        const left = Math.min(...boxes.map((box) => box.left)) - margin;
+        const top = Math.min(...boxes.map((box) => box.top)) - margin;
+        const right = Math.max(...boxes.map((box) => box.right)) + margin;
+        const bottom = Math.max(...boxes.map((box) => box.bottom)) + margin;
+        await page.screenshot({
+          ...options,
+          clip: { x: left, y: top, width: right - left, height: bottom - top },
+        });
+        return;
+      }
       if (capture.locator) {
         await page.locator(capture.locator).screenshot(options);
         return;

@@ -4,6 +4,52 @@ Find any tab, switch spaces, add context, and stay focused in Zen Browser.
 
 Zen Tab Search is a fast fuzzy search overlay and popup for tabs, spaces, and custom labels. It is exclusive to [Zen Browser](https://zen-browser.app/).
 
+## Contents
+
+- [Installation](#installation)
+  - [From a GitHub release (recommended)](#from-a-github-release-recommended)
+  - [Build from source](#build-from-source)
+- [Features](#features)
+  - [Settings](#settings)
+  - [Omnibar](#omnibar)
+  - [Toolbar popup](#toolbar-popup)
+  - [Status, rename, and the tab menu](#status-rename-and-the-tab-menu)
+  - [Timers](#timers)
+  - [Host overrides](#host-overrides)
+  - [Layout and theme](#layout-and-theme)
+  - [Reuse an open tab for external links](#reuse-an-open-tab-for-external-links)
+  - [AI agents (MCP)](#ai-agents-mcp)
+- [Important notices](#important-notices)
+- [Credits and license](#credits-and-license)
+- [Why this cannot be published on AMO](#why-this-cannot-be-published-on-amo)
+- [Creating a release](#creating-a-release)
+- [Development](#development)
+- [Project structure](#project-structure)
+- [License](#license)
+
+## Installation
+
+### From a GitHub release (recommended)
+
+1. Download the latest `.zip` from the [Releases page](https://github.com/SanderCokart/Zen-Tab-Search-Anytime-and-Anywhere/releases).
+2. Open `about:config` in Zen Browser.
+3. Set these preferences and restart Zen:
+  - `extensions.experiments.enabled` = `true`
+  - `xpinstall.signatures.required` = `false`
+4. Open `about:addons`, click the gear icon, and choose **Install Add-on From File…**.
+5. Select the downloaded `.zip` (you can also drag it onto the page).
+
+**Optional: let AI agents control Zen.** The same release has a `zen-tab-search-mcp.mjs` asset, the MCP server for Claude, Cursor and other MCP clients. It needs Node.js 20 or newer. See [mcp/README.md](mcp/README.md#install) to download it, turn it on in the settings, and register it with your client.
+
+### Build from source
+
+```bash
+npm install
+npm run zip
+```
+
+The zip will be produced by WXT. Install it using the same `about:addons` → gear → **Install Add-on From File…** flow above.
+
 ## Features
 
 Change or assign shortcuts in `about:addons` → **Zen Tab Search** → **Manage Extension Shortcuts** (`Ctrl+Shift+A` opens `about:addons`).
@@ -63,19 +109,38 @@ Zen gives essential tabs no label you can change, so they always show the page t
 
 ### Timers
 
-`Alt+T` sets a timer on the current tab. The clock on a result, **Timer** in the tab menu, and the clock beside the search field open the same controls. Running timers show a countdown on the row; the list lets you jump to a tab, edit one, or clear them all.
+`Alt+T` sets a timer on the current tab. The clock on a result and **Timer** in the tab menu open the same controls. Running timers show a countdown on the row.
+
+The ⏱ button beside the search field, with a badge counting the running timers, opens the **Active timers** list. From there you can jump to a tab, edit a timer, or clear them all. While the list is open the button becomes ✕.
+
+<p align="center">
+  <img src="docs/screenshots/timers-button.png" alt="The active timers button beside the search field" width="240" />
+</p>
 
 Besides the presets, the **When** field reads plain language. Type a duration like `45m`, `2h`, or `1d 30m`, or a moment like `tomorrow at 9am`, `friday at 5pm`, or `next monday`. **Ends at** fills in as you type, so you can check the result before pressing **Set**, or pick the date and time there directly.
 
-| Active timers | Set a timer |
-| :-----------: | :---------: |
-| ![Active timers list](docs/screenshots/timers-from-search.png) | ![Timer presets and custom time](docs/screenshots/timer-popup.png) |
+<p align="center">
+  <img src="docs/screenshots/timer-natural-language.png" alt="Typing friday at 5pm fills in the end time" width="560" />
+</p>
 
-![Typing "friday at 5pm" fills in the end time](docs/screenshots/timer-natural-language.png)
+<table>
+  <tr>
+    <th width="50%">Active timers</th>
+    <th width="50%">Create or edit a timer</th>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/timers-from-search.png" alt="Active timers list" width="100%" /></td>
+    <td width="50%"><img src="docs/screenshots/timer-form.png" alt="Timer form with presets and a plain-language field" width="100%" /></td>
+  </tr>
+</table>
 
 ### Host overrides
 
-Pin a tab’s hostnames to a fixed IP, like a per-tab hosts file. The overlay and the result menu both open the editor.
+Pin a tab’s hostnames to a fixed IP, like a per-tab hosts file. Open the editor from the ⇄ button beside the search field, from **Host overrides** in a result's menu, or by right-clicking any page: Zen's own context menu has **Host overrides** → **Manage host overrides…**, plus **Turn all off** to switch off every override for that tab.
+
+<p align="center">
+  <img src="docs/screenshots/host-overrides-browser-menu.png" alt="Host overrides in Zen's page context menu" width="400" />
+</p>
 
 <p align="center">
   <img src="docs/screenshots/host-popup.png" alt="Host overrides for a staging tab" width="560" />
@@ -105,59 +170,12 @@ Claude, Cursor, and other MCP clients can list spaces, folders, and tabs, rename
 
 ![AI agents (MCP) setting](docs/screenshots/mcp-settings.png)
 
-
-
-## Installation
-
-
-
-### From a GitHub release (recommended)
-
-1. Download the latest `.zip` from the [Releases page](https://github.com/SanderCokart/Zen-Tab-Search-Anytime-and-Anywhere/releases).
-2. Open `about:config` in Zen Browser.
-3. Set these preferences and restart Zen:
-  - `extensions.experiments.enabled` = `true`
-  - `xpinstall.signatures.required` = `false`
-4. Open `about:addons`, click the gear icon, and choose **Install Add-on From File…**.
-5. Select the downloaded `.zip` (you can also drag it onto the page).
-
-**Optional: let AI agents control Zen.** The same release has a `zen-tab-search-mcp.mjs` asset, the MCP server for Claude, Cursor and other MCP clients. It needs Node.js 20 or newer. See [mcp/README.md](mcp/README.md#install) to download it, turn it on in the settings, and register it with your client.
-
-
-
-### Build from source
-
-```bash
-npm install
-npm run zip
-```
-
-The zip will be produced by WXT. Install it using the same `about:addons` → gear → **Install Add-on From File…** flow above.
-
-## At a glance
-
-- Omnibar search with `Alt+F`, including when no page DOM is available
-- A legacy toolbar popup that stays fully functional, with an unmapped shortcut
-- GitHub and GitLab issues in a navigator beside the tabs
-- Todos, 🔴 🟠 🟢 status, and rename from the result menu
-- Names for essential tabs, which Zen cannot rename
-- Folder and subfolder sections
-- Timers from search, the tab menu, or `Alt+T`, set in plain language
-- Per-tab host overrides
-- Hide essentials or spaces, wrap or truncate titles, and theme the omnibar
-- Reuse of an already open tab for external links
-- Optional local MCP server for AI agents
-
-
-
 ## Important notices
 
 - This extension is exclusive to Zen Browser and relies on Zen's internal workspace and tab APIs.
 - It uses privileged `experiment_apis`, so it cannot be published on addons.mozilla.org (AMO) and must be installed from a zip file.
 - `extensions.experiments.enabled` must be `true` for Zen's extension APIs to be available.
 - `xpinstall.signatures.required` must be `false` to install the unsigned zip.
-
-
 
 ## Credits and license
 
@@ -250,8 +268,6 @@ scripts/              Build and release helpers
 docs/screenshots/     Feature stills used above, generated by `npm run screenshots`
 screenshots/          Mocked UI harness that Playwright captures from
 ```
-
-
 
 ## License
 
