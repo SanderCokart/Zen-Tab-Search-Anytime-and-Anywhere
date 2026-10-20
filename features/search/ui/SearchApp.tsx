@@ -109,7 +109,7 @@ export function SearchApp({
   });
 
   const rename = useTabRename({ essentialNames, setEssentialNames, setTabs });
-  const todoActions = useTodoActions({ setTodos });
+  const todoActions = useTodoActions({ setTodos, setStatuses });
   const statusActions = useStatusActions({ setStatuses });
   const todoTabs = results.todoTabs;
 

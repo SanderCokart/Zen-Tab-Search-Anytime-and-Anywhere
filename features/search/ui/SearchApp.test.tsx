@@ -763,6 +763,7 @@ describe("SearchApp", () => {
         "Second tab",
       ),
     );
+    await vi.waitFor(() => expect(root.querySelector("[data-status-light]")).toBeNull());
 
     confirm.mockRestore();
     render(null, root);

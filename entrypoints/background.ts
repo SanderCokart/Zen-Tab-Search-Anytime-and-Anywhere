@@ -223,7 +223,12 @@ export default defineBackground(() => {
       notify();
     },
     clearTodos: async (tabIds) => {
-      await Promise.all(tabIds.map((tabId) => todoService.setTodo(tabId, "none")));
+      await Promise.all(
+        tabIds.flatMap((tabId) => [
+          todoService.setTodo(tabId, "none"),
+          statusService.setStatus(tabId, "none"),
+        ]),
+      );
       notify();
     },
     getHostOverrides: hostOverrideService.getOverrides,
