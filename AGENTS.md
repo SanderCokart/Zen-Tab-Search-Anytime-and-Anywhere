@@ -107,6 +107,12 @@ surface asks it for data.
   matching requests to a loopback proxy started by the second experiment,
   `zenHosts` (`public/experiment/zenHosts/`), which tunnels every connection to
   the group's fixed IP. Only `features/hosts/background/host-proxy.ts` calls it.
+- **Settings backup** (`features/settings/background/settings-backup.ts`): Firefox
+  deletes storage.local on uninstall (including removing a temporary add-on with
+  the same ID), so the third experiment, `zenBackup`, mirrors the settings keys to
+  `zen-tab-search-settings.json` in the profile. When storage holds none of them,
+  the background restores from that file and reloads the extension. A new storage
+  key that is a user setting belongs in `BACKED_UP_STORAGE_KEYS`.
 
 ## Adding a feature
 

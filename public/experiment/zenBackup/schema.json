@@ -1,0 +1,28 @@
+[
+  {
+    "namespace": "zenBackup",
+    "description": "A copy of the extension's settings in the browser profile, kept when the add-on is uninstalled",
+    "functions": [
+      {
+        "name": "readSettingsBackup",
+        "type": "function",
+        "description": "Returns the saved backup text, or null when there is none",
+        "async": true,
+        "parameters": []
+      },
+      {
+        "name": "writeSettingsBackup",
+        "type": "function",
+        "description": "Replaces the saved backup",
+        "async": true,
+        "parameters": [
+          {
+            "name": "text",
+            "type": "string",
+            "description": "Backup contents (JSON)"
+          }
+        ]
+      }
+    ]
+  }
+]

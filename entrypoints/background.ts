@@ -5,6 +5,7 @@ import { registerContextMenus } from "@/app/background/context-menus";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { registerPopupWindowTracking } from "@/app/background/popup-tracking";
 import { openSettingsPopup } from "@/features/settings/background/popup";
+import { startSettingsBackup } from "@/features/settings/background/settings-backup";
 import { openCustomTimerPopup } from "@/features/timers/background/popup";
 import { openHostOverridesPopup } from "@/features/hosts/background/popup";
 import {
@@ -48,6 +49,9 @@ import {
 
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());
+  void startSettingsBackup().catch((error) => {
+    debugWarn(`${LOG_PREFIX} Could not start settings backup:`, formatError(error));
+  });
   const workspace = createZenWorkspaceAdapter({
     logDebugInfo: (context, anchorTabId) => logZenDebugInfo(workspace, context, anchorTabId),
   });

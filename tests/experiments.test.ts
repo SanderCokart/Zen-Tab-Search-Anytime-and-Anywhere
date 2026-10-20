@@ -3,7 +3,7 @@ import path from "node:path";
 import vm from "node:vm";
 import { describe, expect, it } from "vitest";
 
-const EXPERIMENTS = ["zenTabs", "zenHosts"] as const;
+const EXPERIMENTS = ["zenTabs", "zenHosts", "zenBackup"] as const;
 
 function experimentSource(name: (typeof EXPERIMENTS)[number]): string {
   // Vitest runs from the repo root.
