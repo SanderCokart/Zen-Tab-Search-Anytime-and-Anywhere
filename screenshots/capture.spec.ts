@@ -166,6 +166,33 @@ const captures: Capture[] = [
     },
   },
   {
+    scene: "search-omnibar",
+    file: "rename-essential.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      await page
+        .locator("[data-testid='zen-essential-grid'] [data-testid='zen-search-item']")
+        .first()
+        .click({ button: "right" });
+      await page.getByRole("menuitem", { name: "Rename" }).click();
+      await expect(page.getByText("Rename tab")).toBeVisible();
+    },
+  },
+  {
+    scene: "search-omnibar",
+    file: "settings-gear.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      await page.getByRole("button", { name: "Open display settings" }).evaluate((button) => {
+        if (button instanceof HTMLElement) {
+          button.style.outline = "3px solid #f97316";
+          button.style.outlineOffset = "-3px";
+        }
+      });
+    },
+    clip: "omnibar",
+  },
+  {
     scene: "display-settings",
     file: "display-settings.png",
     ready: async (page) => {
@@ -180,6 +207,29 @@ const captures: Capture[] = [
       await expect(page.getByRole("heading", { name: "Display options" })).toBeVisible();
     },
     locator: "fieldset:has([data-testid='zen-bridgeEnabled'])",
+  },
+  {
+    scene: "display-settings",
+    file: "external-links-settings.png",
+    ready: async (page) => {
+      await expect(page.getByRole("heading", { name: "Display options" })).toBeVisible();
+    },
+    after: async (page) => {
+      await page.locator("[data-testid='zen-reuseExternalTabs']").check();
+    },
+    locator: "fieldset:has([data-testid='zen-reuseExternalTabs'])",
+  },
+  {
+    scene: "timer-popup",
+    file: "timer-natural-language.png",
+    ready: async (page) => {
+      await expect(page.getByText("Presets")).toBeVisible();
+    },
+    after: async (page) => {
+      await page.getByPlaceholder("tomorrow at 9am or 1d 30m").fill("friday at 5pm");
+      await expect(page.getByText("Use a time like")).toHaveCount(0);
+    },
+    clip: "card",
   },
   {
     scene: "timer-popup",

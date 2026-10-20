@@ -6,8 +6,20 @@ Zen Tab Search is a fast fuzzy search overlay and popup for tabs, spaces, and cu
 
 ## Features
 
-Open **Display options** from the gear on either search surface. Change or assign shortcuts in `about:addons` → **Zen Tab Search** → **Manage Extension Shortcuts**.
-Or shortcut, **CTRL + Shift + A**.
+Change or assign shortcuts in `about:addons` → **Zen Tab Search** → **Manage Extension Shortcuts** (`Ctrl+Shift+A` opens `about:addons`).
+
+### Settings
+
+Every option in this guide lives in **Display options**. Open it from the ⚙ gear at the right of the search field, on both the omnibar and the toolbar popup. It also sits in `about:addons` → **Zen Tab Search** → **Preferences**. Changes apply as you make them, with no save button.
+
+![The gear beside the search field opens Display options](docs/screenshots/settings-gear.png)
+
+<details>
+<summary>The full Display options page</summary>
+
+![Display options page](docs/screenshots/display-settings.png)
+
+</details>
 
 ### Omnibar
 
@@ -29,7 +41,13 @@ The toolbar popup is a compact legacy surface. `Alt+F` no longer opens it; the w
 
 ### Status, rename, and the tab menu
 
-Right-click a result for rename, timer, host overrides, todo, and a red / orange / green status. `Alt+R` auto-labels GitLab and GitHub issues and MRs/PRs, or opens Zen's Change Label editor on other pages.
+Right-click a result for rename, timer, host overrides, todo, and a status. `Alt+R` auto-labels GitLab and GitHub issues and MRs/PRs, or opens Zen's Change Label editor on other pages.
+
+The status is a traffic light you set per tab. It tints the tab's row in every column, and the meaning is up to you, for example:
+
+- 🔴 **Red**: blocked, or needs attention first
+- 🟠 **Orange**: in progress, or waiting on someone
+- 🟢 **Green**: done, or good to go
 
 | Context menu | Status |
 | :----------: | :----: |
@@ -37,13 +55,23 @@ Right-click a result for rename, timer, host overrides, todo, and a red / orange
 
 ![Rename dialog on a result](docs/screenshots/rename-tab.png)
 
+#### Renaming essential tabs
+
+Zen gives essential tabs no label you can change, so they always show the page title. Rename one from its tile and the extension keeps that name itself: it shows on the tile and is matched by search, so `inbox` finds the essential you named Inbox even though its page is titled Mail. The name lives only in the extension's views; Zen's own sidebar keeps the page title.
+
+![Renaming the Mail essential tab to Inbox](docs/screenshots/rename-essential.png)
+
 ### Timers
 
 `Alt+T` sets a timer on the current tab. The clock on a result, **Timer** in the tab menu, and the clock beside the search field open the same controls. Running timers show a countdown on the row; the list lets you jump to a tab, edit one, or clear them all.
 
+Besides the presets, the **When** field reads plain language. Type a duration like `45m`, `2h`, or `1d 30m`, or a moment like `tomorrow at 9am`, `friday at 5pm`, or `next monday`. **Ends at** fills in as you type, so you can check the result before pressing **Set**, or pick the date and time there directly.
+
 | Active timers | Set a timer |
 | :-----------: | :---------: |
 | ![Active timers list](docs/screenshots/timers-from-search.png) | ![Timer presets and custom time](docs/screenshots/timer-popup.png) |
+
+![Typing "friday at 5pm" fills in the end time](docs/screenshots/timer-natural-language.png)
 
 ### Host overrides
 
@@ -65,7 +93,11 @@ Hide the spaces grid, the essential-tabs grid, or both, independently on the omn
 | :---------------------: | :-----------: |
 | ![Omnibar with a larger font size and density](docs/screenshots/spacing-size-and-zoom.png) | ![Omnibar with themed panel colors](docs/screenshots/display-colors.png) |
 
-**Reuse an open tab**, under External links, focuses a tab that already has an address when another app opens that link in Zen.
+### Reuse an open tab for external links
+
+When another app opens a link in Zen (a mail client, Slack, a terminal), Zen normally opens a new tab every time. Turn on **Reuse an open tab** under **External links** in Display options, and Zen instead switches to the tab that already has that address, across spaces, so the same page does not pile up in duplicates.
+
+![External links setting](docs/screenshots/external-links-settings.png)
 
 ### AI agents (MCP)
 
@@ -107,9 +139,10 @@ The zip will be produced by WXT. Install it using the same `about:addons` → ge
 - Omnibar search with `Alt+F`, including when no page DOM is available
 - A legacy toolbar popup that stays fully functional, with an unmapped shortcut
 - GitHub and GitLab issues in a navigator beside the tabs
-- Todos, traffic-light status, and rename from the result menu
+- Todos, 🔴 🟠 🟢 status, and rename from the result menu
+- Names for essential tabs, which Zen cannot rename
 - Folder and subfolder sections
-- Timers from search, the tab menu, or `Alt+T`
+- Timers from search, the tab menu, or `Alt+T`, set in plain language
 - Per-tab host overrides
 - Hide essentials or spaces, wrap or truncate titles, and theme the omnibar
 - Reuse of an already open tab for external links
