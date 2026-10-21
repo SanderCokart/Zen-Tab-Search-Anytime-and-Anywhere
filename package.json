@@ -27,9 +27,7 @@
   "lint-staged": {
     "*.{js,mjs,ts,tsx}": "eslint --fix",
     "*.{json,md,css}": "prettier --write",
-    "{entrypoints,public}/**/*": "npm run lint:web-ext",
-    "wxt.config.ts": "npm run lint:web-ext",
-    "package.json": "npm run lint:web-ext"
+    "{entrypoints/**/*,public/**/*,wxt.config.ts,package.json}": "npm run lint:web-ext"
   },
   "webExt": {
     "ignoreFiles": [
