@@ -44,6 +44,9 @@ function mountSearchApp(
         statuses: snapshotStatuses,
       };
     }
+    if (type === "getTab") {
+      return snapshotTabs[0];
+    }
     return undefined;
   });
   Object.assign(globalThis, {
@@ -117,6 +120,50 @@ describe("SearchApp", () => {
       expect(root.querySelector("[data-selected='true']")?.textContent).toContain("Second tab"),
     );
     expect(root.textContent).not.toContain("First tab");
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("makes the search inert and focuses When while the timer view is open", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", undefined, [], [], [], {
+      kind: "timer",
+      tabId: 1,
+    });
+    const search = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    expect(search.hasAttribute("inert")).toBe(true);
+
+    await vi.waitFor(() =>
+      expect(document.activeElement?.closest("form")?.textContent).toContain("When"),
+    );
+    // Past the search's delayed focus retry, the When field still has focus.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(document.activeElement).not.toBe(search);
+    expect(document.activeElement?.closest("form")?.textContent).toContain("When");
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("makes the search inert while the host overrides view is open", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", undefined, [], [], [], {
+      kind: "hosts",
+      tabId: 1,
+    });
+    const search = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    expect(search.hasAttribute("inert")).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(document.activeElement).not.toBe(search);
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("keeps the search usable without a view", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
+    const search = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    expect(search.hasAttribute("inert")).toBe(false);
+    await vi.waitFor(() => expect(document.activeElement).toBe(search));
 
     render(null, root);
     root.remove();

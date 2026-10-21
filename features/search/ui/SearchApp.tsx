@@ -291,6 +291,7 @@ export function SearchApp({
           inputRef={navigation.inputRef}
           compact={compact}
           initialValue={initialQuery}
+          inert={view?.kind === "timer" || view?.kind === "hosts"}
           onQueryChange={(next) => {
             setQuery(next);
             // Typing goes back to the search the input is for.

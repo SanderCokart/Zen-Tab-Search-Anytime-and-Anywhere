@@ -6,6 +6,8 @@ export interface SearchInputProps {
   inputRef: Ref<HTMLInputElement>;
   compact: boolean;
   initialValue?: string;
+  /** Takes the input out of focus and input while a panel such as the timer form has the keyboard. */
+  inert?: boolean;
   onQueryChange: (query: string) => void;
   onKeyDown: (event: JSX.TargetedKeyboardEvent<HTMLInputElement>) => void;
 }
@@ -19,6 +21,7 @@ export function SearchInput({
   inputRef,
   compact,
   initialValue = "",
+  inert = false,
   onQueryChange,
   onKeyDown,
 }: SearchInputProps) {
@@ -52,10 +55,12 @@ export function SearchInput({
       data-testid="zen-search-input"
       type="text"
       placeholder="Search tabs and spaces..."
+      inert={inert}
       class={cn(
         "bg-zen-surface placeholder:text-zen-muted min-w-0 flex-1 border-0 outline-none",
         "rounded-[var(--zen-radius)] p-[var(--zen-space-2)] text-[length:var(--zen-text-lg)]",
         compact && "w-full",
+        inert && "opacity-50",
       )}
       value={value}
       onInput={(event) => {

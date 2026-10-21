@@ -119,7 +119,7 @@ The ⏱ button beside the search field, with a badge counting the running timers
 
 Timers survive a restart, including on tabs in a space you haven't opened yet. When one finishes you get a notification, and clicking it switches to the tab. If the tab was closed, the notice says so, and clicking it searches for the tab by name instead.
 
-Besides the presets, the **When** field reads plain language. Type a duration like `45m`, `2h`, or `1d 30m`, or a moment like `tomorrow at 9am`, `friday at 5pm`, or `next monday`. **Ends at** fills in as you type, so you can check the result before pressing **Set**, or pick the date and time there directly.
+Besides the presets, the **When** field reads plain language. It has the keyboard as soon as the timer controls open; the search field stays inactive until you go back. Type a duration like `45m`, `2h`, or `1d 30m`, or a moment like `tomorrow at 9am`, `friday at 5pm`, or `next monday`. **Ends at** fills in as you type, so you can check the result before pressing **Set**, or pick the date and time there directly.
 
 <p align="center">
   <img src="docs/screenshots/timer-natural-language.png" alt="Typing friday at 5pm fills in the end time" width="560" />

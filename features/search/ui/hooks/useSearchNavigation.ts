@@ -188,9 +188,14 @@ export function useSearchNavigation({
   useEffect(() => {
     // Focus at once so keys typed straight after Alt+F reach the input rather
     // than the page; the delayed retry covers the toolbar popup, which can
-    // take focus back while it opens.
-    inputRef.current?.focus();
-    const timer = window.setTimeout(() => inputRef.current?.focus(), 100);
+    // take focus back while it opens. An inert input leaves focus with the
+    // panel that made it inert, such as the timer form's When field.
+    const focusInput = () => {
+      const input = inputRef.current;
+      if (input && !input.hasAttribute("inert")) input.focus();
+    };
+    focusInput();
+    const timer = window.setTimeout(focusInput, 100);
     return () => window.clearTimeout(timer);
   }, []);
 
