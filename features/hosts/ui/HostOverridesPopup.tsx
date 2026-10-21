@@ -123,6 +123,10 @@ export function HostOverridesPopup({ tabId, onClose, embedded = false }: HostOve
   }, [routing]);
 
   useEffect(() => {
+    // Inside the omnibar, Escape closes the whole omnibar instead.
+    if (embedded) {
+      return;
+    }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") {
         return;
@@ -137,7 +141,7 @@ export function HostOverridesPopup({ tabId, onClose, embedded = false }: HostOve
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [editing, onClose]);
+  }, [embedded, editing, onClose]);
 
   /** Saves a whole new list for one scope. Resolves to whether it was saved. */
   const save = useCallback(

@@ -87,6 +87,10 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
   }, []);
 
   useEffect(() => {
+    // Inside the omnibar, Escape closes the whole omnibar instead.
+    if (embedded) {
+      return;
+    }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") {
         return;
@@ -97,7 +101,7 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [onClose]);
+  }, [embedded, onClose]);
 
   const clear = () => {
     void sendExtensionMessage({ type: "clearTimer", tabId })

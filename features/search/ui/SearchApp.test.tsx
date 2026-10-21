@@ -159,6 +159,43 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it.each([{ kind: "timer", tabId: 1 }, { kind: "hosts", tabId: 1 }, { kind: "timers" }] as const)(
+    "closes the omnibar on Escape from the $kind view",
+    async (initialView) => {
+      const onClose = vi.fn();
+      const { root } = mountSearchApp(onClose, tabs, "overlay", undefined, [], [], [], initialView);
+      await vi.waitFor(() => expect(root.textContent).toContain("Back to search"));
+      // Let Preact run its effects, which register the key listeners.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      (document.activeElement ?? window).dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+      expect(onClose).toHaveBeenCalledTimes(1);
+
+      render(null, root);
+      root.remove();
+    },
+  );
+
+  it("closes the omnibar on Escape from an open context menu", async () => {
+    const onClose = vi.fn();
+    const { root } = mountSearchApp(onClose, tabs, "overlay");
+    await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
+    root
+      .querySelector("[data-testid='zen-search-item']")!
+      .dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, clientX: 20, clientY: 20 }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-tab-context-menu']")).toBeTruthy(),
+    );
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    render(null, root);
+    root.remove();
+  });
+
   it("keeps the search usable without a view", async () => {
     const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
     const search = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;

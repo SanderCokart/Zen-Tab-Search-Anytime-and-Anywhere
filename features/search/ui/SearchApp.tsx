@@ -252,19 +252,18 @@ export function SearchApp({
     navigation.inputRef.current?.focus();
   }, [navigation.inputRef]);
 
-  // The timer and host override panels handle Escape themselves (stepping out
-  // of an open form first); the timers list has no form, so it is handled here.
+  // Escape always closes the whole search, whatever view, menu or form is
+  // open. Embedded panels leave Escape to this handler.
   useEffect(() => {
-    if (view?.kind !== "timers") return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
       event.stopPropagation();
-      closeView();
+      onClose();
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [view, closeView]);
+  }, [onClose]);
 
   const timersOpen = swapsViews ? view?.kind === "timers" : showTimers;
   const toggleTimers = () => {
