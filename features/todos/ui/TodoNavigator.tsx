@@ -1,3 +1,4 @@
+import { useState } from "preact/hooks";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { hostname } from "@/features/search/ui/lib/format";
 import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
@@ -22,6 +23,13 @@ import { cn } from "@/shared/ui/cn";
  * The header's "Clear" menu marks every todo, or every todo of one status
  * color, done after a confirmation. Only rendered while there is at least one todo.
  */
+/** The confirmation the "Clear" menu shows before marking `count` todos done. */
+function clearMessage(filter: TodoClearFilter, count: number): string {
+  const which = filter === "all" ? "" : ` with status ${filter}`;
+  const todos = count === 1 ? "1 todo" : `${count} todos`;
+  return `Mark ${todos}${which} as done?`;
+}
+
 /** "All" plus one entry per status color, with how many todos each would clear. */
 function clearOptions(
   tabs: TabInfo[],
@@ -50,7 +58,6 @@ export function TodoNavigator({
   onClear,
   onOpenStatusMenu,
   onContextMenu,
-  confirm = (message) => window.confirm(message),
 }: {
   /** The rows to list: every todo, or the ones an "@" query matches. */
   tabs: TabInfo[];
@@ -67,12 +74,15 @@ export function TodoNavigator({
   onDone: (tab: TabInfo) => void;
   /** Marks these todo tabs done. */
   onClear: (tabIds: number[]) => void;
-  /** Asks before clearing; `window.confirm` unless a test supplies one. */
-  confirm?: (message: string) => boolean;
   /** Opens the status menu under the button at `anchor`. */
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
   onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
 }) {
+  // The omnibar is a <browser> in Zen's chrome, not a tab, so `window.confirm`
+  // has nowhere to show and returns false: the confirmation lives in the column.
+  const [pendingClear, setPendingClear] = useState<TodoClearFilter | null>(null);
+  const pendingTabIds =
+    pendingClear === null ? [] : todoTabIdsToClear(allTabs, statuses, pendingClear);
   return (
     <aside
       class="border-zen-border flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--zen-radius-lg)] border p-[var(--zen-space-2)]"
@@ -99,14 +109,8 @@ export function TodoNavigator({
               const filter = select.value as TodoClearFilter;
               // Always back to the "Clear…" prompt, whatever the answer.
               select.value = "";
-              const tabIds = todoTabIdsToClear(allTabs, statuses, filter);
-              if (tabIds.length === 0) {
-                return;
-              }
-              const which = filter === "all" ? "" : ` with status ${filter}`;
-              const count = tabIds.length === 1 ? "1 todo" : `${tabIds.length} todos`;
-              if (confirm(`Mark ${count}${which} as done?`)) {
-                onClear(tabIds);
+              if (todoTabIdsToClear(allTabs, statuses, filter).length > 0) {
+                setPendingClear(filter);
               }
             }}
           >
@@ -121,6 +125,37 @@ export function TodoNavigator({
           </select>
         </span>
       </div>
+      {pendingClear !== null && pendingTabIds.length > 0 && (
+        <div
+          class="border-zen-line mb-[var(--zen-space-2)] flex min-w-0 items-center justify-between gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] border p-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]"
+          role="alertdialog"
+          aria-label="Confirm clearing todos"
+          data-testid="zen-todo-clear-confirm"
+        >
+          <span class="min-w-0 truncate">{clearMessage(pendingClear, pendingTabIds.length)}</span>
+          <span class="flex shrink-0 items-center gap-[var(--zen-space-2)]">
+            <button
+              type="button"
+              class="border-zen-line bg-zen-chip text-zen-text cursor-pointer rounded-[var(--zen-radius)] border px-[var(--zen-space-2)] font-[inherit] text-[length:var(--zen-text-sm)] hover:underline"
+              data-testid="zen-todo-clear-confirm-button"
+              onClick={() => {
+                setPendingClear(null);
+                onClear(pendingTabIds);
+              }}
+            >
+              Mark done
+            </button>
+            <button
+              type="button"
+              class="text-zen-subtle hover:text-zen-text cursor-pointer border-0 bg-transparent px-[var(--zen-space-1)] font-[inherit] text-[length:var(--zen-text-sm)] hover:underline"
+              data-testid="zen-todo-clear-cancel-button"
+              onClick={() => setPendingClear(null)}
+            >
+              Cancel
+            </button>
+          </span>
+        </div>
+      )}
       <div class="zen-scroll flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--zen-todo-gap)] overflow-x-hidden overflow-y-auto">
         {tabs.length === 0 && (
           <p class="text-zen-muted m-0 py-[var(--zen-space-3)] text-center text-[length:var(--zen-text-sm)]">

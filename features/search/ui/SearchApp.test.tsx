@@ -831,7 +831,7 @@ describe("SearchApp", () => {
   });
 
   it("clears the todos of one status color after confirming", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    const confirm = vi.spyOn(window, "confirm");
     const { root, sendMessage } = mountSearchApp(
       vi.fn(),
       tabs,
@@ -857,10 +857,21 @@ describe("SearchApp", () => {
     select().value = "red";
     select().dispatchEvent(new Event("change", { bubbles: true }));
 
-    expect(confirm).toHaveBeenCalledWith("Mark 1 todo with status red as done?");
+    // window.confirm can't show in the omnibar's chrome <browser>; the column asks instead.
+    const prompt = () => root.querySelector("[data-testid='zen-todo-clear-confirm']");
+    await vi.waitFor(() =>
+      expect(prompt()?.textContent).toContain("Mark 1 todo with status red as done?"),
+    );
+    expect(confirm).not.toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "clearTodos" }));
+
+    root
+      .querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-confirm-button']")!
+      .click();
     await vi.waitFor(() =>
       expect(sendMessage).toHaveBeenCalledWith({ type: "clearTodos", tabIds: [2] }),
     );
+    expect(prompt()).toBeNull();
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-todo-column']")?.textContent).not.toContain(
         "Second tab",
@@ -873,8 +884,7 @@ describe("SearchApp", () => {
     root.remove();
   });
 
-  it("keeps the todos when the clear confirmation is declined", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  it("keeps the todos when the clear confirmation is cancelled", async () => {
     const { root, sendMessage } = mountSearchApp(
       vi.fn(),
       tabs,
@@ -889,11 +899,19 @@ describe("SearchApp", () => {
     select().value = "all";
     select().dispatchEvent(new Event("change", { bubbles: true }));
 
-    expect(confirm).toHaveBeenCalledWith("Mark 1 todo as done?");
-    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "clearTodos" }));
+    const prompt = () => root.querySelector("[data-testid='zen-todo-clear-confirm']");
+    await vi.waitFor(() => expect(prompt()?.textContent).toContain("Mark 1 todo as done?"));
     expect(select().value).toBe("");
 
-    confirm.mockRestore();
+    root
+      .querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-cancel-button']")!
+      .click();
+    await vi.waitFor(() => expect(prompt()).toBeNull());
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "clearTodos" }));
+    expect(root.querySelector("[data-testid='zen-todo-column']")?.textContent).toContain(
+      "First tab",
+    );
+
     render(null, root);
     root.remove();
   });
