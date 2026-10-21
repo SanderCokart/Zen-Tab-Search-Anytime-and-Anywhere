@@ -12,14 +12,7 @@ import { formatTimerCountdown, stripTimerPrefix } from "@/features/timers/model/
 import type { TabInfo, TabTimer } from "@/shared/types";
 import { formatTabDisplayTitle } from "@/shared/types";
 import { TimerForm } from "@/features/timers/ui/TimerForm";
-
-function hostname(url: string): string {
-  try {
-    return url ? new URL(url).hostname : "";
-  } catch {
-    return "";
-  }
-}
+import { TabSummary } from "@/shared/ui/TabSummary";
 
 export interface TimerPopupProps {
   tabId: number;
@@ -52,24 +45,31 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
     }
 
     let cancelled = false;
+    const fail = (reason: unknown) => {
+      debugError("Could not load custom timer popup:", reason);
+      if (!cancelled) {
+        setError("Make sure the extension is enabled in Zen Browser.");
+      }
+    };
+    // The tab loads on its own so the header names it even when the
+    // snapshot cannot be read.
     const load = () =>
       Promise.all([
-        sendExtensionMessage({ type: "getTab", tabId }),
-        sendExtensionMessage({ type: "getSnapshot" }),
-      ])
-        .then(([nextTab, snapshot]) => {
-          if (cancelled) {
-            return;
-          }
-          setTab(nextTab);
-          setTimer(snapshot.timers.find((item) => item.tabId === tabId));
-        })
-        .catch((reason) => {
-          debugError("Could not load custom timer popup:", reason);
-          if (!cancelled) {
-            setError("Make sure the extension is enabled in Zen Browser.");
-          }
-        });
+        sendExtensionMessage({ type: "getTab", tabId })
+          .then((nextTab) => {
+            if (!cancelled) {
+              setTab(nextTab);
+            }
+          })
+          .catch(fail),
+        sendExtensionMessage({ type: "getSnapshot" })
+          .then((snapshot) => {
+            if (!cancelled) {
+              setTimer(snapshot.timers.find((item) => item.tabId === tabId));
+            }
+          })
+          .catch(fail),
+      ]);
 
     void load();
     const unsubscribe = subscribeToSnapshotChanged(() => {
@@ -123,16 +123,18 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
           : { ...uiScaleStyle(displaySettings, "popup"), color: displaySettings.textColor }
       }
     >
-      <h1 class="m-0 truncate text-[length:var(--zen-text-md)] font-semibold">
-        {tab
-          ? formatTabDisplayTitle({ ...tab, customLabel: stripTimerPrefix(tab.customLabel || "") })
-          : "Loading tab…"}
-      </h1>
-      {tab && (
-        <p class="text-zen-subtle m-0 text-[length:var(--zen-text-xs)]">
-          {tab.workspaceName || hostname(tab.url) || tab.url || "No URL"}
-        </p>
-      )}
+      <TabSummary
+        label="Timer for"
+        tab={tab}
+        title={
+          tab
+            ? formatTabDisplayTitle({
+                ...tab,
+                customLabel: stripTimerPrefix(tab.customLabel || ""),
+              })
+            : "Loading tab…"
+        }
+      />
       {timer && (
         <p class="text-zen-lavender m-0 text-[length:var(--zen-text-xs)]">
           Current timer {formatTimerCountdown(timer.endAt, now)}

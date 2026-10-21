@@ -145,6 +145,23 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it.each([
+    { view: { kind: "timer", tabId: 1 }, label: "Timer for" },
+    { view: { kind: "hosts", tabId: 1 }, label: "Overrides for" },
+  ] as const)("names the tab the $view.kind view acts on", async ({ view, label }) => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", undefined, [], [], [], view);
+
+    await vi.waitFor(() => {
+      const summary = root.querySelector("[data-testid='zen-tab-summary']");
+      expect(summary?.textContent).toContain(label);
+      expect(summary?.textContent).toContain("First tab");
+      expect(summary?.textContent).toContain("example.com");
+    });
+
+    render(null, root);
+    root.remove();
+  });
+
   it("makes the search inert while the host overrides view is open", async () => {
     const { root } = mountSearchApp(vi.fn(), tabs, "overlay", undefined, [], [], [], {
       kind: "hosts",
@@ -865,9 +882,7 @@ describe("SearchApp", () => {
     expect(confirm).not.toHaveBeenCalled();
     expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "clearTodos" }));
 
-    root
-      .querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-confirm-button']")!
-      .click();
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-confirm-button']")!.click();
     await vi.waitFor(() =>
       expect(sendMessage).toHaveBeenCalledWith({ type: "clearTodos", tabIds: [2] }),
     );
@@ -903,9 +918,7 @@ describe("SearchApp", () => {
     await vi.waitFor(() => expect(prompt()?.textContent).toContain("Mark 1 todo as done?"));
     expect(select().value).toBe("");
 
-    root
-      .querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-cancel-button']")!
-      .click();
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-cancel-button']")!.click();
     await vi.waitFor(() => expect(prompt()).toBeNull());
     expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "clearTodos" }));
     expect(root.querySelector("[data-testid='zen-todo-column']")?.textContent).toContain(

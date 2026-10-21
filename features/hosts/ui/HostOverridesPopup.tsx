@@ -23,6 +23,7 @@ import {
 import { HostGroupCard } from "@/features/hosts/ui/components/HostGroupCard";
 import { HostGroupForm } from "@/features/hosts/ui/components/HostGroupForm";
 import { primaryButtonClass } from "@/features/hosts/ui/lib/styles";
+import { TabSummary } from "@/shared/ui/TabSummary";
 
 /** Which form is open: none, a new group, or the group with this ID in this list. */
 type Editing =
@@ -73,25 +74,34 @@ export function HostOverridesPopup({ tabId, onClose, embedded = false }: HostOve
     }
 
     let cancelled = false;
+    // The tab loads on its own so the header names it even when the
+    // override lists cannot be read.
     const load = () =>
       Promise.all([
-        sendExtensionMessage({ type: "getTab", tabId }),
-        sendExtensionMessage({ type: "getHostOverrides", tabId }),
-        sendExtensionMessage({ type: "getGlobalHostOverrides" }),
-      ])
-        .then(([nextTab, nextTabGroups, nextGlobalGroups]) => {
-          if (!cancelled) {
-            setTab(nextTab);
-            setTabGroups(nextTabGroups);
-            setGlobalGroups(nextGlobalGroups);
-          }
-        })
-        .catch((reason) => {
-          debugError("Could not load host overrides:", reason);
-          if (!cancelled) {
-            setError("Make sure the extension is enabled in Zen Browser.");
-          }
-        });
+        sendExtensionMessage({ type: "getTab", tabId })
+          .then((nextTab) => {
+            if (!cancelled) {
+              setTab(nextTab);
+            }
+          })
+          .catch((reason) => debugError("Could not load the host override tab:", reason)),
+        Promise.all([
+          sendExtensionMessage({ type: "getHostOverrides", tabId }),
+          sendExtensionMessage({ type: "getGlobalHostOverrides" }),
+        ])
+          .then(([nextTabGroups, nextGlobalGroups]) => {
+            if (!cancelled) {
+              setTabGroups(nextTabGroups);
+              setGlobalGroups(nextGlobalGroups);
+            }
+          })
+          .catch((reason) => {
+            debugError("Could not load host overrides:", reason);
+            if (!cancelled) {
+              setError("Make sure the extension is enabled in Zen Browser.");
+            }
+          }),
+      ]);
 
     void load();
     const unsubscribe = subscribeToSnapshotChanged(() => {
@@ -269,12 +279,15 @@ export function HostOverridesPopup({ tabId, onClose, embedded = false }: HostOve
           : { ...uiScaleStyle(displaySettings, "popup"), color: displaySettings.textColor }
       }
     >
-      <header class="flex flex-col gap-[var(--zen-space-1)]">
+      <header class="flex flex-col gap-[var(--zen-space-2)]">
         <h1 class="m-0 text-[length:var(--zen-text-md)] font-semibold">Host overrides</h1>
-        <p class="text-zen-subtle m-0 truncate text-[length:var(--zen-text-sm)]">
-          {tab ? formatTabDisplayTitle(tab) : validTab ? "Loading tab…" : ""}
-          {tabHostname && ` · ${tabHostname}`}
-        </p>
+        {validTab && (
+          <TabSummary
+            label="Overrides for"
+            tab={tab}
+            title={tab ? formatTabDisplayTitle(tab) : "Loading tab…"}
+          />
+        )}
       </header>
 
       {active.length > 0 && (
