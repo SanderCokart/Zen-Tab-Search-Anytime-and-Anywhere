@@ -9,6 +9,15 @@ const packageLockPath = path.join(rootDir, "package-lock.json");
 // Fixed name so `releases/latest/download/zen-tab-search-mcp.mjs` always
 // serves the MCP server that matches the latest extension.
 const mcpArtifact = path.join(rootDir, "mcp", "dist", "zen-tab-search-mcp.mjs");
+// A built experiment whose DEBUG flag follows WXT_DEBUG (scripts/experiment-debug.mjs).
+const builtExperiment = path.join(
+  rootDir,
+  ".output",
+  "firefox-mv2",
+  "experiment",
+  "zenTabs",
+  "api.js",
+);
 
 let releaseStep = "preflight";
 let currentTagName;
@@ -352,12 +361,21 @@ function main() {
   assertTagDoesNotExist(tagName);
   assertGitHubCli();
 
+  // .env.local turns WXT_DEBUG on for local builds, and Vite loads it for production
+  // too. A debug release logs verbosely and offers every user a "debug demo" update,
+  // so the release build always turns it off; process.env outranks the .env files.
+  process.env.WXT_DEBUG = "false";
+
   releaseStep = "version bump";
   run("Bumping package version", "npm", ["version", newVersion, "--no-git-tag-version"]);
   releaseStep = "build";
   run("Building extension", "npm", ["run", "build"]);
   releaseStep = "zip";
   run("Creating extension zip", "npm", ["run", "zip", "--", "--tag", tagName]);
+
+  if (!fs.readFileSync(builtExperiment, "utf8").includes("const DEBUG = false;")) {
+    fail("The release build has debug mode on; WXT_DEBUG must be false.");
+  }
 
   const zipArtifact = findZipArtifact(tagName);
   if (!zipArtifact) {
