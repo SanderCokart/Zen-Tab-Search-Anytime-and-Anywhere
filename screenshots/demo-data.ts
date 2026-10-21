@@ -170,16 +170,20 @@ export function demoSnapshot(now = Date.now()): SearchSnapshot {
     spaces: DEMO_SPACES,
     timers: [
       {
+        timerId: "demo-1",
         tabId: 1,
         endAt: now + TIMER_LEAD_MS,
         originalLabel: "PR: #45 - Improve tab search",
         title: "Improve tab search",
+        url: "",
       },
       {
+        timerId: "demo-4",
         tabId: 4,
         endAt: now + 8 * 60 * MINUTE,
         originalLabel: "",
         title: "Architecture guide",
+        url: "",
       },
     ],
     todos: [

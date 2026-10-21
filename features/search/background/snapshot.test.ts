@@ -12,13 +12,15 @@ describe("createSnapshotReader", () => {
         { id: anchorTabId ?? 1, title: "Tab", url: "https://x.test", favIconUrl: "", windowId: 1 },
       ]),
       getSpaces: vi.fn(async () => [{ id: "space-a", name: "Work", isActive: true }]),
-      getTimers: vi.fn(async () => [{ tabId: 1, endAt: 99, originalLabel: "", title: "Tab" }]),
+      getTimers: vi.fn(async () => [
+        { timerId: "t1", tabId: 1, endAt: 99, originalLabel: "", title: "Tab", url: "" },
+      ]),
     });
 
     await expect(getSnapshot(4)).resolves.toEqual({
       tabs: [{ id: 4, title: "Tab", url: "https://x.test", favIconUrl: "", windowId: 1 }],
       spaces: [{ id: "space-a", name: "Work", isActive: true }],
-      timers: [{ tabId: 1, endAt: 99, originalLabel: "", title: "Tab" }],
+      timers: [{ timerId: "t1", tabId: 1, endAt: 99, originalLabel: "", title: "Tab", url: "" }],
       todos: [],
       statuses: [],
     });

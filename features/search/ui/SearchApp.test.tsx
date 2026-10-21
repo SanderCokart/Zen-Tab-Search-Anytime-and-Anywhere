@@ -1,6 +1,7 @@
 import { render } from "preact";
 import { describe, expect, it, vi } from "vitest";
 import { SearchApp } from "@/features/search/ui/SearchApp";
+import type { OmnibarView } from "@/shared/messaging/protocol";
 import type { SpaceInfo, TabInfo, TabStatus, TabTodo } from "@/shared/types";
 
 const tabs: TabInfo[] = [
@@ -31,6 +32,7 @@ function mountSearchApp(
   snapshotSpaces: Partial<SpaceInfo>[] = [],
   snapshotTodos: TabTodo[] = [],
   snapshotStatuses: TabStatus[] = [],
+  initialView?: OmnibarView,
 ) {
   const sendMessage = vi.fn(async ({ type }: { type: string }) => {
     if (type === "getSnapshot") {
@@ -61,7 +63,7 @@ function mountSearchApp(
   });
   const root = document.createElement("div");
   document.body.appendChild(root);
-  render(<SearchApp onClose={onClose} layout={layout} />, root);
+  render(<SearchApp onClose={onClose} layout={layout} initialView={initialView} />, root);
   return { root, onClose, sendMessage };
 }
 
@@ -98,6 +100,23 @@ describe("SearchApp", () => {
         "Epic browser tab",
       ),
     );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("starts with the query a search view opens it on", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", undefined, [], [], [], {
+      kind: "search",
+      query: "Second",
+    });
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    expect(input.value).toBe("Second");
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-selected='true']")?.textContent).toContain("Second tab"),
+    );
+    expect(root.textContent).not.toContain("First tab");
 
     render(null, root);
     root.remove();

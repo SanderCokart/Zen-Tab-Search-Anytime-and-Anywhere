@@ -38,6 +38,8 @@ import { cn } from "@/shared/ui/cn";
 
 export type { SearchLayout };
 
+type PanelView = Exclude<OmnibarView, { kind: "search" }>;
+
 export interface SearchAppProps {
   onClose: () => void;
   pageJump?: number;
@@ -61,9 +63,13 @@ export function SearchApp({
   // The overlay has room to swap its columns for the timer and host override
   // controls; the toolbar popup still opens those in their own windows.
   const swapsViews = layout === "overlay";
-  const [view, setView] = useState<OmnibarView | undefined>(swapsViews ? initialView : undefined);
+  // A search view is no panel: it only fills in the query.
+  const initialQuery = initialView?.kind === "search" ? initialView.query : "";
+  const [view, setView] = useState<PanelView | undefined>(
+    swapsViews && initialView?.kind !== "search" ? initialView : undefined,
+  );
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("recent");
   const [timerTabId, setTimerTabId] = useState<number | null>(null);
   const [showTimers, setShowTimers] = useState(false);
@@ -284,6 +290,7 @@ export function SearchApp({
         <SearchInput
           inputRef={navigation.inputRef}
           compact={compact}
+          initialValue={initialQuery}
           onQueryChange={(next) => {
             setQuery(next);
             // Typing goes back to the search the input is for.

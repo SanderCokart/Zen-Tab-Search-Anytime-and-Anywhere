@@ -5,6 +5,7 @@ import { cn } from "@/shared/ui/cn";
 export interface SearchInputProps {
   inputRef: Ref<HTMLInputElement>;
   compact: boolean;
+  initialValue?: string;
   onQueryChange: (query: string) => void;
   onKeyDown: (event: JSX.TargetedKeyboardEvent<HTMLInputElement>) => void;
 }
@@ -14,8 +15,14 @@ export interface SearchInputProps {
  * the result list. The query is flushed to the parent on the next frame, or
  * immediately when a key needs the latest value (Enter / arrows).
  */
-export function SearchInput({ inputRef, compact, onQueryChange, onKeyDown }: SearchInputProps) {
-  const [value, setValue] = useState("");
+export function SearchInput({
+  inputRef,
+  compact,
+  initialValue = "",
+  onQueryChange,
+  onKeyDown,
+}: SearchInputProps) {
+  const [value, setValue] = useState(initialValue);
   const frameRef = useRef<number | undefined>(undefined);
   const queryRef = useRef(value);
 

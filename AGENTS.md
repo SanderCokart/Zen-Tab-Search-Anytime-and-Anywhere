@@ -144,6 +144,13 @@ context menu and popup, and its own UI — all in one directory.
   `text-[length:var(--zen-text-base)]`), not literal pixels. Any new surface needs
   `data-zen-ui` and `uiScaleStyle()` on its root, or the tokens are undefined and the
   declarations are dropped.
+- **`browser.tabs.query` misses tabs in Zen spaces that have not been opened yet.**
+  Those tabs have real tab IDs but are left out until the user switches to their
+  space. When you need every tab, use `listAllTabs()` from
+  `features/zen/tabs-query.ts`, which starts from Zen's own list. Their per-tab
+  `browser.sessions` values may not come back either, so timers find their tab
+  after a restart by matching two of timer ID, URL and ⏱ label
+  (`features/timers/model/timer-match.ts`).
 - **Essential tabs have no writable Zen label**, so the extension stores its own
   names under the `essentialTabNames` storage key, keyed by DOM id.
 - **`noUncheckedIndexedAccess` is on.** Indexing an array gives `T | undefined`.

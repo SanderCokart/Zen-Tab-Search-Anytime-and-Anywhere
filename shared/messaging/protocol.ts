@@ -37,10 +37,20 @@ export const spaceInfoSchema = v.object({
 });
 
 export const tabTimerSchema = v.object({
+  /** Identifies the timer across browser sessions, which give tabs new IDs. */
+  timerId: v.string(),
   tabId: tabIdSchema,
   endAt: v.number(),
   originalLabel: v.fallback(v.string(), ""),
   title: v.fallback(v.string(), ""),
+  /** The tab's URL, which helps find the tab again after a restart. */
+  url: v.fallback(v.string(), ""),
+});
+
+/** Timers saved before timer IDs existed have none; the timer service assigns one. */
+export const storedTabTimerSchema = v.object({
+  ...tabTimerSchema.entries,
+  timerId: v.optional(v.string()),
 });
 
 export const TODO_STATUSES = ["todo"] as const;
@@ -260,6 +270,8 @@ export const omnibarViewSchema = v.variant("kind", [
   v.object({ kind: v.literal("timers") }),
   v.object({ kind: v.literal("timer"), tabId: tabIdSchema }),
   v.object({ kind: v.literal("hosts"), tabId: tabIdSchema }),
+  /** The search itself, opened with a query already typed. */
+  v.object({ kind: v.literal("search"), query: v.string() }),
 ]);
 
 export const omnibarShownSchema = v.object({
@@ -312,6 +324,7 @@ export type FolderInfo = v.InferOutput<typeof folderInfoSchema>;
 export type ForgePageInfo = v.InferOutput<typeof forgePageInfoSchema>;
 export type TabInfo = v.InferOutput<typeof tabInfoSchema>;
 export type TabTimer = v.InferOutput<typeof tabTimerSchema>;
+export type StoredTabTimer = v.InferOutput<typeof storedTabTimerSchema>;
 export type SpaceInfo = v.InferOutput<typeof spaceInfoSchema>;
 export type TabTodo = v.InferOutput<typeof tabTodoSchema>;
 export type TodoStatus = (typeof TODO_STATUSES)[number];
@@ -402,17 +415,17 @@ export function parseOmnibarView(value: unknown): OmnibarView | undefined {
   return parsed.success ? parsed.output : undefined;
 }
 
-export function parseStoredTimer(value: unknown): TabTimer | undefined {
-  const parsed = v.safeParse(tabTimerSchema, value);
+export function parseStoredTimer(value: unknown): StoredTabTimer | undefined {
+  const parsed = v.safeParse(storedTabTimerSchema, value);
   return parsed.success ? parsed.output : undefined;
 }
 
-export function parseStoredTimers(value: unknown): Record<string, TabTimer> {
+export function parseStoredTimers(value: unknown): Record<string, StoredTabTimer> {
   if (!value || typeof value !== "object") {
     return {};
   }
 
-  const timers: Record<string, TabTimer> = {};
+  const timers: Record<string, StoredTabTimer> = {};
   for (const entry of Object.values(value as Record<string, unknown>)) {
     const parsed = parseStoredTimer(entry);
     if (!parsed) {

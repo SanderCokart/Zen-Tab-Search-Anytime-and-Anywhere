@@ -49,7 +49,7 @@ function workspace(tabs: TabInfo[] = []): BridgeWorkspace {
 }
 
 function timer(tabId: number, endAt: number): TabTimer {
-  return { tabId, endAt, originalLabel: "Docs", title: "Docs" };
+  return { timerId: `t${tabId}`, tabId, endAt, originalLabel: "Docs", title: "Docs", url: "" };
 }
 
 function services(

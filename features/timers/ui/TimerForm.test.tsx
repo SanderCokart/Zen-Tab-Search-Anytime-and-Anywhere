@@ -7,7 +7,14 @@ function mountTimerForm(onSet = vi.fn(), onClear = vi.fn()) {
   document.body.appendChild(root);
   render(
     <TimerForm
-      timer={{ tabId: 1, endAt: Date.now() + 60_000, originalLabel: "", title: "Tab" }}
+      timer={{
+        timerId: "t1",
+        tabId: 1,
+        endAt: Date.now() + 60_000,
+        originalLabel: "",
+        title: "Tab",
+        url: "",
+      }}
       onSet={onSet}
       onClear={onClear}
     />,

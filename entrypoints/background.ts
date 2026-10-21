@@ -12,6 +12,7 @@ import {
   getOmnibarAnchorTabId,
   hideOmnibar,
   OMNIBAR_PAGE,
+  openOmnibarView,
   preloadOmnibar,
 } from "@/features/search/background/omnibar";
 import {
@@ -55,11 +56,11 @@ export default defineBackground(() => {
   const workspace = createZenWorkspaceAdapter({
     logDebugInfo: (context, anchorTabId) => logZenDebugInfo(workspace, context, anchorTabId),
   });
-  const { queryTabs, getTabInfo, getSpaces } = createTabQuery(workspace);
+  const { queryTabs, getTabInfo, getSpaces, listAllTabs } = createTabQuery(workspace);
   const { switchToTab, switchToSpace } = createTabSwitcher(workspace);
   const timerService = createTimerService({
     setLabel: (label, tabId, silent) => workspace.setLabel(label, tabId, silent),
-    getCustomTabLabels: (tabIds) => workspace.getCustomLabels(tabIds),
+    listTabs: listAllTabs,
   });
 
   const todoService = createTodoService();
@@ -139,16 +140,18 @@ export default defineBackground(() => {
       });
       return;
     }
-    if (!notificationId.startsWith("tab-timer-")) {
-      return;
-    }
-    const tabId = Number(notificationId.slice("tab-timer-".length));
-    if (!isUsableTabId(tabId)) {
-      return;
-    }
-    void switchToTab(tabId, undefined, tabId).catch((error) => {
-      debugWarn(`${LOG_PREFIX} Could not open timed tab from notification:`, formatError(error));
-    });
+    void timerService
+      .resolveNotificationClick(notificationId)
+      .then(async (target) => {
+        if (target?.kind === "tab") {
+          await switchToTab(target.tabId, undefined, target.tabId);
+        } else if (target?.kind === "search") {
+          await openOmnibarView({ kind: "search", query: target.query });
+        }
+      })
+      .catch((error) => {
+        debugWarn(`${LOG_PREFIX} Could not open timed tab from notification:`, formatError(error));
+      });
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {

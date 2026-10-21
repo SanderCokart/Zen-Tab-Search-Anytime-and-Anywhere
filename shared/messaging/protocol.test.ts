@@ -46,7 +46,7 @@ describe("parseExtensionSuccess", () => {
       parseExtensionSuccess("getSnapshot", {
         tabs: [{ id: 1, title: "Home", url: "https://example.com", windowId: 1 }],
         spaces: [{ id: "space-a" }],
-        timers: [{ tabId: 1, endAt: 1 }],
+        timers: [{ timerId: "t1", tabId: 1, endAt: 1 }],
       }),
     ).toEqual({
       tabs: [
@@ -59,7 +59,7 @@ describe("parseExtensionSuccess", () => {
         },
       ],
       spaces: [{ id: "space-a", name: "", isActive: false }],
-      timers: [{ tabId: 1, endAt: 1, originalLabel: "", title: "" }],
+      timers: [{ timerId: "t1", tabId: 1, endAt: 1, originalLabel: "", title: "", url: "" }],
       todos: [],
       statuses: [],
     });
@@ -87,7 +87,7 @@ describe("parseStoredTimers", () => {
         bad: { tabId: "nope" },
       }),
     ).toEqual({
-      "1": { tabId: 1, endAt: 9, originalLabel: "A", title: "Tab" },
+      "1": { tabId: 1, endAt: 9, originalLabel: "A", title: "Tab", url: "" },
     });
   });
 
@@ -97,6 +97,7 @@ describe("parseStoredTimers", () => {
       endAt: 11,
       originalLabel: "B",
       title: "Docs",
+      url: "",
     });
     expect(parseStoredTimer({ tabId: "nope" })).toBeUndefined();
   });
