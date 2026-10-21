@@ -50,6 +50,7 @@ describe("update service", () => {
       updateAvailable: true,
       demo: false,
       canInstall: true,
+      checkedAt: 1_000_000,
     });
     expect(deps.writeCheck).toHaveBeenCalledWith({ checkedAt: 1_000_000, latest });
   });
@@ -104,7 +105,22 @@ describe("update service", () => {
     fetchLatestRelease.mockRejectedValueOnce(new Error("offline"));
     now += UPDATE_CHECK_INTERVAL_MS;
 
-    await expect(service.getStatus()).resolves.toMatchObject({ latest, updateAvailable: true });
+    await expect(service.getStatus()).resolves.toMatchObject({
+      latest,
+      updateAvailable: true,
+      checkedAt: 1_000_000,
+    });
+  });
+
+  it("reports no check time until GitHub has answered once", async () => {
+    const { service, fetchLatestRelease } = setup();
+    fetchLatestRelease.mockRejectedValueOnce(new Error("offline"));
+
+    await expect(service.getStatus(true)).resolves.toMatchObject({
+      latest: null,
+      updateAvailable: false,
+      checkedAt: null,
+    });
   });
 
   it("opens the zip or the release page, and installs the zip in place", async () => {

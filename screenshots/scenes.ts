@@ -13,11 +13,19 @@ export interface HarnessScene {
   layout?: SearchLayout;
   displaySettings?: Partial<DisplaySettings>;
   initialView?: OmnibarView;
+  /** Answer the update check with a newer release than the installed one. */
+  updateAvailable?: boolean;
 }
 
 const SCENES: Record<string, HarnessScene> = {
   "search-omnibar": { id: "search-omnibar", surface: "search", layout: "overlay" },
   "search-popup": { id: "search-popup", surface: "search", layout: "popup" },
+  "update-available": {
+    id: "update-available",
+    surface: "search",
+    layout: "overlay",
+    updateAvailable: true,
+  },
   "omnibar-shape": { id: "omnibar-shape", surface: "search", layout: "overlay" },
   "hide-spaces-and-essentials": {
     id: "hide-spaces-and-essentials",

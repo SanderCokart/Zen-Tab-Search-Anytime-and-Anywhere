@@ -19,6 +19,15 @@
         max-height: 420px;
         background: #1e1e1e;
         color: #fff;
+        /* A column, so the results scroll and the status bar stays in view. */
+        display: flex;
+        flex-direction: column;
+      }
+      #app {
+        display: flex;
+        min-height: 0;
+        flex: 1 1 auto;
+        flex-direction: column;
       }
     </style>
   </head>

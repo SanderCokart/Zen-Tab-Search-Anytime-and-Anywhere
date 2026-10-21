@@ -162,6 +162,27 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("counts tabs, spaces and GitHub tabs in the status bar", async () => {
+    const { root } = mountSearchApp(
+      vi.fn(),
+      [...tabs, { ...tabs[1], id: 3, url: "https://github.com/acme/app/pull/7" }],
+      "overlay",
+      undefined,
+      [{ id: "space-a", name: "Work", isActive: true }],
+    );
+
+    await vi.waitFor(() => {
+      const bar = root.querySelector("[data-testid='zen-status-bar']");
+      expect(bar?.textContent).toContain("3 tabs");
+      expect(bar?.textContent).toContain("1 space");
+      expect(bar?.textContent).toContain("1 GitHub");
+    });
+    expect(root.querySelector("[data-stat='gitlab']")).toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
   it("makes the search inert while the host overrides view is open", async () => {
     const { root } = mountSearchApp(vi.fn(), tabs, "overlay", undefined, [], [], [], {
       kind: "hosts",

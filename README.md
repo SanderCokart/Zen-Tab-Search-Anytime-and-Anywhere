@@ -39,7 +39,13 @@ Zen Tab Search is a fast fuzzy search overlay and popup for tabs, spaces, and cu
 4. Open `about:addons`, click the gear icon, and choose **Install Add-on From File…**.
 5. Select the downloaded `.zip` (you can also drag it onto the page).
 
-**Updating.** The extension checks GitHub for a newer release every few hours. When there is one, the omnibar shows *There is a new version available!* above the search. Click it to install the update in place (your settings are kept) or to download the zip and install it the same way as above.
+**Updating.** The extension checks GitHub for a newer release every few hours. When there is one, the status bar along the bottom of the omnibar shows *There is a new version available!*. Click it to install the update in place (your settings are kept) or to download the zip and install it the same way as above. Otherwise the status bar shows your version and a **Check for updates** button that asks GitHub straight away.
+
+**Status bar.** Under the search, the omnibar and toolbar popup count your tabs, essential tabs and spaces, plus the GitHub and GitLab issue tabs, todos and running timers once there are any.
+
+![Status bar with tab counts and the check for updates button](docs/screenshots/status-bar.png)
+
+![A newer release in the status bar, with install, download and release notes](docs/screenshots/status-bar-update.png)
 
 **Optional: let AI agents control Zen.** The same release has a `zen-tab-search-mcp.mjs` asset, the MCP server for Claude, Cursor and other MCP clients. It needs Node.js 20 or newer. See [mcp/README.md](mcp/README.md#install) to download it, turn it on in the settings, and register it with your client.
 

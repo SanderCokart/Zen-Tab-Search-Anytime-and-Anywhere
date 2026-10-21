@@ -35,7 +35,7 @@ export function SearchShell({
   if (layout === "popup") {
     return (
       <div
-        class="flex h-full flex-col"
+        class="flex h-full min-h-0 flex-col"
         data-zen-ui="popup"
         style={{ color: displaySettings.textColor }}
       >

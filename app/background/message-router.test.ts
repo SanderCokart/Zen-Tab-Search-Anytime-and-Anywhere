@@ -49,6 +49,7 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
       updateAvailable: false,
       demo: false,
       canInstall: false,
+      checkedAt: null,
     })),
     openUpdate: vi.fn(async () => undefined),
     installUpdate: vi.fn(async () => undefined),

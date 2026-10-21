@@ -10,7 +10,7 @@ import "@/shared/ui/styles.css";
 import "@/screenshots/harness.css";
 
 const scene = sceneFromSearch(window.location.search);
-installBrowserMock(displaySettingsFor(scene));
+installBrowserMock(displaySettingsFor(scene), { updateAvailable: scene.updateAvailable });
 document.documentElement.dataset.harnessScene = scene.id;
 
 function FakeZenChrome({

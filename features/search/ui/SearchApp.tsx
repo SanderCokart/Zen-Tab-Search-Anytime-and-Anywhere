@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
 import type { ForgeIssueSortMode } from "@/features/search/model/ranking";
+import { summarizeSearch } from "@/features/search/model/stats";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
 import { UpdateNotice } from "@/features/updates/ui/UpdateNotice";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/features/status/ui/TrafficLightMenu";
 import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersPanel";
 import { OmnibarViewPanel } from "@/features/search/ui/components/OmnibarViewPanel";
+import { StatusBar } from "@/features/search/ui/components/StatusBar";
 import { RenameTabDialog } from "@/features/search/ui/components/RenameTabDialog";
 import { SearchInput } from "@/features/search/ui/components/SearchInput";
 import { SearchResultsList } from "@/features/search/ui/components/SearchResultsList";
@@ -108,6 +110,18 @@ export function SearchApp({
     query,
     forgeSortMode,
   });
+
+  const stats = useMemo(
+    () =>
+      summarizeSearch({
+        tabs: results.labeledTabs,
+        spaces,
+        forgeEntries: results.forgeIssueEntries,
+        todos: results.allTodoTabs.length,
+        timers: timers.size,
+      }),
+    [results.allTodoTabs, results.forgeIssueEntries, results.labeledTabs, spaces, timers],
+  );
 
   const onTimerFormClose = useCallback(() => setTimerTabId(null), []);
   const timerActions = useTimerActions({
@@ -286,7 +300,6 @@ export function SearchApp({
       aspect={layout === "overlay" ? overlayAspect : "1/1"}
       open={layout === "overlay" ? overlayOpen : true}
     >
-      <UpdateNotice />
       <div class="mb-[var(--zen-space-3)] flex items-center gap-[var(--zen-space-2)]">
         <SearchInput
           inputRef={navigation.inputRef}
@@ -378,11 +391,15 @@ export function SearchApp({
       )}
 
       <div
-        class={cn(layout === "overlay" && "flex min-h-0 min-w-0 flex-1 gap-4 overflow-hidden")}
+        class={cn(
+          "flex min-h-0 min-w-0 flex-1",
+          layout === "overlay" ? "gap-4 overflow-hidden" : "flex-col",
+        )}
         // Kept mounted under a view so the lists keep their scroll and selection.
         style={view ? { display: "none" } : undefined}
       >
-        <div class={cn(layout === "overlay" && "flex min-h-0 min-w-0 flex-1 flex-col")}>
+        {/* Scrolls inside the frame, so the status bar stays in view under it. */}
+        <div class="flex min-h-0 min-w-0 flex-1 flex-col">
           <ul
             class={cn(
               "zen-scroll m-0 flex min-h-0 flex-1 list-none flex-col overflow-y-auto p-0",
@@ -475,6 +492,10 @@ export function SearchApp({
           />
         )}
       </div>
+
+      <StatusBar stats={stats} showForge={displaySettings.detectForgeIssues}>
+        <UpdateNotice />
+      </StatusBar>
 
       {statusMenu && (
         <TrafficLightMenu

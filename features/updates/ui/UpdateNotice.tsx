@@ -1,7 +1,11 @@
 import { useState } from "preact/hooks";
 import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
 import { versionSegments } from "@/features/updates/model/version";
-import { useUpdateStatus } from "@/features/updates/ui/hooks/useUpdateStatus";
+import { formatLastChecked } from "@/features/updates/model/checked-at";
+import {
+  useUpdateStatus,
+  type UpdateCheckState,
+} from "@/features/updates/ui/hooks/useUpdateStatus";
 import { debugError } from "@/shared/debug";
 import { sendExtensionMessage } from "@/shared/messaging/client";
 import { cn } from "@/shared/ui/cn";
@@ -30,18 +34,60 @@ function LatestVersion({ latest, current }: { latest: string; current: string })
   );
 }
 
+const linkButtonClass =
+  "text-zen-subtle hover:text-zen-text cursor-pointer border-0 bg-transparent p-0 font-[inherit] text-[length:var(--zen-text-xs)] hover:underline disabled:cursor-default disabled:no-underline";
+
+function checkResultText(state: UpdateCheckState): string | undefined {
+  if (state.kind === "upToDate") return "Up to date";
+  if (state.kind === "failed") return "Could not reach GitHub";
+  return undefined;
+}
+
 /**
- * A line above the search saying a newer release is out. Clicking it opens the
- * choices: install it in place, download the zip, or read the release notes.
- * Renders nothing while the installed version is the latest.
+ * The update end of the status bar. While the installed version is the latest
+ * it shows that version and a "Check for updates" button that asks GitHub now.
+ * When a newer release is out it says so instead; clicking that opens the
+ * choices above the bar: install it in place, download the zip, or read the
+ * release notes.
  */
 export function UpdateNotice() {
-  const status = useUpdateStatus();
+  const { status, checkState, check } = useUpdateStatus();
   const [open, setOpen] = useState(false);
   const [install, setInstall] = useState<InstallState>({ kind: "idle" });
 
-  if (!status?.updateAvailable || !status.latest) {
+  if (!status) {
     return null;
+  }
+
+  if (!status.updateAvailable || !status.latest) {
+    const result = checkResultText(checkState);
+    return (
+      <span
+        class="flex min-w-0 shrink-0 items-center gap-[var(--zen-space-2)]"
+        data-testid="zen-update-check"
+      >
+        {result && (
+          <span
+            class={cn(checkState.kind === "failed" ? "text-zen-danger" : "text-zen-muted")}
+            role="status"
+            data-testid="zen-update-result"
+          >
+            {result}
+          </span>
+        )}
+        <span class="text-zen-muted">v{status.currentVersion}</span>
+        <TooltipButton
+          label="Check for updates"
+          tooltip={formatLastChecked(status.checkedAt, Date.now())}
+          class={linkButtonClass}
+          disabled={checkState.kind === "checking"}
+          data-testid="zen-update-check-button"
+          onClick={check}
+        >
+          {checkState.kind === "checking" ? "Checking…" : "Check for updates"}
+        </TooltipButton>
+      </span>
+    );
   }
   const { currentVersion, latest } = status;
 
@@ -62,10 +108,7 @@ export function UpdateNotice() {
   };
 
   return (
-    <div
-      class="mb-[var(--zen-space-2)] flex min-w-0 flex-col gap-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]"
-      data-testid="zen-update-notice"
-    >
+    <div class="relative flex min-w-0 shrink" data-testid="zen-update-notice">
       <TooltipButton
         label={`New version available. Latest: ${latest.version}`}
         tooltip={
@@ -74,17 +117,24 @@ export function UpdateNotice() {
             : `You are on version ${currentVersion}`
         }
         aria-expanded={open}
-        class="text-zen-subtle hover:text-zen-text flex min-w-0 cursor-pointer items-center gap-[var(--zen-space-1)] self-start border-0 bg-transparent p-0 font-[inherit] text-[length:var(--zen-text-sm)]"
+        class="text-zen-text flex min-w-0 cursor-pointer items-center gap-[var(--zen-space-1)] border-0 bg-transparent p-0 font-[inherit] text-[length:var(--zen-text-xs)] hover:underline"
         onClick={() => setOpen((current) => !current)}
       >
-        <span aria-hidden="true">⬆</span>
+        <span aria-hidden="true" class="text-green-400">
+          ⬆
+        </span>
         <span class="truncate">There is a new version available! Latest:</span>
         <LatestVersion latest={latest.version} current={currentVersion} />
         {status.demo && <span class="text-zen-muted">(debug demo)</span>}
       </TooltipButton>
       {open && (
+        // Opens upwards, since the status bar sits at the bottom of the search.
         <div
-          class="border-zen-line flex min-w-0 flex-col gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] border p-[var(--zen-space-2)]"
+          class={cn(
+            "border-zen-line bg-zen-raised absolute right-0 bottom-full z-10 mb-[var(--zen-space-2)]",
+            "flex w-max max-w-[min(32em,90vw)] flex-col gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] border p-[var(--zen-space-2)]",
+            "text-[length:var(--zen-text-sm)] shadow-[0_4px_16px_rgba(0,0,0,0.4)]",
+          )}
           data-testid="zen-update-panel"
         >
           <span>

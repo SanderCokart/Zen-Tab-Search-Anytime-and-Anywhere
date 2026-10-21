@@ -145,6 +145,8 @@ export const latestReleaseSchema = v.object({
  * The installed version and the newest release the last check found, if any.
  * `canInstall` says whether the in-place install is available in this browser.
  * `demo` marks a debug build offering a release that is not newer, to replace itself.
+ * `checkedAt` is when GitHub last answered, or null when it never has; a forced
+ * check that leaves it unchanged failed.
  */
 export const updateStatusSchema = v.object({
   currentVersion: v.string(),
@@ -152,6 +154,7 @@ export const updateStatusSchema = v.object({
   updateAvailable: v.boolean(),
   demo: v.boolean(),
   canInstall: v.boolean(),
+  checkedAt: v.nullable(v.number()),
 });
 
 export const errorResponseSchema = v.object({

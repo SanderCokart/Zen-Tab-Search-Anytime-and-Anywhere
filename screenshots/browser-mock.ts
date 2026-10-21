@@ -41,7 +41,10 @@ function pickStorage(
  * Stands in for the background script so the real UI can render without Zen.
  * Snapshot, storage and host-override replies come from the demo fixtures.
  */
-export function installBrowserMock(displaySettings: DisplaySettings): void {
+export function installBrowserMock(
+  displaySettings: DisplaySettings,
+  { updateAvailable = false }: { updateAvailable?: boolean } = {},
+): void {
   const snapshot: SearchSnapshot = demoSnapshot();
   const store: Record<string, unknown> = demoStorage(displaySettings);
   let tabGroups = DEMO_HOST_GROUPS.map((group) => ({ ...group }));
@@ -81,7 +84,20 @@ export function installBrowserMock(displaySettings: DisplaySettings): void {
           title: "",
         };
       case "getUpdateStatus":
-        return { currentVersion: "4.0.2", latest: null, updateAvailable: false, demo: false, canInstall: false };
+        return {
+          currentVersion: "4.0.2",
+          latest: updateAvailable
+            ? {
+                version: "4.1.0",
+                zipUrl: "https://github.com/demo/releases/download/v4.1.0/demo-firefox.zip",
+                releaseUrl: "https://github.com/demo/releases/tag/v4.1.0",
+              }
+            : null,
+          updateAvailable,
+          demo: false,
+          canInstall: true,
+          checkedAt: Date.now() - 20 * 60_000,
+        };
       case "clearTimer":
         return { success: true as const, cleared: true };
       case "clearAllTimers":

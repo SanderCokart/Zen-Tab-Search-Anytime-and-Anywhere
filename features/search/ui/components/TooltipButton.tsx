@@ -5,7 +5,10 @@ import { cn } from "@/shared/ui/cn";
 
 type TooltipAnchor = { rect: DOMRect; container: Element };
 
-export type TooltipButtonProps = Omit<JSX.HTMLAttributes<HTMLButtonElement>, "title" | "class"> & {
+export type TooltipButtonProps = Omit<
+  JSX.ButtonHTMLAttributes<HTMLButtonElement>,
+  "title" | "class"
+> & {
   /** The accessible name. Also the tooltip text unless `tooltip` says more. */
   label: string;
   tooltip?: ComponentChildren;

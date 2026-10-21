@@ -9,9 +9,14 @@ const latest = {
   releaseUrl: "https://github.com/x/y/releases/tag/v4.0.2",
 };
 
-function mountUpdateNotice(status: UpdateStatus, installResponse: unknown = undefined) {
-  const sendMessage = vi.fn(async ({ type }: { type: string }) => {
-    if (type === "getUpdateStatus") return status;
+function mountUpdateNotice(
+  status: Omit<UpdateStatus, "checkedAt"> & { checkedAt?: number | null },
+  installResponse: unknown = undefined,
+  forcedStatus?: UpdateStatus,
+) {
+  const initial: UpdateStatus = { checkedAt: 1_000, ...status };
+  const sendMessage = vi.fn(async ({ type, force }: { type: string; force?: boolean }) => {
+    if (type === "getUpdateStatus") return force && forcedStatus ? forcedStatus : initial;
     if (type === "installUpdate") return installResponse;
     return undefined;
   });
@@ -116,10 +121,51 @@ describe("UpdateNotice", () => {
       demo: false,
       canInstall: true,
     });
-    await vi.waitFor(() =>
-      expect(upToDate.sendMessage).toHaveBeenCalledWith({ type: "getUpdateStatus" }),
-    );
+    await vi.waitFor(() => expect(testId(upToDate.root, "check")).toBeTruthy());
     expect(testId(upToDate.root, "notice")).toBeNull();
+    expect(testId(upToDate.root, "check")!.textContent).toContain("v4.0.2");
+  });
+
+  it("checks GitHub now from the check for updates button", async () => {
+    const status = {
+      currentVersion: "4.0.0",
+      latest: null,
+      updateAvailable: false,
+      demo: false,
+      canInstall: true,
+    };
+    const { root, sendMessage } = mountUpdateNotice(status, undefined, {
+      ...status,
+      latest,
+      updateAvailable: true,
+      checkedAt: 2_000,
+    });
+    await vi.waitFor(() => expect(testId(root, "check-button")).toBeTruthy());
+
+    testId(root, "check-button")!.click();
+
+    expect(sendMessage).toHaveBeenCalledWith({ type: "getUpdateStatus", force: true });
+    await vi.waitFor(() => expect(testId(root, "notice")).toBeTruthy());
+    expect(testId(root, "check")).toBeNull();
+  });
+
+  it.each([
+    { checkedAt: 2_000, result: "Up to date" },
+    { checkedAt: 1_000, result: "Could not reach GitHub" },
+  ])("says $result after a check that finds no update", async ({ checkedAt, result }) => {
+    const status = {
+      currentVersion: "4.0.2",
+      latest,
+      updateAvailable: false,
+      demo: false,
+      canInstall: true,
+    };
+    const { root } = mountUpdateNotice(status, undefined, { ...status, checkedAt });
+    await vi.waitFor(() => expect(testId(root, "check-button")).toBeTruthy());
+
+    testId(root, "check-button")!.click();
+
+    await vi.waitFor(() => expect(testId(root, "result")?.textContent).toBe(result));
   });
 
   it("labels a debug build's offer to replace itself with the same release", async () => {

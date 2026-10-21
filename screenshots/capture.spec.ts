@@ -193,6 +193,22 @@ const captures: Capture[] = [
   },
   {
     scene: "search-omnibar",
+    file: "status-bar.png",
+    ready: (page) => waitForSearch(page, true),
+    around: "[data-testid='zen-status-bar']",
+  },
+  {
+    scene: "update-available",
+    file: "status-bar-update.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      await page.getByTestId("zen-update-notice").getByRole("button").click();
+      await expect(page.getByTestId("zen-update-panel")).toBeVisible();
+    },
+    around: "[data-testid='zen-status-bar'], [data-testid='zen-update-panel']",
+  },
+  {
+    scene: "search-omnibar",
     file: "settings-gear.png",
     ready: (page) => waitForSearch(page, true),
     after: (page) => highlight(page.getByRole("button", { name: "Open display settings" })),

@@ -94,7 +94,8 @@ export function createUpdateService(overrides: Partial<UpdateServiceDeps> = {}) 
     return pendingCheck;
   }
 
-  function toStatus(latest: LatestRelease | null): UpdateStatus {
+  function toStatus(check: StoredUpdateCheck | undefined): UpdateStatus {
+    const latest: LatestRelease | null = check?.latest ?? null;
     const currentVersion = deps.currentVersion();
     const newer = latest !== null && isNewerVersion(latest.version, currentVersion);
     const demo = !newer && latest !== null && deps.demo;
@@ -104,6 +105,7 @@ export function createUpdateService(overrides: Partial<UpdateServiceDeps> = {}) 
       updateAvailable: newer || demo,
       demo,
       canInstall: deps.installer() !== undefined,
+      checkedAt: check?.checkedAt ?? null,
     };
   }
 
@@ -116,7 +118,7 @@ export function createUpdateService(overrides: Partial<UpdateServiceDeps> = {}) 
     const stored = await readCheck();
     const stale = !stored || deps.now() - stored.checkedAt >= UPDATE_CHECK_INTERVAL_MS;
     const current = force || stale ? ((await check()) ?? stored) : stored;
-    return toStatus(current?.latest ?? null);
+    return toStatus(current);
   }
 
   async function availableUpdate(): Promise<LatestRelease> {
