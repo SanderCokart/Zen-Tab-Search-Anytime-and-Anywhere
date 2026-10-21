@@ -203,12 +203,9 @@ export function useSearchNavigation({
     const count = items.length;
     const forgeCount = navigatorEntries.length;
     const todoCount = todoTabs.length;
-    const prefixPane: SearchPane | null =
-      canFocusForge && isPrefixKey(FORGE_NAVIGATOR_PREFIXES, event.key)
-        ? "forge"
-        : canFocusTodos && isPrefixKey(TODO_NAVIGATOR_PREFIXES, event.key)
-          ? "todos"
-          : null;
+    const typesPrefix =
+      (canFocusForge && isPrefixKey(FORGE_NAVIGATOR_PREFIXES, event.key)) ||
+      (canFocusTodos && isPrefixKey(TODO_NAVIGATOR_PREFIXES, event.key));
 
     if (event.key === "Escape") {
       onClose();
@@ -222,17 +219,17 @@ export function useSearchNavigation({
         focusPane(next);
       }
     } else if (
-      prefixPane &&
+      typesPrefix &&
       !event.ctrlKey &&
       !event.metaKey &&
       !event.altKey &&
       (inputRef.current?.selectionStart ?? 0) === 0
     ) {
-      if (prefixPane === "forge") {
-        focusForgePane(0);
-      } else {
-        focusTodosPane(0);
-      }
+      // The prefix itself picks the pane once it is in the query, so drop any
+      // override rather than pinning one: an override stored here would be
+      // keyed to the query without the prefix and take the keyboard back to
+      // this pane after the prefix is deleted again.
+      setPaneOverride(null);
     } else if (event.key === "Enter") {
       if (activePane === "forge") {
         const selectedForge = navigatorEntries[selectedForgeIndex];
