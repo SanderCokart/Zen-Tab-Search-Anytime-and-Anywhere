@@ -41,6 +41,7 @@ describe("excludePinnedSearchSources", () => {
       excludePinnedSearchSources(tabs, spaces, {
         excludeSpaces: true,
         excludeEssentials: false,
+        query: "",
       }),
     ).toEqual({
       tabs,
@@ -50,6 +51,7 @@ describe("excludePinnedSearchSources", () => {
       excludePinnedSearchSources(tabs, spaces, {
         excludeSpaces: false,
         excludeEssentials: true,
+        query: "",
       }),
     ).toEqual({
       tabs: [tabs[0]],
@@ -63,6 +65,21 @@ describe("excludePinnedSearchSources", () => {
       excludePinnedSearchSources(tabs, spaces, {
         excludeSpaces: false,
         excludeEssentials: false,
+        query: "",
+      }),
+    ).toEqual({
+      tabs,
+      spaces,
+    });
+  });
+
+  it("keeps hidden sections searchable once there is a query", () => {
+    const tabs = [tab(1), { ...tab(2), essential: true }];
+    expect(
+      excludePinnedSearchSources(tabs, spaces, {
+        excludeSpaces: true,
+        excludeEssentials: true,
+        query: " work ",
       }),
     ).toEqual({
       tabs,

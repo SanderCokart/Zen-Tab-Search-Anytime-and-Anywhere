@@ -152,7 +152,7 @@ Pin a tab’s hostnames to a fixed IP, like a per-tab hosts file. Open the edito
 
 ### Layout and theme
 
-Hide the spaces grid, the essential-tabs grid, or both, independently on the omnibar and the toolbar popup. Turn wrapping on when you want the full title. Font size, density, and the gap sliders reshape the omnibar; the popup stays a compact fixed size. Text, issue, folder, and space colors each have their own reset.
+Hide the spaces grid, the essential-tabs grid, or both, independently on the omnibar and the toolbar popup; hidden ones still turn up as soon as you search. Turn wrapping on when you want the full title. Font size, density, and the gap sliders reshape the omnibar; the popup stays a compact fixed size. Text, issue, folder, and space colors each have their own reset.
 
 | Hidden grids | Wrapping titles |
 | :----------: | :-------------: |

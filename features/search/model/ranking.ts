@@ -207,13 +207,18 @@ function fieldScore(field: SearchField, query: string, queryWords: string[]): nu
 
 /**
  * Drops spaces and essential tabs before they are ranked. Each flag is
- * independent, so a surface can hide one section and keep the other.
+ * independent, so a surface can hide one section and keep the other. Hiding
+ * only declutters the unfiltered list: once the user searches, both come back
+ * so a hidden space or essential tab can still be found.
  */
 export function excludePinnedSearchSources(
   tabs: TabInfo[],
   spaces: SpaceInfo[],
-  options: { excludeSpaces: boolean; excludeEssentials: boolean },
+  options: { excludeSpaces: boolean; excludeEssentials: boolean; query: string },
 ): { tabs: TabInfo[]; spaces: SpaceInfo[] } {
+  if (options.query.trim()) {
+    return { tabs, spaces };
+  }
   return {
     spaces: options.excludeSpaces ? [] : spaces,
     tabs: options.excludeEssentials ? tabs.filter((tab) => !isEssentialTab(tab)) : tabs,

@@ -141,6 +141,13 @@ export function useSearchResults({
     [forgeNavigatorQuery.filterQuery, navigatorEntries, rankedForgeIssueEntries],
   );
 
+  // A navigator prefix hands the keyboard to another column; the rest of the
+  // query still filters the tab list.
+  const effectiveQuery =
+    forgeNavigatorQuery.active || todoNavigatorQuery.active
+      ? forgeNavigatorQuery.filterQuery
+      : query;
+
   const searchable = useMemo(() => {
     const popup = layout === "popup";
     return excludePinnedSearchSources(visibleTabs, spaces, {
@@ -150,8 +157,9 @@ export function useSearchResults({
       excludeEssentials: popup
         ? displaySettings.hideEssentialsInPopup
         : displaySettings.hideEssentialsInOverlay,
+      query: effectiveQuery,
     });
-  }, [displaySettings, layout, spaces, visibleTabs]);
+  }, [displaySettings, effectiveQuery, layout, spaces, visibleTabs]);
 
   const searchDocuments = useMemo(
     () => buildSearchDocuments(buildSearchItems(searchable.tabs, searchable.spaces)),
@@ -159,10 +167,6 @@ export function useSearchResults({
   );
 
   const filtered = useMemo(() => {
-    const effectiveQuery =
-      forgeNavigatorQuery.active || todoNavigatorQuery.active
-        ? forgeNavigatorQuery.filterQuery
-        : query;
     const matches = filterSearchDocuments(searchDocuments, effectiveQuery);
     if (effectiveQuery.trim()) {
       return matches;
@@ -174,7 +178,7 @@ export function useSearchResults({
       items: prioritizeCurrentTab(matches.items, activeId),
       bestExactWordCount: 0,
     };
-  }, [forgeNavigatorQuery, query, searchable, searchDocuments, todoNavigatorQuery.active]);
+  }, [effectiveQuery, searchable, searchDocuments]);
 
   const items = filtered.items;
   const bestTabWordCount = filtered.bestExactWordCount;

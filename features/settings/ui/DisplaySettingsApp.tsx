@@ -30,22 +30,22 @@ const PINNED_VISIBILITY = [
   [
     "hideSpacesInPopup",
     "Hide spaces in the toolbar popup",
-    "Leaves the spaces grid out of the toolbar popup. The omnibar is unchanged.",
+    "Leaves the spaces grid out of the toolbar popup until you search. The omnibar is unchanged.",
   ],
   [
     "hideSpacesInOverlay",
     "Hide spaces in the omnibar",
-    "Leaves the spaces grid out of the in-page search. The toolbar popup is unchanged.",
+    "Leaves the spaces grid out of the in-page search until you search. The toolbar popup is unchanged.",
   ],
   [
     "hideEssentialsInPopup",
     "Hide essential tabs in the toolbar popup",
-    "Leaves essential tabs out of the toolbar popup, including while you search. The omnibar is unchanged.",
+    "Leaves essential tabs out of the toolbar popup until you search. The omnibar is unchanged.",
   ],
   [
     "hideEssentialsInOverlay",
     "Hide essential tabs in the omnibar",
-    "Leaves essential tabs out of the in-page search, including while you search. The toolbar popup is unchanged.",
+    "Leaves essential tabs out of the in-page search until you search. The toolbar popup is unchanged.",
   ],
 ] as const;
 
