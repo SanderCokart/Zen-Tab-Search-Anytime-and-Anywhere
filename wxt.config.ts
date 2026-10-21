@@ -89,6 +89,14 @@ export default defineConfig({
           script: "experiment/zenBackup/api.js",
         },
       },
+      zenUpdate: {
+        schema: "experiment/zenUpdate/schema.json",
+        parent: {
+          scopes: ["addon_parent"],
+          paths: [["zenUpdate"]],
+          script: "experiment/zenUpdate/api.js",
+        },
+      },
     },
     browser_specific_settings: {
       gecko: {

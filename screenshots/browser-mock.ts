@@ -80,6 +80,8 @@ export function installBrowserMock(displaySettings: DisplaySettings): void {
           originalLabel: "",
           title: "",
         };
+      case "getUpdateStatus":
+        return { currentVersion: "4.0.2", latest: null, updateAvailable: false, demo: false, canInstall: false };
       case "clearTimer":
         return { success: true as const, cleared: true };
       case "clearAllTimers":
@@ -90,6 +92,8 @@ export function installBrowserMock(displaySettings: DisplaySettings): void {
       case "openSettings":
       case "openHostOverridesPopup":
       case "hideOmnibar":
+      case "openUpdate":
+      case "installUpdate":
       case "setTabLabel":
       case "setTodo":
       case "setTabStatus":

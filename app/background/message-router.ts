@@ -4,6 +4,7 @@ import {
   type HostProxyReport,
   type TodoStatus,
   type TrafficLight,
+  type UpdateStatus,
 } from "@/shared/types";
 import {
   type ExtensionRequest,
@@ -37,6 +38,9 @@ export interface MessageRouterHandlers {
   getHostProxyStatus(): Promise<HostProxyReport>;
   openHostOverridesPopup(tabId: number): Promise<void>;
   hideOmnibar(): Promise<void>;
+  getUpdateStatus(force: boolean): Promise<UpdateStatus>;
+  openUpdate(page: "download" | "releaseNotes"): Promise<void>;
+  installUpdate(): Promise<void>;
   /** Anchor for a sender that is not a tab, such as the window-hosted omnibar. */
   anchorTabIdForSender?(sender: MessageSender): number | undefined;
   isAllowedTimerEnd(endAt: number): boolean;
@@ -157,6 +161,12 @@ function handleParsedRequest(
       return handlers.openHostOverridesPopup(message.tabId);
     case "hideOmnibar":
       return handlers.hideOmnibar();
+    case "getUpdateStatus":
+      return handlers.getUpdateStatus(message.force === true);
+    case "openUpdate":
+      return handlers.openUpdate(message.page);
+    case "installUpdate":
+      return handlers.installUpdate();
   }
 }
 

@@ -10,6 +10,7 @@ export type {
   HostOverrideGroup,
   HostProxyReport,
   HostProxyStatus,
+  LatestRelease,
   SpaceInfo,
   TabInfo,
   TabTimer,
@@ -17,6 +18,7 @@ export type {
   TabTodo,
   TodoStatus,
   TrafficLight,
+  UpdateStatus,
 } from "@/shared/messaging/protocol";
 
 export type SearchItem = { kind: "tab"; data: TabInfo } | { kind: "space"; data: SpaceInfo };

@@ -47,6 +47,10 @@ import {
   parseHostOverrideNotificationTabId,
   registerHostOverrides,
 } from "@/features/hosts/background/host-override-service";
+import {
+  createUpdateService,
+  registerUpdateChecks,
+} from "@/features/updates/background/update-service";
 
 export default defineBackground(() => {
   debugLog(`${LOG_PREFIX} background started at`, new Date().toISOString());
@@ -66,6 +70,8 @@ export default defineBackground(() => {
   const todoService = createTodoService();
   const statusService = createStatusService();
   const hostOverrideService = createHostOverrideService();
+  const updateService = createUpdateService();
+  registerUpdateChecks(updateService);
 
   const snapshotCache = createCachedSnapshotReader(
     createSnapshotReader({
@@ -253,6 +259,12 @@ export default defineBackground(() => {
     getHostProxyStatus: hostOverrideService.getStatus,
     openHostOverridesPopup,
     hideOmnibar,
+    getUpdateStatus: updateService.getStatus,
+    openUpdate: async (page) => {
+      await updateService.open(page);
+      await hideOmnibar();
+    },
+    installUpdate: updateService.install,
     anchorTabIdForSender: (sender) =>
       sender.tab === undefined && sender.url?.startsWith(browser.runtime.getURL(OMNIBAR_PAGE))
         ? getOmnibarAnchorTabId()

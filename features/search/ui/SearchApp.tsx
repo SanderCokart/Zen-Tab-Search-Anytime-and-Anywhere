@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
 import type { ForgeIssueSortMode } from "@/features/search/model/ranking";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
+import { UpdateNotice } from "@/features/updates/ui/UpdateNotice";
 import {
   TRAFFIC_LIGHT_MENU_SELECTOR,
   TRAFFIC_LIGHT_TRIGGER_SELECTOR,
@@ -285,6 +286,7 @@ export function SearchApp({
       aspect={layout === "overlay" ? overlayAspect : "1/1"}
       open={layout === "overlay" ? overlayOpen : true}
     >
+      <UpdateNotice />
       <div class="mb-[var(--zen-space-3)] flex items-center gap-[var(--zen-space-2)]">
         <SearchInput
           inputRef={navigation.inputRef}

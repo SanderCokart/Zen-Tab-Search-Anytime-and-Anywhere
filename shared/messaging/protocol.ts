@@ -134,6 +134,26 @@ export const hostProxyReportSchema = v.object({
   proxies: v.array(hostProxyStatusSchema),
 });
 
+/** The newest published release: its version, its Firefox zip and its release page. */
+export const latestReleaseSchema = v.object({
+  version: v.string(),
+  zipUrl: v.string(),
+  releaseUrl: v.string(),
+});
+
+/**
+ * The installed version and the newest release the last check found, if any.
+ * `canInstall` says whether the in-place install is available in this browser.
+ * `demo` marks a debug build offering a release that is not newer, to replace itself.
+ */
+export const updateStatusSchema = v.object({
+  currentVersion: v.string(),
+  latest: v.nullable(latestReleaseSchema),
+  updateAvailable: v.boolean(),
+  demo: v.boolean(),
+  canInstall: v.boolean(),
+});
+
 export const errorResponseSchema = v.object({
   error: v.string(),
 });
@@ -241,6 +261,19 @@ export const extensionRequestSchema = v.variant("type", [
   v.object({
     type: v.literal("hideOmnibar"),
   }),
+  v.object({
+    type: v.literal("getUpdateStatus"),
+    /** Asks GitHub now instead of using a check from the last few hours. */
+    force: v.optional(v.boolean()),
+  }),
+  v.object({
+    type: v.literal("openUpdate"),
+    /** The release zip, which Firefox downloads, or the release page with its notes. */
+    page: v.picklist(["download", "releaseNotes"]),
+  }),
+  v.object({
+    type: v.literal("installUpdate"),
+  }),
 ]);
 
 export const contentCommandSchema = v.variant("type", [
@@ -313,6 +346,9 @@ export const EXTENSION_REQUEST_TYPES = [
   "getHostProxyStatus",
   "openHostOverridesPopup",
   "hideOmnibar",
+  "getUpdateStatus",
+  "openUpdate",
+  "installUpdate",
 ] as const;
 
 /**
@@ -333,6 +369,8 @@ export type TrafficLight = (typeof TRAFFIC_LIGHTS)[number];
 export type HostOverrideGroup = v.InferOutput<typeof hostOverrideGroupSchema>;
 export type HostProxyStatus = v.InferOutput<typeof hostProxyStatusSchema>;
 export type HostProxyReport = v.InferOutput<typeof hostProxyReportSchema>;
+export type LatestRelease = v.InferOutput<typeof latestReleaseSchema>;
+export type UpdateStatus = v.InferOutput<typeof updateStatusSchema>;
 
 export type ExtensionRequestType = (typeof EXTENSION_REQUEST_TYPES)[number];
 export type ExtensionRequest = v.InferOutput<typeof extensionRequestSchema>;
@@ -370,6 +408,9 @@ export type ExtensionSuccessMap = {
   getHostProxyStatus: HostProxyReport;
   openHostOverridesPopup: void;
   hideOmnibar: void;
+  getUpdateStatus: UpdateStatus;
+  openUpdate: void;
+  installUpdate: void;
 };
 
 const clearTimerResponseSchema = v.object({
@@ -479,6 +520,11 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
       return v.parse(hostProxyReportSchema, value) as ExtensionSuccessMap[T];
     case "openHostOverridesPopup":
     case "hideOmnibar":
+      return undefined as ExtensionSuccessMap[T];
+    case "getUpdateStatus":
+      return v.parse(updateStatusSchema, value) as ExtensionSuccessMap[T];
+    case "openUpdate":
+    case "installUpdate":
       return undefined as ExtensionSuccessMap[T];
     default: {
       const exhaustive: never = type;

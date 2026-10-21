@@ -40,7 +40,7 @@ each violation so far has been a genuine misplacement.
 | `mcp/`         | Node MCP server (outside the extension bundle); may import `shared/` only         |
 
 Features: `search`, `timers`, `todos`, `status`, `forge`, `settings`, `zen`, `bridge`,
-`hosts`, `intercept`.
+`hosts`, `intercept`, `updates`.
 
 Inside a feature:
 
@@ -113,6 +113,15 @@ surface asks it for data.
   `zen-tab-search-settings.json` in the profile. When storage holds none of them,
   the background restores from that file and reloads the extension. A new storage
   key that is a user setting belongs in `BACKED_UP_STORAGE_KEYS`.
+- **Updates** (`features/updates/`): the background asks GitHub for the latest
+  release (at startup, every 6 hours, cached under `updateCheck`) and the omnibar
+  shows a notice when it is newer. "Install now" goes through the fourth
+  experiment, `zenUpdate`, which hands the release zip to Firefox's AddonManager
+  as an in-place update. It only accepts assets under this repository's
+  `releases/download/` and cancels a package with another add-on ID or version,
+  so the `-firefox.zip` asset name `scripts/release.mjs` uploads is load-bearing.
+  With `WXT_DEBUG=true` the notice also offers a release that is not newer
+  (marked "debug demo"), so a dev build can replace itself to demo the flow.
 
 ## Adding a feature
 

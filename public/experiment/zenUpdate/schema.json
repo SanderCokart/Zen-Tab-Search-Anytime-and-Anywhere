@@ -1,0 +1,26 @@
+[
+  {
+    "namespace": "zenUpdate",
+    "description": "Installs a newer release of this add-on over the running one",
+    "functions": [
+      {
+        "name": "installFromUrl",
+        "type": "function",
+        "description": "Downloads the add-on package at the URL and installs it as an update of this add-on. Resolves once Firefox has installed it, after which the add-on restarts",
+        "async": true,
+        "parameters": [
+          {
+            "name": "url",
+            "type": "string",
+            "description": "A release asset of this add-on on GitHub"
+          },
+          {
+            "name": "version",
+            "type": "string",
+            "description": "The version the package must contain"
+          }
+        ]
+      }
+    ]
+  }
+]

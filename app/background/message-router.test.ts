@@ -43,6 +43,15 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
     getHostProxyStatus: vi.fn(async () => ({ logPath: "", proxies: [] })),
     openHostOverridesPopup: vi.fn(async () => undefined),
     hideOmnibar: vi.fn(async () => undefined),
+    getUpdateStatus: vi.fn(async () => ({
+      currentVersion: "4.0.0",
+      latest: null,
+      updateAvailable: false,
+      demo: false,
+      canInstall: false,
+    })),
+    openUpdate: vi.fn(async () => undefined),
+    installUpdate: vi.fn(async () => undefined),
     isAllowedTimerEnd: vi.fn(() => true),
     ...overrides,
   };
@@ -184,6 +193,18 @@ describe("dispatchExtensionMessage", () => {
     await Promise.all([marked.promise, cleared.promise]);
     expect(api.setTodo).toHaveBeenNthCalledWith(1, 4, "todo");
     expect(api.setTodo).toHaveBeenNthCalledWith(2, 4, "none");
+  });
+
+  it("dispatches getUpdateStatus, checking now only when forced", async () => {
+    const api = handlers();
+    const cached = dispatchExtensionMessage(api, { type: "getUpdateStatus" });
+    const forced = dispatchExtensionMessage(api, { type: "getUpdateStatus", force: true });
+    if (!cached.handled || !cached.async || !forced.handled || !forced.async) {
+      throw new Error("expected async dispatch");
+    }
+    await Promise.all([cached.promise, forced.promise]);
+    expect(api.getUpdateStatus).toHaveBeenNthCalledWith(1, false);
+    expect(api.getUpdateStatus).toHaveBeenNthCalledWith(2, true);
   });
 
   it("dispatches setTabStatus, including clearing it with none", async () => {
