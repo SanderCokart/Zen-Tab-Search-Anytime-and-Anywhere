@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Settings — mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=block" rel="stylesheet" />
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #d9d9d6; }
+body { padding: 36px; width: 1676px; display: flex; flex-direction: column; gap: 18px; font-family: "IBM Plex Mono", monospace; }
+.caption { font: 600 13px/1.4 "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: #333; }
+.caption b { color: #ff2a1f; margin-right: 12px; }
+.caption i { font-style: normal; color: #777; font-weight: 400; margin-left: 10px; }
+.pair { display: flex; gap: 28px; align-items: flex-start; }
+svg.i { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.t-light { --chassis:#e8e8e5; --card:#fafaf8; --card-hi:#fff; --ink:#161616; --ink-2:#4c4c4a; --ink-3:#72726d; --hair:#dcdcd8;
+  --red:#ff2a1f; --red-ink:#d4201a; --glow:rgb(255 42 31/55%); --led-off:#cfcdc7; --lcd:#111; --lcd-ink:#f4f4f2;
+  --key:#f4f4f1; --key-edge:#cfcfca; --pressed:#ececea; --track:#2a2a2a;
+  --shadow:0 1px 0 #fff inset,0 14px 26px -16px rgb(0 0 0/30%),0 2px 5px rgb(0 0 0/6%);
+  --key-shadow:inset 0 1px 0 rgb(255 255 255/.95),0 2px 0 var(--key-edge),0 3px 6px -2px rgb(0 0 0/18%);
+  --well:inset 0 1px 3px rgb(0 0 0/.12),inset 0 0 0 1px rgb(0 0 0/.04); }
+.t-dark { --chassis:#121212; --card:#1b1b1b; --card-hi:#232323; --ink:#ededea; --ink-2:#a9a9a4; --ink-3:#8a8a85; --hair:#2c2c2c;
+  --red:#ff2a1f; --red-ink:#ff5a50; --glow:rgb(255 42 31/55%); --led-off:#3a3a3a; --lcd:#070707; --lcd-ink:#f4f4f2;
+  --key:#2a2a2a; --key-edge:#0c0c0c; --pressed:#151515; --track:#050505;
+  --shadow:0 1px 0 rgb(255 255 255/6%) inset,0 16px 30px -16px rgb(0 0 0/90%),0 2px 4px rgb(0 0 0/50%);
+  --key-shadow:inset 0 1px 0 rgb(255 255 255/.09),0 2px 0 var(--key-edge),0 4px 8px -2px rgb(0 0 0/70%);
+  --well:inset 0 2px 6px rgb(0 0 0/70%),inset 0 0 0 1px rgb(255 255 255/3%); }
+
+.chassis { background: var(--chassis); border-radius: 22px; width: 784px; color: var(--ink); padding: 22px; }
+.card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); }
+.ph { display: flex; align-items: center; gap: 10px; font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
+.ph .idx { color: var(--red); font-weight: 600; }
+.ph .rule { flex: 1; height: 1px; background: var(--hair); }
+.ph .meta { color: var(--ink-3); }
+.title { font: 400 34px/1 "IBM Plex Mono", monospace; letter-spacing: -.02em; }
+.sub { font: 400 12px/1.6 "IBM Plex Mono", monospace; color: var(--ink-2); margin-top: 8px; }
+.lbl { font: 500 13px/1.3 Inter, sans-serif; color: var(--ink); }
+.hint { font: 400 11.5px/1.45 Inter, sans-serif; color: var(--ink-3); margin-top: 3px; }
+.mono-lbl { font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+
+/* switch */
+.sw { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.sw small { font-size: 8.5px; letter-spacing: .14em; color: var(--ink-3); }
+.sw .track { width: 40px; height: 22px; border-radius: 11px; background: var(--pressed); box-shadow: var(--well); position: relative; }
+.sw .nub { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--card-hi); box-shadow: 0 1px 0 rgb(255 255 255/.8) inset, 0 2px 4px rgb(0 0 0/.35); }
+.sw.on .track { background: var(--red); box-shadow: inset 0 1px 3px rgb(0 0 0/.25), 0 0 10px -2px var(--glow); }
+.sw.on .nub { left: 20px; background: #fff; }
+.sw.on small.on, .sw:not(.on) small.off { color: var(--ink); font-weight: 600; }
+/* slider */
+.sl { display: flex; align-items: center; gap: 12px; flex: none; }
+.sl .rail { position: relative; width: 190px; height: 18px; }
+.sl .bar { position: absolute; top: 7px; left: 0; right: 0; height: 5px; border-radius: 3px; background: var(--track); }
+.sl .fill { position: absolute; top: 7px; left: 0; height: 5px; border-radius: 3px; background: var(--red); box-shadow: 0 0 8px -1px var(--glow); }
+.sl .thumb { position: absolute; top: 0; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: var(--card-hi); box-shadow: 0 1px 0 rgb(255 255 255/.9) inset, 0 2px 5px rgb(0 0 0/.35), 0 0 0 1px var(--key-edge); }
+.sl .ticks { position: absolute; top: 20px; left: 0; right: 0; display: flex; justify-content: space-between; }
+.sl .ticks i { width: 1px; height: 4px; background: var(--ink-3); opacity: .6; }
+.sl .ticks i:nth-child(5n+1) { height: 7px; opacity: 1; }
+.lcdv { min-width: 54px; text-align: right; background: var(--lcd); color: var(--lcd-ink); font: 500 12px "IBM Plex Mono", monospace; padding: 5px 8px; border-radius: 7px; box-shadow: inset 0 2px 5px rgb(0 0 0/.7); }
+.lcdv u { text-decoration: none; color: #7c7c78; font-size: 10px; margin-left: 2px; }
+/* segmented */
+.seg { display: flex; background: var(--pressed); box-shadow: var(--well); border-radius: 11px; padding: 3px; gap: 3px; }
+.seg span { flex: 1; text-align: center; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; padding: 7px 14px; border-radius: 8px; color: var(--ink-3); white-space: nowrap; }
+.seg span.on { background: var(--card-hi); color: var(--ink); box-shadow: var(--key-shadow); font-weight: 600; }
+.seg span.on::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--red); box-shadow: 0 0 6px var(--glow); margin-right: 7px; vertical-align: 2px; }
+/* color key */
+.swatch { display: inline-flex; align-items: center; gap: 8px; padding: 4px 4px 4px 4px; border-radius: 9px; background: var(--key); box-shadow: var(--key-shadow); }
+.swatch i { width: 22px; height: 22px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgb(0 0 0/.15); }
+.swatch span { font-size: 10px; letter-spacing: .12em; color: var(--ink-2); padding-right: 6px; }
+.key { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 9px; background: var(--key); box-shadow: var(--key-shadow); font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); white-space: nowrap; }
+.key.red { background: var(--red); color: #fff; box-shadow: 0 1px 0 rgb(255 255 255/.35) inset, 0 2px 0 #a8150f, 0 6px 14px -4px var(--glow); }
+.led { width: 6px; height: 6px; border-radius: 50%; background: var(--led-off); display: inline-block; flex: none; }
+.led.on { background: var(--red); box-shadow: 0 0 7px var(--glow); }
+.lcdfield { background: var(--lcd); color: var(--lcd-ink); border-radius: 10px; padding: 10px 12px; font-size: 12px; box-shadow: inset 0 2px 6px rgb(0 0 0/.75); display: flex; gap: 10px; align-items: center; }
+.lcdfield em { font-style: normal; color: var(--red); font-size: 9.5px; letter-spacing: .16em; }
+.knob { position: absolute; inset: 0; border-radius: 50%;
+  background: repeating-conic-gradient(from -135deg, var(--ink-3) 0 1.2deg, transparent 1.2deg 13.5deg); mask: radial-gradient(circle, transparent 23px, #000 24px, #000 31px, transparent 31px); }
+.knobwrap { position: relative; display: block; width: 62px; height: 62px; margin: 0 auto; flex: none; }
+.knobwrap .cap { position: absolute; inset: 9px; border-radius: 50%; background: var(--card-hi); box-shadow: 0 1px 0 rgb(255 255 255/.9) inset, 0 4px 10px rgb(0 0 0/.3), 0 0 0 1px var(--key-edge); }
+.knobwrap .dot { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--red); box-shadow: 0 0 6px var(--glow); }
+
+/* ═══ A — Rack panel: sidebar index + section cards ═══ */
+.a .layout { display: grid; grid-template-columns: 190px 1fr; gap: 18px; }
+.a .nav { padding: 16px 10px; align-self: start; }
+.a .nav div { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.a .nav div b { color: var(--ink-3); font-weight: 500; width: 18px; }
+.a .nav div.on { background: var(--pressed); box-shadow: var(--well); color: var(--ink); font-weight: 600; }
+.a .nav div.on b { color: var(--red); }
+.a .nav div .led { margin-left: auto; }
+.a .stack { display: flex; flex-direction: column; gap: 16px; }
+.a .sec { padding: 16px 18px 6px; }
+.a .row { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px dashed var(--hair); }
+.a .ph + .row { border-top: 0; }
+.a .row .txt { flex: 1; min-width: 0; }
+
+/* ═══ B — Module grid: SPEC-01 component sheet ═══ */
+.b .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.b .mod { padding: 16px 16px 14px; }
+.b .mod.wide { grid-column: span 2; }
+.b .mod .body { padding-top: 14px; display: flex; flex-direction: column; gap: 14px; }
+.b .knobs { display: flex; justify-content: space-around; gap: 10px; text-align: center; }
+.b .knobs .v { font: 400 20px "IBM Plex Mono", monospace; margin-top: 8px; }
+.b .pill-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.b .minirow { display: flex; align-items: center; gap: 10px; }
+.b .minirow .lbl { flex: 1; font-size: 12.5px; }
+.b .gaps { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; }
+.b .gaps .g { display: flex; align-items: center; gap: 10px; }
+.b .gaps .g .mono-lbl { width: 92px; }
+.b .gaps .sl .rail { width: 120px; }
+.b .gaps .lcdv { min-width: 44px; }
+
+/* ═══ C — Console: one column of grouped rows + live preview ═══ */
+.c .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 4px 4px 18px; }
+.c .preview { padding: 12px; margin-bottom: 16px; }
+.c .preview .mini { border-radius: 12px; background: var(--chassis); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.c .preview .mini .lcdfield { padding: 7px 10px; font-size: 11px; }
+.c .preview .cols { display: grid; grid-template-columns: 1fr 1fr .8fr; gap: 8px; }
+.c .preview .cols div { background: var(--card); border-radius: 9px; box-shadow: var(--shadow); padding: 8px; display: flex; flex-direction: column; gap: 5px; }
+.c .preview .cols div i { height: 8px; border-radius: 3px; background: var(--hair); display: block; }
+.c .preview .cols div i.r { background: var(--pressed); box-shadow: var(--well); height: 12px; }
+.c .grp { margin-bottom: 14px; }
+.c .grp .ph { padding: 0 6px 8px; }
+.c .grp .card { padding: 2px 16px; }
+.c .row { display: flex; align-items: center; gap: 16px; padding: 12px 0; }
+.c .row + .row { border-top: 1px solid var(--hair); }
+.c .row .txt { flex: 1; min-width: 0; }
+.c .row.child { padding-left: 22px; position: relative; }
+.c .row.child::before { content: ""; position: absolute; left: 6px; top: 0; bottom: 50%; width: 10px; border-left: 1px dotted var(--ink-3); border-bottom: 1px dotted var(--ink-3); }
+</style>
+</head>
+<body>
+<script>
+const sw = (on) => `<span class="sw ${on ? "on" : ""}"><small class="off">OFF</small><span class="track"><span class="nub"></span></span><small class="on">ON</small></span>`;
+const swPlain = (on) => `<span class="sw ${on ? "on" : ""}"><span class="track"><span class="nub"></span></span></span>`;
+const slider = (pct, val, unit = "") => `<span class="sl"><span class="rail"><span class="bar"></span><span class="fill" style="width:${pct}%"></span><span class="thumb" style="left:${pct}%"></span><span class="ticks">${"<i></i>".repeat(21)}</span></span><span class="lcdv">${val}<u>${unit}</u></span></span>`;
+const seg = (opts, on) => `<span class="seg">${opts.map((o, i) => `<span class="${i === on ? "on" : ""}">${o}</span>`).join("")}</span>`;
+const swatch = (color, label) => `<span class="swatch"><i style="background:${color}"></i><span>${label}</span></span>`;
+const knob = (deg) => { const r = 26, a = (deg - 90) * Math.PI / 180; return `<span class="knobwrap"><span class="knob"></span><span class="cap"></span><span class="dot" style="left:${31 + Math.cos(a) * 14 - 3}px;top:${31 + Math.sin(a) * 14 - 3}px"></span></span>`; };
+const reset = `<span class="key"><svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Reset</span>`;
+
+function designA(t) {
+  const row = (lbl, hint, ctrl) => `<div class="row"><div class="txt"><div class="lbl">${lbl}</div>${hint ? `<div class="hint">${hint}</div>` : ""}</div>${ctrl}</div>`;
+  return `<div style="padding:4px 4px 20px"><div class="title">SETTINGS/DISPLAY</div><div class="sub">Every change saves at once and shows up in the omnibar.</div></div>
+  <div class="layout">
+    <div class="card nav">
+      ${[["01","Appearance",1],["02","Size",0],["03","Sound",0],["04","Gaps",0],["05","Lists",0],["06","Links & issues",0],["07","AI agents",0]].map(([n,l,on])=>`<div class="${on?"on":""}"><b>${n}</b>${l}${on?'<span class="led on"></span>':""}</div>`).join("")}
+    </div>
+    <div class="stack">
+      <div class="card sec"><div class="ph"><span class="idx">01</span>Appearance<span class="rule"></span></div>
+        ${row("Theme", "System follows your OS.", seg(["System","Light","Dark"], 0))}
+        ${row("Text", "Auto follows the theme.", swatch(t==="dark"?"#ededea":"#161616","AUTO"))}
+        ${row("Issue cards", "", swatch(t==="dark"?"#1b1b1b":"#fafaf8","AUTO"))}
+        ${row("Folder cards", "", swatch("#2f4f8a","#2F4F8A") + " " + reset)}
+      </div>
+      <div class="card sec"><div class="ph"><span class="idx">02</span>Size<span class="rule"></span></div>
+        ${row("Font size", "", slider(40, "14", "px"))}
+        ${row("Density", "", slider(55, "1.10", "×"))}
+        ${row("Follow the page zoom level", "Scales with Ctrl + / Ctrl −.", sw(true))}
+      </div>
+      <div class="card sec"><div class="ph"><span class="idx">03</span>Sound<span class="rule"></span></div>
+        ${row("Interface sounds", "Key clicks, latches and chimes.", sw(true))}
+        ${row("Volume", "", slider(40, "40", "%"))}
+      </div>
+    </div>
+  </div>`;
+}
+
+function designB(t) {
+  const mini = (lbl, on) => `<div class="minirow"><span class="lbl">${lbl}</span>${swPlain(on)}</div>`;
+  return `<div style="padding:4px 4px 18px"><div class="title">SETTINGS</div><div class="sub">A module per group. Turn, slide, switch — it saves as you go.</div></div>
+  <div class="grid">
+    <div class="card mod wide"><div class="ph"><span class="idx">01</span>Theme<span class="rule"></span></div>
+      <div class="body"><div class="pill-row">${seg(["System","Light","Dark"], 0)}<span style="display:flex;gap:8px">${swatch(t==="dark"?"#ededea":"#161616","TEXT")}${swatch(t==="dark"?"#1b1b1b":"#fafaf8","ISSUES")}${swatch("#2f4f8a","FOLDERS")}${swatch(t==="dark"?"#1b1b1b":"#fafaf8","SPACES")}</span></div></div></div>
+    <div class="card mod"><div class="ph"><span class="idx">02</span>Size<span class="rule"></span></div>
+      <div class="body"><div class="knobs">
+        <div>${knob(-30)}<div class="v">14</div><div class="mono-lbl">Font px</div></div>
+        <div>${knob(20)}<div class="v">1.10</div><div class="mono-lbl">Density</div></div>
+      </div>${mini("Follow page zoom", true)}</div></div>
+    <div class="card mod"><div class="ph"><span class="idx">03</span>Sound<span class="rule"></span></div>
+      <div class="body"><div class="knobs">
+        <div>${knob(-50)}<div class="v">40</div><div class="mono-lbl">Volume</div></div>
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">${sw(true)}<div class="mono-lbl">Sounds</div></div>
+      </div><div class="minirow"><span class="lbl">Test</span><span class="key">Click</span><span class="key">Tick</span><span class="key red">Chime</span></div></div></div>
+    <div class="card mod wide"><div class="ph"><span class="idx">04</span>Gaps<span class="rule"></span><span class="meta">px at default size</span></div>
+      <div class="body"><div class="gaps">
+        ${[["Tabs",30,"6"],["Folders",50,"10"],["Essentials",40,"8"],["Spaces",40,"8"],["Sections",70,"14"],["Issues",30,"6"],["Todos",30,"6"]].map(([l,p,v])=>`<div class="g"><span class="mono-lbl">${l}</span>${slider(p,v)}</div>`).join("")}
+        <div class="g" style="justify-content:flex-end">${reset}</div>
+      </div></div></div>
+    <div class="card mod"><div class="ph"><span class="idx">05</span>Lists<span class="rule"></span></div>
+      <div class="body">${mini("Truncate tab titles", true)}${mini("Truncate issue titles", true)}${mini("Group tabs by folders", true)}${mini("Group by subfolders", false)}</div></div>
+    <div class="card mod"><div class="ph"><span class="idx">06</span>Popup &amp; omnibar<span class="rule"></span></div>
+      <div class="body">${mini("Hide spaces · popup", false)}${mini("Hide spaces · omnibar", true)}${mini("Hide essentials · popup", false)}${mini("Hide essentials · omnibar", false)}</div></div>
+  </div>`;
+}
+
+function designC(t) {
+  const row = (lbl, hint, ctrl, child) => `<div class="row ${child ? "child" : ""}"><div class="txt"><div class="lbl">${lbl}</div>${hint ? `<div class="hint">${hint}</div>` : ""}</div>${ctrl}</div>`;
+  return `<div class="head"><div><div class="title">SETTINGS</div><div class="sub">Display · sound · lists · links · agents</div></div>
+    <div class="lcdfield" style="width:260px"><em>FIND</em><span style="color:#777">Search settings…</span></div></div>
+  <div class="card preview"><div class="ph" style="padding:0 2px 8px"><span class="idx">00</span>Live preview<span class="rule"></span><span class="meta">${t}</span></div>
+    <div class="mini"><div class="lcdfield"><em>SEARCH</em><span style="color:#777">Search tabs and spaces…</span></div>
+      <div class="cols"><div><i class="r"></i><i></i><i></i><i></i></div><div><i class="r"></i><i></i><i></i></div><div><i></i><i></i></div></div></div></div>
+  <div class="grp"><div class="ph"><span class="idx">01</span>Appearance<span class="rule"></span></div><div class="card">
+    ${row("Theme", "System follows your OS.", seg(["System","Light","Dark"], 0))}
+    ${row("Colors", "Auto follows the theme.", `<span style="display:flex;gap:6px">${swatch(t==="dark"?"#ededea":"#161616","A")}${swatch(t==="dark"?"#1b1b1b":"#fafaf8","A")}${swatch("#2f4f8a","")}${swatch(t==="dark"?"#1b1b1b":"#fafaf8","A")}</span>`)}
+    ${row("Font size", "", slider(40, "14", "px"))}
+    ${row("Density", "", slider(55, "1.10", "×"))}
+    ${row("Follow the page zoom level", "Scales with Ctrl + / Ctrl −.", sw(true))}
+  </div></div>
+  <div class="grp"><div class="ph"><span class="idx">02</span>Sound<span class="rule"></span></div><div class="card">
+    ${row("Interface sounds", "Key clicks, latches and chimes.", sw(true))}
+    ${row("Volume", "", slider(40, "40", "%"), true)}
+  </div></div>
+  <div class="grp"><div class="ph"><span class="idx">03</span>Links &amp; issues<span class="rule"></span></div><div class="card">
+    ${row("Reuse an open tab", "Switch to a tab that already has the link.", sw(true))}
+    ${row("Auto-detect GitHub and GitLab issues", "", sw(true))}
+    ${row("Group tabs by folders", "", sw(true))}
+    ${row("Group by subfolders", "", sw(false), true)}
+  </div></div>`;
+}
+
+const d = new URLSearchParams(location.search).get("design") || "a";
+const meta = { a: ["A", "Rack panel", "numbered section index on the left, one card per section, rows with switches and LCD-readout sliders"],
+  b: ["B", "Module grid", "a SPEC-01 component sheet: knobs for size and volume, switch banks, a gaps fader block, sound test keys"],
+  c: ["C", "Console", "one scrolling column of grouped rows, settings search, live omnibar preview on top"] }[d];
+const body = { a: designA, b: designB, c: designC }[d];
+document.body.innerHTML = `<div class="caption"><b>${meta[0]}</b>${meta[1]}<i>— ${meta[2]} · light / dark</i></div>
+<div class="pair">${["light", "dark"].map((t) => `<div class="chassis t-${t} ${d}">${body(t)}</div>`).join("")}</div>`;
+</script>
+</body>
+</html>

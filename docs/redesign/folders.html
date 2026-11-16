@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Forge folders — mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=block" rel="stylesheet" />
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #d9d9d6; }
+body { padding: 36px; width: 1676px; display: flex; flex-direction: column; gap: 18px; font-family: "IBM Plex Mono", monospace; }
+.caption { font: 600 13px/1.4 "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: #333; }
+.caption b { color: #ff2a1f; margin-right: 12px; }
+.caption i { font-style: normal; color: #777; font-weight: 400; margin-left: 10px; }
+.pair { display: flex; gap: 28px; }
+svg.i { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ── Tokens (SPEC-01, from round 1) ── */
+.t-light { --chassis:#e8e8e5; --card:#fafaf8; --card-hi:#fff; --ink:#161616; --ink-2:#4c4c4a; --ink-3:#72726d; --hair:#dcdcd8;
+  --red:#ff2a1f; --red-ink:#d4201a; --glow:rgb(255 42 31/55%); --led-off:#cfcdc7; --lcd:#111; --lcd-ink:#f4f4f2;
+  --key:#f4f4f1; --key-edge:#cfcfca; --pressed:#ececea; --tray:#ededeb;
+  --shadow:0 1px 0 #fff inset,0 14px 26px -16px rgb(0 0 0/30%),0 2px 5px rgb(0 0 0/6%);
+  --key-shadow:inset 0 1px 0 rgb(255 255 255/.95),0 2px 0 var(--key-edge);
+  --well:inset 0 1px 3px rgb(0 0 0/.1),inset 0 0 0 1px rgb(0 0 0/.03); }
+.t-dark { --chassis:#121212; --card:#1b1b1b; --card-hi:#232323; --ink:#ededea; --ink-2:#a9a9a4; --ink-3:#8a8a85; --hair:#2c2c2c;
+  --red:#ff2a1f; --red-ink:#ff5a50; --glow:rgb(255 42 31/55%); --led-off:#3a3a3a; --lcd:#070707; --lcd-ink:#f4f4f2;
+  --key:#262626; --key-edge:#0c0c0c; --pressed:#151515; --tray:#151515;
+  --shadow:0 1px 0 rgb(255 255 255/6%) inset,0 16px 30px -16px rgb(0 0 0/90%),0 2px 4px rgb(0 0 0/50%);
+  --key-shadow:inset 0 1px 0 rgb(255 255 255/.09),0 2px 0 var(--key-edge);
+  --well:inset 0 2px 6px rgb(0 0 0/70%),inset 0 0 0 1px rgb(255 255 255/3%); }
+
+.chassis { background: var(--chassis); padding: 22px; border-radius: 22px; width: 784px; color: var(--ink); }
+.panel { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 16px 14px 14px; height: 900px; overflow: hidden; }
+.ph { display: flex; align-items: center; gap: 10px; font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); padding: 0 6px 12px; }
+.ph .idx { color: var(--red); font-weight: 600; }
+.ph .rule { flex: 1; height: 1px; background: var(--hair); }
+.ph .meta { color: var(--red-ink); font-weight: 600; }
+.seg { display: flex; background: var(--pressed); box-shadow: var(--well); border-radius: 12px; padding: 4px; gap: 4px; margin: 0 4px 14px; }
+.seg span { flex: 1; text-align: center; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; padding: 8px 0; border-radius: 9px; color: var(--ink-3); }
+.seg span.on { background: var(--card-hi); color: var(--ink); box-shadow: var(--key-shadow); font-weight: 600; }
+.seg span.on::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--red); box-shadow: 0 0 6px var(--glow); margin-right: 8px; vertical-align: 2px; }
+.seg b { font-weight: 400; color: var(--ink-3); margin-left: 6px; }
+
+.led { width: 6px; height: 6px; border-radius: 50%; background: var(--led-off); flex: none; display: inline-block; }
+.led.on { background: var(--red); box-shadow: 0 0 7px var(--glow); }
+.keys { display: flex; gap: 6px; flex: none; }
+.k { width: 30px; height: 26px; border-radius: 8px; background: var(--key); box-shadow: var(--key-shadow); display: grid; place-items: center; color: var(--ink-2); position: relative; }
+.k::after { content: ""; position: absolute; top: 4px; right: 4px; width: 3px; height: 3px; border-radius: 50%; background: var(--led-off); }
+.k.on::after { background: var(--red); box-shadow: 0 0 4px var(--glow); }
+.k.on { color: var(--ink); }
+.row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px; }
+.row .txt { flex: 1; min-width: 0; }
+.row .t { font: 500 13.5px/1.3 Inter, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .s { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin-top: 3px; white-space: nowrap; }
+.row.sel { background: var(--pressed); box-shadow: var(--well); }
+.ref { font-family: "IBM Plex Mono", monospace; font-weight: 500; color: var(--ink-3); margin-right: 8px; font-size: 12.5px; }
+.tag { font: 600 9.5px "IBM Plex Mono", monospace; letter-spacing: .12em; padding: 3px 6px; border-radius: 5px; border: 1px solid var(--hair); color: var(--ink-2); margin-right: 8px; vertical-align: 1px; }
+.tag.mr { color: var(--red-ink); border-color: color-mix(in srgb, var(--red) 40%, transparent); }
+.tag.epic { background: var(--ink); color: var(--card); border-color: var(--ink); }
+.cnt { font-size: 10.5px; color: var(--ink-3); letter-spacing: .08em; }
+
+/* ═══ A — Trays: project = raised plate, groups = recessed trays, LED + count ═══ */
+.a .proj { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 12px; background: var(--card-hi); box-shadow: var(--key-shadow); margin: 0 4px 10px; }
+.a .proj .num { color: var(--red); font-weight: 600; font-size: 11px; }
+.a .proj .lbl { flex: 1; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+.a .proj .lbl small { display: block; font-weight: 400; color: var(--ink-3); letter-spacing: .1em; font-size: 9.5px; margin-bottom: 2px; }
+.a .tray { background: var(--tray); box-shadow: var(--well); border-radius: 13px; margin: 0 4px 10px; padding: 4px; }
+.a .gh { display: flex; align-items: center; gap: 10px; padding: 9px 10px; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.a .gh .num { color: var(--ink-3); }
+.a .gh .rule { flex: 1; height: 1px; background: var(--hair); }
+.a .gh b { color: var(--ink); font-weight: 600; }
+.a .tray .row { background: transparent; }
+.a .tray .row.sel { background: var(--card); box-shadow: var(--key-shadow); }
+.a .tray.closed .gh { padding-bottom: 9px; }
+
+/* ═══ B — Label tape: project = black LCD tape strip, groups = hairline dividers, flat rows ═══ */
+.b .tape { display: flex; align-items: center; gap: 12px; background: var(--lcd); color: var(--lcd-ink); border-radius: 10px; padding: 10px 14px; margin: 0 4px 6px; box-shadow: inset 0 2px 6px rgb(0 0 0/70%); }
+.b .tape .lbl { flex: 1; font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; }
+.b .tape .lbl span { color: #7d7d7a; }
+.b .tape .num { color: var(--red); font-weight: 600; font-size: 11px; }
+.b .tape .digits { font-size: 11px; color: #9a9a96; letter-spacing: .1em; }
+.b .div { display: flex; align-items: center; gap: 10px; padding: 14px 14px 6px; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3); }
+.b .div .rule { flex: 1; height: 0; border-top: 1px dashed var(--hair); }
+.b .div b { color: var(--ink); font-weight: 600; }
+.b .div .tog { font-size: 10px; color: var(--ink-3); }
+.b .row { padding-left: 14px; }
+.b .closed-note { margin: 0 14px 4px; padding: 7px 10px; border-radius: 8px; background: var(--pressed); box-shadow: var(--well); font-size: 10.5px; letter-spacing: .1em; color: var(--ink-3); text-transform: uppercase; display: flex; justify-content: space-between; }
+
+/* ═══ C — Rack: keycap toggles + dotted tree guide, single-line rows ═══ */
+.c .node { display: flex; align-items: center; gap: 10px; padding: 7px 6px; }
+.c .tog { width: 26px; height: 22px; border-radius: 7px; background: var(--key); box-shadow: var(--key-shadow); display: grid; place-items: center; flex: none; }
+.c .tog.down { box-shadow: var(--well); background: var(--pressed); }
+.c .node .lbl { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 600; }
+.c .node .lbl span { color: var(--ink-3); font-weight: 400; }
+.c .node .rule { flex: 1; height: 1px; background: var(--hair); }
+.c .branch { font: 600 10px "IBM Plex Mono", monospace; letter-spacing: .1em; background: var(--lcd); color: var(--lcd-ink); padding: 3px 8px; border-radius: 5px; }
+.c .kids { margin-left: 18px; padding-left: 14px; border-left: 1px dotted color-mix(in srgb, var(--ink-3) 60%, transparent); }
+.c .row { padding: 6px 8px; }
+.c .row .t { font-size: 13px; }
+.c .row .when { font-size: 10.5px; color: var(--ink-3); letter-spacing: .04em; flex: none; width: 34px; text-align: right; }
+.c .row .s { display: none; }
+</style>
+</head>
+<body>
+<script>
+const I = {
+  box: '<rect x="5" y="5" width="14" height="14" rx="3"/>',
+  check: '<rect x="5" y="5" width="14" height="14" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+  timer: '<circle cx="12" cy="13" r="7"/><path d="M12 10v3l2 1.5M10 3h4"/>',
+  light: '<rect x="8" y="3" width="8" height="18" rx="3"/><circle cx="12" cy="8" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="16" r="1.3"/>',
+  open: '<path d="m7 10 5 5 5-5"/>', closed: '<path d="m10 7 5 5-5 5"/>',
+};
+const svg = (n) => `<svg class="i" viewBox="0 0 24 24">${I[n]}</svg>`;
+const issues = [
+  ["#12126", "Factuuradres in two-column checkout", "43m", "43 minutes ago"],
+  ["#11796", "[Checkout] Todo's uit de code oplossen", "2w", "2 weeks ago"],
+  ["#12118", "Bedankpagina two-column checkout volgens design", "2w", "2 weeks ago"],
+  ["#12161", "Follow-up of “Velden horen niet bij gekozen verzendmethode”", "2w", "2 weeks ago"],
+  ["", "EPIC — Two-column checkout", "2w", "2 weeks ago", "epic"],
+  ["#11541", "Canarische Eilanden: correcte ISO 3166-code (IC)", "2w", "2 weeks ago"],
+];
+const mrsDev = [["!19338", "Draft: Nieuwe checkout release branch", "1h", "1 hour ago"], ["!19855", "Checkout: show updated payment method icons in flow", "5h", "5 hours ago", "", true]];
+const keys = (todo) => `<div class="keys"><span class="k ${todo ? "on" : ""}">${svg(todo ? "check" : "box")}</span><span class="k">${svg("timer")}</span><span class="k">${svg("light")}</span></div>`;
+function row([ref, title, short, long, kind, todo], isMr, sel, d) {
+  const tag = kind === "epic" ? `<span class="tag epic">EPIC</span>` : isMr ? `<span class="tag mr">MR</span>` : `<span class="tag">ISSUE</span>`;
+  const when = d === "c" ? `<span class="when">${short}</span>` : "";
+  return `<div class="row ${sel ? "sel" : ""}"><div class="txt"><div class="t">${tag}${ref ? `<span class="ref">${ref}</span>` : ""}${title}</div><div class="s">${isMr ? "Merge request · " : ""}Last opened ${long}</div></div>${when}${keys(todo)}</div>`;
+}
+const head = (d) => `<div class="ph"><span class="idx">02</span>Issues &amp; requests<span class="rule"></span><span class="meta">Recent · 22</span></div>
+  <div class="seg"><span class="on">All<b>22</b></span><span>Issues<b>11</b></span><span>MRs<b>11</b></span></div>`;
+
+function designA() {
+  return `${head("a")}
+  <div class="proj"><span class="num">01</span><span class="lbl"><small>GitLab</small>gitlab.biedmeer.nl / ccv / shop / shop</span><span class="cnt">22</span><span class="led on"></span></div>
+  <div class="tray"><div class="gh"><span class="num">01</span><b>Issues</b><span class="rule"></span><span class="cnt">11</span><span class="led on"></span></div>
+    ${issues.map((r, i) => row(r, false, i === 0, "a")).join("")}</div>
+  <div class="tray"><div class="gh"><span class="num">02</span><b>MRs → develop</b><span class="rule"></span><span class="cnt">2</span><span class="led on"></span></div>
+    ${mrsDev.map((r) => row(r, true, false, "a")).join("")}</div>
+  <div class="tray closed"><div class="gh"><span class="num">03</span><b>MRs → master</b><span class="rule"></span><span class="cnt">9 hidden</span><span class="led"></span></div></div>`;
+}
+function designB() {
+  return `${head("b")}
+  <div class="tape"><span class="num">01</span><span class="lbl"><span>gitlab /</span> biedmeer.nl/ccv/shop/shop</span><span class="digits">22</span><span class="led on"></span></div>
+  <div class="div"><b>Issues</b><span class="rule"></span><span class="cnt">11</span><span class="led on"></span></div>
+  ${issues.map((r, i) => row(r, false, i === 0, "b")).join("")}
+  <div class="div"><b>MRs → develop</b><span class="rule"></span><span class="cnt">2</span><span class="led on"></span></div>
+  ${mrsDev.map((r) => row(r, true, false, "b")).join("")}
+  <div class="div"><b>MRs → master</b><span class="rule"></span><span class="cnt">9</span><span class="led"></span></div>
+  <div class="closed-note"><span>9 merge requests folded</span><span>Alt+→ to open</span></div>`;
+}
+function designC() {
+  return `${head("c")}
+  <div class="node"><span class="tog down">${svg("open")}</span><span class="lbl"><span>GitLab · </span>biedmeer.nl/ccv/shop/shop</span><span class="rule"></span><span class="cnt">22</span><span class="led on"></span></div>
+  <div class="kids">
+    <div class="node"><span class="tog down">${svg("open")}</span><span class="lbl">Issues</span><span class="rule"></span><span class="cnt">11</span></div>
+    <div class="kids">${issues.map((r, i) => row(r, false, i === 0, "c")).join("")}</div>
+    <div class="node"><span class="tog down">${svg("open")}</span><span class="lbl">MRs</span><span class="branch">→ develop</span><span class="rule"></span><span class="cnt">2</span></div>
+    <div class="kids">${mrsDev.map((r) => row(r, true, false, "c")).join("")}</div>
+    <div class="node"><span class="tog">${svg("closed")}</span><span class="lbl">MRs</span><span class="branch">→ master</span><span class="rule"></span><span class="cnt">9</span></div>
+  </div>`;
+}
+const d = new URLSearchParams(location.search).get("design") || "a";
+const meta = { a: ["A", "Trays", "project as a raised plate, each group a recessed tray, LED + count show open state"],
+  b: ["B", "Label tape", "project as a black LCD tape, groups as dashed dividers, rows sit flat on the card"],
+  c: ["C", "Rack tree", "keycap toggles, dotted tree guide, branch as an LCD chip, dense one-line rows"] }[d];
+const body = { a: designA, b: designB, c: designC }[d];
+document.body.innerHTML = `<div class="caption"><b>${meta[0]}</b>${meta[1]}<i>— ${meta[2]} · light / dark</i></div>
+<div class="pair">${["light", "dark"].map((t) => `<div class="chassis t-${t} ${d}"><div class="panel">${body()}</div></div>`).join("")}</div>`;
+</script>
+</body>
+</html>

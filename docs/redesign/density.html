@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Density — calm layout mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=block" rel="stylesheet" />
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #d9d9d6; }
+body { padding: 40px; width: 1680px; display: flex; flex-direction: column; gap: 20px; font-family: Inter, sans-serif; }
+.caption { font: 600 13px/1.4 "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase; color: #333; }
+.caption b { color: #ff2a1f; margin-right: 12px; }
+.caption i { font-style: normal; color: #777; font-weight: 400; margin-left: 10px; letter-spacing: .06em; text-transform: none; }
+svg.i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.t-light { --chassis:#e8e8e5; --card:#fafaf8; --ink:#161616; --ink-2:#55554f; --ink-3:#8a8a84; --hair:#e4e4e0;
+  --red:#ff2a1f; --red-ink:#d4201a; --led-off:#cfcdc7; --lcd:#111; --lcd-ink:#f4f4f2; --hover:#f0f0ec; --sel:#ececE8;
+  --key:#f4f4f1; --key-edge:#cfcfca; --tint-issue:#fbe9e1; --tint-todo:#f8e1e1;
+  --shadow:0 1px 0 #fff inset,0 18px 30px -20px rgb(0 0 0/28%),0 2px 5px rgb(0 0 0/5%);
+  --key-shadow:inset 0 1px 0 rgb(255 255 255/.95),0 2px 0 var(--key-edge);
+  --well:inset 0 1px 3px rgb(0 0 0/.1),inset 0 0 0 1px rgb(0 0 0/.03); }
+.t-dark { --chassis:#121212; --card:#1b1b1b; --ink:#ededea; --ink-2:#a9a9a4; --ink-3:#77776f; --hair:#282828;
+  --red:#ff2a1f; --red-ink:#ff5a50; --led-off:#3a3a3a; --lcd:#070707; --lcd-ink:#f4f4f2; --hover:#222; --sel:#262626;
+  --key:#262626; --key-edge:#0c0c0c; --tint-issue:#2c211d; --tint-todo:#2c1e1f;
+  --shadow:0 1px 0 rgb(255 255 255/5%) inset,0 18px 32px -18px rgb(0 0 0/90%),0 2px 4px rgb(0 0 0/50%);
+  --key-shadow:inset 0 1px 0 rgb(255 255 255/.09),0 2px 0 var(--key-edge);
+  --well:inset 0 2px 6px rgb(0 0 0/70%),inset 0 0 0 1px rgb(255 255 255/3%); }
+
+/* Rhythm: everything is a multiple of 4; rows 40, card padding 20, column gap 24. */
+.chassis { background: var(--chassis); color: var(--ink); border-radius: 22px; padding: 24px; width: 1600px; display: flex; flex-direction: column; gap: 20px; }
+
+.top { display: flex; gap: 12px; align-items: center; }
+.search { flex: 1; height: 56px; background: var(--lcd); color: var(--lcd-ink); border-radius: 16px; display: flex; align-items: center; gap: 16px; padding: 0 22px; font: 400 18px "IBM Plex Mono", monospace; }
+.search small { font: 600 11px "IBM Plex Mono"; letter-spacing: .18em; color: var(--red); }
+.search span { color: #8d8d88; }
+.search kbd { margin-left: auto; font: 500 11px "IBM Plex Mono"; color: #77776f; border: 1px solid #333; border-radius: 6px; padding: 3px 7px; letter-spacing: .08em; }
+.key { position: relative; width: 48px; height: 48px; border-radius: 14px; background: var(--key); box-shadow: var(--key-shadow); display: grid; place-items: center; color: var(--ink); }
+.key .led { position: absolute; top: 7px; right: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--led-off); }
+.key .led.on { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; border-radius: 10px; background: var(--red); color: #fff; font: 600 11px "IBM Plex Mono"; display: grid; place-items: center; }
+
+/* Current tab: same row anatomy as every other row, just pinned. */
+.now { align-self: flex-start; display: flex; align-items: center; gap: 14px; background: var(--card); box-shadow: var(--shadow); border-radius: 14px; padding: 10px 12px 10px 18px; }
+.now .lbl { font: 600 10.5px "IBM Plex Mono"; letter-spacing: .16em; color: var(--red-ink); }
+
+.grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; align-items: start; }
+.card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 20px; display: flex; flex-direction: column; gap: 24px; }
+.col { display: flex; flex-direction: column; gap: 24px; }
+
+.sec { display: flex; flex-direction: column; gap: 4px; }
+.sh { display: flex; align-items: center; gap: 10px; height: 24px; margin-bottom: 8px; font: 500 11px "IBM Plex Mono"; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-2); }
+.sh b { color: var(--red-ink); font-weight: 600; }
+.sh .rule { flex: 1; height: 1px; background: var(--hair); }
+.sh .n { color: var(--ink-3); letter-spacing: .08em; }
+
+/* The one row. 40px, icon 20, title 14/500, meta mono 11 right-aligned. */
+.row { position: relative; height: 40px; display: flex; align-items: center; gap: 12px; padding: 0 10px; border-radius: 10px; }
+.row .ic { width: 20px; height: 20px; border-radius: 6px; flex: none; }
+.row .t { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.row .m { margin-left: auto; font: 400 11px "IBM Plex Mono"; color: var(--ink-3); letter-spacing: .04em; white-space: nowrap; flex: none; }
+.row .m.red { color: var(--red-ink); }
+.row.sel { background: var(--sel); }
+.row.sel::before { content: ""; position: absolute; left: -2px; top: 12px; bottom: 12px; width: 3px; border-radius: 2px; background: var(--red); }
+.row.hover { background: var(--hover); }
+.acts { display: flex; gap: 6px; margin-left: 8px; }
+.mini { position: relative; width: 28px; height: 28px; border-radius: 8px; background: var(--key); box-shadow: var(--key-shadow); display: grid; place-items: center; color: var(--ink-2); }
+.mini svg.i { width: 13px; height: 13px; }
+.mini .led { position: absolute; top: 4px; right: 4px; width: 4px; height: 4px; border-radius: 50%; background: var(--led-off); }
+.mini .led.on { background: var(--red); box-shadow: 0 0 5px var(--red); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); box-shadow: 0 0 5px var(--red); flex: none; }
+.ghost { color: var(--ink-3); }
+
+.tiles { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.tile { height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; font-weight: 500; }
+.tile.on { background: var(--key); box-shadow: var(--key-shadow); }
+.tile .ic { width: 18px; height: 18px; border-radius: 5px; }
+.ess { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ess .row { background: transparent; box-shadow: inset 0 0 0 1px var(--hair); }
+
+.sub { margin-left: 18px; padding-left: 14px; border-left: 1px solid var(--hair); display: flex; flex-direction: column; gap: 4px; }
+
+.seg { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 4px; border-radius: 12px; box-shadow: var(--well); background: var(--chassis); }
+.seg div { height: 32px; display: flex; align-items: center; justify-content: center; gap: 8px; font: 500 11px "IBM Plex Mono"; letter-spacing: .14em; color: var(--ink-2); border-radius: 9px; }
+.seg .on { background: var(--card); box-shadow: var(--key-shadow); color: var(--ink); }
+.tag { font: 600 10px "IBM Plex Mono"; letter-spacing: .1em; padding: 2px 6px; border-radius: 5px; box-shadow: inset 0 0 0 1px currentColor; flex: none; }
+.tag.issue { color: var(--ink-2); }
+.tag.mr { color: var(--red-ink); }
+.tag.br { background: var(--lcd); color: var(--lcd-ink); box-shadow: none; }
+.num { font: 400 12px "IBM Plex Mono"; color: var(--ink-3); flex: none; }
+.tog { width: 22px; height: 22px; border-radius: 7px; background: var(--key); box-shadow: var(--key-shadow); display: grid; place-items: center; color: var(--ink-2); flex: none; }
+.tog svg.i { width: 11px; height: 11px; }
+.grp { height: 36px; display: flex; align-items: center; gap: 10px; padding: 0 4px; font: 500 11px "IBM Plex Mono"; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.grp .rule { flex: 1; height: 1px; background: var(--hair); }
+
+.todo { border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.todo .t { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.todo .f { display: flex; align-items: center; font: 400 11px "IBM Plex Mono"; color: var(--ink-3); letter-spacing: .04em; }
+.todo .f span:last-child { margin-left: auto; }
+.lcd { background: var(--lcd); color: var(--lcd-ink); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
+.lcd .big { font: 500 26px "IBM Plex Mono"; letter-spacing: .02em; }
+.lcd .sm { font: 400 11px "IBM Plex Mono"; color: #8d8d88; letter-spacing: .06em; }
+.timer { height: 48px; display: flex; align-items: center; gap: 12px; padding: 0 4px; }
+.timer .t { font-size: 14px; font-weight: 500; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip { font: 500 12px "IBM Plex Mono"; background: var(--lcd); color: var(--lcd-ink); padding: 5px 10px; border-radius: 8px; white-space: nowrap; }
+.btn { font: 500 11px "IBM Plex Mono"; letter-spacing: .1em; text-transform: uppercase; height: 28px; padding: 0 10px; border-radius: 8px; background: var(--key); box-shadow: var(--key-shadow); display: grid; place-items: center; color: var(--ink-2); }
+
+.status { display: flex; gap: 20px; padding: 0 4px; font: 400 11px "IBM Plex Mono"; letter-spacing: .12em; color: var(--ink-3); }
+.status span:last-child { margin-left: auto; }
+
+.notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px 32px; padding: 8px 4px; font: 400 13px/1.55 Inter; color: #333; width: 1600px; }
+.notes b { display: block; font: 600 11px "IBM Plex Mono"; letter-spacing: .14em; text-transform: uppercase; color: #ff2a1f; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<svg style="display:none">
+  <symbol id="timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></symbol>
+  <symbol id="swap" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3 15.4H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/></symbol>
+  <symbol id="pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+  <symbol id="chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+</svg>
+
+<template id="ui">
+<div class="chassis">
+  <div class="top">
+    <div class="search"><small>SEARCH</small><span>Search tabs and spaces…</span><kbd>ALT F</kbd></div>
+    <div class="key"><svg class="i"><use href="#timer"/></svg><div class="badge">2</div></div>
+    <div class="key"><svg class="i"><use href="#swap"/></svg><i class="led"></i></div>
+    <div class="key"><svg class="i"><use href="#gear"/></svg></div>
+  </div>
+
+  <div class="now">
+    <span class="lbl">NOW</span>
+    <i class="ic" style="width:20px;height:20px;border-radius:6px;background:#3b82f6"></i>
+    <span class="tag mr">PR</span><span class="num">#45</span>
+    <span style="font-size:14px;font-weight:500">Improve tab search</span>
+    <span class="num" style="color:var(--red-ink)">⏱ 27m 40s</span>
+    <span class="num">Work</span>
+    <div class="acts"><div class="mini"><svg class="i"><use href="#check"/></svg><i class="led"></i></div><div class="mini"><svg class="i"><use href="#timer"/></svg><i class="led on"></i></div><div class="mini"><svg class="i"><use href="#pen"/></svg></div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="sec">
+        <div class="sh"><b>01</b>Spaces<span class="rule"></span></div>
+        <div class="tiles">
+          <div class="tile on"><i class="ic" style="background:#8b5a3c"></i>Work</div>
+          <div class="tile"><i class="ic" style="background:#f59e0b"></i>Personal</div>
+          <div class="tile"><i class="ic" style="background:#22c55e"></i>Research</div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sh"><b>02</b>Essentials<span class="rule"></span></div>
+        <div class="ess">
+          <div class="row"><i class="ic" style="background:#ef4444"></i><span class="t">Inbox</span><span class="m">Work</span></div>
+          <div class="row"><i class="ic" style="background:#eab308"></i><span class="t">Week</span><span class="m">Work</span></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sh"><b>03</b>Docs<span class="rule"></span><span class="n">3</span></div>
+        <div class="row sel"><i class="ic" style="background:#22c55e"></i><span class="t">Architecture guide</span><span class="m red">⏱ 8h</span><div class="acts"><div class="mini"><svg class="i"><use href="#check"/></svg><i class="led"></i></div><div class="mini"><svg class="i"><use href="#timer"/></svg><i class="led on"></i></div><div class="mini"><svg class="i"><use href="#pen"/></svg></div></div></div>
+        <div class="row"><i class="ic" style="background:#f97316"></i><span class="t">Release checklist</span><span class="dot"></span><span class="m">Work</span></div>
+        <div class="row"><i class="ic" style="background:#a855f7"></i><span class="t">A very long personal note title that wraps when truncated</span><span class="m">Personal</span></div>
+      </div>
+      <div class="sec">
+        <div class="sh"><b>04</b>Product<span class="rule"></span><span class="n">2</span></div>
+        <div class="row"><i class="ic" style="background:#64748b"></i><span class="t">Research paper</span><span class="m">Research</span></div>
+        <div class="grp" style="padding-left:10px"><span class="tog"><svg class="i"><use href="#chev"/></svg></span>Infra<span class="rule"></span><span class="n">1</span></div>
+        <div class="sub">
+          <div class="row"><i class="ic" style="background:#14b8a6"></i><span class="t">Staging dashboard</span><span class="m">Work</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec">
+        <div class="sh"><b>!#</b>Issues &amp; requests<span class="rule"></span><span class="n" style="color:var(--red-ink)">RECENT · 2</span></div>
+        <div class="seg"><div class="on"><span class="dot"></span>ALL 2</div><div>ISSUES 1</div><div>MRS 1</div></div>
+      </div>
+      <div class="sec">
+        <div class="grp"><span class="tog"><svg class="i"><use href="#chev"/></svg></span>gitlab.com/example/zen-tab-search<span class="rule"></span><span class="dot"></span></div>
+        <div class="sub">
+          <div class="grp"><span class="tog"><svg class="i"><use href="#chev"/></svg></span>Issues<span class="rule"></span>1</div>
+          <div class="row" style="background:var(--tint-issue)"><span class="tag issue">ISSUE</span><span class="num">#123</span><span class="t">Fix the search results</span><span class="m">3y</span></div>
+          <div class="grp"><span class="tog"><svg class="i"><use href="#chev"/></svg></span>MRs <span class="tag br">→ develop</span><span class="rule"></span>1</div>
+          <div class="row hover"><span class="tag mr">MR</span><span class="num">!88</span><span class="t">Host override proxy</span><span class="m">3y</span><div class="acts"><div class="mini"><svg class="i"><use href="#check"/></svg><i class="led"></i></div><div class="mini"><svg class="i"><use href="#timer"/></svg><i class="led"></i></div><div class="mini"><svg class="i"><use href="#pen"/></svg></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <div class="sec">
+          <div class="sh"><b>@</b>Todos<span class="rule"></span><span class="n" style="color:var(--red-ink)">2 TO DO</span></div>
+          <div class="todo" style="background:var(--tint-issue)"><span class="t">#123 · Fix the search results</span><div class="f"><span>Work</span><span>MARK DONE</span></div></div>
+          <div class="todo" style="background:var(--tint-todo);margin-top:4px"><span class="t">Release checklist</span><div class="f"><span>Work</span><span>MARK DONE</span></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="sec">
+          <div class="sh"><b>⏱</b>Timers<span class="rule"></span><span class="btn">Clear all</span></div>
+          <div class="lcd"><span class="sm">NEXT · IMPROVE TAB SEARCH</span><span class="big">27:40</span><span class="sm">MON 16 NOV · 16:33</span></div>
+          <div class="timer" style="margin-top:8px"><span class="t">Improve tab search</span><span class="chip">27m 40s</span><span class="btn">Edit</span></div>
+          <div class="timer"><span class="t">Architecture guide</span><span class="chip">8h 00m</span><span class="btn">Edit</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status"><span>10 TABS</span><span>2 ESSENTIALS</span><span>3 SPACES</span><span>2 TODOS</span><span>2 TIMERS</span><span>v4.2.0 · CHECK FOR UPDATES</span></div>
+</div>
+</template>
+
+<div class="caption"><b>Calm</b>One row, one rhythm <i>— base 14px Inter titles, mono only for labels and numbers, 40px rows, 4px grid, actions only on the selected / hovered row</i></div>
+<div class="t-light" id="light"></div>
+<div class="notes">
+  <div><b>One row anatomy</b>Every tab, issue, essential and the NOW strip use the same 40px row: 20px icon · 14px title · mono meta pushed right. Space name moves from a second line into the meta slot, so rows stop being two-storey.</div>
+  <div><b>Actions on demand</b>The three keys only appear on the selected row (red bar) or under the mouse. Today every row carries them, which is most of the visual noise.</div>
+  <div><b>Two fonts, two jobs</b>Inter 14/500 for anything you read (titles). Plex Mono 11px, tracked caps, for labels, counts, ages and times. Today titles are mixed mono/sans.</div>
+  <div><b>Fewer boxes</b>Folders are sections inside one column card, not cards in cards. Sub-folders indent with a hairline, like the issue tree.</div>
+  <div><b>Fixed spacing scale</b>4 · 8 · 12 · 20 · 24 only. Card padding 20, column gap 24, section gap 24, row gap 4. Still driven by the font-size and density settings.</div>
+  <div><b>Timers read at a glance</b>One big LCD for the next timer, then compact rows with a short countdown chip (27m 40s) instead of full sentences that wrap.</div>
+</div>
+<div class="caption"><b>Dark</b>Same layout</div>
+<div class="t-dark" id="dark"></div>
+
+<script>
+const t = document.getElementById("ui");
+for (const id of ["light", "dark"]) document.getElementById(id).appendChild(t.content.cloneNode(true));
+</script>
+</body>
+</html>
