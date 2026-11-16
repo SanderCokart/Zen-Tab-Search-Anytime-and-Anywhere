@@ -4,6 +4,7 @@ import { SearchApp } from "@/features/search/ui/SearchApp";
 import { sendExtensionMessage, subscribeToOmnibarShown } from "@/shared/messaging/client";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { parseOmnibarView, type OmnibarView } from "@/shared/messaging/protocol";
+import "@/shared/ui/fonts.css";
 import "@/shared/ui/styles.css";
 
 const params = new URLSearchParams(window.location.search);

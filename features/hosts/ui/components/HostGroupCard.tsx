@@ -12,7 +12,7 @@ export interface HostGroupCardProps {
 /** One IP group with its on/off switch, as listed in the editor. */
 export function HostGroupCard({ group, onToggle, onEdit, onDelete }: HostGroupCardProps) {
   return (
-    <li class="border-zen-line bg-zen-raised flex flex-wrap items-start gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] border p-[var(--zen-space-2)]">
+    <li class="zs-well flex flex-wrap items-start gap-[var(--zen-space-2)] rounded-[var(--zs-r-lcd)] p-[var(--zen-space-2)]">
       <button
         type="button"
         class={toggleButtonClass(group.enabled)}

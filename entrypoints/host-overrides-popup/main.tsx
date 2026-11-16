@@ -1,5 +1,6 @@
 import { render } from "preact";
 import { HostOverridesPopup } from "@/features/hosts/ui/HostOverridesPopup";
+import "@/shared/ui/fonts.css";
 import "@/shared/ui/styles.css";
 
 const root = document.getElementById("app");

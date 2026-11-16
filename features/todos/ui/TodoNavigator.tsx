@@ -58,6 +58,7 @@ export function TodoNavigator({
   onClear,
   onOpenStatusMenu,
   onContextMenu,
+  class: className = "flex-1",
 }: {
   /** The rows to list: every todo, or the ones an "@" query matches. */
   tabs: TabInfo[];
@@ -66,7 +67,8 @@ export function TodoNavigator({
   statuses: Map<number, TrafficLight>;
   /** The tab whose status menu is open, if any. */
   statusMenuTabId: number | null;
-  backgroundColor: string;
+  /** A custom colour; left out, the card takes its colour from the theme. */
+  backgroundColor?: string;
   truncate: boolean;
   selectedIndex: number;
   onActivate: (tab: TabInfo) => void;
@@ -77,6 +79,8 @@ export function TodoNavigator({
   /** Opens the status menu under the button at `anchor`. */
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
   onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
+  /** How the column sizes itself in its parent; fills it by default. */
+  class?: string;
 }) {
   // The omnibar is a <browser> in Zen's chrome, not a tab, so `window.confirm`
   // has nowhere to show and returns false: the confirmation lives in the column.
@@ -85,21 +89,21 @@ export function TodoNavigator({
     pendingClear === null ? [] : todoTabIdsToClear(allTabs, statuses, pendingClear);
   return (
     <aside
-      class="border-zen-border flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--zen-radius-lg)] border p-[var(--zen-space-2)]"
+      class={cn(
+        "zs-card flex min-h-0 min-w-0 flex-col overflow-hidden p-[var(--zen-space-5)]",
+        className,
+      )}
       style={{ backgroundColor }}
       data-testid="zen-todo-column"
     >
-      <div class="mb-[var(--zen-space-2)] flex min-w-0 items-center justify-between gap-[var(--zen-space-2)]">
-        <span class="flex min-w-0 items-center">
-          <PrefixHint prefixes={TODO_NAVIGATOR_PREFIXES} column="todos" />
-          <strong class="min-w-0 truncate text-[length:var(--zen-text-base)]">Todos</strong>
-        </span>
+      <div class="zs-head">
+        <PrefixHint prefixes={TODO_NAVIGATOR_PREFIXES} column="todos" />
+        <strong class="min-w-0 truncate font-[inherit] font-medium">Todos</strong>
+        <span class="zs-head-rule" aria-hidden="true" />
         <span class="flex shrink-0 items-center gap-[var(--zen-space-2)]">
-          <span class="text-zen-lavender text-[length:var(--zen-text-sm)]">
-            {allTabs.length} to do
-          </span>
+          <span class="text-zen-danger">{allTabs.length} to do</span>
           <select
-            class="border-zen-line bg-zen-chip text-zen-subtle hover:text-zen-text cursor-pointer rounded-[var(--zen-radius)] border px-[var(--zen-space-1)] font-[inherit] text-[length:var(--zen-text-sm)]"
+            class="zs-key text-zen-subtle hover:text-zen-text px-[var(--zen-space-1)] font-[inherit] text-[length:var(--zen-text-xs)] tracking-[0.04em] normal-case"
             aria-label="Clear todos"
             title="Mark several todos as done"
             data-testid="zen-todo-clear"
@@ -127,7 +131,7 @@ export function TodoNavigator({
       </div>
       {pendingClear !== null && pendingTabIds.length > 0 && (
         <div
-          class="border-zen-line mb-[var(--zen-space-2)] flex min-w-0 items-center justify-between gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] border p-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]"
+          class="zs-well mb-[var(--zen-space-2)] flex min-w-0 items-center justify-between gap-[var(--zen-space-2)] rounded-[var(--zs-r-lcd)] p-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]"
           role="alertdialog"
           aria-label="Confirm clearing todos"
           data-testid="zen-todo-clear-confirm"
@@ -136,7 +140,7 @@ export function TodoNavigator({
           <span class="flex shrink-0 items-center gap-[var(--zen-space-2)]">
             <button
               type="button"
-              class="border-zen-line bg-zen-chip text-zen-text cursor-pointer rounded-[var(--zen-radius)] border px-[var(--zen-space-2)] font-[inherit] text-[length:var(--zen-text-sm)] hover:underline"
+              class="zs-key zs-key-red px-[var(--zen-space-2)] font-[inherit] text-[length:var(--zen-text-sm)]"
               data-testid="zen-todo-clear-confirm-button"
               onClick={() => {
                 setPendingClear(null);
@@ -170,8 +174,13 @@ export function TodoNavigator({
             <div
               key={tab.id ?? tab.domId ?? tab.url}
               class={cn(
-                "flex w-full max-w-full min-w-0 shrink-0 items-end overflow-hidden rounded-[var(--zen-radius)]",
-                statusRowClass(light, selected),
+                "zs-row flex w-full max-w-full min-w-0 shrink-0 flex-col gap-[calc(var(--zen-font-size)*0.43)] rounded-[var(--zen-radius-lg)]",
+                "px-[var(--zen-space-3)] py-[var(--zen-space-3)]",
+                light
+                  ? statusRowClass(light, selected)
+                  : selected
+                    ? "bg-[color-mix(in_srgb,var(--zs-red)_18%,var(--zs-card))]"
+                    : "bg-[color-mix(in_srgb,var(--zs-red)_9%,var(--zs-card))]",
               )}
               data-status-light={light}
               data-todo-selected={selected ? "true" : undefined}
@@ -184,49 +193,40 @@ export function TodoNavigator({
             >
               <button
                 type="button"
-                class="flex min-w-0 flex-1 cursor-pointer flex-col overflow-hidden border-0 bg-transparent p-[var(--zen-space-2)] text-left font-[inherit] text-inherit"
+                // Stretched over the whole block, so the space line below clicks through too.
+                class="zs-row-title block w-full cursor-pointer border-0 bg-transparent p-0 text-left text-inherit after:absolute after:inset-0 after:rounded-[inherit] after:content-['']"
                 onClick={() => onActivate(tab)}
                 onFocus={() => onSelect(index)}
                 title={tab.url}
               >
-                <span
-                  class={cn(
-                    "block w-full min-w-0 text-[length:var(--zen-text-base)]",
-                    entryTextClass(truncate),
-                  )}
-                >
+                <span class={cn("block w-full min-w-0", entryTextClass(truncate))}>
                   {formatTabDisplayTitle(tab)}
                 </span>
-                <span
-                  class={cn(
-                    "text-zen-subtle block w-full min-w-0 text-[length:var(--zen-text-sm)]",
-                    entryTextClass(truncate),
-                  )}
-                >
-                  {tab.active
-                    ? `${tab.workspaceName || hostname(tab.url)} · Current tab`
-                    : tab.workspaceName || hostname(tab.url)}
-                </span>
               </button>
-              <span class="flex shrink-0 items-center">
-                <TooltipButton
-                  label="Mark as done"
-                  tooltip="Mark as done and remove from your todos"
-                  data-testid="zen-todo-done-button"
-                  class="text-zen-subtle hover:text-zen-text shrink-0 cursor-pointer border-0 bg-transparent p-[var(--zen-space-2)] font-[inherit] text-[length:var(--zen-text-sm)] whitespace-nowrap hover:underline"
-                  onClick={() => onDone(tab)}
-                >
-                  Mark as done
-                </TooltipButton>
-                <StatusButton
-                  tab={tab}
-                  light={light}
-                  open={tabId !== undefined && statusMenuTabId === tabId}
-                  onOpenMenu={onOpenStatusMenu}
-                  class="text-zen-subtle hover:text-zen-text p-[var(--zen-space-2)]"
-                  iconClass="size-[var(--zen-icon-md)]"
-                />
-              </span>
+              <div class="text-zen-muted relative z-10 flex min-w-0 items-center justify-between gap-[var(--zen-space-2)] font-mono text-[length:var(--zen-text-xs)] tracking-[0.04em]">
+                <span class={cn("min-w-0", entryTextClass(truncate))}>
+                  {tab.workspaceName || hostname(tab.url)}
+                </span>
+                <span class="flex shrink-0 items-center gap-[var(--zen-space-2)]">
+                  <TooltipButton
+                    label="Mark as done"
+                    tooltip="Mark as done and remove from your todos"
+                    data-testid="zen-todo-done-button"
+                    class="text-zen-muted hover:text-zen-text shrink-0 cursor-pointer border-0 bg-transparent p-0 font-[inherit] tracking-[inherit] whitespace-nowrap uppercase hover:underline"
+                    onClick={() => onDone(tab)}
+                  >
+                    Mark as done
+                  </TooltipButton>
+                  <StatusButton
+                    tab={tab}
+                    light={light}
+                    open={tabId !== undefined && statusMenuTabId === tabId}
+                    onOpenMenu={onOpenStatusMenu}
+                    class="text-zen-subtle hover:text-zen-text border-0 bg-transparent p-[calc(var(--zen-space-1)*0.5)]"
+                    iconClass="size-[var(--zen-icon-sm)]"
+                  />
+                </span>
+              </div>
             </div>
           );
         })}

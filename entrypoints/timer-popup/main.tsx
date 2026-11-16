@@ -1,5 +1,6 @@
 import { render } from "preact";
 import { TimerPopup } from "@/features/timers/ui/TimerPopup";
+import "@/shared/ui/fonts.css";
 import "@/shared/ui/styles.css";
 
 const root = document.getElementById("app");

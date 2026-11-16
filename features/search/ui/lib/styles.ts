@@ -1,9 +1,14 @@
 /** Shared Tailwind class recipes for the search surfaces. */
-export const primaryButtonClass =
-  "cursor-pointer rounded-md border border-zen-border bg-zen-accent font-[inherit] text-inherit hover:bg-zen-accent-hover disabled:cursor-not-allowed disabled:opacity-50";
 
-export const clearButtonClass =
-  "cursor-pointer rounded-md border border-zen-clear bg-transparent font-[inherit] text-zen-faint hover:bg-zen-surface-faint";
+/** A full-size hardware keycap; callers add the padding or size. */
+export const primaryButtonClass = "zs-key font-[inherit]";
+
+/** The secondary key: the same hardware with quieter text. */
+export { clearButtonClass } from "@/shared/ui/button-styles";
+
+/** A small icon key, as on a tab row. */
+export const miniKeyClass =
+  "zs-key zs-key-mini relative inline-flex items-center justify-center p-0 font-[inherit]";
 
 /**
  * Whether a result's own text is cut to one line or allowed to wrap.
@@ -14,13 +19,3 @@ export const clearButtonClass =
 export function entryTextClass(truncate: boolean): string {
   return truncate ? "truncate" : "break-words";
 }
-
-export const projectBorderColors = [
-  "border-red-400",
-  "border-orange-400",
-  "border-yellow-400",
-  "border-green-400",
-  "border-blue-400",
-  "border-purple-400",
-  "border-pink-400",
-];

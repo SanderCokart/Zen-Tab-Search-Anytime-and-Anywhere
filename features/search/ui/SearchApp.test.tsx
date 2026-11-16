@@ -1,8 +1,16 @@
 import { render } from "preact";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SearchApp } from "@/features/search/ui/SearchApp";
 import type { OmnibarView } from "@/shared/messaging/protocol";
-import type { SpaceInfo, TabInfo, TabStatus, TabTodo } from "@/shared/types";
+import type { SpaceInfo, TabInfo, TabStatus, TabTimer, TabTodo } from "@/shared/types";
+
+const play = vi.hoisted(() => vi.fn());
+
+// The real engine is silent in jsdom; this one records which voices are asked for.
+vi.mock("@/shared/ui/sound/engine", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/ui/sound/engine")>()),
+  createSoundEngine: () => ({ play, setVolume: vi.fn() }),
+}));
 
 const tabs: TabInfo[] = [
   {
@@ -33,13 +41,14 @@ function mountSearchApp(
   snapshotTodos: TabTodo[] = [],
   snapshotStatuses: TabStatus[] = [],
   initialView?: OmnibarView,
+  snapshotTimers: Partial<TabTimer>[] = [],
 ) {
   const sendMessage = vi.fn(async ({ type }: { type: string }) => {
     if (type === "getSnapshot") {
       return {
         tabs: snapshotTabs,
         spaces: snapshotSpaces,
-        timers: [],
+        timers: snapshotTimers,
         todos: snapshotTodos,
         statuses: snapshotStatuses,
       };
@@ -119,7 +128,10 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(root.querySelector("[data-selected='true']")?.textContent).toContain("Second tab"),
     );
-    expect(root.textContent).not.toContain("First tab");
+    // The strip still shows the current tab; the list does not.
+    expect(
+      [...root.querySelectorAll("[data-testid='zen-search-item']")].map((item) => item.textContent),
+    ).toEqual([expect.stringContaining("Second tab")]);
 
     render(null, root);
     root.remove();
@@ -202,7 +214,12 @@ describe("SearchApp", () => {
     async (initialView) => {
       const onClose = vi.fn();
       const { root } = mountSearchApp(onClose, tabs, "overlay", undefined, [], [], [], initialView);
-      await vi.waitFor(() => expect(root.textContent).toContain("Back to search"));
+      await vi.waitFor(() =>
+        expect(
+          root.querySelector("[data-testid='zen-tab-summary']") ??
+            (root.textContent?.includes("Click a timer to go to its tab") ? root : null),
+        ).toBeTruthy(),
+      );
       // Let Preact run its effects, which register the key listeners.
       await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -292,9 +309,12 @@ describe("SearchApp", () => {
     expect(menu()).toBeNull();
     expect(root.querySelector("h1")?.textContent).toBe("Host overrides");
 
-    [...root.querySelectorAll<HTMLButtonElement>("button")]
-      .find((button) => button.textContent?.includes("Back to search"))!
-      .click();
+    // The tab is the current one, so the toolbar toggle shows it open and closes it.
+    const toggle = root.querySelector<HTMLButtonElement>(
+      "button[title='Host overrides for this tab']",
+    )!;
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    toggle.click();
     await vi.waitFor(() => expect(root.querySelector("h1")).toBeNull());
 
     render(null, root);
@@ -458,6 +478,7 @@ describe("SearchApp", () => {
         title: "MR: !7 - Improve filters",
         url: "https://gitlab.com/acme/project/-/merge_requests/7",
         lastOpenedAt: Date.now() - 10 * 24 * 60 * 60 * 1000,
+        forgeTargetBranch: "main",
       },
     ];
     const { root, onClose, sendMessage } = mountSearchApp(vi.fn(), forgeTabs, "overlay");
@@ -468,8 +489,10 @@ describe("SearchApp", () => {
     expect(root.textContent).toContain("GitHub");
     expect(root.textContent).toContain("GitLab");
     expect(root.textContent).toContain("Issues");
-    expect(root.textContent).toContain("PRs / MRs");
-    expect(root.textContent).toContain("Issue #42");
+    expect(root.textContent).toContain("MRs → main");
+    // The issues and the branch each get a folder.
+    expect(root.querySelectorAll("[data-testid='zen-issue-folder']")).toHaveLength(2);
+    expect(root.textContent).toContain("#42");
     expect(root.textContent).not.toContain("Merge request #7");
     expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(0);
     await vi.waitFor(() => expect(root.textContent).toContain("Recent"));
@@ -485,7 +508,7 @@ describe("SearchApp", () => {
       expect(root.textContent).not.toContain("Improve filters");
     });
 
-    root.querySelector<HTMLButtonElement>("button[title*='github.com']")?.click();
+    root.querySelector<HTMLButtonElement>("button[title^='https://github.com']")?.click();
     await vi.waitFor(() =>
       expect(sendMessage).toHaveBeenCalledWith({
         type: "switchTab",
@@ -669,7 +692,7 @@ describe("SearchApp", () => {
       expect(root.querySelector("[data-todo-selected='true']")?.textContent).toContain("First tab"),
     );
     expect(todoRows()[0]?.textContent).toContain("First tab");
-    expect(todoRows()[0]?.textContent).toContain("Current tab");
+    expect(todoRows()[0]?.textContent).not.toContain("Current tab");
     expect(todoRows()[1]?.textContent).toContain("Second tab");
     // The todo column has the keyboard, so nothing in the tab list is selected.
     expect(root.querySelector("[data-selected='true']")).toBeNull();
@@ -763,8 +786,15 @@ describe("SearchApp", () => {
   });
 
   it("gives issue entries todo and timer buttons", async () => {
+    // Another tab is current, so the issue is listed in the navigator, not shown in the strip.
     const forgeTabs = [
-      { ...tabs[0], title: "Fix search", url: "https://github.com/acme/project/issues/42" },
+      {
+        ...tabs[0],
+        active: false,
+        title: "Fix search",
+        url: "https://github.com/acme/project/issues/42",
+      },
+      { ...tabs[1], active: true },
     ];
     const { root, sendMessage } = mountSearchApp(vi.fn(), forgeTabs, "overlay");
 
@@ -1134,15 +1164,22 @@ describe("SearchApp", () => {
   });
 
   it("opens the tab context menu from an issue entry", async () => {
+    // Another tab is current, so the issue is listed in the navigator, not shown in the strip.
     const forgeTabs = [
-      { ...tabs[0], title: "Fix search", url: "https://github.com/acme/project/issues/42" },
+      {
+        ...tabs[0],
+        active: false,
+        title: "Fix search",
+        url: "https://github.com/acme/project/issues/42",
+      },
+      { ...tabs[1], active: true },
     ];
     const { root, sendMessage } = mountSearchApp(vi.fn(), forgeTabs, "overlay");
 
     await vi.waitFor(() =>
-      expect(root.querySelector("button[title*='github.com']")).not.toBeNull(),
+      expect(root.querySelector("button[title^='https://github.com']")).not.toBeNull(),
     );
-    root.querySelector("button[title*='github.com']")!.dispatchEvent(
+    root.querySelector("button[title^='https://github.com']")!.dispatchEvent(
       new MouseEvent("contextmenu", {
         bubbles: true,
         cancelable: true,
@@ -1314,7 +1351,7 @@ describe("SearchApp", () => {
     root.remove();
   });
 
-  it("lists the current issue tab first in the navigator while issues are kept out of the tab list", async () => {
+  it("keeps the current issue tab out of the navigator while issues are kept out of the tab list", async () => {
     const issueTabs = [
       { ...tabs[1], active: false },
       {
@@ -1341,26 +1378,27 @@ describe("SearchApp", () => {
     });
 
     await vi.waitFor(() =>
-      expect(root.querySelector("[data-testid='zen-current-issue']")?.textContent).toContain(
+      expect(root.querySelector("[data-testid='zen-current-tab']")?.textContent).toContain(
         "Older issue",
       ),
     );
+    // The current issue lives in the strip, not among the navigator entries.
     const entries = [...root.querySelectorAll("[data-testid='zen-issue-entry']")];
     expect(entries.map((entry) => entry.textContent)).toEqual([
-      expect.stringContaining("Older issue"),
       expect.stringContaining("Newer issue"),
     ]);
     expect(
       [...root.querySelectorAll("[data-testid='zen-prefix-hint']")].map((hint) => hint.textContent),
     ).toContain("! / # - ");
 
-    // A query re-ranks the navigator, so the current entry is no longer pinned.
+    // A query re-ranks the navigator but leaves the strip where it is.
     const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
     input.value = "#issue";
     input.dispatchEvent(new InputEvent("input", { bubbles: true }));
     await vi.waitFor(() =>
-      expect(root.querySelector("[data-testid='zen-current-issue']")).toBeNull(),
+      expect(root.querySelectorAll("[data-testid='zen-issue-entry']").length).toBe(2),
     );
+    expect(root.querySelector("[data-testid='zen-current-tab']")).not.toBeNull();
 
     render(null, root);
     root.remove();
@@ -1601,5 +1639,612 @@ describe("SearchApp", () => {
 
     render(null, root);
     root.remove();
+  });
+});
+
+const GITLAB = "gitlab.com/acme/project";
+
+/** Mounts the overlay over a snapshot, with a storage mock that remembers what is written. */
+function mountOverlay({
+  snapshotTabs,
+  timers = [],
+  todos = [],
+  displaySettings,
+  stored = {},
+}: {
+  snapshotTabs: Partial<TabInfo>[];
+  timers?: Record<string, unknown>[];
+  todos?: TabTodo[];
+  displaySettings?: Record<string, unknown>;
+  stored?: Record<string, unknown>;
+}) {
+  const set = vi.fn(async () => undefined);
+  const sendMessage = vi.fn(async ({ type }: { type: string }) =>
+    type === "getSnapshot"
+      ? { tabs: snapshotTabs, spaces: [], timers, todos, statuses: [] }
+      : undefined,
+  );
+  Object.assign(globalThis, {
+    browser: {
+      runtime: {
+        sendMessage,
+        onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+      storage: {
+        local: {
+          get: vi.fn(async (key: string) => {
+            const all: Record<string, unknown> = {
+              ...(displaySettings ? { displaySettings } : {}),
+              ...stored,
+            };
+            return key in all ? { [key]: all[key] } : {};
+          }),
+          set,
+        },
+        onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+      },
+    },
+  });
+  const root = document.createElement("div");
+  document.body.appendChild(root);
+  render(<SearchApp onClose={vi.fn()} layout="overlay" />, root);
+  const input = () => root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+  const press = (key: string, init: KeyboardEventInit = {}) =>
+    input().dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...init }));
+  const unmount = () => {
+    render(null, root);
+    root.remove();
+  };
+  return { root, set, sendMessage, input, press, unmount };
+}
+
+const DAY = 24 * 60 * 60 * 1000;
+
+/** Two issues, then two merge requests into main and one into develop, newest first. */
+function forgeSnapshotTabs(): Partial<TabInfo>[] {
+  const make = (id: number, title: string, path: string, days: number, branch?: string) => ({
+    id,
+    title,
+    url: `https://gitlab.com/acme/project/${path}`,
+    favIconUrl: "",
+    windowId: 1,
+    lastOpenedAt: Date.now() - days * DAY,
+    ...(branch ? { forgeTargetBranch: branch } : {}),
+  });
+  return [
+    make(10, "Alpha issue", "-/issues/10", 1),
+    make(11, "Beta issue", "-/issues/11", 2),
+    make(7, "Seven request", "-/merge_requests/7", 3, "main"),
+    make(9, "Nine request", "-/merge_requests/9", 4, "main"),
+    make(8, "Eight request", "-/merge_requests/8", 5, "develop"),
+  ];
+}
+
+const entryUrls = (root: HTMLElement) =>
+  [...root.querySelectorAll<HTMLElement>("[data-testid='zen-issue-entry']")].map(
+    (element) => element.querySelector("button")?.getAttribute("title") ?? "",
+  );
+
+const selectedUrl = (root: HTMLElement) =>
+  root.querySelector("[data-issue-selected='true'] button")?.getAttribute("title") ?? "";
+
+const radios = (root: HTMLElement) => [
+  ...root.querySelectorAll<HTMLButtonElement>("[role='radio']"),
+];
+
+function folder(root: HTMLElement, label: string) {
+  const match = [...root.querySelectorAll<HTMLElement>("[data-testid='zen-issue-folder']")].find(
+    (element) => element.querySelector(".zs-tree-trigger")?.getAttribute("title") === label,
+  );
+  if (!match) throw new Error(`No folder ${label}`);
+  return {
+    element: match,
+    trigger: match.querySelector<HTMLButtonElement>(".zs-tree-trigger")!,
+    clip: match.querySelector<HTMLElement>(".zs-acc-clip")!,
+  };
+}
+
+describe("SearchApp issue filter, accordions, timers dock and sound", () => {
+  beforeEach(() => play.mockClear());
+
+  it("narrows the navigator to issues and shows the counts", async () => {
+    const { root, unmount } = mountOverlay({ snapshotTabs: forgeSnapshotTabs() });
+    await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(5));
+
+    expect(radios(root).map((tab) => tab.textContent)).toEqual(["All5", "Issues2", "MRs3"]);
+    expect(radios(root)[0]?.getAttribute("aria-checked")).toBe("true");
+
+    radios(root)[1]!.click();
+    await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(2));
+    expect(entryUrls(root).every((url) => url.includes("/issues/"))).toBe(true);
+    expect(root.querySelector("[role='radio'][aria-checked='true']")?.textContent).toBe("Issues2");
+    // The counts still describe everything the query left.
+    expect(radios(root).map((tab) => tab.textContent)).toEqual(["All5", "Issues2", "MRs3"]);
+
+    radios(root)[2]!.click();
+    await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(3));
+    expect(entryUrls(root).every((url) => url.includes("/merge_requests/"))).toBe(true);
+    unmount();
+  });
+
+  it("calls the third tab PRs when every entry is a GitHub one", async () => {
+    const { root, unmount } = mountOverlay({
+      snapshotTabs: [
+        {
+          id: 1,
+          title: "Fix search",
+          url: "https://github.com/acme/project/pull/5",
+          favIconUrl: "",
+          windowId: 1,
+          forgeTargetBranch: "main",
+        },
+      ],
+    });
+    await vi.waitFor(() => expect(radios(root)[2]?.textContent).toBe("PRs1"));
+    unmount();
+  });
+
+  it("never lets ArrowDown select an entry the filter hides", async () => {
+    const { root, input, press, unmount } = mountOverlay({ snapshotTabs: forgeSnapshotTabs() });
+    await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(5));
+    radios(root)[1]!.click();
+    await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(2));
+
+    input().value = "#";
+    input().dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() => expect(selectedUrl(root)).toContain("/issues/"));
+    const seen = new Set<string>();
+    for (let step = 0; step < 6; step++) {
+      press("ArrowDown");
+      await vi.waitFor(() => expect(selectedUrl(root)).not.toBe(""));
+      seen.add(selectedUrl(root));
+    }
+    expect([...seen].every((url) => url.includes("/issues/"))).toBe(true);
+    expect(seen.size).toBe(2);
+    unmount();
+  });
+
+  it("collapses a branch, shows its count, and walks the keyboard past it", async () => {
+    const { root, set, input, press, unmount } = mountOverlay({
+      snapshotTabs: forgeSnapshotTabs(),
+    });
+    await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(5));
+
+    const main = folder(root, "MRs → main");
+    expect(main.trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(main.clip.hasAttribute("inert")).toBe(false);
+    expect(main.trigger.querySelector(".zs-acc-count")?.textContent).toBe("2");
+
+    main.trigger.click();
+    await vi.waitFor(() => expect(main.trigger.getAttribute("aria-expanded")).toBe("false"));
+    expect(main.clip.hasAttribute("inert")).toBe(true);
+    expect(main.trigger.querySelector(".zs-acc-count")?.textContent).toBe("2");
+    expect(set).toHaveBeenCalledWith({
+      forgeCollapsedGroups: [`branch:gitlab:${GITLAB}:main`],
+    });
+
+    input().value = "#";
+    input().dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() => expect(selectedUrl(root)).not.toBe(""));
+    const seen = new Set<string>();
+    for (let step = 0; step < 8; step++) {
+      press("ArrowDown");
+      await vi.waitFor(() => expect(selectedUrl(root)).not.toBe(""));
+      seen.add(selectedUrl(root));
+    }
+    expect([...seen].some((url) => url.includes("/merge_requests/7"))).toBe(false);
+    expect([...seen].some((url) => url.includes("/merge_requests/9"))).toBe(false);
+    expect([...seen].some((url) => url.includes("/merge_requests/8"))).toBe(true);
+
+    main.trigger.click();
+    await vi.waitFor(() => expect(main.trigger.getAttribute("aria-expanded")).toBe("true"));
+    expect(set).toHaveBeenLastCalledWith({ forgeCollapsedGroups: [] });
+    unmount();
+  });
+
+  it("starts with the groups that were left collapsed", async () => {
+    const { root, unmount } = mountOverlay({
+      snapshotTabs: forgeSnapshotTabs(),
+      stored: { forgeCollapsedGroups: [`project:gitlab:${GITLAB}`] },
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector(".zs-tree-trigger")?.getAttribute("aria-expanded")).toBe("false"),
+    );
+    expect(root.querySelector(".zs-tree-trigger .zs-acc-count")?.textContent).toBe("5");
+    unmount();
+  });
+
+  it("collapses with Alt+Left and expands the nearest collapsed group with Alt+Right", async () => {
+    const { root, set, input, press, unmount } = mountOverlay({
+      snapshotTabs: forgeSnapshotTabs(),
+    });
+    await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(5));
+    input().value = "#";
+    input().dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() => expect(selectedUrl(root)).toContain("/issues/10"));
+
+    const issues = folder(root, "Issues");
+    // Plain Left still pages through the list; only Alt+Left collapses.
+    press("ArrowLeft");
+    expect(issues.trigger.getAttribute("aria-expanded")).toBe("true");
+
+    press("ArrowLeft", { altKey: true });
+    await vi.waitFor(() => expect(issues.trigger.getAttribute("aria-expanded")).toBe("false"));
+    expect(set).toHaveBeenLastCalledWith({
+      forgeCollapsedGroups: [`issues:gitlab:${GITLAB}`],
+    });
+    // The selection moved on to a visible entry rather than staying on a hidden one.
+    await vi.waitFor(() => expect(selectedUrl(root)).toContain("/merge_requests/"));
+
+    press("ArrowRight", { altKey: true });
+    await vi.waitFor(() => expect(issues.trigger.getAttribute("aria-expanded")).toBe("true"));
+    expect(set).toHaveBeenLastCalledWith({ forgeCollapsedGroups: [] });
+    unmount();
+  });
+
+  it("docks the timers under the todos and keeps them there with 30 todos", async () => {
+    const many = Array.from({ length: 30 }, (_, index) => ({
+      id: 100 + index,
+      title: `Todo tab ${index}`,
+      url: `https://example.com/${index}`,
+      favIconUrl: "",
+      windowId: 1,
+    }));
+    const { root, unmount } = mountOverlay({
+      snapshotTabs: many,
+      todos: many.map((tab) => ({ tabId: tab.id, status: "todo" as const })),
+      timers: [
+        {
+          timerId: "later",
+          tabId: 101,
+          endAt: Date.now() + 3 * 60 * 60 * 1000,
+          title: "Later timer",
+          originalLabel: "",
+          url: "",
+        },
+        {
+          timerId: "soon",
+          tabId: 102,
+          endAt: Date.now() + 5 * 60 * 1000,
+          title: "Soonest timer",
+          originalLabel: "",
+          url: "",
+        },
+      ],
+    });
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-timers-dock']")).not.toBeNull(),
+    );
+    const dock = root.querySelector("[data-testid='zen-timers-dock']")!;
+    const column = root.querySelector("[data-testid='zen-todo-column']")!;
+    expect(dock.textContent).toContain("Timers");
+    expect(dock.querySelector("[data-testid='zen-timers-dock-soonest']")?.textContent).toContain(
+      "Soonest timer",
+    );
+    expect(dock.querySelectorAll("li")).toHaveLength(2);
+    // The todos stop at half the column and scroll inside it, above the dock.
+    expect(column.className).toContain("max-h-[50%]");
+    expect(column.querySelector(".zen-scroll")?.children.length).toBe(30);
+    expect(column.parentElement).toBe(dock.parentElement);
+    expect(column.compareDocumentPosition(dock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // One right column, not a fourth.
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("3/2");
+    unmount();
+  });
+
+  it("shows the dock without todos, and lets the todos fill the column without timers", async () => {
+    const { root, unmount } = mountOverlay({
+      snapshotTabs: tabs,
+      timers: [
+        {
+          timerId: "t",
+          tabId: 1,
+          endAt: Date.now() + 60 * 60 * 1000,
+          title: "Only timer",
+          originalLabel: "",
+          url: "",
+        },
+      ],
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-timers-dock']")).not.toBeNull(),
+    );
+    expect(root.querySelector("[data-testid='zen-todo-column']")).toBeNull();
+    unmount();
+
+    const withTodo = mountOverlay({ snapshotTabs: tabs, todos: [{ tabId: 2, status: "todo" }] });
+    await vi.waitFor(() =>
+      expect(withTodo.root.querySelector("[data-testid='zen-todo-column']")).not.toBeNull(),
+    );
+    expect(withTodo.root.querySelector("[data-testid='zen-timers-dock']")).toBeNull();
+    expect(withTodo.root.querySelector("[data-testid='zen-todo-column']")?.className).not.toContain(
+      "max-h-[50%]",
+    );
+    withTodo.unmount();
+  });
+
+  it("plays key sounds from event handlers when sound is on", async () => {
+    const { root, press, unmount } = mountOverlay({
+      snapshotTabs: forgeSnapshotTabs(),
+      displaySettings: { soundEnabled: true },
+    });
+    await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(5));
+    // Rendering and loading are silent.
+    expect(play).not.toHaveBeenCalled();
+
+    press("a");
+    expect(play).toHaveBeenCalledWith("type");
+    press(" ");
+    expect(play).toHaveBeenCalledWith("type-space");
+    radios(root)[1]!.click();
+    expect(play).toHaveBeenCalledWith("tick");
+    unmount();
+  });
+
+  it("clicks the small row keys on the way down and up, but leaves latches to their own sound", async () => {
+    const { root, unmount } = mountOverlay({
+      snapshotTabs: forgeSnapshotTabs(),
+      displaySettings: { soundEnabled: true },
+    });
+    await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(5));
+    const pointer = (element: Element, type: "pointerdown" | "pointerup") =>
+      element.dispatchEvent(new Event(type, { bubbles: true }));
+
+    const timerKey = root.querySelector("[data-testid='zen-timer-button']")!;
+    pointer(timerKey, "pointerdown");
+    expect(play).toHaveBeenLastCalledWith("down");
+    pointer(timerKey, "pointerup");
+    expect(play).toHaveBeenLastCalledWith("up");
+
+    play.mockClear();
+    pointer(root.querySelector("[data-testid='zen-todo-button']")!, "pointerdown");
+    pointer(root.querySelector("[data-testid='zen-status-button']")!, "pointerdown");
+    expect(play).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("never plays a sound with sound off", async () => {
+    const { root, press, unmount } = mountOverlay({
+      snapshotTabs: forgeSnapshotTabs(),
+      displaySettings: { soundEnabled: false },
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-omnibar-stage]")?.getAttribute("data-omnibar-stage")).toBe(
+        "open",
+      ),
+    );
+    await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(5));
+
+    press("a");
+    press("ArrowDown");
+    radios(root)[1]!.click();
+    folder(root, "Issues").trigger.click();
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-button']")?.click();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(play).not.toHaveBeenCalled();
+    unmount();
+  });
+});
+
+describe("SearchApp current-tab strip and toolbar toggles", () => {
+  const issueTab = {
+    ...tabs[0],
+    title: "Fix search",
+    url: "https://github.com/acme/project/issues/42",
+  };
+  const strip = (root: HTMLElement) => root.querySelector("[data-testid='zen-current-tab']");
+  const finish = (root: HTMLElement) => {
+    render(null, root);
+    root.remove();
+  };
+
+  it("shows the forge tag, ref, countdown and working keys for an active issue tab", async () => {
+    const { root, sendMessage } = mountSearchApp(
+      vi.fn(),
+      [issueTab, { ...tabs[1] }],
+      "overlay",
+      undefined,
+      [],
+      [],
+      [],
+      undefined,
+      [{ timerId: "t1", tabId: 1, endAt: Date.now() + 5 * 60_000 }],
+    );
+
+    await vi.waitFor(() => expect(strip(root)?.textContent).toContain("Fix search"));
+    expect(strip(root)?.textContent).toContain("ISSUE");
+    expect(strip(root)?.textContent).toContain("#42");
+    await vi.waitFor(() => expect(strip(root)?.textContent).toMatch(/⏱ \d+m/));
+
+    strip(root)!.querySelector<HTMLButtonElement>("[data-testid='zen-todo-button']")!.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "setTodo", tabId: 1, status: "todo" }),
+    );
+
+    // In the overlay the timer key opens the timer view for the tab.
+    strip(root)!.querySelector<HTMLButtonElement>("[data-testid='zen-timer-button']")!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-tab-summary']")?.textContent).toContain(
+        "Timer for",
+      ),
+    );
+    expect(strip(root)).toBeNull();
+
+    finish(root);
+  });
+
+  it("keeps the strip out of the arrow-key order", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs);
+    await vi.waitFor(() => expect(strip(root)?.textContent).toContain("First tab"));
+    expect(strip(root)!.querySelector("[role='option'], [data-selected]")).toBeNull();
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    const selected = () => root.querySelector("[data-selected='true']");
+    await vi.waitFor(() => expect(selected()?.textContent).toContain("First tab"));
+    expect(strip(root)!.contains(selected())).toBe(false);
+
+    // The strip is no stop on the way: ArrowDown goes straight to the next tab.
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    await vi.waitFor(() => expect(selected()?.textContent).toContain("Second tab"));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+    await vi.waitFor(() => expect(selected()?.textContent).toContain("First tab"));
+    expect(strip(root)!.contains(selected())).toBe(false);
+
+    finish(root);
+  });
+
+  it("toggles the host overrides view from the toolbar button", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
+    await vi.waitFor(() => expect(strip(root)).not.toBeNull());
+    const toggle = () =>
+      root.querySelector<HTMLButtonElement>("button[title='Host overrides for this tab']")!;
+    expect(toggle().getAttribute("aria-pressed")).toBe("false");
+
+    toggle().click();
+    await vi.waitFor(() => expect(root.querySelector("h1")?.textContent).toBe("Host overrides"));
+    expect(toggle().getAttribute("aria-pressed")).toBe("true");
+    expect(strip(root)).toBeNull();
+
+    toggle().click();
+    await vi.waitFor(() => expect(root.querySelector("h1")).toBeNull());
+    expect(toggle().getAttribute("aria-pressed")).toBe("false");
+    expect(strip(root)).not.toBeNull();
+
+    finish(root);
+  });
+
+  it("keeps the timer button's icon when the timers view is open", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
+    await vi.waitFor(() => expect(strip(root)).not.toBeNull());
+    const button = () =>
+      root.querySelector<HTMLButtonElement>("button[aria-pressed][title*='timers']")!;
+    const icon = () => button().querySelector("svg")!.innerHTML;
+    const before = icon();
+    expect(button().getAttribute("aria-pressed")).toBe("false");
+
+    button().click();
+    await vi.waitFor(() => expect(button().getAttribute("aria-pressed")).toBe("true"));
+    expect(icon()).toBe(before);
+
+    finish(root);
+  });
+
+  it.each([{ kind: "timers" }, { kind: "timer", tabId: 1 }, { kind: "hosts", tabId: 1 }] as const)(
+    "has no Back to search button in the $kind view",
+    async (view) => {
+      const { root } = mountSearchApp(vi.fn(), tabs, "overlay", undefined, [], [], [], view);
+      await vi.waitFor(() =>
+        expect(root.querySelector("[data-testid='zen-search-input']")).toBeTruthy(),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(root.textContent).not.toContain("Back to search");
+      finish(root);
+    },
+  );
+
+  it("renders the strip in the toolbar popup too", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "popup");
+    await vi.waitFor(() => expect(strip(root)?.textContent).toContain("First tab"));
+    // One compact line: the space or host is left out.
+    expect(strip(root)?.textContent).not.toContain("example.com");
+    finish(root);
+  });
+});
+
+describe("SearchApp tab folders", () => {
+  const docs = { id: "docs", name: "Docs" };
+  const infra = { id: "infra", name: "Infra" };
+  const folderTabs = (): Partial<TabInfo>[] => [
+    { id: 1, title: "Alpha doc", url: "https://example.com/a", windowId: 1, folderPath: [docs] },
+    { id: 2, title: "Beta doc", url: "https://example.com/b", windowId: 1, folderPath: [docs] },
+    {
+      id: 3,
+      title: "Gamma infra",
+      url: "https://example.com/c",
+      windowId: 1,
+      folderPath: [docs, infra],
+    },
+    { id: 4, title: "Delta loose", url: "https://example.com/d", windowId: 1 },
+  ];
+  const header = (root: HTMLElement, name: string) =>
+    [...root.querySelectorAll<HTMLButtonElement>("[data-testid='zen-folder-group']")].find(
+      (button) => button.textContent?.includes(name),
+    )!;
+  const rows = (root: HTMLElement) =>
+    [...root.querySelectorAll("[data-testid='zen-search-item']")].map((row) => row.textContent);
+
+  it("collapses a folder from its chevron, keeps its count, and stores the choice", async () => {
+    const { root, set, unmount } = mountOverlay({ snapshotTabs: folderTabs() });
+    await vi.waitFor(() => expect(rows(root)).toHaveLength(4));
+    expect(header(root, "Docs").getAttribute("aria-expanded")).toBe("true");
+    expect(header(root, "Docs").querySelector(".zs-tree-toggle")).not.toBeNull();
+    expect(header(root, "Infra").getAttribute("aria-expanded")).toBe("true");
+
+    header(root, "Docs").click();
+    await vi.waitFor(() =>
+      expect(header(root, "Docs").getAttribute("aria-expanded")).toBe("false"),
+    );
+    // Its sub-folder goes with it; the count still says what is inside.
+    expect(rows(root)).toHaveLength(1);
+    expect(rows(root)[0]).toContain("Delta loose");
+    expect(header(root, "Docs").querySelector(".zs-section-count")?.textContent).toBe("3");
+    expect(set).toHaveBeenCalledWith({ tabFolderCollapsed: ["folder:docs"] });
+
+    header(root, "Docs").click();
+    await vi.waitFor(() => expect(rows(root)).toHaveLength(4));
+    expect(set).toHaveBeenLastCalledWith({ tabFolderCollapsed: [] });
+    unmount();
+  });
+
+  it("collapses just a sub-folder", async () => {
+    const { root, unmount } = mountOverlay({ snapshotTabs: folderTabs() });
+    await vi.waitFor(() => expect(rows(root)).toHaveLength(4));
+
+    header(root, "Infra").click();
+    await vi.waitFor(() => expect(rows(root)).toHaveLength(3));
+    expect(root.textContent).not.toContain("Gamma infra");
+    expect(root.textContent).toContain("Alpha doc");
+    unmount();
+  });
+
+  it("starts with the folders that were left collapsed", async () => {
+    const { root, unmount } = mountOverlay({
+      snapshotTabs: folderTabs(),
+      stored: { tabFolderCollapsed: ["folder:docs"] },
+    });
+    await vi.waitFor(() => expect(rows(root)).toHaveLength(1));
+    expect(header(root, "Docs").getAttribute("aria-expanded")).toBe("false");
+    unmount();
+  });
+
+  it("shows every match while a query is active, then folds the folder again", async () => {
+    const { root, input, unmount } = mountOverlay({
+      snapshotTabs: folderTabs(),
+      stored: { tabFolderCollapsed: ["folder:docs"] },
+    });
+    await vi.waitFor(() => expect(rows(root)).toHaveLength(1));
+
+    input().value = "alpha";
+    input().dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() => expect(root.textContent).toContain("Alpha doc"));
+
+    input().value = "";
+    input().dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() => expect(root.textContent).not.toContain("Alpha doc"));
+    unmount();
+  });
+
+  it("walks the keyboard past a collapsed folder", async () => {
+    const { root, press, unmount } = mountOverlay({
+      snapshotTabs: folderTabs(),
+      stored: { tabFolderCollapsed: ["folder:docs"] },
+    });
+    await vi.waitFor(() => expect(rows(root)).toHaveLength(1));
+    for (let step = 0; step < 3; step++) press("ArrowDown");
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-selected='true']")?.textContent).toContain("Delta loose"),
+    );
+    unmount();
   });
 });

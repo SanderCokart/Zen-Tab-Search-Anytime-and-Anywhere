@@ -8,6 +8,7 @@ import {
   forgePageInfoSchema,
   isErrorResponse,
   isSnapshotChangedMessage,
+  isTabZoomChangedMessage,
   parseOmnibarShownMessage,
   parseExtensionSuccess,
 } from "@/shared/messaging/protocol";
@@ -51,6 +52,19 @@ export async function sendTabMessage<T extends ContentCommand["type"]>(
 export function subscribeToSnapshotChanged(onChanged: () => void): () => void {
   const listener = (message: unknown) => {
     if (isSnapshotChangedMessage(message)) {
+      onChanged();
+    }
+  };
+  browser.runtime.onMessage.addListener(listener);
+  return () => {
+    browser.runtime.onMessage.removeListener(listener);
+  };
+}
+
+/** Calls `onChanged` when the zoom level of a tab changes. */
+export function subscribeToTabZoomChanged(onChanged: () => void): () => void {
+  const listener = (message: unknown) => {
+    if (isTabZoomChangedMessage(message)) {
       onChanged();
     }
   };

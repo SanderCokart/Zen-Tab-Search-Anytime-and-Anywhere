@@ -1,7 +1,11 @@
 import type { ComponentChildren } from "preact";
-import type { DisplaySettings } from "@/features/settings/model/display-settings";
+import { customColor, type DisplaySettings } from "@/features/settings/model/display-settings";
 import { uiScaleStyle } from "@/features/settings/model/ui-scale";
 import type { SearchLayout } from "@/features/search/ui/types";
+import { SoundProvider, type SoundApi } from "@/shared/ui/sound/SoundContext";
+import { keyPressVoice } from "@/shared/ui/sound/key-press-voice";
+import { usePageZoom } from "@/features/search/ui/hooks/usePageZoom";
+import { useResolvedTheme } from "@/shared/ui/theme";
 
 /**
  * The outer frame for both search surfaces.
@@ -23,6 +27,7 @@ export function SearchShell({
   displaySettings,
   aspect = "1/1",
   open = true,
+  sound,
   children,
 }: {
   layout: SearchLayout;
@@ -30,36 +35,66 @@ export function SearchShell({
   displaySettings: DisplaySettings;
   aspect?: OmnibarAspect;
   open?: boolean;
+  /** The sound player for everything inside; silent when left out. */
+  sound?: SoundApi;
   children: ComponentChildren;
 }) {
+  const theme = useResolvedTheme(displaySettings.theme);
+  const textColor = customColor(displaySettings.textColor);
+  // Only the overlay, and only when it should hold its size on screen, needs the zoom.
+  const zoom = usePageZoom(layout === "overlay" && !displaySettings.respectZoom);
+
+  // Presses are heard on the way down and up, from one listener for the whole surface.
+  const onPointerDown = (event: PointerEvent) => {
+    const voice = keyPressVoice(event.target, false);
+    if (voice) sound?.play(voice);
+  };
+  const onPointerUp = (event: PointerEvent) => {
+    const voice = keyPressVoice(event.target, true);
+    if (voice) sound?.play(voice);
+  };
+
+  const frame = (content: ComponentChildren) =>
+    sound ? <SoundProvider sound={sound}>{content}</SoundProvider> : <>{content}</>;
+
   if (layout === "popup") {
-    return (
+    return frame(
       <div
-        class="flex h-full min-h-0 flex-col"
+        class="zs-chassis flex h-full min-h-0 flex-col p-[var(--zen-space-2)]"
         data-zen-ui="popup"
-        style={{ color: displaySettings.textColor }}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        data-theme={theme}
+        style={{ colorScheme: theme, color: textColor }}
       >
         {children}
-      </div>
+      </div>,
     );
   }
 
-  return (
+  return frame(
     <div
       class="bg-zen-overlay flex h-full w-full items-center justify-center backdrop-blur-[8px]"
       onClick={onClose}
       data-zen-ui
+      data-theme={theme}
       data-omnibar-stage={open ? "open" : "loading"}
-      style={{ ...uiScaleStyle(displaySettings, "overlay"), color: displaySettings.textColor }}
+      style={{
+        ...uiScaleStyle(displaySettings, "overlay", zoom),
+        colorScheme: theme,
+        color: textColor,
+      }}
     >
       <div
-        class="from-zen-bg to-zen-raised flex min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl bg-linear-to-br p-[var(--zen-space-3)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+        class="zs-chassis flex min-h-0 shrink-0 flex-col overflow-hidden rounded-[var(--zs-r-card)] p-[var(--zen-space-6)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
         onClick={(event) => event.stopPropagation()}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
         data-omnibar
         data-omnibar-aspect={aspect}
       >
         {children}
       </div>
-    </div>
+    </div>,
   );
 }

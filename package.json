@@ -79,6 +79,8 @@
     "zod": "~4.4.3"
   },
   "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
     "@simonwep/pickr": "^1.10.2",
     "@timelang/parse": "^0.1.1",
     "cn": "^0.3.0",

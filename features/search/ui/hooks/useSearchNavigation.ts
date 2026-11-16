@@ -27,6 +27,17 @@ export interface UseSearchNavigationOptions {
   onActivateItem: (item: SearchItem) => void;
   onActivateForgeEntry: (entry: ForgeIssueEntry) => void;
   onActivateTodoTab: (tab: TabInfo) => void;
+  /**
+   * Alt+Left / Alt+Right in the issue navigator: collapse the group of the
+   * selected entry, or expand the collapsed group nearest to it. Plain Left and
+   * Right already page through the list. Returns how many entries are visible
+   * afterwards, so the selection can stay in range; undefined when nothing changed.
+   */
+  onForgeGroupKey?: (
+    action: "collapse" | "expand",
+    entry: ForgeIssueEntry | undefined,
+    index: number,
+  ) => number | undefined;
 }
 
 function isPrefixKey(prefixes: readonly string[], key: string): boolean {
@@ -61,6 +72,7 @@ export function useSearchNavigation({
   onActivateItem,
   onActivateForgeEntry,
   onActivateTodoTab,
+  onForgeGroupKey,
 }: UseSearchNavigationOptions) {
   const [paneOverride, setPaneOverride] = useState<{ query: string; pane: SearchPane } | null>(
     null,
@@ -270,6 +282,26 @@ export function useSearchNavigation({
         });
       } else if (count) {
         setTabSelection({ query, index: selectedIndex <= 0 ? count - 1 : selectedIndex - 1 });
+      }
+      event.preventDefault();
+    } else if (
+      (event.key === "ArrowLeft" || event.key === "ArrowRight") &&
+      event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      activePane === "forge"
+    ) {
+      const remaining = onForgeGroupKey?.(
+        event.key === "ArrowLeft" ? "collapse" : "expand",
+        navigatorEntries[selectedForgeIndex],
+        selectedForgeIndex,
+      );
+      if (remaining !== undefined) {
+        // Stay on the same row, or on the last one left.
+        setForgeSelection({
+          query,
+          index: Math.max(0, Math.min(selectedForgeIndex, remaining - 1)),
+        });
       }
       event.preventDefault();
     } else if (event.key === "ArrowRight") {

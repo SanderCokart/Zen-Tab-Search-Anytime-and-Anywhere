@@ -73,12 +73,12 @@ export function StatusBar({ stats, showForge, children }: StatusBarProps) {
   return (
     <footer
       class={cn(
-        "border-zen-line text-zen-muted mt-[var(--zen-space-2)] flex min-w-0 shrink-0 items-center justify-between",
-        "gap-[var(--zen-space-3)] border-t pt-[var(--zen-space-2)] text-[length:var(--zen-text-xs)]",
+        "text-zen-muted mt-[var(--zen-space-5)] flex min-w-0 shrink-0 items-center justify-between px-[var(--zen-space-1)]",
+        "gap-[var(--zen-status-gap)] font-mono text-[length:var(--zen-text-xs)] tracking-[0.12em] uppercase",
       )}
       data-testid="zen-status-bar"
     >
-      <ul class="m-0 flex min-w-0 list-none flex-wrap items-center gap-x-[var(--zen-space-3)] gap-y-[var(--zen-space-1)] p-0">
+      <ul class="m-0 flex min-w-0 list-none flex-nowrap items-center gap-x-[var(--zen-status-gap)] overflow-hidden p-0 whitespace-nowrap">
         {visibleStats(stats, showForge).map((stat) => (
           <li key={stat.key} title={stat.title} data-stat={stat.key}>
             {stat.text}

@@ -1,12 +1,12 @@
 import { parseForgeUrl, cleanForgeTitle } from "@/features/forge/model/forge-label";
 import {
   isEssentialTab,
-  isUsableTabId,
   type FolderInfo,
   type SearchItem,
   type SpaceInfo,
   type TabInfo,
 } from "@/shared/types";
+import { visibleForgeEntries } from "@/features/forge/model/forge-collapse";
 import { type ForgeIssueEntry } from "@/features/forge/model/forge-label";
 
 export type ForgeIssueSortMode = "recent" | "old";
@@ -233,10 +233,6 @@ export function buildSearchItems(allTabs: TabInfo[], allSpaces: SpaceInfo[]): Se
   return items;
 }
 
-export function isPinnedSearchItem(item: SearchItem): boolean {
-  return item.kind === "space" || (item.kind === "tab" && isEssentialTab(item.data));
-}
-
 function partitionPinnedSearchItems(items: SearchItem[]): {
   pinned: SearchItem[];
   rest: SearchItem[];
@@ -263,6 +259,26 @@ export interface SearchItemGroup {
   children: SearchItemGroup[];
 }
 
+/**
+ * The folders an item is listed under, outermost first: none for a space or an
+ * essential tab, only the top folder when sub-folders are not grouped.
+ */
+export function searchItemFolderPath(item: SearchItem, groupSubfolders = true): FolderInfo[] {
+  const folderPath: FolderInfo[] =
+    item.kind === "tab" && !isEssentialTab(item.data)
+      ? (item.data.folderPath ??
+        (item.data.folderId || item.data.folderName
+          ? [
+              {
+                id: item.data.folderId || `name:${item.data.folderName}`,
+                name: item.data.folderName || "Folder",
+              },
+            ]
+          : []))
+      : [];
+  return groupSubfolders ? folderPath : folderPath.slice(0, 1);
+}
+
 export function groupSearchItems(
   items: SearchItem[],
   options: { groupFolders?: boolean; groupSubfolders?: boolean } = {},
@@ -276,19 +292,7 @@ export function groupSearchItems(
   const groups: SearchItemGroup[] = [];
 
   for (const item of rest) {
-    const folderPath: FolderInfo[] =
-      item.kind === "tab" && !isEssentialTab(item.data)
-        ? (item.data.folderPath ??
-          (item.data.folderId || item.data.folderName
-            ? [
-                {
-                  id: item.data.folderId || `name:${item.data.folderName}`,
-                  name: item.data.folderName || "Folder",
-                },
-              ]
-            : []))
-        : [];
-    const visibleFolderPath = groupSubfolders ? folderPath : folderPath.slice(0, 1);
+    const visibleFolderPath = searchItemFolderPath(item, groupSubfolders);
     let currentGroups = groups;
     let currentGroup: SearchItemGroup | undefined;
 
@@ -367,6 +371,9 @@ export function buildForgeIssueEntries(allTabs: TabInfo[]): ForgeIssueEntry[] {
         tab,
         title: cleanForgeTitle(tab.title || "", ref) || `${ref.platform} ${ref.kind} #${ref.id}`,
         projectLabel: `${ref.host}/${ref.projectPath}`,
+        ...(ref.kind !== "issue" && tab.forgeTargetBranch
+          ? { targetBranch: tab.forgeTargetBranch }
+          : {}),
       },
     ];
   });
@@ -422,6 +429,7 @@ export function forgeEntrySearchTexts(entry: ForgeIssueEntry): string[] {
     entry.tab.customLabel || "",
     tabNameSearchText(entry.tab),
     entry.projectLabel,
+    entry.targetBranch ?? "",
     entry.ref.id,
     entry.ref.kind.replaceAll("_", " "),
     entry.ref.platform,
@@ -569,10 +577,17 @@ export function sortForgeIssueEntries(
   });
 }
 
+/** A project's MRs/PRs into one branch; `targetBranch` is unset for those not read yet. */
+export interface ForgeRequestBranchGroup {
+  targetBranch?: string;
+  requests: ForgeIssueEntry[];
+}
+
 export interface ForgeIssueProjectGroup {
   projectLabel: string;
   issues: ForgeIssueEntry[];
-  requests: ForgeIssueEntry[];
+  /** In order of their first request, with the unknown-branch group last. */
+  branches: ForgeRequestBranchGroup[];
 }
 
 export interface ForgeIssueProviderGroup {
@@ -591,12 +606,19 @@ export function groupForgeIssueEntries(
     const project = projects.get(entry.projectLabel) || {
       projectLabel: entry.projectLabel,
       issues: [],
-      requests: [],
+      branches: [],
     };
     if (entry.ref.kind === "issue") {
       project.issues.push(entry);
     } else {
-      project.requests.push(entry);
+      let branch = project.branches.find((group) => group.targetBranch === entry.targetBranch);
+      if (!branch) {
+        branch = entry.targetBranch
+          ? { targetBranch: entry.targetBranch, requests: [] }
+          : { requests: [] };
+        project.branches.push(branch);
+      }
+      branch.requests.push(entry);
     }
     projects.set(entry.projectLabel, project);
     providers.set(entry.ref.platform, projects);
@@ -604,28 +626,32 @@ export function groupForgeIssueEntries(
 
   return [...providers.entries()].map(([platform, projects]) => ({
     platform: platform as ForgeIssueEntry["ref"]["platform"],
-    projects: [...projects.values()],
+    projects: [...projects.values()].map((project) => ({
+      ...project,
+      branches: [
+        ...project.branches.filter((group) => group.targetBranch !== undefined),
+        ...project.branches.filter((group) => group.targetBranch === undefined),
+      ],
+    })),
   }));
 }
 
 /**
- * The navigator's keyboard order: the pinned current entry, if any, then each
- * provider's projects with their issues before their requests.
+ * The navigator's keyboard order: each provider's projects with their issues before their requests, branch by branch.
+ * Entries inside a collapsed group (`collapsed` holds its key) are left out;
+ * without the set, every group is open.
  */
 export function flattenForgeNavigatorEntries(
   entries: ForgeIssueEntry[],
   sortMode: ForgeIssueSortMode,
-  currentEntry?: ForgeIssueEntry,
+  collapsed: ReadonlySet<string> = new Set(),
 ): ForgeIssueEntry[] {
-  const grouped = groupForgeIssueEntries(entries, sortMode).flatMap((provider) =>
-    provider.projects.flatMap((project) => [...project.issues, ...project.requests]),
-  );
-  return currentEntry ? [currentEntry, ...grouped] : grouped;
+  return visibleForgeEntries(groupForgeIssueEntries(entries, sortMode), collapsed);
 }
 
 /**
- * Splits off the entry for the tab the overlay was opened over, so the
- * navigator can list it first the way the tab list lists the current tab.
+ * Splits off the entry for the tab the overlay was opened over, which the
+ * current-tab strip shows instead of the navigator.
  */
 export function splitCurrentForgeEntry(entries: ForgeIssueEntry[]): {
   current?: ForgeIssueEntry;
@@ -637,22 +663,14 @@ export function splitCurrentForgeEntry(entries: ForgeIssueEntry[]): {
     : { rest: entries };
 }
 
-export function prioritizeCurrentTab(
-  items: SearchItem[],
-  currentTabId?: number | null,
-): SearchItem[] {
-  const current = isUsableTabId(currentTabId)
-    ? items.find((item) => item.kind === "tab" && item.data.id === currentTabId)
-    : items.find((item) => item.kind === "tab" && item.data.active);
-  const movableCurrent = current && !isPinnedSearchItem(current) ? current : undefined;
-  const { pinned, rest } = partitionPinnedSearchItems(
-    movableCurrent ? items.filter((item) => item !== movableCurrent) : items,
-  );
-
-  if (!movableCurrent) {
-    return pinned.length ? [...pinned, ...rest] : items;
-  }
-  return [...pinned, movableCurrent, ...rest];
+/**
+ * Spaces, then essential tabs, then everything else in its own order. The
+ * current tab gets no special place here: it ranks like any other tab, and the
+ * strip under the search bar shows it.
+ */
+export function pinnedFirst(items: SearchItem[]): SearchItem[] {
+  const { pinned, rest } = partitionPinnedSearchItems(items);
+  return pinned.length ? [...pinned, ...rest] : items;
 }
 
 export interface FilterSearchResult {

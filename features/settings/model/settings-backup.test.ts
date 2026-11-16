@@ -25,9 +25,9 @@ describe("settings backup", () => {
   });
 
   it("restores into storage that holds no settings", () => {
-    expect(
-      settingsToRestore({ tabTimers: [] }, { displaySettings: { fontSize: 14 } }),
-    ).toEqual({ displaySettings: { fontSize: 14 } });
+    expect(settingsToRestore({ tabTimers: [] }, { displaySettings: { fontSize: 14 } })).toEqual({
+      displaySettings: { fontSize: 14 },
+    });
   });
 
   it("leaves storage alone once any setting is present", () => {

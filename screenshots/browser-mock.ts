@@ -83,6 +83,8 @@ export function installBrowserMock(
           originalLabel: "",
           title: "",
         };
+      case "getTabZoom":
+        return 1;
       case "getUpdateStatus":
         return {
           currentVersion: "4.0.2",

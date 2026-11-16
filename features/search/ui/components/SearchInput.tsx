@@ -1,6 +1,9 @@
 import type { JSX, Ref } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { cn } from "@/shared/ui/cn";
+import { Lcd } from "@/shared/ui/primitives/Lcd";
+import { useSound } from "@/shared/ui/sound/SoundContext";
+import type { SoundVoice } from "@/shared/ui/sound/engine";
 
 export interface SearchInputProps {
   inputRef: Ref<HTMLInputElement>;
@@ -10,6 +13,17 @@ export interface SearchInputProps {
   inert?: boolean;
   onQueryChange: (query: string) => void;
   onKeyDown: (event: JSX.TargetedKeyboardEvent<HTMLInputElement>) => void;
+}
+
+/** The key-down voice for a key, or none for one that makes no noise. */
+function keyDownVoice(event: KeyboardEvent): SoundVoice | undefined {
+  if (event.ctrlKey || event.metaKey) return undefined;
+  if (event.key === " ") return "type-space";
+  if (event.key === "Backspace" || event.key === "Delete") return "type-big";
+  if (event.key.length === 1) return "type";
+  // Alt+arrows belong to the issue groups, which tick for themselves.
+  if (event.key.startsWith("Arrow") && !event.altKey) return "tick";
+  return undefined;
 }
 
 /**
@@ -25,6 +39,7 @@ export function SearchInput({
   onQueryChange,
   onKeyDown,
 }: SearchInputProps) {
+  const { play } = useSound();
   const [value, setValue] = useState(initialValue);
   const frameRef = useRef<number | undefined>(undefined);
   const queryRef = useRef(value);
@@ -50,41 +65,59 @@ export function SearchInput({
   };
 
   return (
-    <input
-      ref={inputRef}
-      data-testid="zen-search-input"
-      type="text"
-      placeholder="Search tabs and spaces..."
-      inert={inert}
+    <Lcd
       class={cn(
-        "bg-zen-surface placeholder:text-zen-muted min-w-0 flex-1 border-0 outline-none",
-        "rounded-[var(--zen-radius)] p-[var(--zen-space-2)] text-[length:var(--zen-text-lg)]",
-        compact && "w-full",
+        "flex min-w-0 flex-1 items-center gap-[var(--zen-space-3)] px-[var(--zen-space-3)]",
         inert && "opacity-50",
       )}
-      value={value}
-      onInput={(event) => {
-        const next = event.currentTarget.value;
-        setValue(next);
-        if (frameRef.current !== undefined) {
-          cancelAnimationFrame(frameRef.current);
-        }
-        frameRef.current = requestAnimationFrame(() => {
-          frameRef.current = undefined;
-          flushQuery(next);
-        });
-      }}
-      onKeyDown={(event) => {
-        if (
-          event.key === "Enter" ||
-          event.key === "Tab" ||
-          event.key === "Escape" ||
-          event.key.startsWith("Arrow")
-        ) {
-          flushQuery(event.currentTarget.value);
-        }
-        onKeyDown(event);
-      }}
-    />
+    >
+      {!compact && (
+        <span aria-hidden="true" class="zs-label zs-label-red shrink-0 select-none">
+          Search
+        </span>
+      )}
+      <input
+        ref={inputRef}
+        data-testid="zen-search-input"
+        type="text"
+        placeholder={compact ? "Search…" : "Search tabs and spaces..."}
+        inert={inert}
+        class={cn(
+          "min-w-0 flex-1 border-0 bg-transparent text-inherit caret-[var(--zs-red)] outline-none placeholder:text-[var(--zs-lcd-dim)]",
+          "py-[var(--zen-space-3)] font-[inherit] text-[length:var(--zen-text-lg)]",
+          compact && "w-full",
+        )}
+        value={value}
+        onInput={(event) => {
+          const next = event.currentTarget.value;
+          setValue(next);
+          if (frameRef.current !== undefined) {
+            cancelAnimationFrame(frameRef.current);
+          }
+          frameRef.current = requestAnimationFrame(() => {
+            frameRef.current = undefined;
+            flushQuery(next);
+          });
+        }}
+        onKeyDown={(event) => {
+          const voice = keyDownVoice(event);
+          if (voice) play(voice);
+          if (
+            event.key === "Enter" ||
+            event.key === "Tab" ||
+            event.key === "Escape" ||
+            event.key.startsWith("Arrow")
+          ) {
+            flushQuery(event.currentTarget.value);
+          }
+          onKeyDown(event);
+        }}
+        onKeyUp={(event) => {
+          // Only the keys that typed have a release to hear.
+          const voice = keyDownVoice(event);
+          if (voice && voice !== "tick") play("type-up");
+        }}
+      />
+    </Lcd>
   );
 }

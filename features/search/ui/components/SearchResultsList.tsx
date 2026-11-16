@@ -1,7 +1,9 @@
 import type { SearchItemGroup } from "@/features/search/model/ranking";
+import { tabFolderKey } from "@/features/search/model/tab-folder-collapse";
+import { TabFolderHeader } from "@/features/search/ui/components/TabFolderHeader";
 import { TabSearchRow } from "@/features/search/ui/components/TabSearchRow";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
-import type { DisplaySettings } from "@/features/settings/model/display-settings";
+import { customColor, type DisplaySettings } from "@/features/settings/model/display-settings";
 import { statusRowClass } from "@/features/status/ui/traffic-light";
 import {
   formatSpaceDisplayTitle,
@@ -23,6 +25,9 @@ export interface SearchResultsListProps {
   /** True while another overlay column owns the keyboard, so no result row looks selected. */
   navigateForge: boolean;
   displaySettings: DisplaySettings;
+  /** Folders whose rows are folded away, by `tabFolderKey`; empty while a query is active. */
+  collapsedFolders: ReadonlySet<string>;
+  onToggleFolder: (key: string) => void;
   timers: Map<number, TabTimer>;
   todos: Map<number, TabTodo>;
   statuses: Map<number, TrafficLight>;
@@ -41,8 +46,13 @@ export interface SearchResultsListProps {
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
 }
 
-const sectionHeaderClass =
-  "text-zen-subtle border-zen-line-soft border-b px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-[length:var(--zen-text-xs)] font-semibold uppercase";
+/** Numbered by CSS counter (the list resets it), so no header text changes. */
+const sectionHeaderClass = "zs-section-label";
+
+/** The padding and radius a section needs once the user gives it a colour of its own. */
+function tintedSection(color: string | undefined): string | false {
+  return color !== undefined && "rounded-[var(--zen-radius)] p-[var(--zen-space-2)]";
+}
 
 /** Renders the (possibly folder-nested) tab and space results. */
 export function SearchResultsList(props: SearchResultsListProps) {
@@ -59,18 +69,19 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
         (item) => item.kind === "tab" && isEssentialTab(item.data),
       );
       const tabs = group.items.filter((item) => item.kind === "tab" && !isEssentialTab(item.data));
+      const spaceColor = customColor(displaySettings.spaceBackgroundColor);
 
       return (
         <section key={`ungrouped-${level}-${groupIndex}`} class="contents">
           {spaces.length > 0 && (
             <li
-              class="rounded-[var(--zen-radius)] p-[var(--zen-space-1)]"
-              style={{ backgroundColor: displaySettings.spaceBackgroundColor }}
+              class={cn("min-w-0", tintedSection(spaceColor))}
+              style={{ backgroundColor: spaceColor }}
               data-testid="zen-space-section"
             >
               <div class={sectionHeaderClass}>Spaces</div>
               <ul
-                class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,var(--zen-tile-space)),1fr))] gap-[var(--zen-space-gap)] p-[var(--zen-space-2)]"
+                class="m-0 grid list-none grid-cols-3 gap-[var(--zen-space-gap)] p-0"
                 data-testid="zen-space-grid"
               >
                 {spaces.map((item) => renderItem(props, item))}
@@ -79,13 +90,13 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
           )}
           {essentialTabs.length > 0 && (
             <li
-              class="rounded-[var(--zen-radius)] p-[var(--zen-space-1)]"
-              style={{ backgroundColor: displaySettings.spaceBackgroundColor }}
+              class={cn("min-w-0", tintedSection(spaceColor))}
+              style={{ backgroundColor: spaceColor }}
               data-testid="zen-essential-section"
             >
               <div class={sectionHeaderClass}>Essential tabs</div>
               <ul
-                class="m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(min(100%,var(--zen-tile-essential)),1fr))] gap-[var(--zen-essential-gap)] p-[var(--zen-space-2)]"
+                class="m-0 grid list-none grid-cols-2 gap-[var(--zen-essential-gap)] p-0"
                 data-testid="zen-essential-grid"
               >
                 {essentialTabs.map((item) => renderItem(props, item))}
@@ -93,7 +104,13 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
             </li>
           )}
           {tabs.length > 0 && (
-            <li>
+            <li class="min-w-0">
+              {/* Under folders, a bare list would read as part of the folder above it. */}
+              {level === 0 && groups.some((other) => other.folderId !== undefined) && (
+                <div class={sectionHeaderClass} data-testid="zen-ungrouped-heading">
+                  Tabs
+                </div>
+              )}
               <ul
                 class="m-0 flex list-none flex-col gap-[var(--zen-tab-gap)] p-0"
                 data-testid="zen-tab-list"
@@ -106,42 +123,50 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
       );
     }
 
+    const count = countTabs(group);
+    const folderKey = tabFolderKey(group.folderId);
+    const open = !props.collapsedFolders.has(folderKey);
+
     return (
       <li
         key={`${group.folderId}-${level}-${groupIndex}`}
         class={cn(
-          // Margin-top only: adjacent folders then sit exactly one folder gap
-          // apart rather than two, and the last one adds no trailing space.
-          "mt-[var(--zen-folder-gap)] first:mt-0",
-          level > 0 && "mx-[var(--zen-space-1)]",
-          "rounded-[var(--zen-radius)] p-[var(--zen-space-1)]",
+          "min-w-0",
+          // A sub-folder follows its siblings by the folder gap; top-level sections are
+          // spaced by the list's own section gap.
+          level > 0 && "mt-[var(--zen-folder-gap)]",
         )}
-        style={{ backgroundColor: displaySettings.folderBackgroundColor }}
         data-testid="zen-folder-section"
+        data-open={open}
       >
-        <div
-          class={cn(
-            "border-b px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-[length:var(--zen-text-xs)] font-semibold uppercase",
-            level === 0
-              ? "border-gray-400/30 text-gray-300"
-              : level === 1
-                ? "border-gray-500/20 text-gray-400"
-                : "border-gray-600/20 text-gray-500",
-            level > 0 && "pl-[var(--zen-space-4)]",
-            level > 1 && "pl-[calc(var(--zen-space-4)*1.5)]",
-          )}
-          data-testid="zen-folder-group"
-          role="presentation"
+        <TabFolderHeader
+          open={open}
+          sub={level > 0}
+          dim={level > 1}
+          count={count}
+          onToggle={() => props.onToggleFolder(folderKey)}
         >
           {group.folderName}
-        </div>
-        <ul class="m-0 flex list-none flex-col gap-[var(--zen-tab-gap)] p-0">
-          {group.items.map((item) => renderItem(props, item))}
-          {renderGroups(props, group.children, level + 1)}
-        </ul>
+        </TabFolderHeader>
+        {open && (
+          <ul
+            class={cn(
+              "m-0 flex list-none flex-col gap-[var(--zen-tab-gap)] p-0",
+              level > 0 && "zs-sub",
+            )}
+          >
+            {group.items.map((item) => renderItem(props, item))}
+            {renderGroups(props, group.children, level + 1)}
+          </ul>
+        )}
       </li>
     );
   });
+}
+
+/** Every tab in a folder, sub-folders included. */
+function countTabs(group: SearchItemGroup): number {
+  return group.items.length + group.children.reduce((sum, child) => sum + countTabs(child), 0);
 }
 
 function itemKey(item: SearchItem): string {
@@ -185,11 +210,16 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
       data-selected={selected ? "true" : undefined}
       data-status-light={light}
       class={cn(
-        "zen-search-row flex min-w-0 cursor-pointer items-start transition-colors",
-        item.kind === "space" && "items-center justify-center text-center",
-        "gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] p-[var(--zen-space-2)] text-[length:var(--zen-text-md)]",
-        statusRowClass(light, selected),
-        item.kind === "space" && item.data.isActive && "bg-zen-accent",
+        "zen-search-row zs-row flex min-w-0 cursor-pointer items-center transition-colors",
+        "rounded-[var(--zen-radius)] px-[var(--zen-row-pad)]",
+        item.kind === "space" &&
+          "min-h-[calc(var(--zen-row-height)*1.1)] justify-center gap-[var(--zen-space-2)] text-center",
+        item.kind === "tab" &&
+          isEssentialTab(item.data) &&
+          "shadow-[inset_0_0_0_1px_var(--zs-hair)]",
+        item.kind === "space" && item.data.isActive
+          ? "bg-[var(--zs-key)] shadow-[var(--zs-key-shadow)]"
+          : statusRowClass(light, selected),
       )}
       role="option"
       aria-selected={selected}
@@ -202,19 +232,12 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
     >
       {item.kind === "space" ? (
         <>
-          <span class="mt-px flex size-[var(--zen-icon-lg)] shrink-0 items-center justify-center text-[length:var(--zen-text-base)] leading-none">
+          <span class="flex size-[var(--zen-icon-lg)] shrink-0 items-center justify-center text-[length:var(--zen-text-base)] leading-none">
             {item.data.icon?.trim() || "◆"}
           </span>
-          <div class="flex w-auto min-w-0 flex-col items-center gap-px text-inherit">
-            <span
-              class={cn(
-                "min-w-0 flex-none text-[length:var(--zen-text-base)] font-semibold",
-                entryTextClass(props.displaySettings.truncateTabTitles),
-              )}
-            >
-              {formatSpaceDisplayTitle(item.data)}
-            </span>
-          </div>
+          <span class={cn("zs-row-title", entryTextClass(props.displaySettings.truncateTabTitles))}>
+            {formatSpaceDisplayTitle(item.data)}
+          </span>
         </>
       ) : (
         <TabSearchRow

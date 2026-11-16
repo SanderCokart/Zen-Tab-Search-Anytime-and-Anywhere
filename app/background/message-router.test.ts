@@ -43,6 +43,7 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
     getHostProxyStatus: vi.fn(async () => ({ logPath: "", proxies: [] })),
     openHostOverridesPopup: vi.fn(async () => undefined),
     hideOmnibar: vi.fn(async () => undefined),
+    getTabZoom: vi.fn(async () => 1.5),
     getUpdateStatus: vi.fn(async () => ({
       currentVersion: "4.0.0",
       latest: null,
@@ -194,6 +195,26 @@ describe("dispatchExtensionMessage", () => {
     await Promise.all([marked.promise, cleared.promise]);
     expect(api.setTodo).toHaveBeenNthCalledWith(1, 4, "todo");
     expect(api.setTodo).toHaveBeenNthCalledWith(2, 4, "none");
+  });
+
+  it("asks for the zoom of a content-script sender, and of nothing for any other sender", async () => {
+    const api = handlers();
+    const fromPage = dispatchExtensionMessage(
+      api,
+      { type: "getTabZoom" },
+      { tab: { id: 12, url: "https://example.com/" } },
+    );
+    const fromExtension = dispatchExtensionMessage(
+      api,
+      { type: "getTabZoom" },
+      { tab: { id: 13, url: "moz-extension://abc/omnibar.html" } },
+    );
+    if (!fromPage.handled || !fromPage.async || !fromExtension.handled || !fromExtension.async) {
+      throw new Error("expected async dispatch");
+    }
+    await Promise.all([fromPage.promise, fromExtension.promise]);
+    expect(api.getTabZoom).toHaveBeenNthCalledWith(1, 12);
+    expect(api.getTabZoom).toHaveBeenNthCalledWith(2, undefined);
   });
 
   it("dispatches getUpdateStatus, checking now only when forced", async () => {

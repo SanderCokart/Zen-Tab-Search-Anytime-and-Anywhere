@@ -7,10 +7,11 @@ import {
   MCP_SERVER_ASSET_PATH,
   MCP_SERVER_FILE_NAME,
 } from "@/features/bridge/model/mcp-install";
+import { settingsKeyClass } from "@/shared/ui/button-styles";
+import { Lcd } from "@/shared/ui/primitives/Lcd";
+import { FieldText, Module } from "@/shared/ui/primitives/Module";
+import { Switch } from "@/shared/ui/primitives/Switch";
 import { BRIDGE_PORT, BRIDGE_TOKEN_STORAGE_KEY } from "@/shared/messaging/bridge-protocol";
-
-const smallButtonClass =
-  "border-zen-clear text-zen-faint hover:bg-zen-surface cursor-pointer rounded-md border bg-transparent px-2 py-1 font-[inherit] text-xs disabled:cursor-not-allowed disabled:opacity-40 no-underline";
 
 /**
  * Opt-in pairing for the local MCP server. Storing a token is what turns the
@@ -70,66 +71,60 @@ export function BridgeSettings() {
   };
 
   return (
-    <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
-      <legend class="px-1 text-sm font-medium">AI agents (MCP)</legend>
-      <label class="flex cursor-pointer items-start gap-3">
-        <input
-          type="checkbox"
-          class="accent-zen-accent mt-1 size-4"
-          data-testid="zen-bridgeEnabled"
-          checked={!!token}
-          disabled={!loaded}
-          onChange={(event) =>
-            saveToken(event.currentTarget.checked ? generateBridgeToken() : undefined)
-          }
+    <Module title="AI agents" meta="MCP" wide>
+      <Switch
+        checked={!!token}
+        disabled={!loaded}
+        data-testid="zen-bridgeEnabled"
+        showState
+        onChange={(checked) => saveToken(checked ? generateBridgeToken() : undefined)}
+      >
+        <FieldText
+          label="Let a local MCP server control Zen"
+          hint={`Claude, Cursor and other MCP clients can then read and organise your tabs, folders and spaces through the Zen Tab Search MCP server. It connects only over this computer (127.0.0.1:${BRIDGE_PORT}) and only with the token below.`}
         />
-        <span>
-          <span class="block text-sm font-medium">Let a local MCP server control Zen</span>
-          <span class="text-zen-subtle block text-xs">
-            Claude, Cursor and other MCP clients can then read and organise your tabs, folders and
-            spaces through the Zen Tab Search MCP server. It connects only over this computer
-            (127.0.0.1:{BRIDGE_PORT}) and only with the token below.
-          </span>
-        </span>
-      </label>
+      </Switch>
       {token && (
-        <div class="ml-7 flex flex-col gap-2">
-          <span class="text-zen-subtle text-xs">
+        <div class="flex flex-col gap-[var(--zen-space-3)]">
+          <span class="text-[length:var(--zen-text-sm)] text-[var(--zs-ink-3)]">
             Set <code>ZEN_BRIDGE_TOKEN</code> to this value in your MCP client's config.
           </span>
-          <input
-            type="text"
-            readOnly
-            class="border-zen-line bg-zen-surface rounded-md border px-2 py-1 font-mono text-xs text-inherit"
-            data-testid="zen-bridgeToken"
-            value={token}
-            aria-label="MCP bridge token"
-            onFocus={(event) => event.currentTarget.select()}
-          />
-          <div class="flex flex-wrap gap-2">
-            <button type="button" class={smallButtonClass} onClick={copyToken}>
+          <Lcd class="flex items-center gap-[var(--zen-space-3)] px-[var(--zen-space-3)] py-[var(--zen-space-2)]">
+            <em class="zs-label zs-label-red not-italic">TOKEN</em>
+            <input
+              type="text"
+              readOnly
+              class="min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[length:var(--zen-text-md)] text-inherit outline-none"
+              data-testid="zen-bridgeToken"
+              value={token}
+              aria-label="MCP bridge token"
+              onFocus={(event) => event.currentTarget.select()}
+            />
+          </Lcd>
+          <div class="flex flex-wrap gap-[var(--zen-space-2)]">
+            <button type="button" class={settingsKeyClass} onClick={copyToken}>
               {copied ? "Copied" : "Copy token"}
             </button>
             <button
               type="button"
-              class={smallButtonClass}
+              class={settingsKeyClass}
               title="Disconnects any MCP server still using the old token"
               onClick={() => saveToken(generateBridgeToken())}
             >
               New token
             </button>
           </div>
-          <div class="flex flex-wrap gap-2" data-testid="zen-mcpActions">
+          <div class="flex flex-wrap gap-[var(--zen-space-2)]" data-testid="zen-mcpActions">
             <button
               type="button"
-              class={smallButtonClass}
+              class={settingsKeyClass}
               data-testid="zen-mcpDownload"
               onClick={() => void downloadServer()}
             >
               Download MCP server
             </button>
             <a
-              class={smallButtonClass}
+              class={settingsKeyClass}
               role="button"
               data-testid="zen-mcpAddToCursor"
               href={cursorInstallUrl(token)}
@@ -139,7 +134,7 @@ export function BridgeSettings() {
             </a>
             <button
               type="button"
-              class={smallButtonClass}
+              class={settingsKeyClass}
               data-testid="zen-mcpCopyConfig"
               title="Copies an mcpServers JSON fragment with placeholders for the path and token"
               onClick={copyConfig}
@@ -148,17 +143,17 @@ export function BridgeSettings() {
             </button>
           </div>
           {downloadFailed && (
-            <span class="text-xs text-red-400">
+            <span class="text-zen-danger text-[length:var(--zen-text-sm)]">
               Download failed. Reload the extension and try again.
             </span>
           )}
-          <span class="text-zen-subtle text-xs">
+          <span class="text-[length:var(--zen-text-sm)] text-[var(--zs-ink-3)]">
             Download the server first, then replace <code>{MCP_PATH_PLACEHOLDER}</code> with the
             path to the saved file. Claude Desktop and Claude Code have no link to add a server, so
             use Copy MCP config and paste it into their config, replacing the placeholders.
           </span>
         </div>
       )}
-    </fieldset>
+    </Module>
   );
 }

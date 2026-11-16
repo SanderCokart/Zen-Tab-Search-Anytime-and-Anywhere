@@ -56,3 +56,18 @@ export function formatForgeEntryDate(entry: ForgeIssueEntry): ForgeEntryDate | u
 export function stripTimerPrefixFromTab(tab: TabInfo): string {
   return stripTimerPrefix(tab.customLabel || "");
 }
+
+const SHORT_AGE_UNITS = [
+  { ms: 31_536_000_000, suffix: "y" },
+  { ms: 2_592_000_000, suffix: "mo" },
+  { ms: 604_800_000, suffix: "w" },
+  { ms: 86_400_000, suffix: "d" },
+  { ms: 3_600_000, suffix: "h" },
+  { ms: 60_000, suffix: "m" },
+] as const;
+
+/** An elapsed time as one short token, such as `43m`, `1h` or `2w`; under a minute is `now`. */
+export function formatShortAge(elapsedMs: number): string {
+  const unit = SHORT_AGE_UNITS.find((candidate) => elapsedMs >= candidate.ms);
+  return unit ? `${Math.floor(elapsedMs / unit.ms)}${unit.suffix}` : "now";
+}

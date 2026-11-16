@@ -1,5 +1,8 @@
 import { useEffect, useState } from "preact/hooks";
 import {
+  AUTO_COLOR,
+  AUTO_SWATCH,
+  customColor,
   DEFAULT_DISPLAY_SETTINGS,
   readDisplaySettings,
   saveDisplaySettings,
@@ -15,16 +18,33 @@ import {
   MIN_UI_SCALE,
   type GapSettingKey,
 } from "@/features/settings/model/ui-scale";
+import { settingsKeyClass } from "@/shared/ui/button-styles";
 import { cn } from "@/shared/ui/cn";
+import { Dial } from "@/shared/ui/primitives/Dial";
+import { Lcd } from "@/shared/ui/primitives/Lcd";
+import { FieldText, Module } from "@/shared/ui/primitives/Module";
+import { Segmented } from "@/shared/ui/primitives/Segmented";
+import { Slider } from "@/shared/ui/primitives/Slider";
+import { Switch } from "@/shared/ui/primitives/Switch";
+import type { SoundVoice } from "@/shared/ui/sound/engine";
+import { keyPressVoice } from "@/shared/ui/sound/key-press-voice";
+import { SoundProvider, useSoundEngine } from "@/shared/ui/sound/SoundContext";
+import { useResolvedTheme, type ThemePreference } from "@/shared/ui/theme";
 import { ColorPickerField } from "@/features/settings/ui/ColorPickerField";
 import { BridgeSettings } from "@/features/bridge/ui/BridgeSettings";
 
 const COLOR_SETTINGS = [
-  ["textColor", "Text color"],
-  ["issueBackgroundColor", "Issues background"],
-  ["folderBackgroundColor", "Folders background"],
-  ["spaceBackgroundColor", "Spaces background"],
+  ["textColor", "Text color", "Text"],
+  ["issueBackgroundColor", "Issues background", "Issues"],
+  ["folderBackgroundColor", "Folders background", "Folders"],
+  ["spaceBackgroundColor", "Spaces background", "Spaces"],
 ] as const;
+
+const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
 
 const PINNED_VISIBILITY = [
   [
@@ -52,32 +72,48 @@ const PINNED_VISIBILITY = [
 const TRUNCATE_SETTINGS = [
   [
     "truncateTabTitles",
-    "Tab titles",
+    "Truncate tab titles",
     "Cuts each tab and space title to one line. Off, long titles wrap onto as many lines as they need.",
   ],
   [
     "truncateIssueTitles",
-    "Issue titles",
+    "Truncate issue titles",
     "Cuts each title in the issue navigator to one line. Off, long titles wrap onto as many lines as they need.",
   ],
 ] as const;
 
-const GAP_CONTROLS: readonly (readonly [GapSettingKey, string, string])[] = [
-  ["tabGap", "Between tabs", "Separates one tab row from the next, inside folders as well."],
-  ["folderGap", "Between folders", "Separates each folder section from what comes before it."],
-  ["essentialGap", "Between essential tabs", "Separates the tiles in the essential-tabs grid."],
-  ["spaceGap", "Between spaces", "Separates the tiles in the spaces grid."],
+/** Setting key, full label (the accessible name), the short label on the module, hint. */
+const GAP_CONTROLS: readonly (readonly [GapSettingKey, string, string, string])[] = [
+  [
+    "tabGap",
+    "Between tabs",
+    "Tabs",
+    "Separates one tab row from the next, inside folders as well.",
+  ],
+  [
+    "folderGap",
+    "Between folders",
+    "Folders",
+    "Separates each folder section from what comes before it.",
+  ],
+  [
+    "essentialGap",
+    "Between essential tabs",
+    "Essentials",
+    "Separates the tiles in the essential-tabs grid.",
+  ],
+  ["spaceGap", "Between spaces", "Spaces", "Separates the tiles in the spaces grid."],
   [
     "sectionGap",
     "Between sections",
+    "Sections",
     "Separates the spaces block, the essential-tabs block and the tab list from each other.",
   ],
-  ["issueGap", "Between issues", "Separates one issue-navigator entry from the next."],
-  ["todoGap", "Between todos", "Separates one todo-column entry from the next."],
+  ["issueGap", "Between issues", "Issues", "Separates one issue-navigator entry from the next."],
+  ["todoGap", "Between todos", "Todos", "Separates one todo-column entry from the next."],
 ];
 
-const rangeClass =
-  "accent-zen-accent h-1 w-40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50";
+const monoLabelClass = "zs-label !font-normal !text-[var(--zs-ink-3)]";
 
 function ResetIcon({ class: className }: { class?: string }) {
   return (
@@ -88,9 +124,43 @@ function ResetIcon({ class: className }: { class?: string }) {
   );
 }
 
+/** A test key for the Sound module: it plays its own voice, so the press listener skips it. */
+function TestKey({
+  label,
+  voice,
+  play,
+  disabled,
+  red = false,
+}: {
+  label: string;
+  voice: SoundVoice;
+  play: (voice: SoundVoice) => void;
+  disabled: boolean;
+  red?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      class={cn(settingsKeyClass, red && "zs-key-red !text-white")}
+      data-own-sound
+      data-testid={`zen-sound-test-${label.toLowerCase()}`}
+      disabled={disabled}
+      onClick={() => play(voice)}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function DisplaySettingsApp() {
   const [settings, setSettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const [loaded, setLoaded] = useState(false);
+  const theme = useResolvedTheme(settings.theme);
+  // The page plays its own interface sounds, from the same settings it edits.
+  const sound = useSoundEngine({
+    enabled: settings.soundEnabled,
+    volume: settings.soundVolume,
+  });
 
   useEffect(() => {
     void readDisplaySettings()
@@ -119,341 +189,371 @@ export function DisplaySettingsApp() {
     void saveDisplaySettings(next);
   };
 
+  // Hardware keys are heard going down and up, from one listener for the page.
+  const onPointerDown = (event: PointerEvent) => {
+    const voice = keyPressVoice(event.target, false);
+    if (voice) sound.play(voice);
+  };
+  const onPointerUp = (event: PointerEvent) => {
+    const voice = keyPressVoice(event.target, true);
+    if (voice) sound.play(voice);
+  };
+
+  const soundOff = !loaded || !settings.soundEnabled;
+  const gapsAreDefault = GAP_CONTROLS.every(
+    ([key]) => settings[key] === DEFAULT_DISPLAY_SETTINGS[key],
+  );
+  const sizesAreDefault =
+    settings.fontSize === DEFAULT_DISPLAY_SETTINGS.fontSize &&
+    settings.uiScale === DEFAULT_DISPLAY_SETTINGS.uiScale &&
+    settings.respectZoom === DEFAULT_DISPLAY_SETTINGS.respectZoom;
+
   return (
-    <main class="bg-zen-bg min-h-screen p-5" style={{ color: settings.textColor }}>
-      <div class="mx-auto flex max-w-xl flex-col gap-4">
-        <header>
-          <h1 class="m-0 text-xl font-semibold">Display options</h1>
-        </header>
-        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
-          <legend class="px-1 text-sm font-medium">Colors</legend>
-          {COLOR_SETTINGS.map(([key, label]) => {
-            const isDefault = settings[key].toLowerCase() === DEFAULT_DISPLAY_SETTINGS[key];
-            return (
-              <div class="flex items-center justify-between gap-4 text-sm" key={key}>
-                <span>{label}</span>
-                <div class="flex items-center gap-2">
-                  <button
-                    type="button"
-                    class="inline-flex cursor-pointer items-center border-0 bg-transparent p-0 text-inherit hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-                    disabled={!loaded || isDefault}
-                    aria-label={`Reset ${label.toLowerCase()}`}
-                    title="Reset to default"
-                    onClick={() => updateSettings({ [key]: DEFAULT_DISPLAY_SETTINGS[key] })}
-                  >
-                    <ResetIcon class="size-4" />
-                  </button>
-                  <ColorPickerField
-                    disabled={!loaded}
-                    label={label}
-                    color={settings[key]}
-                    onChange={(color) => updateSettings({ [key]: color })}
-                  />
+    <SoundProvider sound={sound}>
+      <main
+        class="zs-chassis min-h-screen p-[calc(var(--zen-font-size)*1.7)]"
+        data-zen-ui="page"
+        data-theme={theme}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        style={{ colorScheme: theme, color: customColor(settings.textColor) }}
+      >
+        <div class="zs-mod-host mx-auto max-w-[calc(var(--zen-font-size)*60)]">
+          <header class="px-[var(--zen-space-1)] pb-[calc(var(--zen-font-size)*1.4)]">
+            <h1 class="m-0 text-[length:calc(var(--zen-font-size)*2.6)] leading-none font-normal tracking-[-0.02em] uppercase">
+              Settings
+            </h1>
+            <p class="mt-[var(--zen-space-2)] mb-0 text-[length:var(--zen-text-base)] leading-relaxed text-[var(--zs-ink-2)]">
+              A module per group. Turn, slide, switch. It saves as you go.
+            </p>
+          </header>
+          <div class="zs-mod-grid">
+            <Module title="Theme" wide>
+              <div class="flex flex-wrap items-end justify-between gap-[var(--zen-space-4)]">
+                <Segmented
+                  class="min-w-[calc(var(--zen-font-size)*20)]"
+                  label="Theme"
+                  options={THEME_OPTIONS}
+                  value={settings.theme}
+                  disabled={!loaded}
+                  onChange={(next) => updateSettings({ theme: next })}
+                />
+                <div class="flex flex-wrap gap-[var(--zen-space-3)]">
+                  {COLOR_SETTINGS.map(([key, label, short]) => {
+                    const isDefault = settings[key] === AUTO_COLOR;
+                    return (
+                      <div class="flex flex-col gap-[var(--zen-space-1)]" key={key}>
+                        <span class={monoLabelClass}>{short}</span>
+                        <div class="flex items-center gap-[var(--zen-space-1)]">
+                          <ColorPickerField
+                            disabled={!loaded}
+                            label={label}
+                            caption={isDefault ? "AUTO" : settings[key].toUpperCase()}
+                            color={customColor(settings[key]) ?? AUTO_SWATCH[theme][key]}
+                            onChange={(color) => {
+                              // Landing on the theme's own colour is no choice:
+                              // keep it auto, so the other theme still gets its own.
+                              const isSwatch =
+                                color.toLowerCase() === AUTO_SWATCH.light[key] ||
+                                color.toLowerCase() === AUTO_SWATCH.dark[key];
+                              if (isDefault && isSwatch) return;
+                              updateSettings({ [key]: isSwatch ? AUTO_COLOR : color });
+                            }}
+                          />
+                          <button
+                            type="button"
+                            class="zs-key zs-key-mini flex items-center justify-center text-[var(--zs-ink-2)]"
+                            disabled={!loaded || isDefault}
+                            aria-label={`Reset ${label.toLowerCase()}`}
+                            title="Reset to default"
+                            onClick={() => updateSettings({ [key]: DEFAULT_DISPLAY_SETTINGS[key] })}
+                          >
+                            <ResetIcon class="size-[var(--zen-icon-md)]" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            );
-          })}
-        </fieldset>
-        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
-          <legend class="px-1 text-sm font-medium">Size</legend>
-          <label class="flex items-center justify-between gap-4 text-sm">
-            <span>
-              <span class="block font-medium">Font size</span>
-              <span class="text-zen-subtle block text-xs">
-                The base text size everything else is derived from.
-              </span>
-            </span>
-            <span class="flex shrink-0 items-center gap-2">
-              <input
-                type="range"
-                class={rangeClass}
-                min={MIN_FONT_SIZE}
-                max={MAX_FONT_SIZE}
-                step={1}
-                disabled={!loaded}
-                value={settings.fontSize}
-                onInput={(event) => updateSettings({ fontSize: Number(event.currentTarget.value) })}
-              />
-              <span class="w-12 text-right tabular-nums">{settings.fontSize}px</span>
-            </span>
-          </label>
-          <label class="flex items-center justify-between gap-4 text-sm">
-            <span>
-              <span class="block font-medium">Density</span>
-              <span class="text-zen-subtle block text-xs">
-                Padding, gaps, icons and the space and essential-tab tiles.
-              </span>
-            </span>
-            <span class="flex shrink-0 items-center gap-2">
-              <input
-                type="range"
-                class={rangeClass}
-                min={MIN_UI_SCALE}
-                max={MAX_UI_SCALE}
-                step={0.05}
-                disabled={!loaded}
-                value={settings.uiScale}
-                onInput={(event) => updateSettings({ uiScale: Number(event.currentTarget.value) })}
-              />
-              <span class="w-12 text-right tabular-nums">
-                {Math.round(settings.uiScale * 100)}%
-              </span>
-            </span>
-          </label>
-          <label class="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              class="accent-zen-accent mt-1 size-4"
-              data-testid="zen-respect-zoom"
-              checked={settings.respectZoom}
-              disabled={!loaded}
-              onChange={(event) => updateSettings({ respectZoom: event.currentTarget.checked })}
-            />
-            <span>
-              <span class="block text-sm font-medium">Follow the page zoom level</span>
-              <span class="text-zen-subtle block text-xs">
-                Lets the overlay grow and shrink with the browser's zoom, like the page underneath
-                it. Off, the overlay keeps the same size on screen at every zoom level.
-              </span>
-            </span>
-          </label>
-          <button
-            type="button"
-            class="border-zen-clear text-zen-faint hover:bg-zen-surface cursor-pointer self-start rounded-md border bg-transparent px-2 py-1 font-[inherit] text-xs disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={
-              !loaded ||
-              (settings.fontSize === DEFAULT_DISPLAY_SETTINGS.fontSize &&
-                settings.uiScale === DEFAULT_DISPLAY_SETTINGS.uiScale &&
-                settings.respectZoom === DEFAULT_DISPLAY_SETTINGS.respectZoom)
-            }
-            onClick={() =>
-              updateSettings({
-                fontSize: DEFAULT_DISPLAY_SETTINGS.fontSize,
-                uiScale: DEFAULT_DISPLAY_SETTINGS.uiScale,
-                respectZoom: DEFAULT_DISPLAY_SETTINGS.respectZoom,
-              })
-            }
-          >
-            Reset sizes
-          </button>
-        </fieldset>
-        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
-          <legend class="px-1 text-sm font-medium">Gaps</legend>
-          <p class="text-zen-subtle m-0 text-xs">
-            Pixels at the default font size, in steps of {GAP_STEP}. Each one moves a single gap and
-            nothing else; padding inside rows and tiles follows the density slider above.
-          </p>
-          {GAP_CONTROLS.map(([key, label, hint]) => (
-            <label class="flex items-center justify-between gap-4 text-sm" key={key}>
-              <span>
-                <span class="block font-medium">{label}</span>
-                <span class="text-zen-subtle block text-xs">{hint}</span>
-              </span>
-              <span class="flex shrink-0 items-center gap-2">
-                <input
-                  type="range"
-                  class={rangeClass}
-                  data-testid={`zen-${key}`}
-                  min={MIN_GAP}
-                  max={MAX_GAP}
-                  step={GAP_STEP}
-                  disabled={!loaded}
-                  value={settings[key]}
-                  onInput={(event) => updateSettings({ [key]: Number(event.currentTarget.value) })}
+            </Module>
+
+            <Module title="Size">
+              <div class="flex flex-col gap-[var(--zen-space-2)]">
+                <FieldText
+                  label="Font size"
+                  hint="The base text size everything else is derived from."
                 />
-                <span class="w-12 text-right tabular-nums">{settings[key]}px</span>
-              </span>
-            </label>
-          ))}
-          <button
-            type="button"
-            class="border-zen-clear text-zen-faint hover:bg-zen-surface cursor-pointer self-start rounded-md border bg-transparent px-2 py-1 font-[inherit] text-xs disabled:cursor-not-allowed disabled:opacity-40"
-            disabled={
-              !loaded ||
-              GAP_CONTROLS.every(([key]) => settings[key] === DEFAULT_DISPLAY_SETTINGS[key])
-            }
-            onClick={() =>
-              updateSettings(
-                Object.fromEntries(
-                  GAP_CONTROLS.map(([key]) => [key, DEFAULT_DISPLAY_SETTINGS[key]]),
-                ),
-              )
-            }
-          >
-            Reset gaps
-          </button>
-        </fieldset>
-        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
-          <legend class="px-1 text-sm font-medium">Truncate</legend>
-          {TRUNCATE_SETTINGS.map(([key, label, hint]) => (
-            <label class="flex cursor-pointer items-start gap-3" key={key}>
-              <input
-                type="checkbox"
-                class="accent-zen-accent mt-1 size-4"
-                data-testid={`zen-${key}`}
-                checked={settings[key]}
+                <Slider
+                  label="Font size"
+                  data-testid="zen-fontSize"
+                  min={MIN_FONT_SIZE}
+                  max={MAX_FONT_SIZE}
+                  step={1}
+                  disabled={!loaded}
+                  value={settings.fontSize}
+                  unit="px"
+                  onChange={(fontSize) => updateSettings({ fontSize })}
+                />
+              </div>
+              <div class="flex flex-col gap-[var(--zen-space-2)]">
+                <FieldText
+                  label="Density"
+                  hint="Padding, gaps, icons and the space and essential-tab tiles."
+                />
+                <Slider
+                  label="Density"
+                  data-testid="zen-uiScale"
+                  min={MIN_UI_SCALE}
+                  max={MAX_UI_SCALE}
+                  step={0.05}
+                  disabled={!loaded}
+                  value={settings.uiScale}
+                  display={String(Math.round(settings.uiScale * 100))}
+                  unit="%"
+                  onChange={(uiScale) => updateSettings({ uiScale })}
+                />
+              </div>
+              <Switch
+                data-testid="zen-respect-zoom"
+                checked={settings.respectZoom}
                 disabled={!loaded}
-                onChange={(event) => updateSettings({ [key]: event.currentTarget.checked })}
-              />
-              <span>
-                <span class="block text-sm font-medium">{label}</span>
-                <span class="text-zen-subtle block text-xs">{hint}</span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
-          <legend class="px-1 text-sm font-medium">Spaces and essential tabs</legend>
-          {PINNED_VISIBILITY.map(([key, label, hint]) => (
-            <label class="flex cursor-pointer items-start gap-3" key={key}>
-              <input
-                type="checkbox"
-                class="accent-zen-accent mt-1 size-4"
-                data-testid={`zen-${key}`}
-                checked={settings[key]}
-                disabled={!loaded}
-                onChange={(event) => updateSettings({ [key]: event.currentTarget.checked })}
-              />
-              <span>
-                <span class="block text-sm font-medium">{label}</span>
-                <span class="text-zen-subtle block text-xs">{hint}</span>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        <fieldset class="border-zen-line m-0 flex flex-col gap-3 rounded-md border p-3">
-          <legend class="px-1 text-sm font-medium">External links</legend>
-          <label class="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              class="accent-zen-accent mt-1 size-4"
-              data-testid="zen-reuseExternalTabs"
-              checked={settings.reuseExternalTabs}
-              disabled={!loaded}
-              onChange={(event) =>
-                updateSettings({ reuseExternalTabs: event.currentTarget.checked })
-              }
-            />
-            <span>
-              <span class="block text-sm font-medium">Reuse an open tab</span>
-              <span class="text-zen-subtle block text-xs">
-                When another app opens a link in Zen, such as a mail client, focus the tab that
-                already has that address instead of opening a new one.
-              </span>
-            </span>
-          </label>
-        </fieldset>
-        <ul class="m-0 flex list-none flex-col gap-4 p-0" aria-label="Display options">
-          <li>
-            <label class="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                class="accent-zen-accent mt-1 size-4"
-                checked={settings.detectForgeIssues}
-                disabled={!loaded}
-                onChange={(event) =>
+                onChange={(respectZoom) => updateSettings({ respectZoom })}
+              >
+                <span title="Lets the overlay grow and shrink with the browser's zoom, like the page underneath it. Off, the overlay keeps the same size on screen at every zoom level.">
+                  <FieldText
+                    label="Follow the page zoom level"
+                    hint="The overlay grows and shrinks with the browser zoom. Off, it keeps one size on screen."
+                  />
+                </span>
+              </Switch>
+              <button
+                type="button"
+                class={cn(settingsKeyClass, "self-start")}
+                disabled={!loaded || sizesAreDefault}
+                onClick={() =>
                   updateSettings({
-                    detectForgeIssues: event.currentTarget.checked,
-                    filterIssuesInOverlay:
-                      event.currentTarget.checked && settings.filterIssuesInOverlay,
+                    fontSize: DEFAULT_DISPLAY_SETTINGS.fontSize,
+                    uiScale: DEFAULT_DISPLAY_SETTINGS.uiScale,
+                    respectZoom: DEFAULT_DISPLAY_SETTINGS.respectZoom,
                   })
                 }
-              />
-              <span>
-                <span class="block text-sm font-medium">Auto-detect GitHub and GitLab issues</span>
-                <span class="text-zen-subtle block text-xs">
-                  Finds issue and pull-request tabs and shows them in the issue navigator.
-                </span>
-              </span>
-            </label>
-            <ul class="border-zen-border mt-3 ml-7 list-none border-l pl-4">
-              <li>
-                <label
-                  class={cn(
-                    "flex items-start gap-3",
-                    settings.detectForgeIssues ? "cursor-pointer" : "cursor-not-allowed opacity-50",
-                  )}
-                >
-                  <input
-                    type="checkbox"
-                    class="accent-zen-accent mt-1 size-4"
-                    checked={settings.filterIssuesInOverlay}
-                    disabled={!loaded || !settings.detectForgeIssues}
-                    onChange={(event) =>
-                      updateSettings({ filterIssuesInOverlay: event.currentTarget.checked })
-                    }
+              >
+                <ResetIcon class="size-[var(--zen-icon-sm)]" />
+                Reset sizes
+              </button>
+            </Module>
+
+            <Module title="Sound">
+              <div class="flex items-center justify-around gap-[var(--zen-space-4)]">
+                <div class="flex flex-col items-center gap-[var(--zen-space-2)] text-center">
+                  <Dial
+                    label="Volume"
+                    data-testid="zen-sound-volume"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    disabled={soundOff}
+                    value={settings.soundVolume}
+                    valueText={`${Math.round(settings.soundVolume * 100)} percent`}
+                    onChange={(soundVolume) => updateSettings({ soundVolume })}
                   />
-                  <span>
-                    <span class="block text-sm font-medium">
-                      Show issues only in the issue navigator
+                  <Lcd class="zs-readout zs-digits">
+                    {Math.round(settings.soundVolume * 100)}
+                    <u>%</u>
+                  </Lcd>
+                  <span class={monoLabelClass}>Volume</span>
+                </div>
+                <Switch
+                  class="min-w-0 flex-1 flex-col items-start"
+                  data-testid="zen-sound-enabled"
+                  showState
+                  checked={settings.soundEnabled}
+                  disabled={!loaded}
+                  onChange={(soundEnabled) => updateSettings({ soundEnabled })}
+                >
+                  <FieldText
+                    label="Interface sounds"
+                    hint="Key clicks, latches and chimes while you search, set todos and timers."
+                  />
+                </Switch>
+              </div>
+              <div class="flex flex-wrap items-center gap-[var(--zen-space-2)]">
+                <span class={cn(monoLabelClass, "mr-[var(--zen-space-2)]")}>Test</span>
+                <TestKey label="Click" voice="down" play={sound.play} disabled={soundOff} />
+                <TestKey label="Tick" voice="tick" play={sound.play} disabled={soundOff} />
+                <TestKey label="Chime" voice="success" play={sound.play} disabled={soundOff} red />
+              </div>
+            </Module>
+
+            <Module title="Gaps" meta={`px at default size, steps of ${GAP_STEP}`} wide>
+              <p class="m-0 font-[family-name:var(--font-title)] text-[length:var(--zen-text-sm)] text-[var(--zs-ink-3)]">
+                Each one moves a single gap and nothing else; padding inside rows and tiles follows
+                Density.
+              </p>
+              <div class="zs-mod-two">
+                {GAP_CONTROLS.map(([key, label, short, hint]) => (
+                  <div class="flex items-center gap-[var(--zen-space-3)]" key={key} title={hint}>
+                    <span class={cn(monoLabelClass, "w-[calc(var(--zen-font-size)*7)] shrink-0")}>
+                      {short}
                     </span>
-                    <span class="text-zen-subtle block text-xs">
-                      Removes issue and pull-request tabs from the overlay tab results. They remain
-                      available in the issue navigator.
-                    </span>
+                    <Slider
+                      class="[--zs-slider-width:calc(var(--zen-font-size)*9.2)]"
+                      label={label}
+                      data-testid={`zen-${key}`}
+                      min={MIN_GAP}
+                      max={MAX_GAP}
+                      step={GAP_STEP}
+                      disabled={!loaded}
+                      value={settings[key]}
+                      unit="px"
+                      onChange={(value) => updateSettings({ [key]: value })}
+                    />
+                  </div>
+                ))}
+                <div class="flex items-center justify-end">
+                  <button
+                    type="button"
+                    class={settingsKeyClass}
+                    disabled={!loaded || gapsAreDefault}
+                    onClick={() =>
+                      updateSettings(
+                        Object.fromEntries(
+                          GAP_CONTROLS.map(([key]) => [key, DEFAULT_DISPLAY_SETTINGS[key]]),
+                        ),
+                      )
+                    }
+                  >
+                    <ResetIcon class="size-[var(--zen-icon-sm)]" />
+                    Reset gaps
+                  </button>
+                </div>
+              </div>
+            </Module>
+
+            <Module title="Lists">
+              {TRUNCATE_SETTINGS.map(([key, label, hint]) => (
+                <Switch
+                  key={key}
+                  data-testid={`zen-${key}`}
+                  checked={settings[key]}
+                  disabled={!loaded}
+                  onChange={(checked) => updateSettings({ [key]: checked })}
+                >
+                  <span title={hint}>
+                    <FieldText label={label} />
                   </span>
-                </label>
-              </li>
-            </ul>
-          </li>
-          <li>
-            <label class="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                class="accent-zen-accent mt-1 size-4"
+                </Switch>
+              ))}
+              <Switch
+                data-testid="zen-groupFolders"
                 checked={settings.groupFolders}
                 disabled={!loaded}
-                onChange={(event) =>
+                onChange={(checked) =>
                   updateSettings({
-                    groupFolders: event.currentTarget.checked,
-                    groupSubfolders: event.currentTarget.checked && settings.groupSubfolders,
+                    groupFolders: checked,
+                    groupSubfolders: checked && settings.groupSubfolders,
                   })
                 }
-              />
-              <span>
-                <span class="block text-sm font-medium">Group tabs by folders</span>
-                <span class="text-zen-subtle block text-xs">
-                  Shows each folder as a separate section in the tab results.
+              >
+                <span title="Shows each folder as a separate section in the tab results.">
+                  <FieldText label="Group tabs by folders" />
                 </span>
-              </span>
-            </label>
-            <ul class="border-zen-border mt-3 ml-7 list-none border-l pl-4">
-              <li>
-                <label
-                  class={cn(
-                    "flex items-start gap-3",
-                    settings.groupFolders ? "cursor-pointer" : "cursor-not-allowed opacity-50",
-                  )}
+              </Switch>
+              <Switch
+                class={cn("ml-[var(--zen-space-4)]", !settings.groupFolders && "opacity-50")}
+                data-testid="zen-groupSubfolders"
+                checked={settings.groupSubfolders}
+                disabled={!loaded || !settings.groupFolders}
+                onChange={(checked) => updateSettings({ groupSubfolders: checked })}
+              >
+                <span title="Adds nested folder sections inside their parent folder.">
+                  <FieldText label="Group by subfolders" />
+                </span>
+              </Switch>
+            </Module>
+
+            <Module title="Popup & omnibar">
+              {PINNED_VISIBILITY.map(([key, label, hint]) => (
+                <Switch
+                  key={key}
+                  data-testid={`zen-${key}`}
+                  checked={settings[key]}
+                  disabled={!loaded}
+                  onChange={(checked) => updateSettings({ [key]: checked })}
                 >
-                  <input
-                    type="checkbox"
-                    class="accent-zen-accent mt-1 size-4"
-                    checked={settings.groupSubfolders}
-                    disabled={!loaded || !settings.groupFolders}
-                    onChange={(event) =>
-                      updateSettings({ groupSubfolders: event.currentTarget.checked })
-                    }
-                  />
-                  <span>
-                    <span class="block text-sm font-medium">Group by subfolders</span>
-                    <span class="text-zen-subtle block text-xs">
-                      Adds nested folder sections inside their parent folder.
-                    </span>
+                  <span title={hint}>
+                    <FieldText label={label} />
                   </span>
-                </label>
-              </li>
-            </ul>
-          </li>
-        </ul>
-        <BridgeSettings />
-        <button
-          type="button"
-          class="border-zen-border bg-zen-accent hover:bg-zen-accent-hover cursor-pointer self-end rounded-md border px-4 py-2 font-[inherit] text-sm"
-          onClick={() => window.close()}
-        >
-          Done
-        </button>
-      </div>
-    </main>
+                </Switch>
+              ))}
+            </Module>
+
+            <Module title="Links & issues" wide>
+              {/* A two-column grid of short mono labels and switches, like Gaps;
+                  the full explanations are tooltips. */}
+              <div class="zs-mod-two">
+                <Switch
+                  data-testid="zen-reuseExternalTabs"
+                  checked={settings.reuseExternalTabs}
+                  disabled={!loaded}
+                  onChange={(reuseExternalTabs) => updateSettings({ reuseExternalTabs })}
+                >
+                  <span
+                    class={monoLabelClass}
+                    title="When another app opens a link in Zen, such as a mail client, focus the tab that already has that address instead of opening a new one."
+                  >
+                    Reuse an open tab
+                  </span>
+                </Switch>
+                <Switch
+                  data-testid="zen-detectForgeIssues"
+                  checked={settings.detectForgeIssues}
+                  disabled={!loaded}
+                  onChange={(checked) =>
+                    updateSettings({
+                      detectForgeIssues: checked,
+                      filterIssuesInOverlay: checked && settings.filterIssuesInOverlay,
+                    })
+                  }
+                >
+                  <span
+                    class={monoLabelClass}
+                    title="Finds issue and pull-request tabs and shows them in the issue navigator."
+                  >
+                    Auto-detect GitHub and GitLab issues
+                  </span>
+                </Switch>
+                <Switch
+                  class={cn(!settings.detectForgeIssues && "opacity-50")}
+                  data-testid="zen-filterIssuesInOverlay"
+                  checked={settings.filterIssuesInOverlay}
+                  disabled={!loaded || !settings.detectForgeIssues}
+                  onChange={(filterIssuesInOverlay) => updateSettings({ filterIssuesInOverlay })}
+                >
+                  <span
+                    class={monoLabelClass}
+                    title="Removes issue and pull-request tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect."
+                  >
+                    Show issues only in the issue navigator
+                  </span>
+                </Switch>
+              </div>
+            </Module>
+
+            <BridgeSettings />
+          </div>
+          <div class="mt-[var(--zen-space-4)] flex justify-end">
+            <button
+              type="button"
+              class="zs-key zs-key-red px-[calc(var(--zen-font-size)*1.4)] py-[var(--zen-space-2)] font-[inherit]"
+              onClick={() => window.close()}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </main>
+    </SoundProvider>
   );
 }

@@ -11,13 +11,13 @@ import {
   type TrafficLight,
 } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
-
-const iconButtonClass =
-  "inline-flex cursor-pointer items-center border-0 bg-transparent p-0 text-inherit hover:text-inherit";
+import { miniKeyClass } from "@/features/search/ui/lib/styles";
+import { Led } from "@/shared/ui/primitives/Led";
 
 /**
  * The todo, timer and status buttons for a tab, shared by the result rows and
- * the issue column. A todo shows a checked checkbox, anything else an empty one.
+ * the issue column. They are put away until the row is selected, hovered or holds
+ * focus (see `.zs-acts`). A todo shows a checked checkbox, anything else an empty one.
  */
 export function TabActions({
   tab,
@@ -30,6 +30,7 @@ export function TabActions({
   onToggleTimer,
   onOpenTimerPopup,
   onOpenStatusMenu,
+  always = false,
 }: {
   tab: TabInfo;
   timer?: TabTimer;
@@ -43,6 +44,8 @@ export function TabActions({
   onToggleTimer: (tabId: number) => void;
   onOpenTimerPopup: (tabId: number) => void;
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
+  /** Keep the keys showing, as on the current-tab strip, instead of only on the active row. */
+  always?: boolean;
 }) {
   const tabId = tabBrowserId(tab);
   if (tabId === undefined) {
@@ -54,25 +57,32 @@ export function TabActions({
   const timerLabel = essential ? "Open timer popup" : "Open timer controls";
 
   return (
-    <span class="flex shrink-0 items-center gap-[var(--zen-space-2)]">
+    <span
+      class="zs-acts"
+      data-testid="zen-tab-actions"
+      // An open timer form or status menu keeps its keys up after the pointer leaves.
+      data-always={always || timerOpen || statusMenuOpen || undefined}
+    >
       {!essential && (
         <TooltipButton
           label={todoLabel}
           aria-pressed={isTodo}
           data-testid="zen-todo-button"
-          class={cn(iconButtonClass, isTodo && "text-zen-lavender")}
+          data-own-sound=""
+          class={miniKeyClass}
           onClick={(event) => {
             event.stopPropagation();
             onToggleTodo(tabId);
           }}
         >
           <TodoIcon checked={isTodo} class="size-[var(--zen-icon-sm)]" />
+          <Led on={isTodo} />
         </TooltipButton>
       )}
       <TooltipButton
         label={timerLabel}
         data-testid="zen-timer-button"
-        class={iconButtonClass}
+        class={miniKeyClass}
         tooltip={
           timer ? (
             <>
@@ -97,15 +107,16 @@ export function TabActions({
       >
         <TimerIcon
           close={timerOpen}
-          class={cn(timer && "text-zen-border", "size-[var(--zen-icon-sm)]")}
+          class={cn(timer && "text-zen-timer", "size-[var(--zen-icon-sm)]")}
         />
+        <Led on={timer !== undefined} />
       </TooltipButton>
       <StatusButton
         tab={tab}
         light={light}
         open={statusMenuOpen}
         onOpenMenu={onOpenStatusMenu}
-        class="p-0 text-inherit"
+        class={miniKeyClass}
         iconClass="size-[var(--zen-icon-md)]"
       />
     </span>

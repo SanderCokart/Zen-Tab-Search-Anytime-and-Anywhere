@@ -17,7 +17,7 @@ export const GAP_STEP = 4;
  * pixels exactly; if the font size or the zoom-independent sizing moves, the gap
  * follows the rest of the UI instead of stranding itself at a fixed pixel value.
  */
-const GAP_REFERENCE_PX = 12;
+const GAP_REFERENCE_PX = 14;
 
 /**
  * Every gap in the search UI, paired with the custom property it feeds. Each one
@@ -40,15 +40,6 @@ export const GAP_SETTINGS = [
 ] as const;
 
 export type GapSettingKey = (typeof GAP_SETTINGS)[number][0];
-
-/**
- * Panel size the zoom-independent ramp is tuned against — the overlay is
- * `min(80vw, 90dvh)`, which is 720px on a 800px-tall window. At that size both
- * modes agree, and the UI grows or shrinks from there with the window.
- */
-const REFERENCE_PANEL_PX = 720;
-const PANEL_VW = 80;
-const PANEL_DVH = 90;
 
 export function clampFontSize(value: number): number {
   return clamp(value, MIN_FONT_SIZE, MAX_FONT_SIZE);
@@ -79,38 +70,57 @@ function css(value: number): string {
   return String(Math.round(value * 1000) / 1000);
 }
 
+/** Zoom levels Firefox allows run from 30% to 500%; anything else is a bad reading. */
+const MIN_ZOOM = 0.3;
+const MAX_ZOOM = 5;
+
+/** A usable zoom factor, or 1 (no zoom) for a missing or nonsensical reading. */
+export function normalizeZoom(zoom: number | undefined): number {
+  if (zoom === undefined || !Number.isFinite(zoom)) {
+    return 1;
+  }
+  return clamp(zoom, MIN_ZOOM, MAX_ZOOM);
+}
+
+/**
+ * The CSS px size that lands on screen at `screenPx` once the page's zoom is applied.
+ * A CSS px is `zoom` screen px, so cancelling the zoom means dividing by it.
+ */
+export function cancelZoom(screenPx: number, zoom: number | undefined): number {
+  return screenPx / normalizeZoom(zoom);
+}
+
 /**
  * The base font size for a surface, as a CSS length.
  *
  * The overlay is laid out inside the page, so its CSS pixels scale with the page
  * zoom level. That single fact decides both modes:
  *
- * - `respectZoom` on — a plain px length. Page zoom scales it along with the rest
+ * - `respectZoom` on: a plain px length. Page zoom scales it along with the rest
  *   of the page, which is what "follow the browser's zoom" means.
- * - `respectZoom` off — a viewport-relative length derived from the overlay's own
- *   `min(80vw, 90dvh)` box. Page zoom shrinks the viewport in CSS px by exactly the
- *   factor it magnifies them, so a `vw`-derived size comes out the same on screen at
- *   every zoom level. It is deliberately free of any `px` term: one would reintroduce
- *   the zoom dependence this mode exists to remove.
- *
- * Neither mode needs to know the zoom factor, so neither has to wait on the
- * background to tell it — the size is right on the first paint.
+ * - `respectZoom` off: the configured size divided by the tab's zoom factor, so
+ *   the font lands on screen at exactly the configured pixels whatever the zoom
+ *   and whatever the window size. The factor comes from the background
+ *   (`tabs.getZoom`), see `usePageZoom`; until it arrives, or for a surface that
+ *   is not inside a zoomed page, it is 1.
  *
  * The timer and host override windows (`"popup"`) are extension pages in their
  * own resizable windows: they take the plain px length at the full font size,
  * and the window's own zoom scales it like any page. The toolbar search popup
  * does not come through here; it pins fixed tokens under `[data-zen-ui="popup"]`.
  */
-export function resolveBaseFontSize(settings: DisplaySettings, surface: UiSurface): string {
+export function resolveBaseFontSize(
+  settings: DisplaySettings,
+  surface: UiSurface,
+  zoom?: number,
+): string {
   const fontSize = clampFontSize(settings.fontSize);
 
   if (settings.respectZoom || surface === "popup") {
     return `${css(fontSize)}px`;
   }
 
-  const vw = (PANEL_VW * fontSize) / REFERENCE_PANEL_PX;
-  const dvh = (PANEL_DVH * fontSize) / REFERENCE_PANEL_PX;
-  return `min(${css(vw)}vw, ${css(dvh)}dvh)`;
+  return `${css(cancelZoom(fontSize, zoom))}px`;
 }
 
 /**
@@ -120,9 +130,10 @@ export function resolveBaseFontSize(settings: DisplaySettings, surface: UiSurfac
 export function uiScaleStyle(
   settings: DisplaySettings,
   surface: UiSurface,
+  zoom?: number,
 ): Record<string, string> {
   const style: Record<string, string> = {
-    "--zen-font-size": resolveBaseFontSize(settings, surface),
+    "--zen-font-size": resolveBaseFontSize(settings, surface, zoom),
     "--zen-scale": css(clampUiScale(settings.uiScale)),
   };
   for (const [key, property] of GAP_SETTINGS) {

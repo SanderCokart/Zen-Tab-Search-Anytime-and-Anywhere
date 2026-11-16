@@ -21,7 +21,7 @@ import {
   notifySnapshotChanged,
   registerSnapshotChangeNotifications,
 } from "@/features/search/background/snapshot";
-import { searchSnapshotSchema } from "@/shared/messaging/protocol";
+import { searchSnapshotSchema, TAB_ZOOM_CHANGED_TYPE } from "@/shared/messaging/protocol";
 import * as v from "valibot";
 import { createTabQuery } from "@/features/zen/tabs-query";
 import { createTabSwitcher } from "@/features/zen/tabs-switch";
@@ -42,6 +42,11 @@ import { BRIDGE_TOKEN_STORAGE_KEY } from "@/shared/messaging/bridge-protocol";
 import { createTodoService } from "@/features/todos/background/todo-service";
 import { createStatusService } from "@/features/status/background/status-service";
 import { detectForgeLabels } from "@/features/forge/background/label-command";
+import { getForgePageInfo } from "@/features/forge/background/page-info";
+import {
+  createTargetBranchService,
+  registerTargetBranchCollection,
+} from "@/features/forge/background/target-branch-service";
 import {
   createHostOverrideService,
   parseHostOverrideNotificationTabId,
@@ -72,6 +77,8 @@ export default defineBackground(() => {
   const hostOverrideService = createHostOverrideService();
   const updateService = createUpdateService();
   registerUpdateChecks(updateService);
+  const targetBranchService = createTargetBranchService({ getPageInfo: getForgePageInfo });
+  registerTargetBranchCollection(targetBranchService);
 
   const snapshotCache = createCachedSnapshotReader(
     createSnapshotReader({
@@ -81,6 +88,7 @@ export default defineBackground(() => {
       getTodos: todoService.getTodos,
       getStatuses: statusService.getStatuses,
       readLastOpened: readTabLastOpened,
+      readTargetBranches: targetBranchService.read,
     }),
   );
   const notify = () => {
@@ -112,6 +120,12 @@ export default defineBackground(() => {
     },
   });
   registerSnapshotChangeNotifications(150, snapshotCache.invalidate);
+  // An open overlay re-reads its tab's zoom, so it keeps its size on screen.
+  browser.tabs.onZoomChange.addListener(() => {
+    void browser.runtime.sendMessage({ type: TAB_ZOOM_CHANGED_TYPE }).catch(() => {
+      // No overlay is listening.
+    });
+  });
   // Each window gets its overlay built while idle, so Alt+F only has to show it.
   void preloadOmnibar();
   browser.windows.onFocusChanged.addListener((windowId) => {
@@ -259,6 +273,15 @@ export default defineBackground(() => {
     getHostProxyStatus: hostOverrideService.getStatus,
     openHostOverridesPopup,
     hideOmnibar,
+    // `tabs.getZoom` needs no permission beyond what the manifest already asks for.
+    getTabZoom: async (tabId) => {
+      if (tabId === undefined) return 1;
+      try {
+        return await browser.tabs.getZoom(tabId);
+      } catch {
+        return 1;
+      }
+    },
     getUpdateStatus: updateService.getStatus,
     openUpdate: async (page) => {
       await updateService.open(page);

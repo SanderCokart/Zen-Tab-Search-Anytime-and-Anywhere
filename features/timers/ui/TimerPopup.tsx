@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { debugError } from "@/shared/debug";
 import {
+  customColor,
   DEFAULT_DISPLAY_SETTINGS,
   readDisplaySettings,
   subscribeToDisplaySettingsChanged,
@@ -13,6 +14,8 @@ import type { TabInfo, TabTimer } from "@/shared/types";
 import { formatTabDisplayTitle } from "@/shared/types";
 import { TimerForm } from "@/features/timers/ui/TimerForm";
 import { TabSummary } from "@/shared/ui/TabSummary";
+import { useResolvedTheme } from "@/shared/ui/theme";
+import { cn } from "@/shared/ui/cn";
 
 export interface TimerPopupProps {
   tabId: number;
@@ -27,6 +30,7 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
   const [now, setNow] = useState(Date.now());
   const [error, setError] = useState<string>();
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
+  const theme = useResolvedTheme(displaySettings.theme);
 
   useEffect(() => {
     if (!browser.storage?.local) {
@@ -115,12 +119,20 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
 
   return (
     <div
-      class="flex flex-col gap-[var(--zen-space-2)]"
+      class={cn(
+        "flex flex-col gap-[var(--zen-space-2)]",
+        !embedded && "zs-chassis min-h-screen p-[var(--zen-space-3)]",
+      )}
       data-zen-ui={embedded ? undefined : true}
+      data-theme={embedded ? undefined : theme}
       style={
         embedded
           ? undefined
-          : { ...uiScaleStyle(displaySettings, "popup"), color: displaySettings.textColor }
+          : {
+              ...uiScaleStyle(displaySettings, "popup"),
+              colorScheme: theme,
+              color: customColor(displaySettings.textColor),
+            }
       }
     >
       <TabSummary
@@ -136,7 +148,7 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
         }
       />
       {timer && (
-        <p class="text-zen-lavender m-0 text-[length:var(--zen-text-xs)]">
+        <p class="text-zen-timer zs-digits m-0 text-[length:var(--zen-text-xs)]">
           Current timer {formatTimerCountdown(timer.endAt, now)}
         </p>
       )}

@@ -10,10 +10,11 @@ import {
   filterTodoTabs,
   flattenForgeNavigatorEntries,
   fuzzyMatchWithScore,
+  groupForgeIssueEntries,
   groupSearchItems,
   parseForgeNavigatorQuery,
   parseTodoNavigatorQuery,
-  prioritizeCurrentTab,
+  pinnedFirst,
   rankForgeIssueEntries,
   sortForgeIssueEntries,
   splitCurrentForgeEntry,
@@ -88,46 +89,22 @@ describe("excludePinnedSearchSources", () => {
   });
 });
 
-describe("prioritizeCurrentTab", () => {
-  it("moves the current tab to the top", () => {
-    const items = buildSearchItems([tab(1), tab(2), tab(3)], []);
-    const ordered = prioritizeCurrentTab(items, 3);
-    expect(ordered[0]).toMatchObject({ kind: "tab", data: { id: 3 } });
-    expect(ordered.map((item) => (item.kind === "tab" ? item.data.id : item.data.id))).toEqual([
-      3, 1, 2,
-    ]);
+describe("pinnedFirst", () => {
+  it("leaves the current tab where it ranks", () => {
+    const items = buildSearchItems([tab(1), tab(2), tab(3, true)], []);
+    expect(pinnedFirst(items).map((item) => item.data.id)).toEqual([1, 2, 3]);
   });
 
-  it("uses the active flag when no id is given", () => {
-    const items = buildSearchItems([tab(1), tab(2, true), tab(3)], []);
-    const ordered = prioritizeCurrentTab(items);
-    expect(ordered[0]).toMatchObject({ kind: "tab", data: { id: 2 } });
-  });
-
-  it("keeps spaces and essential tabs above the current tab", () => {
+  it("puts spaces, then essential tabs, above the rest", () => {
     const items = buildSearchItems(
       [tab(1), { ...tab(2, true), essential: true }, tab(3)],
       [{ id: "space-a", name: "Work", isActive: true }],
     );
-    const ordered = prioritizeCurrentTab(items, 3);
     expect(
-      ordered.map((item) =>
+      pinnedFirst(items).map((item) =>
         item.kind === "space" ? item.data.id : `${item.data.essential ? "e" : "t"}:${item.data.id}`,
       ),
-    ).toEqual(["space-a", "e:2", "t:3", "t:1"]);
-  });
-
-  it("keeps an essential current tab with the other pinned items", () => {
-    const items = buildSearchItems(
-      [tab(1), { ...tab(2, true), essential: true }],
-      [{ id: "space-a", name: "Work", isActive: false }],
-    );
-    const ordered = prioritizeCurrentTab(items, 2);
-    expect(
-      ordered.map((item) =>
-        item.kind === "space" ? item.data.id : `${item.data.essential ? "e" : "t"}:${item.data.id}`,
-      ),
-    ).toEqual(["space-a", "e:2", "t:1"]);
+    ).toEqual(["space-a", "e:2", "t:1", "t:3"]);
   });
 });
 
@@ -489,6 +466,53 @@ describe("forge issue entries", () => {
     ]);
     expect(sortForgeIssueEntries(entries, "old").map((entry) => entry.ref.id)).toEqual(["10", "2"]);
   });
+
+  it("puts each project's requests in folders by target branch, unknown last", () => {
+    const mr = (id: number, lastOpenedAt: number, forgeTargetBranch?: string): TabInfo => ({
+      ...tab(id),
+      title: `Change ${id}`,
+      url: `https://gitlab.com/acme/project/-/merge_requests/${id}`,
+      lastOpenedAt,
+      ...(forgeTargetBranch ? { forgeTargetBranch } : {}),
+    });
+    const entries = buildForgeIssueEntries([
+      mr(1, 100, "main"),
+      mr(2, 400),
+      mr(3, 300, "release/1.0"),
+      mr(4, 200, "main"),
+      {
+        ...tab(5),
+        title: "Bug",
+        url: "https://gitlab.com/acme/project/-/issues/5",
+        lastOpenedAt: 500,
+        forgeTargetBranch: "main",
+      },
+    ]);
+
+    const [project] = groupForgeIssueEntries(entries, "recent")[0]!.projects;
+    expect(project?.issues.map((entry) => entry.ref.id)).toEqual(["5"]);
+    expect(project?.issues[0]?.targetBranch).toBeUndefined();
+    expect(
+      project?.branches.map((branch) => [
+        branch.targetBranch,
+        branch.requests.map((entry) => entry.ref.id),
+      ]),
+    ).toEqual([
+      ["release/1.0", ["3"]],
+      ["main", ["4", "1"]],
+      [undefined, ["2"]],
+    ]);
+    expect(flattenForgeNavigatorEntries(entries, "recent").map((entry) => entry.ref.id)).toEqual([
+      "5",
+      "3",
+      "4",
+      "1",
+      "2",
+    ]);
+    expect(rankForgeIssueEntries(entries, "release").map(({ entry }) => entry.ref.id)).toContain(
+      "3",
+    );
+  });
 });
 
 describe("parseForgeNavigatorQuery", () => {
@@ -562,14 +586,14 @@ describe("splitCurrentForgeEntry", () => {
     { ...tab(2, true), url: "https://github.com/acme/project/issues/7", lastOpenedAt: 100 },
   ]);
 
-  it("splits off the active tab's entry and lists it first", () => {
+  it("splits off the active tab's entry", () => {
     const { current, rest } = splitCurrentForgeEntry(entries);
 
     expect(current?.ref.id).toBe("7");
     expect(rest.map((entry) => entry.ref.id)).toEqual(["42"]);
-    expect(
-      flattenForgeNavigatorEntries(rest, "recent", current).map((entry) => entry.ref.id),
-    ).toEqual(["7", "42"]);
+    expect(flattenForgeNavigatorEntries(rest, "recent").map((entry) => entry.ref.id)).toEqual([
+      "42",
+    ]);
   });
 
   it("returns no current entry when the active tab is not an issue", () => {

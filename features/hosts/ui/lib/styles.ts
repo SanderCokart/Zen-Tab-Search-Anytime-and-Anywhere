@@ -7,7 +7,7 @@ import {
 const controlSize = "h-[calc(var(--zen-font-size)*2*var(--zen-scale))] px-[var(--zen-space-2)]";
 
 export const fieldClass = cn(
-  "border-zen-line bg-zen-chip placeholder:text-zen-muted w-full rounded-[var(--zen-radius)] border font-[inherit] text-inherit",
+  "zs-well border-zen-line-soft placeholder:text-zen-muted w-full rounded-[var(--zs-r-lcd)] border font-[inherit] text-inherit outline-none focus:border-zen-accent",
   controlSize,
 );
 
@@ -15,24 +15,20 @@ export const primaryButtonClass = cn(basePrimaryButtonClass, controlSize);
 
 export const secondaryButtonClass = cn(clearButtonClass, controlSize);
 
-/** The on/off switch of a group; on is amber to match the toolbar badge. */
+/** The on/off switch of a group: a latching key, pressed in while the override is on. */
 export function toggleButtonClass(enabled: boolean): string {
   return cn(
-    "cursor-pointer rounded-full border font-[inherit] font-semibold",
+    "zs-key font-[inherit] font-semibold uppercase tracking-wider",
     "px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-[length:var(--zen-text-sm)]",
-    enabled
-      ? "border-amber-500 bg-amber-700 text-white hover:bg-amber-600"
-      : "border-zen-line bg-zen-chip text-zen-subtle hover:border-zen-border",
+    !enabled && "text-zen-subtle",
   );
 }
 
 /** One half of the "This tab / All tabs" switch in the editor form. */
 export function scopeButtonClass(selected: boolean): string {
   return cn(
-    "flex-1 cursor-pointer rounded-md border font-[inherit]",
+    "zs-key flex-1 font-[inherit]",
     "px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-[length:var(--zen-text-sm)]",
-    selected
-      ? "border-zen-border bg-zen-accent text-inherit"
-      : "border-zen-line bg-zen-chip text-zen-subtle hover:border-zen-border",
+    !selected && "text-zen-subtle",
   );
 }

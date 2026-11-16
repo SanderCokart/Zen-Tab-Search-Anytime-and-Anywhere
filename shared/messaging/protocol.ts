@@ -26,6 +26,8 @@ export const tabInfoSchema = v.object({
   lastOpenedAt: v.optional(v.number()),
   score: v.optional(v.number()),
   active: v.optional(v.boolean()),
+  /** The branch an MR/PR tab merges into, once its page has been read. */
+  forgeTargetBranch: v.optional(v.string()),
 });
 
 export const spaceInfoSchema = v.object({
@@ -73,6 +75,10 @@ export const tabStatusSchema = v.object({
 export const forgePageInfoSchema = v.object({
   title: v.optional(v.string()),
   bodyText: v.optional(v.string()),
+  /** The MR/PR's target branch, when the page shows it. */
+  targetBranch: v.optional(v.string()),
+  /** The page the info was read from, which can lag the tab's URL mid-navigation. */
+  url: v.optional(v.string()),
 });
 
 /** A hostname a host override matches: exact, or `*.example.com` for every subdomain. */
@@ -262,6 +268,9 @@ export const extensionRequestSchema = v.variant("type", [
     tabId: tabIdSchema,
   }),
   v.object({
+    type: v.literal("getTabZoom"),
+  }),
+  v.object({
     type: v.literal("hideOmnibar"),
   }),
   v.object({
@@ -296,6 +305,13 @@ export const SNAPSHOT_CHANGED_TYPE = "snapshotChanged" as const;
 
 export const snapshotChangedSchema = v.object({
   type: v.literal(SNAPSHOT_CHANGED_TYPE),
+});
+
+/** Broadcast when a tab's zoom level changes, so an open overlay can re-read its own. */
+export const TAB_ZOOM_CHANGED_TYPE = "tabZoomChanged" as const;
+
+export const tabZoomChangedSchema = v.object({
+  type: v.literal(TAB_ZOOM_CHANGED_TYPE),
 });
 
 /** Broadcast when the window-hosted omnibar is shown, so its page remounts fresh. */
@@ -349,6 +365,7 @@ export const EXTENSION_REQUEST_TYPES = [
   "getHostProxyStatus",
   "openHostOverridesPopup",
   "hideOmnibar",
+  "getTabZoom",
   "getUpdateStatus",
   "openUpdate",
   "installUpdate",
@@ -411,6 +428,8 @@ export type ExtensionSuccessMap = {
   getHostProxyStatus: HostProxyReport;
   openHostOverridesPopup: void;
   hideOmnibar: void;
+  /** The zoom factor of the sender tab (1 is 100%); 1 for a sender that is not a tab. */
+  getTabZoom: number;
   getUpdateStatus: UpdateStatus;
   openUpdate: void;
   installUpdate: void;
@@ -447,6 +466,10 @@ export function parseContentCommand(value: unknown): ContentCommand | undefined 
 
 export function isSnapshotChangedMessage(value: unknown): boolean {
   return v.is(snapshotChangedSchema, value);
+}
+
+export function isTabZoomChangedMessage(value: unknown): boolean {
+  return v.is(tabZoomChangedSchema, value);
 }
 
 export function parseOmnibarShownMessage(value: unknown): OmnibarShown | undefined {
@@ -524,6 +547,8 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
     case "openHostOverridesPopup":
     case "hideOmnibar":
       return undefined as ExtensionSuccessMap[T];
+    case "getTabZoom":
+      return v.parse(v.pipe(v.number(), v.finite()), value) as ExtensionSuccessMap[T];
     case "getUpdateStatus":
       return v.parse(updateStatusSchema, value) as ExtensionSuccessMap[T];
     case "openUpdate":

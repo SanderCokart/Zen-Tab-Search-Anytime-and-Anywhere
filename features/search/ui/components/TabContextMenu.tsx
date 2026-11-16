@@ -57,7 +57,7 @@ export function TabContextMenu({
   return (
     <div
       ref={menuRef}
-      class="bg-zen-panel border-zen-line-medium fixed z-50 min-w-[180px] rounded-md border p-1 shadow-lg"
+      class="zs-card border-zen-line-medium fixed z-50 min-w-[180px] rounded-[var(--zs-r-lcd)] border p-[var(--zen-space-1)]"
       style={{ left: `${position.left}px`, top: `${position.top}px` }}
       data-testid="zen-tab-context-menu"
       role="menu"
@@ -103,7 +103,7 @@ export function TabContextMenu({
         <>
           <div class="bg-zen-line-soft my-1 h-px" role="separator" />
           <div
-            class="text-zen-subtle px-[var(--zen-space-3)] pt-[var(--zen-space-1)] text-[length:var(--zen-text-xs)] font-semibold uppercase"
+            class="text-zen-subtle zs-label px-[var(--zen-space-3)] pt-[var(--zen-space-1)]"
             role="presentation"
           >
             Status

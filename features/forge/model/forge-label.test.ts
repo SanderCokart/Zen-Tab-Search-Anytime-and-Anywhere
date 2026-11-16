@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  forgeRowParts,
   buildForgeLabel,
   detectForgePlatform,
   extractRelatedIssueId,
@@ -141,5 +142,44 @@ describe("buildForgeLabel", () => {
         },
       ),
     ).toBe("PR: #999993 - !999994 - Example pull request");
+  });
+});
+
+describe("forgeRowParts", () => {
+  const issue = parseForgeUrl("https://gitlab.com/acme/app/-/issues/12")!;
+  const mr = parseForgeUrl("https://gitlab.com/acme/app/-/merge_requests/88")!;
+  const pr = parseForgeUrl("https://github.com/acme/app/pull/5")!;
+
+  it("drops the issue prefix and keeps the ref and tag", () => {
+    expect(forgeRowParts(issue, "ISSUE: #12 - Fix search")).toEqual({
+      tag: "ISSUE",
+      ref: "#12",
+      title: "Fix search",
+    });
+  });
+
+  it("drops the MR prefix, including a related issue", () => {
+    expect(forgeRowParts(mr, "MR: #7 - !88 - Add filter").title).toBe("Add filter");
+    expect(forgeRowParts(mr, "MR: !88 - Add filter")).toMatchObject({ tag: "MR", ref: "!88" });
+  });
+
+  it("tags a GitHub pull request PR with a # ref", () => {
+    expect(forgeRowParts(pr, "PR: !5 - Bump deps")).toEqual({
+      tag: "PR",
+      ref: "#5",
+      title: "Bump deps",
+    });
+  });
+
+  it("recognises an epic and removes its marker", () => {
+    expect(forgeRowParts(issue, "ISSUE: #12 - EPIC — Two-column checkout")).toEqual({
+      tag: "EPIC",
+      ref: "#12",
+      title: "Two-column checkout",
+    });
+  });
+
+  it("leaves a name without a prefix untouched", () => {
+    expect(forgeRowParts(issue, "My own name").title).toBe("My own name");
   });
 });

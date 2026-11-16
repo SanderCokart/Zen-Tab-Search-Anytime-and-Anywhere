@@ -38,6 +38,8 @@ export interface MessageRouterHandlers {
   getHostProxyStatus(): Promise<HostProxyReport>;
   openHostOverridesPopup(tabId: number): Promise<void>;
   hideOmnibar(): Promise<void>;
+  /** Zoom factor of a tab; 1 when there is no tab to ask. */
+  getTabZoom(tabId?: number): Promise<number>;
   getUpdateStatus(force: boolean): Promise<UpdateStatus>;
   openUpdate(page: "download" | "releaseNotes"): Promise<void>;
   installUpdate(): Promise<void>;
@@ -161,6 +163,10 @@ function handleParsedRequest(
       return handlers.openHostOverridesPopup(message.tabId);
     case "hideOmnibar":
       return handlers.hideOmnibar();
+    case "getTabZoom":
+      // Only a content-script overlay sits inside a zoomed page; the window-hosted
+      // omnibar and the extension pages are laid out at their own, unzoomed scale.
+      return handlers.getTabZoom(isUsableSenderTab(sender.tab) ? sender.tab?.id : undefined);
     case "getUpdateStatus":
       return handlers.getUpdateStatus(message.force === true);
     case "openUpdate":

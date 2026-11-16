@@ -2,28 +2,12 @@ import { debugLog, debugWarn } from "@/shared/debug";
 import {
   buildForgeLabel,
   parseForgeUrl,
-  type ForgePageInfo,
   type ForgePlatform,
 } from "@/features/forge/model/forge-label";
-import { sendTabMessage } from "@/shared/messaging/client";
+import { getForgePageInfo } from "@/features/forge/background/page-info";
 import { isUsableTabId, type TabInfo } from "@/shared/types";
-import { formatError, LOG_PREFIX } from "@/shared/log";
-import { isContentScriptInjectableUrl } from "@/shared/urls";
+import { LOG_PREFIX } from "@/shared/log";
 import type { WorkspaceAdapter } from "@/features/zen/adapter";
-
-async function getForgePageInfo(tabId?: number, url?: string): Promise<ForgePageInfo> {
-  if (!isUsableTabId(tabId) || !isContentScriptInjectableUrl(url)) {
-    return {};
-  }
-
-  try {
-    return await sendTabMessage(tabId, { type: "getForgePageInfo" });
-  } catch (error) {
-    debugLog(`${LOG_PREFIX} getForgePageInfo unavailable:`, formatError(error));
-  }
-
-  return {};
-}
 
 /**
  * Sets a GitHub/GitLab tab's label from its issue, MR or PR. Always silent: the

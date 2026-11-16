@@ -1,5 +1,5 @@
-import { TimerCountdown } from "@/features/timers/ui/TimerCountdown";
 import { clearButtonClass } from "@/features/search/ui/lib/styles";
+import { ActiveTimersList } from "@/features/timers/ui/ActiveTimersList";
 import type { TabTimer } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 
@@ -10,26 +10,36 @@ export interface ActiveTimersPanelProps {
   onActivateTimer: (tabId: number) => void;
   /** Opens the timer controls for that tab; the button is left out without it. */
   onEditTimer?: (tabId: number) => void;
+  /** Skip the card, for a parent that already draws one. */
+  bare?: boolean;
 }
 
-/** The "Active timers" drawer under the search input. */
+/** The "Active timers" drawer under the search input, or the timers view body when `bare`. */
 export function ActiveTimersPanel({
   timers,
   onClearAll,
   onClearTimer,
   onActivateTimer,
   onEditTimer,
+  bare = false,
 }: ActiveTimersPanelProps) {
   const sorted = [...timers.values()].sort((a, b) => a.endAt - b.endAt);
 
   return (
-    <div class="border-zen-accent bg-zen-panel mb-[var(--zen-space-2)] rounded-[var(--zen-radius)] border p-[var(--zen-space-2)]">
-      <div class="mb-[var(--zen-space-2)] flex items-center justify-between gap-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]">
-        <strong>Active timers</strong>
+    <div class={cn(!bare && "zs-card mb-[var(--zen-space-2)] p-[var(--zen-space-4)]")}>
+      <div class="zs-head">
+        <span class="zs-head-glyph" aria-hidden="true">
+          ⏱
+        </span>
+        <strong class="min-w-0 truncate font-[inherit] font-medium">Active timers</strong>
+        <span class="zs-head-rule" aria-hidden="true" />
         {sorted.length > 0 && (
           <button
             type="button"
-            class={cn(clearButtonClass, "px-[var(--zen-space-2)] py-[var(--zen-space-1)]")}
+            class={cn(
+              clearButtonClass,
+              "h-[var(--zen-mini-key)] px-[var(--zen-space-3)] font-mono text-[length:var(--zen-text-xs)] tracking-[0.1em] uppercase",
+            )}
             onClick={onClearAll}
           >
             Clear all
@@ -39,40 +49,13 @@ export function ActiveTimersPanel({
       {sorted.length === 0 ? (
         <p class="text-zen-muted m-0 text-[length:var(--zen-text-sm)]">No active timers.</p>
       ) : (
-        <ul class="zen-scroll m-0 flex max-h-[calc(var(--zen-font-size)*14)] list-none flex-col gap-[var(--zen-space-1)] overflow-y-auto p-0">
-          {sorted.map((timer) => (
-            <li key={timer.tabId} class="flex items-center gap-[var(--zen-space-2)]">
-              <button
-                type="button"
-                class="flex min-w-0 flex-1 cursor-pointer flex-col items-start gap-0.5 border-0 bg-transparent p-0 text-left font-[inherit] text-inherit"
-                onClick={() => onActivateTimer(timer.tabId)}
-              >
-                <span class="max-w-full truncate">
-                  {timer.title || timer.originalLabel || `Tab ${timer.tabId}`}
-                </span>
-                <span class="text-zen-lavender text-[length:var(--zen-text-xs)]">
-                  <TimerCountdown endAt={timer.endAt} />
-                </span>
-              </button>
-              {onEditTimer && (
-                <button
-                  type="button"
-                  class={cn(clearButtonClass, "px-[var(--zen-space-2)] py-[var(--zen-space-1)]")}
-                  onClick={() => onEditTimer(timer.tabId)}
-                >
-                  Edit
-                </button>
-              )}
-              <button
-                type="button"
-                class={cn(clearButtonClass, "px-[var(--zen-space-2)] py-[var(--zen-space-1)]")}
-                onClick={() => onClearTimer(timer.tabId)}
-              >
-                Clear
-              </button>
-            </li>
-          ))}
-        </ul>
+        <ActiveTimersList
+          showLcd
+          timers={sorted}
+          onClearTimer={onClearTimer}
+          onActivateTimer={onActivateTimer}
+          onEditTimer={onEditTimer}
+        />
       )}
     </div>
   );

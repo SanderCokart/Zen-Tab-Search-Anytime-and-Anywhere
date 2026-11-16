@@ -192,6 +192,8 @@ export interface ForgeIssueEntry {
   tab: TabInfo;
   title: string;
   projectLabel: string;
+  /** The branch an MR/PR merges into, once its page has been read; never set on issues. */
+  targetBranch?: string;
 }
 
 export function formatForgeKind(kind: ForgeKind): string {
@@ -202,4 +204,37 @@ export function formatForgeKind(kind: ForgeKind): string {
 
 export function formatForgePlatform(platform: ForgePlatform): string {
   return platform === "github" ? "GitHub" : "GitLab";
+}
+
+export type ForgeRowTag = "ISSUE" | "MR" | "PR" | "EPIC";
+
+export interface ForgeRowParts {
+  tag: ForgeRowTag;
+  /** `#12` for issues and GitHub PRs, `!12` for GitLab merge requests. */
+  ref: string;
+  /** The title without the label prefix the tag and ref already show. */
+  title: string;
+}
+
+const EPIC_PREFIX = /^epic\b\s*(?:[-–—:]\s*)?/i;
+
+/**
+ * Splits a displayed forge title into a kind tag, a ref and the plain title, for
+ * the navigator's one-line rows. Only the display changes: the stored label keeps
+ * its `ISSUE: #12 - ` / `MR: !7 - ` prefix. A title with no such prefix (a name
+ * the user typed) is kept as it is.
+ */
+export function forgeRowParts(ref: ForgeRef, displayTitle: string): ForgeRowParts {
+  const stripped = stripForgeLabelPrefixes(displayTitle);
+  let title = stripped || displayTitle.trim();
+  let tag: ForgeRowTag = "ISSUE";
+  if (ref.kind === "merge_request") {
+    tag = "MR";
+  } else if (ref.kind === "pull_request") {
+    tag = "PR";
+  } else if (EPIC_PREFIX.test(title)) {
+    tag = "EPIC";
+    title = title.replace(EPIC_PREFIX, "").trim() || title;
+  }
+  return { tag, ref: `${ref.kind === "merge_request" ? "!" : "#"}${ref.id}`, title };
 }

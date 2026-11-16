@@ -13,7 +13,6 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:4177",
     viewport: { width: 1600, height: 1000 },
     deviceScaleFactor: 2,
-    colorScheme: "dark",
   },
   webServer: {
     command:

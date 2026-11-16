@@ -8,14 +8,12 @@ import {
   toDatetimeLocalValue,
 } from "@/features/timers/model/timer";
 import type { TabTimer } from "@/shared/types";
+import { clearButtonClass } from "@/shared/ui/button-styles";
 import { cn } from "@/shared/ui/cn";
+import { useSound } from "@/shared/ui/sound/SoundContext";
 
-const presetButtonClass =
-  "cursor-pointer rounded-full border border-zen-line bg-zen-chip font-[inherit] text-zen-subtle hover:border-zen-border hover:bg-zen-accent hover:text-inherit focus-visible:border-zen-border focus-visible:bg-zen-accent focus-visible:text-inherit";
-const primaryButtonClass =
-  "cursor-pointer rounded-md border border-zen-border bg-zen-accent font-[inherit] text-inherit hover:bg-zen-accent-hover disabled:cursor-not-allowed disabled:opacity-50";
-const clearButtonClass =
-  "cursor-pointer rounded-md border border-zen-clear bg-transparent font-[inherit] text-zen-faint hover:bg-zen-surface-faint";
+const presetButtonClass = "zs-key font-[inherit] text-zen-subtle";
+const primaryButtonClass = "zs-key font-[inherit]";
 
 export interface TimerFormProps {
   timer?: TabTimer;
@@ -26,6 +24,7 @@ export interface TimerFormProps {
 }
 
 export function TimerForm({ timer, disabled = false, error, onSet, onClear }: TimerFormProps) {
+  const { play } = useSound();
   const whenInputRef = useRef<HTMLInputElement>(null);
   const [endAt, setEndAt] = useState(timer?.endAt ?? Date.now() + 30 * 60_000);
   const [naturalInput, setNaturalInput] = useState("");
@@ -44,13 +43,16 @@ export function TimerForm({ timer, disabled = false, error, onSet, onClear }: Ti
     const nextEndAt = naturalInput.trim() ? parseTimerInput(naturalInput) : endAt;
     if (nextEndAt === null) {
       setLocalError("Enter a time like “tomorrow at 9am” or “1d 30m”.");
+      play("error");
       return;
     }
     if (!isAllowedTimerEnd(nextEndAt)) {
       setLocalError("Choose a time between 1 minute and 31 days from now.");
+      play("error");
       return;
     }
     setLocalError(undefined);
+    play("success");
     onSet(nextEndAt);
   };
 
@@ -93,7 +95,7 @@ export function TimerForm({ timer, disabled = false, error, onSet, onClear }: Ti
         <input
           ref={whenInputRef}
           class={cn(
-            "border-zen-line bg-zen-chip placeholder:text-zen-muted w-full rounded-[var(--zen-radius)] border font-[inherit]",
+            "zs-well border-zen-line-soft placeholder:text-zen-muted focus:border-zen-accent w-full rounded-[var(--zs-r-lcd)] border font-[inherit] text-inherit outline-none",
             "h-[calc(var(--zen-font-size)*2*var(--zen-scale))] px-[var(--zen-space-2)]",
           )}
           type="text"
@@ -121,7 +123,7 @@ export function TimerForm({ timer, disabled = false, error, onSet, onClear }: Ti
           Ends at
           <input
             class={cn(
-              "border-zen-line bg-zen-chip w-full rounded-[var(--zen-radius)] border font-[inherit] disabled:opacity-60",
+              "zs-well border-zen-line-soft w-full rounded-[var(--zs-r-lcd)] border font-[inherit] text-inherit disabled:opacity-60",
               "h-[calc(var(--zen-font-size)*2*var(--zen-scale))] px-[var(--zen-space-2)]",
             )}
             type="datetime-local"

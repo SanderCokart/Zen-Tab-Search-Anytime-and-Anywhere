@@ -1,5 +1,6 @@
 import { render } from "preact";
 import { DisplaySettingsApp } from "@/features/settings/ui/DisplaySettingsApp";
+import "@/shared/ui/fonts.css";
 import "@/shared/ui/styles.css";
 
 const root = document.getElementById("app");

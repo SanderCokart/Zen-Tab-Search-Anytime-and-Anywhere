@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  customColor,
   DEFAULT_DISPLAY_SETTINGS,
   readDisplaySettings,
   saveDisplaySettings,
@@ -196,5 +197,112 @@ describe("display settings", () => {
     });
     unsubscribe();
     expect(removeListener).toHaveBeenCalledWith(onChanged);
+  });
+
+  describe("theme and colours", () => {
+    function store(displaySettings: unknown) {
+      Object.assign(globalThis, {
+        browser: {
+          storage: {
+            local: { get: vi.fn(async () => ({ displaySettings })), set: vi.fn() },
+            onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+          },
+        },
+      });
+    }
+
+    it("follows the system theme and leaves colours to the theme by default", () => {
+      expect(DEFAULT_DISPLAY_SETTINGS).toMatchObject({
+        theme: "system",
+        textColor: "auto",
+        issueBackgroundColor: "auto",
+        folderBackgroundColor: "auto",
+        spaceBackgroundColor: "auto",
+      });
+    });
+
+    it("keeps a stored theme and falls back from an unknown one", async () => {
+      store({ theme: "dark" });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ theme: "dark" });
+      store({ theme: "sepia" });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ theme: "system" });
+    });
+
+    it("migrates the old dark default colours back to auto but keeps real choices", async () => {
+      store({
+        textColor: "#F5F5F5",
+        issueBackgroundColor: "#252525",
+        folderBackgroundColor: "#2d2d2d",
+        spaceBackgroundColor: "#123456",
+      });
+      await expect(readDisplaySettings()).resolves.toMatchObject({
+        textColor: "auto",
+        issueBackgroundColor: "auto",
+        folderBackgroundColor: "auto",
+        spaceBackgroundColor: "#123456",
+      });
+    });
+
+    it("migrates a theme swatch the colour picker saved by mistake back to auto", async () => {
+      store({
+        textColor: "#EDEDEA",
+        issueBackgroundColor: "#1b1b1b",
+        folderBackgroundColor: "#fafaf8",
+        spaceBackgroundColor: "#1c1c1c",
+      });
+      await expect(readDisplaySettings()).resolves.toMatchObject({
+        textColor: "auto",
+        issueBackgroundColor: "auto",
+        folderBackgroundColor: "auto",
+        spaceBackgroundColor: "#1c1c1c",
+      });
+    });
+
+    it("paints only a real hex value", () => {
+      expect(customColor("auto")).toBeUndefined();
+      expect(customColor("#abcdef")).toBe("#abcdef");
+    });
+  });
+
+  describe("sound", () => {
+    function store(displaySettings: unknown) {
+      Object.assign(globalThis, {
+        browser: {
+          storage: {
+            local: { get: vi.fn(async () => ({ displaySettings })), set: vi.fn() },
+            onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+          },
+        },
+      });
+    }
+
+    it("is on at volume 0.4 unless stored otherwise", async () => {
+      expect(DEFAULT_DISPLAY_SETTINGS).toMatchObject({ soundEnabled: true, soundVolume: 0.4 });
+      store({});
+      await expect(readDisplaySettings()).resolves.toMatchObject({
+        soundEnabled: true,
+        soundVolume: 0.4,
+      });
+    });
+
+    it("keeps a stored choice and clamps the volume into 0..1", async () => {
+      store({ soundEnabled: false, soundVolume: 0.75 });
+      await expect(readDisplaySettings()).resolves.toMatchObject({
+        soundEnabled: false,
+        soundVolume: 0.75,
+      });
+      store({ soundVolume: 9 });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ soundVolume: 1 });
+      store({ soundVolume: -2 });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ soundVolume: 0 });
+    });
+
+    it("falls back to the defaults for values of the wrong type", async () => {
+      store({ soundEnabled: "yes", soundVolume: "loud" });
+      await expect(readDisplaySettings()).resolves.toMatchObject({
+        soundEnabled: true,
+        soundVolume: 0.4,
+      });
+    });
   });
 });

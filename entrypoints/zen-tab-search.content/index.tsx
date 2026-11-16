@@ -3,6 +3,8 @@ import { debugLog } from "@/shared/debug";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { parseContentCommand, SNAPSHOT_CHANGED_TYPE } from "@/shared/messaging/protocol";
 import { SearchApp } from "@/features/search/ui/SearchApp";
+import { normalizeBranchName, parseTargetBranchText } from "@/features/forge/model/target-branch";
+import { injectPageFonts } from "@/shared/ui/page-fonts";
 import "@/shared/ui/styles.css";
 
 const OMNIBAR_Z_INDEX = 2147483646;
@@ -13,6 +15,8 @@ export default defineContentScript({
   cssInjectionMode: "ui",
   async main(ctx) {
     debugLog("Zen Tab Search content script loaded at", new Date().toISOString());
+    // The shadow root cannot declare its own font; see page-fonts.ts.
+    injectPageFonts();
 
     type OmnibarUi = Awaited<ReturnType<typeof createShadowRootUi>>;
     // Built once and remounted on every open: creating it fetches and parses the
@@ -45,7 +49,34 @@ export default defineContentScript({
       return {
         title: titleEl?.textContent?.replace(/\s+/g, " ").trim() || "",
         bodyText: bodyParts.join("\n"),
+        targetBranch: findForgeTargetBranch(),
+        url: location.href,
       };
+    }
+
+    /** An MR/PR page's target branch: its branch element, else its "into <branch>" header. */
+    function findForgeTargetBranch(): string | undefined {
+      for (const selector of [".js-target-branch", ".commit-ref.base-ref", ".base-ref"]) {
+        const text = document.querySelector(selector)?.textContent;
+        const branch = text ? normalizeBranchName(text) : undefined;
+        if (branch) return branch;
+      }
+      for (const selector of [
+        ".detail-page-description",
+        ".merge-request-details",
+        ".detail-page-header",
+        ".gh-header-meta",
+        "#partial-discussion-header",
+        "main",
+      ]) {
+        const element = document.querySelector<HTMLElement>(selector);
+        // Only the start: the header sits at the top, and comments may quote other MRs.
+        const branch = element
+          ? parseTargetBranchText(element.innerText.slice(0, 4_000))
+          : undefined;
+        if (branch) return branch;
+      }
+      return undefined;
     }
 
     const hideOmnibar = () => {
@@ -87,8 +118,8 @@ export default defineContentScript({
             position: fixed !important;
             inset: 0 !important;
             display: block !important;
-            width: 100vw !important;
-            height: 100vh !important;
+            width: 100% !important;
+            height: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             border: none !important;

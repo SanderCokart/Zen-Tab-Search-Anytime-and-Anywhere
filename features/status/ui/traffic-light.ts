@@ -31,5 +31,5 @@ export function statusRowClass(light: TrafficLight | undefined, selected: boolea
   if (light) {
     return trafficLightRowClass[light][selected ? "selected" : "idle"];
   }
-  return selected ? "bg-zen-line-soft" : "hover:bg-zen-line-soft";
+  return selected ? "bg-zen-surface" : "hover:bg-zen-line-soft";
 }

@@ -1,5 +1,12 @@
 import { useMemo } from "preact/hooks";
 import {
+  countForgeEntriesByKind,
+  filterForgeEntriesByKind,
+  forgeRequestsLabel,
+  type ForgeKindFilter,
+} from "@/features/forge/model/forge-filter";
+import type { ForgeCollapsedSet } from "@/features/forge/model/forge-collapse";
+import {
   bestForgeNavigatorIndex,
   buildForgeIssueEntries,
   buildSearchDocuments,
@@ -11,15 +18,19 @@ import {
   groupSearchItems,
   parseForgeNavigatorQuery,
   parseTodoNavigatorQuery,
-  prioritizeCurrentTab,
+  pinnedFirst,
   rankForgeIssueEntries,
   splitCurrentForgeEntry,
   type ForgeIssueSortMode,
 } from "@/features/search/model/ranking";
+import {
+  activeCollapsedFolders,
+  isUnderCollapsedFolder,
+} from "@/features/search/model/tab-folder-collapse";
 import type { DisplaySettings } from "@/features/settings/model/display-settings";
 import type { SearchLayout } from "@/features/search/ui/types";
 import { collectTodoTabs } from "@/features/todos/model/todo";
-import { tabBrowserId, type SpaceInfo, type TabInfo, type TabTodo } from "@/shared/types";
+import type { SpaceInfo, TabInfo, TabTodo } from "@/shared/types";
 
 export interface UseSearchResultsOptions {
   tabs: TabInfo[];
@@ -30,12 +41,21 @@ export interface UseSearchResultsOptions {
   layout: SearchLayout;
   query: string;
   forgeSortMode: ForgeIssueSortMode;
+  /** Which kinds of issue-navigator entry are listed. */
+  forgeKindFilter?: ForgeKindFilter;
+  /** Keys of the navigator groups the user collapsed; their entries leave the keyboard order. */
+  forgeCollapsed?: ForgeCollapsedSet;
+  /** Collapsed tab folders, by `tabFolderKey`; ignored while a query is active. */
+  tabFolderCollapsed?: ReadonlySet<string>;
 }
 
 /**
  * Everything derived from the raw snapshot plus the current query: the labelled
  * tab list, the forge entries, the ranked/filtered result set and its grouping.
  */
+/** A stable empty set, so an absent prop does not rebuild every memo. */
+const NO_COLLAPSED_FOLDERS: ReadonlySet<string> = new Set();
+
 export function useSearchResults({
   tabs,
   spaces,
@@ -45,6 +65,9 @@ export function useSearchResults({
   layout,
   query,
   forgeSortMode,
+  forgeKindFilter = "all",
+  forgeCollapsed,
+  tabFolderCollapsed,
 }: UseSearchResultsOptions) {
   // Essential tabs carry an extension-local name rather than a Zen label.
   const labeledTabs = useMemo(
@@ -109,9 +132,10 @@ export function useSearchResults({
     [forgeIssueEntries, forgeNavigatorQuery.filterQuery, rankedForgeIssueEntries],
   );
 
-  // With issue tabs kept out of the tab list, the current tab can only show up
-  // here, so it is listed first, as the tab list does, until a query re-ranks.
-  const { current: currentForgeEntry, rest: listedForgeIssueEntries } = useMemo(
+  // The current tab's issue is shown by the strip under the search bar, so with
+  // issue tabs kept out of the tab list it stays out of the navigator too until
+  // a query re-ranks.
+  const { rest: restBeforeKind } = useMemo(
     () =>
       layout === "overlay" &&
       displaySettings.filterIssuesInOverlay &&
@@ -126,9 +150,29 @@ export function useSearchResults({
     ],
   );
 
+  // The kind tabs count what the query left, before the kind filter narrows it.
+  const forgeKindCounts = useMemo(() => countForgeEntriesByKind(restBeforeKind), [restBeforeKind]);
+
+  const requestsLabel = useMemo(() => forgeRequestsLabel(forgeIssueEntries), [forgeIssueEntries]);
+
+  const listedForgeIssueEntries = useMemo(
+    () => filterForgeEntriesByKind(restBeforeKind, forgeKindFilter),
+    [forgeKindFilter, restBeforeKind],
+  );
+
+  /** The tab the overlay was opened over, whatever the query or filters. */
+  const currentTab = useMemo(() => labeledTabs.find((tab) => tab.active === true), [labeledTabs]);
+
+  const currentTabForgeEntry = useMemo(
+    () => (currentTab ? forgeIssueEntries.find((entry) => entry.tab === currentTab) : undefined),
+    [currentTab, forgeIssueEntries],
+  );
+
+  // What the arrow keys walk: the visible entries only, so a hidden or
+  // collapsed one can never be selected.
   const navigatorEntries = useMemo(
-    () => flattenForgeNavigatorEntries(listedForgeIssueEntries, forgeSortMode, currentForgeEntry),
-    [currentForgeEntry, forgeSortMode, listedForgeIssueEntries],
+    () => flattenForgeNavigatorEntries(listedForgeIssueEntries, forgeSortMode, forgeCollapsed),
+    [forgeCollapsed, forgeSortMode, listedForgeIssueEntries],
   );
 
   const bestForgeIndex = useMemo(
@@ -171,16 +215,30 @@ export function useSearchResults({
     if (effectiveQuery.trim()) {
       return matches;
     }
-    const activeId = searchable.tabs.find(
-      (tab) => tab.active === true && tabBrowserId(tab) !== undefined,
-    )?.id;
-    return {
-      items: prioritizeCurrentTab(matches.items, activeId),
-      bestExactWordCount: 0,
-    };
-  }, [effectiveQuery, searchable, searchDocuments]);
+    return { items: pinnedFirst(matches.items), bestExactWordCount: 0 };
+  }, [effectiveQuery, searchDocuments]);
 
-  const items = filtered.items;
+  // What a query matched, and the part of it the list shows: rows under a collapsed
+  // folder stay in the folder's count but are not rows, so no key can select them.
+  const matchedItems = filtered.items;
+  const collapsedFolders = useMemo(
+    () =>
+      activeCollapsedFolders(tabFolderCollapsed ?? NO_COLLAPSED_FOLDERS, {
+        query: effectiveQuery,
+        groupFolders: displaySettings.groupFolders,
+      }),
+    [displaySettings.groupFolders, effectiveQuery, tabFolderCollapsed],
+  );
+  const items = useMemo(
+    () =>
+      collapsedFolders.size === 0
+        ? matchedItems
+        : matchedItems.filter(
+            (item) =>
+              !isUnderCollapsedFolder(item, collapsedFolders, displaySettings.groupSubfolders),
+          ),
+    [collapsedFolders, displaySettings.groupSubfolders, matchedItems],
+  );
   const bestTabWordCount = filtered.bestExactWordCount;
   const bestForgeWordCount = useMemo(() => {
     if (!forgeNavigatorQuery.filterQuery.trim()) {
@@ -195,11 +253,11 @@ export function useSearchResults({
 
   const itemGroups = useMemo(
     () =>
-      groupSearchItems(items, {
+      groupSearchItems(matchedItems, {
         groupFolders: displaySettings.groupFolders,
         groupSubfolders: displaySettings.groupSubfolders,
       }),
-    [displaySettings.groupFolders, displaySettings.groupSubfolders, items],
+    [displaySettings.groupFolders, displaySettings.groupSubfolders, matchedItems],
   );
 
   return {
@@ -212,10 +270,15 @@ export function useSearchResults({
     todoTabs,
     rankedForgeIssueEntries,
     listedForgeIssueEntries,
-    currentForgeEntry,
+    currentTab,
+    currentTabForgeEntry,
+    forgeKindCounts,
+    requestsLabel,
     navigatorEntries,
     bestForgeIndex,
     items,
+    matchedItems,
+    collapsedFolders,
     bestTabWordCount,
     bestForgeWordCount,
     itemIndices,

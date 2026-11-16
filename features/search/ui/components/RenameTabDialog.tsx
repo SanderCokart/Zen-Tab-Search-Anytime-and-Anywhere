@@ -30,7 +30,7 @@ export function RenameTabDialog({
   return (
     <div class="bg-zen-overlay-soft fixed inset-0 z-50 flex items-center justify-center p-4">
       <form
-        class="border-zen-accent bg-zen-panel w-full max-w-sm rounded-[var(--zen-radius-lg)] border p-[var(--zen-space-3)] shadow-xl"
+        class="zs-card border-zen-line-medium w-full max-w-sm border p-[var(--zen-space-4)]"
         onSubmit={(event) => {
           event.preventDefault();
           onSubmit(value.replace(/\s+/g, " ").trim());
@@ -40,7 +40,7 @@ export function RenameTabDialog({
           Rename tab
           <input
             ref={inputRef}
-            class="focus:border-zen-accent border-zen-line-strong bg-zen-overlay-soft rounded-[var(--zen-radius)] border px-[var(--zen-space-2)] py-[var(--zen-space-1)] outline-none"
+            class="zs-well focus:border-zen-accent border-zen-line-soft rounded-[var(--zs-r-lcd)] border px-[var(--zen-space-2)] py-[var(--zen-space-2)] font-[inherit] text-inherit outline-none"
             value={value}
             onInput={(event) => onChange(event.currentTarget.value)}
           />

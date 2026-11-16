@@ -2,6 +2,11 @@ import type { SpaceInfo, TabInfo, TabStatus, TabTimer, TabTodo } from "@/shared/
 import { tabBrowserId } from "@/shared/types";
 import { SNAPSHOT_CHANGED_TYPE } from "@/shared/messaging/protocol";
 import { mergeTabLastOpened, TAB_LAST_OPENED_STORAGE_KEY } from "@/features/zen/tab-last-opened";
+import {
+  FORGE_TARGET_BRANCHES_STORAGE_KEY,
+  mergeTabTargetBranches,
+  type StoredTargetBranches,
+} from "@/features/forge/model/target-branch";
 
 export interface SearchSnapshotPayload {
   tabs: TabInfo[];
@@ -18,12 +23,14 @@ export function createSnapshotReader(deps: {
   getTodos?(tabIds: number[]): Promise<TabTodo[]>;
   getStatuses?(tabIds: number[]): Promise<TabStatus[]>;
   readLastOpened?(): Promise<Record<string, number>>;
+  readTargetBranches?(): Promise<StoredTargetBranches>;
 }): (anchorTabId?: number) => Promise<SearchSnapshotPayload> {
   return async (anchorTabId?: number): Promise<SearchSnapshotPayload> => {
-    const [tabs, spaces, lastOpened] = await Promise.all([
+    const [tabs, spaces, lastOpened, targetBranches] = await Promise.all([
       deps.queryTabs(anchorTabId),
       deps.getSpaces(anchorTabId),
       deps.readLastOpened?.() ?? Promise.resolve({}),
+      deps.readTargetBranches?.() ?? Promise.resolve({}),
     ]);
     const tabIds = tabs.flatMap((tab) => {
       const id = tabBrowserId(tab);
@@ -34,7 +41,13 @@ export function createSnapshotReader(deps: {
       deps.getTodos ? deps.getTodos(tabIds) : Promise.resolve([]),
       deps.getStatuses ? deps.getStatuses(tabIds) : Promise.resolve([]),
     ]);
-    return { tabs: mergeTabLastOpened(tabs, lastOpened), spaces, timers, todos, statuses };
+    return {
+      tabs: mergeTabTargetBranches(mergeTabLastOpened(tabs, lastOpened), targetBranches),
+      spaces,
+      timers,
+      todos,
+      statuses,
+    };
   };
 }
 
@@ -107,7 +120,12 @@ export function registerSnapshotChangeNotifications(
   };
 
   const onStorageChanged = (changes: Record<string, unknown>, area: string) => {
-    if (area === "local" && ("tabTimers" in changes || TAB_LAST_OPENED_STORAGE_KEY in changes)) {
+    if (
+      area === "local" &&
+      ("tabTimers" in changes ||
+        TAB_LAST_OPENED_STORAGE_KEY in changes ||
+        FORGE_TARGET_BRANCHES_STORAGE_KEY in changes)
+    ) {
       notify();
     }
   };

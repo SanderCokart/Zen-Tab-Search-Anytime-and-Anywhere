@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
+import { nearestCollapsedGroup, groupToCollapse } from "@/features/forge/model/forge-collapse";
+import type { ForgeKindFilter } from "@/features/forge/model/forge-filter";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
-import type { ForgeIssueSortMode } from "@/features/search/model/ranking";
+import { useForgeCollapse, useStoredCollapse } from "@/features/forge/ui/useForgeCollapse";
+import { TAB_FOLDER_COLLAPSED_STORAGE_KEY } from "@/features/search/model/tab-folder-collapse";
+import {
+  flattenForgeNavigatorEntries,
+  groupForgeIssueEntries,
+  type ForgeIssueSortMode,
+} from "@/features/search/model/ranking";
 import { summarizeSearch } from "@/features/search/model/stats";
+import { TimersDock } from "@/features/timers/ui/TimersDock";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
 import { UpdateNotice } from "@/features/updates/ui/UpdateNotice";
 import {
@@ -9,6 +18,7 @@ import {
   TRAFFIC_LIGHT_TRIGGER_SELECTOR,
   TrafficLightMenu,
 } from "@/features/status/ui/TrafficLightMenu";
+import { CurrentTabStrip } from "@/features/search/ui/components/CurrentTabStrip";
 import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersPanel";
 import { OmnibarViewPanel } from "@/features/search/ui/components/OmnibarViewPanel";
 import { StatusBar } from "@/features/search/ui/components/StatusBar";
@@ -38,6 +48,9 @@ import type { OmnibarView } from "@/shared/messaging/protocol";
 import { isActivatableTab, tabBrowserId, type SearchItem, type TabInfo } from "@/shared/types";
 import { type ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import { cn } from "@/shared/ui/cn";
+import { Led } from "@/shared/ui/primitives/Led";
+import { useSoundEngine } from "@/shared/ui/sound/SoundContext";
+import { customColor } from "@/features/settings/model/display-settings";
 
 export type { SearchLayout };
 
@@ -74,6 +87,9 @@ export function SearchApp({
 
   const [query, setQuery] = useState(initialQuery);
   const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("recent");
+  const [forgeKindFilter, setForgeKindFilter] = useState<ForgeKindFilter>("all");
+  const forgeCollapse = useForgeCollapse();
+  const tabFolderCollapse = useStoredCollapse(TAB_FOLDER_COLLAPSED_STORAGE_KEY);
   const [timerTabId, setTimerTabId] = useState<number | null>(null);
   const [showTimers, setShowTimers] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ tab: TabInfo; x: number; y: number } | null>(
@@ -99,6 +115,10 @@ export function SearchApp({
   } = useSearchSnapshot();
   const { displaySettings, loaded: settingsLoaded } = useDisplaySettings();
   const { essentialNames, setEssentialNames } = useEssentialTabNames();
+  const sound = useSoundEngine({
+    enabled: displaySettings.soundEnabled,
+    volume: displaySettings.soundVolume,
+  });
 
   const results = useSearchResults({
     tabs,
@@ -109,6 +129,9 @@ export function SearchApp({
     layout,
     query,
     forgeSortMode,
+    forgeKindFilter,
+    forgeCollapsed: forgeCollapse.collapsed,
+    tabFolderCollapsed: tabFolderCollapse.collapsed,
   });
 
   const stats = useMemo(
@@ -150,6 +173,13 @@ export function SearchApp({
     return current ? tabBrowserId(current) : undefined;
   }, [tabs]);
 
+  // In the overlay the host overrides toggle like the timers; the toolbar
+  // popup opens them in their own window and has no pressed state.
+  const hostsOpen =
+    swapsViews &&
+    view?.kind === "hosts" &&
+    currentTabId !== undefined &&
+    view.tabId === currentTabId;
   const openHostOverrides = useCallback(
     (tabId: number) => {
       if (swapsViews) {
@@ -171,21 +201,30 @@ export function SearchApp({
     [swapsViews, timerActions],
   );
 
-  const openContextMenu = useCallback((tab: TabInfo, event: MouseEvent) => {
-    event.preventDefault();
-    setStatusMenu(null);
-    setContextMenu({ tab, x: event.clientX, y: event.clientY });
-  }, []);
+  const openContextMenu = useCallback(
+    (tab: TabInfo, event: MouseEvent) => {
+      event.preventDefault();
+      setStatusMenu(null);
+      setContextMenu({ tab, x: event.clientX, y: event.clientY });
+      sound.play("open");
+    },
+    [sound],
+  );
 
-  const toggleStatusMenu = useCallback((tab: TabInfo, anchor: DOMRect) => {
-    const tabId = tabBrowserId(tab);
-    setContextMenu(null);
-    setStatusMenu((current) =>
-      tabId === undefined || current?.tabId === tabId
-        ? null
-        : { tabId, x: anchor.left, y: anchor.bottom + 4 },
-    );
-  }, []);
+  const toggleStatusMenu = useCallback(
+    (tab: TabInfo, anchor: DOMRect) => {
+      const tabId = tabBrowserId(tab);
+      setContextMenu(null);
+      // The status key latches while its menu is open.
+      if (tabId !== undefined) sound.play(statusMenu?.tabId === tabId ? "latch-up" : "latch-down");
+      setStatusMenu((current) =>
+        tabId === undefined || current?.tabId === tabId
+          ? null
+          : { tabId, x: anchor.left, y: anchor.bottom + 4 },
+      );
+    },
+    [sound, statusMenu],
+  );
 
   const activateTab = useCallback(
     (tabId: number | undefined, domId: string | undefined, label: string) => {
@@ -227,20 +266,29 @@ export function SearchApp({
   );
 
   const onToggleTodo = useCallback(
-    (tabId: number) => todoActions.setTodo(tabId, todos.has(tabId) ? "none" : "todo"),
-    [todoActions, todos],
+    (tabId: number) => {
+      const wasTodo = todos.has(tabId);
+      sound.play(wasTodo ? "latch-up" : "latch-down");
+      todoActions.setTodo(tabId, wasTodo ? "none" : "todo");
+    },
+    [sound, todoActions, todos],
   );
 
   const onToggleTimerForm = useCallback(
-    (tabId: number) => setTimerTabId((current) => (current === tabId ? null : tabId)),
-    [],
+    (tabId: number) => {
+      if (timerTabId !== tabId) sound.play("open");
+      setTimerTabId((current) => (current === tabId ? null : tabId));
+    },
+    [sound, timerTabId],
   );
 
   // Size the overlay to the columns that are actually on screen. Using the
   // detection flag here reserved a second column before any issues existed,
   // so the panel jumped the moment the snapshot arrived.
+  // The timers dock shares the todo column, so it never makes a column of its own.
+  const showRightColumn = results.allTodoTabs.length > 0 || timers.size > 0;
   const overlayColumns =
-    1 + (results.forgeIssueEntries.length > 0 ? 1 : 0) + (results.allTodoTabs.length > 0 ? 1 : 0);
+    1 + (results.forgeIssueEntries.length > 0 ? 1 : 0) + (showRightColumn ? 1 : 0);
   const overlayAspect = overlayColumns === 3 ? "2/1" : overlayColumns === 2 ? "3/2" : "1/1";
   const overlayOpen = useOverlayEntrance(layout === "overlay", snapshotLoaded && settingsLoaded);
 
@@ -260,6 +308,24 @@ export function SearchApp({
     onActivateItem: activateItem,
     onActivateForgeEntry: activateForgeEntry,
     onActivateTodoTab: activateTodoTab,
+    onForgeGroupKey: (action, entry, index) => {
+      const { collapsed, setCollapsed } = forgeCollapse;
+      const providers = groupForgeIssueEntries(results.listedForgeIssueEntries, forgeSortMode);
+      let key: string | undefined;
+      if (action === "collapse") {
+        key = entry ? groupToCollapse(entry, collapsed) : undefined;
+      } else {
+        key = nearestCollapsedGroup(providers, collapsed, index);
+      }
+      if (!key) return undefined;
+      sound.play("tick");
+      setCollapsed(key, action === "collapse");
+      const next = new Set(collapsed);
+      if (action === "collapse") next.add(key);
+      else next.delete(key);
+      return flattenForgeNavigatorEntries(results.listedForgeIssueEntries, forgeSortMode, next)
+        .length;
+    },
   });
 
   const closeView = useCallback(() => {
@@ -289,7 +355,7 @@ export function SearchApp({
   const iconButtonClass = cn(
     primaryButtonClass,
     "inline-flex shrink-0 items-center justify-center p-0",
-    "size-[var(--zen-control)] rounded-[var(--zen-radius)]",
+    "size-[var(--zen-control)]",
   );
 
   return (
@@ -299,8 +365,9 @@ export function SearchApp({
       displaySettings={displaySettings}
       aspect={layout === "overlay" ? overlayAspect : "1/1"}
       open={layout === "overlay" ? overlayOpen : true}
+      sound={sound}
     >
-      <div class="mb-[var(--zen-space-3)] flex items-center gap-[var(--zen-space-2)]">
+      <div class="mb-[var(--zen-space-5)] flex items-center gap-[var(--zen-space-3)]">
         <SearchInput
           inputRef={navigation.inputRef}
           compact={compact}
@@ -317,13 +384,15 @@ export function SearchApp({
           type="button"
           class={cn(iconButtonClass, "relative")}
           title={timersOpen ? "Close active timers" : "Show active timers"}
+          aria-pressed={timersOpen}
           onClick={toggleTimers}
         >
-          <TimerIcon close={timersOpen} class="size-[var(--zen-icon-md)]" />
+          <TimerIcon class="size-[var(--zen-icon-md)]" />
+          <Led on={timersOpen} />
           {!timersOpen && timers.size > 0 && (
             <span
               class={cn(
-                "bg-zen-badge absolute -top-1 -right-1 rounded-full text-center",
+                "bg-zen-badge absolute -top-1 -right-1 rounded-full text-center text-white",
                 "min-w-[var(--zen-icon-md)] px-[var(--zen-space-1)]",
                 "text-[length:var(--zen-text-xs)] leading-[var(--zen-icon-md)]",
               )}
@@ -334,19 +403,21 @@ export function SearchApp({
         </button>
         <button
           type="button"
-          class={iconButtonClass}
+          class={cn(iconButtonClass, "relative")}
           title="Host overrides for this tab"
           aria-label="Host overrides for this tab"
+          aria-pressed={swapsViews ? hostsOpen : undefined}
           disabled={currentTabId === undefined}
           onClick={() => {
-            if (currentTabId !== undefined) {
-              openHostOverrides(currentTabId);
-            }
+            if (currentTabId === undefined) return;
+            if (hostsOpen) closeView();
+            else openHostOverrides(currentTabId);
           }}
         >
           <span aria-hidden="true" class="text-[length:var(--zen-text-base)]">
             ⇄
           </span>
+          {swapsViews && <Led on={hostsOpen} />}
         </button>
         <button
           type="button"
@@ -364,6 +435,27 @@ export function SearchApp({
           </span>
         </button>
       </div>
+
+      {results.currentTab && !(view?.kind === "timer" || view?.kind === "hosts") && (
+        <CurrentTabStrip
+          tab={results.currentTab}
+          forgeEntry={results.currentTabForgeEntry}
+          timer={timers.get(currentTabId ?? -1)}
+          isTodo={todos.has(currentTabId ?? -1)}
+          light={currentTabId === undefined ? undefined : statuses.get(currentTabId)}
+          statusMenuOpen={currentTabId !== undefined && statusMenu?.tabId === currentTabId}
+          truncate={
+            results.currentTabForgeEntry
+              ? displaySettings.truncateIssueTitles
+              : displaySettings.truncateTabTitles
+          }
+          compact={compact}
+          onContextMenu={openContextMenu}
+          onToggleTodo={onToggleTodo}
+          onOpenTimer={openTimer}
+          onOpenStatusMenu={toggleStatusMenu}
+        />
+      )}
 
       {view && (
         <OmnibarViewPanel
@@ -393,7 +485,7 @@ export function SearchApp({
       <div
         class={cn(
           "flex min-h-0 min-w-0 flex-1",
-          layout === "overlay" ? "gap-4 overflow-hidden" : "flex-col",
+          layout === "overlay" ? "gap-[var(--zen-space-6)] overflow-hidden" : "flex-col",
         )}
         // Kept mounted under a view so the lists keep their scroll and selection.
         style={view ? { display: "none" } : undefined}
@@ -402,10 +494,12 @@ export function SearchApp({
         <div class="flex min-h-0 min-w-0 flex-1 flex-col">
           <ul
             class={cn(
-              "zen-scroll m-0 flex min-h-0 flex-1 list-none flex-col overflow-y-auto p-0",
-              "gap-[var(--zen-section-gap)]",
+              "zs-card zen-scroll zs-counter m-0 flex min-h-0 list-none flex-col overflow-y-auto",
+              "gap-[var(--zen-section-gap)] p-[var(--zen-space-5)]",
+              "flex-1",
               compact && "min-h-[60px]",
             )}
+            style={{ backgroundColor: customColor(displaySettings.folderBackgroundColor) }}
             role="listbox"
           >
             <SearchResultsList
@@ -414,6 +508,8 @@ export function SearchApp({
               selectedIndex={navigation.selectedIndex}
               navigateForge={navigation.activePane !== "tabs"}
               displaySettings={displaySettings}
+              collapsedFolders={results.collapsedFolders}
+              onToggleFolder={tabFolderCollapse.toggle}
               timers={timers}
               todos={todos}
               statuses={statuses}
@@ -431,7 +527,8 @@ export function SearchApp({
             />
           </ul>
           {(loadError ||
-            (results.items.length === 0 && results.visibleTabs.length + spaces.length > 0)) && (
+            (results.matchedItems.length === 0 &&
+              results.visibleTabs.length + spaces.length > 0)) && (
             <div class="text-zen-muted px-1 py-3 text-center text-xs">
               {loadError || "No tabs or spaces found."}
             </div>
@@ -444,10 +541,19 @@ export function SearchApp({
         {layout === "overlay" && results.forgeIssueEntries.length > 0 && (
           <ForgeIssueNavigator
             entries={results.listedForgeIssueEntries}
-            currentEntry={results.currentForgeEntry}
-            backgroundColor={displaySettings.issueBackgroundColor}
+            backgroundColor={customColor(displaySettings.issueBackgroundColor)}
             truncate={displaySettings.truncateIssueTitles}
             sortMode={forgeSortMode}
+            keyboardEntries={results.navigatorEntries}
+            kindFilter={forgeKindFilter}
+            kindCounts={results.forgeKindCounts}
+            requestsLabel={results.requestsLabel}
+            onKindFilterChange={(filter) => {
+              setForgeKindFilter(filter);
+              navigation.setSelectedForgeIndex(0);
+            }}
+            collapsed={forgeCollapse.collapsed}
+            onToggleGroup={forgeCollapse.toggle}
             selectedIndex={navigation.activePane === "forge" ? navigation.selectedForgeIndex : -1}
             onActivate={activateForgeEntry}
             onSelect={navigation.setSelectedForgeIndex}
@@ -469,27 +575,47 @@ export function SearchApp({
             onOpenStatusMenu={toggleStatusMenu}
           />
         )}
-        {layout === "overlay" && results.allTodoTabs.length > 0 && (
-          <TodoNavigator
-            tabs={todoTabs}
-            allTabs={results.allTodoTabs}
-            statuses={statuses}
-            statusMenuTabId={statusMenu?.tabId ?? null}
-            backgroundColor={displaySettings.issueBackgroundColor}
-            truncate={displaySettings.truncateIssueTitles}
-            selectedIndex={navigation.activePane === "todos" ? navigation.selectedTodoIndex : -1}
-            onActivate={activateTodoTab}
-            onSelect={navigation.setSelectedTodoIndex}
-            onDone={(tab) => {
-              const tabId = tabBrowserId(tab);
-              if (tabId !== undefined) {
-                todoActions.setTodo(tabId, "none");
-              }
-            }}
-            onClear={todoActions.clearTodos}
-            onOpenStatusMenu={toggleStatusMenu}
-            onContextMenu={openContextMenu}
-          />
+        {layout === "overlay" && showRightColumn && (
+          <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--zen-space-6)]">
+            {results.allTodoTabs.length > 0 && (
+              <TodoNavigator
+                tabs={todoTabs}
+                allTabs={results.allTodoTabs}
+                statuses={statuses}
+                statusMenuTabId={statusMenu?.tabId ?? null}
+                backgroundColor={customColor(displaySettings.issueBackgroundColor)}
+                truncate={displaySettings.truncateIssueTitles}
+                selectedIndex={
+                  navigation.activePane === "todos" ? navigation.selectedTodoIndex : -1
+                }
+                onActivate={activateTodoTab}
+                onSelect={navigation.setSelectedTodoIndex}
+                onDone={(tab) => {
+                  const tabId = tabBrowserId(tab);
+                  if (tabId !== undefined) {
+                    todoActions.setTodo(tabId, "none");
+                  }
+                }}
+                onClear={todoActions.clearTodos}
+                onOpenStatusMenu={toggleStatusMenu}
+                onContextMenu={openContextMenu}
+                // With timers below, the todos stop at half the column and scroll inside it.
+                class={timers.size > 0 ? "max-h-[50%] flex-initial" : "flex-1"}
+              />
+            )}
+            {timers.size > 0 && (
+              <TimersDock
+                timers={timers}
+                backgroundColor={customColor(displaySettings.issueBackgroundColor)}
+                onClearAll={timerActions.clearAllTimers}
+                onClearTimer={timerActions.clearTimer}
+                onActivateTimer={(tabId) => {
+                  void sendExtensionMessage({ type: "switchTab", tabId }).then(onClose);
+                }}
+                onEditTimer={openTimer}
+              />
+            )}
+          </div>
         )}
       </div>
 

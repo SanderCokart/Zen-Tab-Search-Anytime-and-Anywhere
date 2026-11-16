@@ -1,14 +1,13 @@
 import { HostOverridesPopup } from "@/features/hosts/ui/HostOverridesPopup";
 import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersPanel";
-import { clearButtonClass } from "@/features/search/ui/lib/styles";
 import { TimerPopup } from "@/features/timers/ui/TimerPopup";
 import type { OmnibarView } from "@/shared/messaging/protocol";
 import type { TabTimer } from "@/shared/types";
-import { cn } from "@/shared/ui/cn";
 
 export interface OmnibarViewPanelProps {
   view: OmnibarView;
   timers: Map<number, TabTimer>;
+  /** Closes the view; the timer form and host overrides call it when they are done. */
   onBack: () => void;
   onClearAll: () => void;
   onClearTimer: (tabId: number) => void;
@@ -32,24 +31,14 @@ export function OmnibarViewPanel({
 }: OmnibarViewPanelProps) {
   return (
     <div class="flex min-h-0 flex-1 flex-col gap-[var(--zen-space-2)]">
-      <div class="flex items-center gap-[var(--zen-space-2)]">
-        <button
-          type="button"
-          class={cn(clearButtonClass, "px-[var(--zen-space-2)] py-[var(--zen-space-1)]")}
-          onClick={onBack}
-        >
-          ← Back to search
-        </button>
-        {view.kind === "timers" && (
-          <span class="text-zen-muted text-[length:var(--zen-text-xs)]">
-            Click a timer to go to its tab
-          </span>
-        )}
-      </div>
+      {view.kind === "timers" && (
+        <span class="zs-label text-zen-muted">Click a timer to go to its tab</span>
+      )}
       {/* Padded so focus outlines, drawn outside their field, are not clipped by the scroll box. */}
-      <div class="zen-scroll min-h-0 flex-1 overflow-y-auto p-[var(--zen-space-1)]">
+      <div class="zen-scroll zs-card min-h-0 flex-1 overflow-y-auto p-[var(--zen-space-5)]">
         {view.kind === "timers" && (
           <ActiveTimersPanel
+            bare
             timers={timers}
             onClearAll={onClearAll}
             onClearTimer={onClearTimer}

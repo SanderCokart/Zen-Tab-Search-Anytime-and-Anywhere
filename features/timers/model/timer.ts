@@ -37,6 +37,43 @@ export function formatCompactDuration(milliseconds: number): string {
   return `${seconds}s`;
 }
 
+/**
+ * A remaining time as one short token that never wraps: `45s`, `27m 40s`,
+ * `8h 00m`, `2d 03h`. Minutes and hours are zero-padded so a column of them lines up.
+ */
+export function formatShortCountdown(milliseconds: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  if (days > 0) {
+    return `${days}d ${pad(hours)}h`;
+  }
+  if (hours > 0) {
+    return `${hours}h ${pad(minutes)}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${pad(seconds)}s`;
+  }
+  return `${seconds}s`;
+}
+
+/**
+ * The big readout of the soonest timer: a clock under an hour (`27:40`), the short
+ * form above it (`8h 00m`), since seconds stop mattering once a timer is hours away.
+ */
+export function formatLcdCountdown(milliseconds: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  if (totalSeconds >= 3600) {
+    return formatShortCountdown(milliseconds);
+  }
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${pad(Math.floor(totalSeconds / 60))}:${pad(totalSeconds % 60)}`;
+}
+
 export function formatHumanDuration(milliseconds: number): string {
   const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
   const days = Math.floor(totalSeconds / 86_400);

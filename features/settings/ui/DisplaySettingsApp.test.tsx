@@ -28,7 +28,7 @@ describe("DisplaySettingsApp", () => {
     document.body.appendChild(root);
     render(<DisplaySettingsApp />, root);
 
-    await vi.waitFor(() => expect(root.textContent).toContain("Display options"));
+    await vi.waitFor(() => expect(root.textContent).toContain("Settings"));
     const colorButton = root.querySelector<HTMLButtonElement>(
       "button[aria-label='Choose text color']",
     );
@@ -38,14 +38,12 @@ describe("DisplaySettingsApp", () => {
     expect(document.querySelector(".pcr-type[data-type='HEXA']")).toBeTruthy();
     expect(document.querySelector(".pcr-type[data-type='RGBA']")).toBeTruthy();
     expect(document.querySelector(".pcr-type[data-type='HSLA']")).toBeTruthy();
-    const checkboxes = root.querySelectorAll<HTMLInputElement>(
-      "input[type='checkbox']:not([data-testid])",
-    );
-    expect(checkboxes).toHaveLength(4);
-    await vi.waitFor(() => expect(checkboxes[2]?.disabled).toBe(false));
-    checkboxes[2]?.click();
+    const folders = root.querySelector<HTMLInputElement>("[data-testid='zen-groupFolders']")!;
+    const subfolders = root.querySelector<HTMLInputElement>("[data-testid='zen-groupSubfolders']")!;
+    await vi.waitFor(() => expect(folders.disabled).toBe(false));
+    folders.click();
 
-    await vi.waitFor(() => expect(checkboxes[3]?.disabled).toBe(true));
+    await vi.waitFor(() => expect(subfolders.disabled).toBe(true));
     expect(set).toHaveBeenCalledWith({
       displaySettings: {
         detectForgeIssues: true,
@@ -56,12 +54,12 @@ describe("DisplaySettingsApp", () => {
         hideSpacesInOverlay: false,
         hideEssentialsInPopup: false,
         hideEssentialsInOverlay: false,
-        fontSize: 12,
+        fontSize: 14,
         uiScale: 1,
         respectZoom: false,
         truncateTabTitles: true,
         truncateIssueTitles: true,
-        sectionGap: 4,
+        sectionGap: 20,
         tabGap: 4,
         folderGap: 12,
         essentialGap: 8,
@@ -69,10 +67,13 @@ describe("DisplaySettingsApp", () => {
         issueGap: 4,
         todoGap: 4,
         reuseExternalTabs: false,
-        textColor: "#f5f5f5",
-        issueBackgroundColor: "#252525",
-        folderBackgroundColor: "#2d2d2d",
-        spaceBackgroundColor: "#292929",
+        soundEnabled: true,
+        soundVolume: 0.4,
+        theme: "system",
+        textColor: "auto",
+        issueBackgroundColor: "auto",
+        folderBackgroundColor: "auto",
+        spaceBackgroundColor: "auto",
       },
     });
 
@@ -104,17 +105,17 @@ describe("DisplaySettingsApp", () => {
     document.body.appendChild(root);
     render(<DisplaySettingsApp />, root);
 
-    const checkboxes = await vi.waitFor(() => {
-      const inputs = root.querySelectorAll<HTMLInputElement>(
-        "input[type='checkbox']:not([data-testid])",
-      );
-      expect(inputs).toHaveLength(4);
-      expect(inputs[0]?.disabled).toBe(false);
-      return inputs;
+    const detect = await vi.waitFor(() => {
+      const input = root.querySelector<HTMLInputElement>("[data-testid='zen-detectForgeIssues']");
+      expect(input?.disabled).toBe(false);
+      return input!;
     });
-    checkboxes[0]?.click();
+    const overlayOnly = root.querySelector<HTMLInputElement>(
+      "[data-testid='zen-filterIssuesInOverlay']",
+    )!;
+    detect.click();
 
-    await vi.waitFor(() => expect(checkboxes[1]?.disabled).toBe(true));
+    await vi.waitFor(() => expect(overlayOnly.disabled).toBe(true));
     expect(set).toHaveBeenCalledWith({
       displaySettings: {
         detectForgeIssues: false,
@@ -125,12 +126,12 @@ describe("DisplaySettingsApp", () => {
         hideSpacesInOverlay: false,
         hideEssentialsInPopup: false,
         hideEssentialsInOverlay: false,
-        fontSize: 12,
+        fontSize: 14,
         uiScale: 1,
         respectZoom: false,
         truncateTabTitles: true,
         truncateIssueTitles: true,
-        sectionGap: 4,
+        sectionGap: 20,
         tabGap: 4,
         folderGap: 12,
         essentialGap: 8,
@@ -138,10 +139,13 @@ describe("DisplaySettingsApp", () => {
         issueGap: 4,
         todoGap: 4,
         reuseExternalTabs: false,
-        textColor: "#f5f5f5",
-        issueBackgroundColor: "#252525",
-        folderBackgroundColor: "#2d2d2d",
-        spaceBackgroundColor: "#292929",
+        soundEnabled: true,
+        soundVolume: 0.4,
+        theme: "system",
+        textColor: "auto",
+        issueBackgroundColor: "auto",
+        folderBackgroundColor: "auto",
+        spaceBackgroundColor: "auto",
       },
     });
 
@@ -192,12 +196,12 @@ describe("DisplaySettingsApp", () => {
           hideSpacesInOverlay: false,
           hideEssentialsInPopup: false,
           hideEssentialsInOverlay: false,
-          fontSize: 12,
+          fontSize: 14,
           uiScale: 1,
           respectZoom: false,
           truncateTabTitles: true,
           truncateIssueTitles: true,
-          sectionGap: 4,
+          sectionGap: 20,
           tabGap: 4,
           folderGap: 12,
           essentialGap: 8,
@@ -205,10 +209,13 @@ describe("DisplaySettingsApp", () => {
           issueGap: 4,
           todoGap: 4,
           reuseExternalTabs: false,
-          textColor: "#f5f5f5",
-          issueBackgroundColor: "#252525",
-          folderBackgroundColor: "#2d2d2d",
-          spaceBackgroundColor: "#292929",
+          soundEnabled: true,
+          soundVolume: 0.4,
+          theme: "system",
+          textColor: "auto",
+          issueBackgroundColor: "auto",
+          folderBackgroundColor: "auto",
+          spaceBackgroundColor: "auto",
         },
       }),
     );
@@ -287,6 +294,47 @@ describe("DisplaySettingsApp", () => {
         },
       }),
     );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("saves the theme picked in the segmented control", async () => {
+    const set = vi.fn(async () => undefined);
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: {
+            get: vi.fn(async () => ({ displaySettings: {} })),
+            set,
+          },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    render(<DisplaySettingsApp />, root);
+
+    const dark = await vi.waitFor(() => {
+      const button = root.querySelector<HTMLButtonElement>(
+        "[role='radiogroup'][aria-label='Theme'] [role='radio']:nth-child(3)",
+      );
+      expect(button?.disabled).toBe(false);
+      return button!;
+    });
+    expect(
+      root.querySelector("[role='radiogroup'][aria-label='Theme'] [aria-checked='true']")
+        ?.textContent,
+    ).toBe("System");
+    dark.click();
+
+    await vi.waitFor(() =>
+      expect(set).toHaveBeenCalledWith({
+        displaySettings: { ...DEFAULT_DISPLAY_SETTINGS, theme: "dark" },
+      }),
+    );
+    expect(root.querySelector("main")?.getAttribute("data-theme")).toBe("dark");
 
     render(null, root);
     root.remove();

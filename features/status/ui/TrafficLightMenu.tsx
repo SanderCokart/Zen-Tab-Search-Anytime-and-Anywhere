@@ -28,7 +28,7 @@ export function TrafficLightMenu({ x, y, light, onSelect }: TrafficLightMenuProp
   return (
     <div
       ref={menuRef}
-      class="bg-zen-panel border-zen-line-medium fixed z-50 min-w-[140px] rounded-md border p-1 shadow-lg"
+      class="zs-card border-zen-line-medium fixed z-50 min-w-[140px] rounded-[var(--zs-r-lcd)] border p-[var(--zen-space-1)]"
       style={{ left: `${position.left}px`, top: `${position.top}px` }}
       data-testid="zen-traffic-light-menu"
       role="menu"

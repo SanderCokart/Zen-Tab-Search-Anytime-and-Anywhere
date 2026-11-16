@@ -27,13 +27,11 @@ export function TabSummary({ label, tab, title }: TabSummaryProps) {
 
   return (
     <section
-      class="border-zen-line bg-zen-chip flex flex-col gap-[var(--zen-space-1)] rounded-[var(--zen-radius)] border p-[var(--zen-space-2)]"
+      class="zs-well flex flex-col gap-[var(--zen-space-1)] rounded-[var(--zs-r-lcd)] p-[var(--zen-space-2)]"
       data-testid="zen-tab-summary"
       aria-label={`${label} ${title}`}
     >
-      <span class="text-zen-faint text-[length:var(--zen-text-xs)] tracking-wide uppercase">
-        {label}
-      </span>
+      <span class="zs-label">{label}</span>
       <div class="flex min-w-0 items-center gap-[var(--zen-space-2)]">
         {tab?.favIconUrl && (
           <img src={tab.favIconUrl} alt="" class="size-[var(--zen-icon-lg)] shrink-0 rounded-sm" />

@@ -42,7 +42,7 @@ export function HostGroupForm({ initial, submitLabel, onSubmit, onCancel }: Host
 
   return (
     <form
-      class="border-zen-line bg-zen-panel flex flex-col gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] border p-[var(--zen-space-2)]"
+      class="zs-card flex flex-col gap-[var(--zen-space-2)] p-[var(--zen-space-3)]"
       onSubmit={(event) => {
         event.preventDefault();
         const result = parseHostOverrideDraft(draft);

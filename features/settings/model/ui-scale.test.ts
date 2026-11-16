@@ -11,6 +11,8 @@ import {
   MIN_UI_SCALE,
   clampFontSize,
   clampUiScale,
+  cancelZoom,
+  normalizeZoom,
   resolveBaseFontSize,
   uiScaleStyle,
 } from "@/features/settings/model/ui-scale";
@@ -38,18 +40,33 @@ describe("ui scale", () => {
     );
   });
 
-  it("derives a zoom-independent size from the overlay's own box by default", () => {
-    // The overlay is min(80vw, 90dvh) and the ramp is tuned against a 720px panel,
-    // so a 16px base becomes min(1.778vw, 2dvh) — 16px on a 800px-tall window.
-    expect(resolveBaseFontSize(settings({ fontSize: 16 }), "overlay")).toBe("min(1.778vw, 2dvh)");
+  it("renders the configured size on screen by dividing out the tab zoom", () => {
+    // A CSS px is `zoom` screen px, so 14px at 150% has to be 9.333 CSS px.
+    expect(resolveBaseFontSize(settings({ fontSize: 14 }), "overlay", 1.5)).toBe("9.333px");
+    expect(resolveBaseFontSize(settings({ fontSize: 14 }), "overlay", 0.5)).toBe("28px");
+    expect(resolveBaseFontSize(settings({ fontSize: 14 }), "overlay", 1)).toBe("14px");
   });
 
-  it("keeps the zoom-independent size free of any px term", () => {
-    // A px length anywhere in the expression would scale with page zoom and so
-    // reintroduce exactly the dependence this mode removes.
-    for (const fontSize of [MIN_FONT_SIZE, 16, MAX_FONT_SIZE]) {
-      expect(resolveBaseFontSize(settings({ fontSize }), "overlay")).not.toContain("px");
+  it("is the configured px size at any window size, because it reads no viewport unit", () => {
+    for (const fontSize of [MIN_FONT_SIZE, 14, MAX_FONT_SIZE]) {
+      expect(resolveBaseFontSize(settings({ fontSize }), "overlay", 1)).toBe(`${fontSize}px`);
+      expect(resolveBaseFontSize(settings({ fontSize }), "overlay", 1.25)).not.toMatch(/vw|dvh/);
     }
+  });
+
+  it("treats a missing or nonsensical zoom as no zoom", () => {
+    expect(resolveBaseFontSize(settings({ fontSize: 14 }), "overlay")).toBe("14px");
+    expect(normalizeZoom(undefined)).toBe(1);
+    expect(normalizeZoom(Number.NaN)).toBe(1);
+    expect(normalizeZoom(0)).toBe(0.3);
+    expect(normalizeZoom(99)).toBe(5);
+    expect(cancelZoom(12, 2)).toBe(6);
+  });
+
+  it("leaves the plain px length alone when following the page zoom", () => {
+    expect(resolveBaseFontSize(settings({ fontSize: 14, respectZoom: true }), "overlay", 1.5)).toBe(
+      "14px",
+    );
   });
 
   it("keeps the popup windows on the plain px font size, in both modes", () => {
@@ -71,17 +88,17 @@ describe("ui scale", () => {
     expect(clampGap(Number.NaN, 12)).toBe(12);
   });
 
-  it("stores gaps as a ratio of the 12px reference, so the slider reads as pixels", () => {
+  it("stores gaps as a ratio of the 14px reference, so the slider reads as pixels", () => {
     const style = uiScaleStyle(
-      settings({ fontSize: 12, uiScale: 1.25, respectZoom: true, tabGap: 0, folderGap: 12 }),
+      settings({ fontSize: 14, uiScale: 1.25, respectZoom: true, tabGap: 0, folderGap: 28 }),
       "overlay",
     );
 
-    expect(style["--zen-font-size"]).toBe("12px");
+    expect(style["--zen-font-size"]).toBe("14px");
     expect(style["--zen-scale"]).toBe("1.25");
     expect(style["--zen-tab-gap-ratio"]).toBe("0");
-    // 12px at the 12px reference is exactly one base font size.
-    expect(style["--zen-folder-gap-ratio"]).toBe("1");
+    // 28px at the 14px reference is exactly two base font sizes.
+    expect(style["--zen-folder-gap-ratio"]).toBe("2");
     expect(Object.keys(style)).toHaveLength(2 + GAP_SETTINGS.length);
   });
 

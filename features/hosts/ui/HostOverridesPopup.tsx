@@ -24,6 +24,9 @@ import { HostGroupCard } from "@/features/hosts/ui/components/HostGroupCard";
 import { HostGroupForm } from "@/features/hosts/ui/components/HostGroupForm";
 import { primaryButtonClass } from "@/features/hosts/ui/lib/styles";
 import { TabSummary } from "@/shared/ui/TabSummary";
+import { useResolvedTheme } from "@/shared/ui/theme";
+import { cn } from "@/shared/ui/cn";
+import { customColor } from "@/features/settings/model/display-settings";
 
 /** Which form is open: none, a new group, or the group with this ID in this list. */
 type Editing =
@@ -64,6 +67,7 @@ export function HostOverridesPopup({ tabId, onClose, embedded = false }: HostOve
   const [editing, setEditing] = useState<Editing>({ kind: "none" });
   const [error, setError] = useState<string>();
   const { displaySettings } = useDisplaySettings();
+  const theme = useResolvedTheme(displaySettings.theme);
   const validTab = isUsableTabId(tabId);
   const routing = [...tabGroups, ...globalGroups].some((group) => group.enabled);
 
@@ -271,12 +275,20 @@ export function HostOverridesPopup({ tabId, onClose, embedded = false }: HostOve
 
   return (
     <div
-      class="flex flex-col gap-[var(--zen-space-3)]"
+      class={cn(
+        "flex flex-col gap-[var(--zen-space-3)]",
+        !embedded && "zs-chassis min-h-screen p-[var(--zen-space-3)]",
+      )}
       data-zen-ui={embedded ? undefined : true}
+      data-theme={embedded ? undefined : theme}
       style={
         embedded
           ? undefined
-          : { ...uiScaleStyle(displaySettings, "popup"), color: displaySettings.textColor }
+          : {
+              ...uiScaleStyle(displaySettings, "popup"),
+              colorScheme: theme,
+              color: customColor(displaySettings.textColor),
+            }
       }
     >
       <header class="flex flex-col gap-[var(--zen-space-2)]">
@@ -292,7 +304,7 @@ export function HostOverridesPopup({ tabId, onClose, embedded = false }: HostOve
 
       {active.length > 0 && (
         <section
-          class="flex flex-col gap-[var(--zen-space-1)] rounded-[var(--zen-radius)] border border-amber-500/60 bg-amber-900/30 p-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]"
+          class="flex flex-col gap-[var(--zen-space-1)] rounded-[var(--zen-radius)] border border-amber-500/60 bg-amber-500/15 p-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]"
           role="status"
         >
           <strong>This tab's traffic is being rerouted</strong>

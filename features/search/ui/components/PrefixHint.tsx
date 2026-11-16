@@ -6,13 +6,14 @@ export function PrefixHint({ prefixes, column }: { prefixes: readonly string[]; 
   const spoken = prefixes.join(" or ");
   return (
     <span
-      class="text-zen-muted shrink-0 text-[length:var(--zen-text-base)] whitespace-pre"
+      class="text-zen-danger zs-head-glyph shrink-0 whitespace-pre"
       title={`Start your search with ${spoken} to search ${column}`}
       aria-label={`Search prefix: ${spoken}`}
       data-testid="zen-prefix-hint"
     >
       <strong>{prefixes.join(" / ")}</strong>
-      {" - "}
+      {/* Kept for the tooltip and screen readers; the header's own gap separates it visually. */}
+      <span class="text-[0px]">{" - "}</span>
     </span>
   );
 }

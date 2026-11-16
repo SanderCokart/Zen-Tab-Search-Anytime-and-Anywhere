@@ -1,5 +1,7 @@
 import * as v from "valibot";
 import { clampFontSize, clampGap, clampUiScale } from "@/features/settings/model/ui-scale";
+import { clampVolume, DEFAULT_SOUND_VOLUME } from "@/shared/ui/sound/engine";
+import { THEME_PREFERENCES } from "@/shared/ui/theme";
 
 export const DISPLAY_SETTINGS_STORAGE_KEY = "displaySettings";
 
@@ -20,7 +22,7 @@ const DEFAULTS = {
   hideEssentialsInPopup: false,
   hideEssentialsInOverlay: false,
   /** Base font size in px, before the surface and relative-mode adjustments. */
-  fontSize: 12,
+  fontSize: 14,
   /** Density multiplier for padding, gaps, icons and tiles. */
   uiScale: 1,
   /** Overlay only: follow the page zoom level instead of holding a constant size. */
@@ -28,30 +30,96 @@ const DEFAULTS = {
   truncateTabTitles: true,
   truncateIssueTitles: true,
   /** Gaps, in pixels at the default font size, snapped to 4. */
-  sectionGap: 4,
+  sectionGap: 20,
   tabGap: 4,
   folderGap: 12,
   essentialGap: 8,
   spaceGap: 8,
   issueGap: 4,
   todoGap: 4,
+  /** Interface sounds: key clicks, latches and chimes. */
+  soundEnabled: true,
+  /** 0..1, the level the sounds are scaled to. */
+  soundVolume: DEFAULT_SOUND_VOLUME,
   /** Focus an already-open tab when another app opens the same address. */
   reuseExternalTabs: false,
+  /** Light, dark, or whichever the system asks for. */
+  theme: "system" as (typeof THEME_PREFERENCES)[number],
+  /** "auto" takes the colour from the theme; a hex value overrides it. */
+  textColor: "auto",
+  issueBackgroundColor: "auto",
+  folderBackgroundColor: "auto",
+  spaceBackgroundColor: "auto",
+};
+
+/** The value of a colour setting that leaves the colour to the theme. */
+export const AUTO_COLOR = "auto";
+
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+/**
+ * The colours that used to be the defaults, all dark. A stored value equal to
+ * one of them was never a choice, and would break the light theme, so it
+ * migrates back to "auto".
+ */
+const LEGACY_DARK_DEFAULTS: Record<string, string> = {
   textColor: "#f5f5f5",
   issueBackgroundColor: "#252525",
   folderBackgroundColor: "#2d2d2d",
   spaceBackgroundColor: "#292929",
 };
 
-const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+/**
+ * What each colour looks like while it is left to the theme: the colour picker's
+ * swatch shows this, so opening and closing the picker used to save it as a
+ * fixed colour. That pinned one theme's colour, and the other theme kept it.
+ */
+export const AUTO_SWATCH = {
+  light: {
+    textColor: "#161616",
+    issueBackgroundColor: "#fafaf8",
+    folderBackgroundColor: "#fafaf8",
+    spaceBackgroundColor: "#fafaf8",
+  },
+  dark: {
+    textColor: "#ededea",
+    issueBackgroundColor: "#1b1b1b",
+    folderBackgroundColor: "#1b1b1b",
+    spaceBackgroundColor: "#1b1b1b",
+  },
+} as const satisfies Record<"light" | "dark", Record<string, string>>;
+
+/**
+ * Whether a stored colour was never a real choice: an old dark default, or a
+ * theme swatch the picker saved by mistake. Both migrate back to "auto".
+ */
+function isStrayColor(key: keyof typeof LEGACY_DARK_DEFAULTS, value: string): boolean {
+  const lower = value.toLowerCase();
+  return (
+    lower === LEGACY_DARK_DEFAULTS[key] ||
+    lower === AUTO_SWATCH.light[key as keyof typeof AUTO_SWATCH.light] ||
+    lower === AUTO_SWATCH.dark[key as keyof typeof AUTO_SWATCH.dark]
+  );
+}
+
+/** The colour to paint with, or undefined to let the theme's own colour show. */
+export function customColor(value: string): string | undefined {
+  return HEX_COLOR.test(value) ? value : undefined;
+}
 
 /** A stored value that falls back to the default instead of failing the parse. */
 function boolean(fallback: boolean) {
   return v.fallback(v.boolean(), fallback);
 }
 
-function color(fallback: string) {
-  return v.fallback(v.pipe(v.string(), v.regex(HEX_COLOR)), fallback);
+function color(key: keyof typeof LEGACY_DARK_DEFAULTS) {
+  return v.fallback(
+    v.pipe(
+      v.union([v.literal(AUTO_COLOR), v.pipe(v.string(), v.regex(HEX_COLOR))]),
+      v.transform((value) => (isStrayColor(key, value) ? AUTO_COLOR : value)),
+    ),
+    AUTO_COLOR,
+  );
 }
 
 /**
@@ -108,11 +176,14 @@ const displaySettingsSchema = v.pipe(
       spaceGap: gap(DEFAULTS.spaceGap),
       issueGap: gap(DEFAULTS.issueGap),
       todoGap: gap(DEFAULTS.todoGap),
+      soundEnabled: boolean(DEFAULTS.soundEnabled),
+      soundVolume: scalar(DEFAULTS.soundVolume, clampVolume),
       reuseExternalTabs: boolean(DEFAULTS.reuseExternalTabs),
-      textColor: color(DEFAULTS.textColor),
-      issueBackgroundColor: color(DEFAULTS.issueBackgroundColor),
-      folderBackgroundColor: color(DEFAULTS.folderBackgroundColor),
-      spaceBackgroundColor: color(DEFAULTS.spaceBackgroundColor),
+      theme: v.fallback(v.picklist(THEME_PREFERENCES), DEFAULTS.theme),
+      textColor: color("textColor"),
+      issueBackgroundColor: color("issueBackgroundColor"),
+      folderBackgroundColor: color("folderBackgroundColor"),
+      spaceBackgroundColor: color("spaceBackgroundColor"),
     }),
     DEFAULTS,
   ),

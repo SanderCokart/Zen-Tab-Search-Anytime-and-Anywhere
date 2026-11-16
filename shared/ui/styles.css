@@ -1,35 +1,46 @@
 @import "tailwindcss";
 
-@theme {
+/*
+ * The existing `--color-zen-*` names stay, but they now point at the runtime
+ * `--zs-*` tokens defined under `[data-zen-ui]` below, so every `bg-zen-*` and
+ * `text-zen-*` class follows the light/dark theme. `inline` makes the utilities
+ * read the token directly instead of a root-level copy, which would not exist
+ * inside the content script's shadow root.
+ */
+@theme inline {
   --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --color-zen-bg: #202020;
-  --color-zen-raised: #2a2a2a;
-  --color-zen-surface: #353535;
-  --color-zen-chip: #2d2d2d;
-  --color-zen-panel: #292929;
-  --color-zen-accent: #626262;
-  --color-zen-accent-hover: #777777;
-  --color-zen-border: #888888;
-  --color-zen-line: #5a5a5a;
-  --color-zen-muted: #999999;
-  --color-zen-subtle: #b8b8b8;
-  --color-zen-faint: #c8c8c8;
-  --color-zen-lavender: #d0d0d0;
-  --color-zen-badge: #707070;
-  --color-zen-danger: #ff9292;
-  --color-zen-clear: #777777;
-  --color-zen-text: #f5f5f5;
-  --color-zen-overlay: rgb(0 0 0 / 60%);
-  --color-zen-overlay-soft: rgb(0 0 0 / 40%);
-  --color-zen-tooltip: rgb(0 0 0 / 90%);
-  --color-zen-line-soft: rgb(255 255 255 / 10%);
-  --color-zen-line-medium: rgb(255 255 255 / 15%);
-  --color-zen-line-strong: rgb(255 255 255 / 20%);
+  --font-title: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --color-zen-bg: var(--zs-chassis);
+  --color-zen-raised: var(--zs-card);
+  --color-zen-surface: var(--zs-pressed);
+  --color-zen-surface-faint: var(--zs-pressed);
+  --color-zen-chip: var(--zs-key);
+  --color-zen-panel: var(--zs-card);
+  --color-zen-accent: var(--zs-red);
+  --color-zen-border: var(--zs-ink-3);
+  --color-zen-line: var(--zs-line);
+  --color-zen-muted: var(--zs-ink-3);
+  --color-zen-subtle: var(--zs-ink-2);
+  --color-zen-faint: var(--zs-ink-2);
+  --color-zen-lavender: var(--zs-ink-2);
+  --color-zen-badge: var(--zs-red);
+  --color-zen-danger: var(--zs-red-ink);
+  --color-zen-timer: var(--zs-red-ink);
+  --color-zen-ok: var(--zs-green);
+  --color-zen-clear: var(--zs-line);
+  --color-zen-text: var(--zs-ink-1);
+  --color-zen-overlay: var(--zs-scrim);
+  --color-zen-overlay-soft: var(--zs-scrim-soft);
+  --color-zen-tooltip: var(--zs-lcd);
+  --color-zen-line-soft: var(--zs-line-soft);
+  --color-zen-line-medium: var(--zs-line-medium);
+  --color-zen-line-strong: var(--zs-line-strong);
 }
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light dark;
   }
 
   :host,
@@ -38,7 +49,7 @@
   }
 
   body {
-    @apply bg-zen-bg text-zen-text m-0 font-sans text-[13px] leading-snug;
+    @apply m-0 font-sans text-[13px] leading-snug;
   }
 
   :host([popover]),
@@ -70,104 +81,1067 @@
    * everywhere in the subtree.
    */
   [data-zen-ui] {
-    --zen-font-size: 12px;
+    /* The "Calm" default: titles read at 14px, labels and meta at 11px. */
+    --zen-font-size: 14px;
     --zen-scale: 1;
 
     font-size: var(--zen-font-size);
 
     /* Type ramp — tracks the font size only, so text stays readable at any density. */
-    --zen-text-xs: calc(var(--zen-font-size) * 0.69);
-    --zen-text-sm: calc(var(--zen-font-size) * 0.78);
-    --zen-text-md: calc(var(--zen-font-size) * 0.88);
+    --zen-text-xs: calc(var(--zen-font-size) * 0.786);
+    --zen-text-sm: calc(var(--zen-font-size) * 0.857);
+    --zen-text-md: calc(var(--zen-font-size) * 0.929);
     --zen-text-base: var(--zen-font-size);
-    --zen-text-lg: calc(var(--zen-font-size) * 1.14);
-
-    /* Spacing ramp — tracks both, so density is a real knob. */
-    --zen-space-1: calc(var(--zen-font-size) * 0.25 * var(--zen-scale));
-    --zen-space-2: calc(var(--zen-font-size) * 0.5 * var(--zen-scale));
-    --zen-space-3: calc(var(--zen-font-size) * 0.75 * var(--zen-scale));
-    --zen-space-4: calc(var(--zen-font-size) * 1 * var(--zen-scale));
-
-    --zen-radius: calc(var(--zen-font-size) * 0.5 * var(--zen-scale));
-    --zen-radius-lg: calc(var(--zen-font-size) * 0.9 * var(--zen-scale));
-
-    /* Icons and controls. */
-    --zen-icon-sm: calc(var(--zen-font-size) * 0.75 * var(--zen-scale));
-    --zen-icon-md: calc(var(--zen-font-size) * 1 * var(--zen-scale));
-    --zen-icon-lg: calc(var(--zen-font-size) * 1.5 * var(--zen-scale));
-    --zen-control: calc(var(--zen-font-size) * 2.75 * var(--zen-scale));
+    --zen-text-lg: calc(var(--zen-font-size) * 1.143);
+    --zen-text-display: calc(var(--zen-font-size) * 1.857);
 
     /*
-     * The spaces and essential-tab grids at the top of the results. These are the
-     * biggest consumers of vertical space, so they get their own tokens and can be
-     * tightened without dragging the rest of the list with them.
+     * Spacing ramp — tracks both, so density is a real knob. At the default size it
+     * is the mockup grid: 4 / 8 / 12 / 16 / 20 / 24. `-5` is the card padding and
+     * `-6` the gap between sections and columns.
      */
-    --zen-tile-space: calc(var(--zen-font-size) * 10 * var(--zen-scale));
-    --zen-tile-essential: calc(var(--zen-font-size) * 12 * var(--zen-scale));
+    --zen-space-1: calc(var(--zen-font-size) * 0.286 * var(--zen-scale));
+    --zen-space-2: calc(var(--zen-font-size) * 0.571 * var(--zen-scale));
+    --zen-space-3: calc(var(--zen-font-size) * 0.857 * var(--zen-scale));
+    --zen-space-4: calc(var(--zen-font-size) * 1.143 * var(--zen-scale));
+    --zen-space-5: calc(var(--zen-font-size) * 1.429 * var(--zen-scale));
+    --zen-status-gap: calc(var(--zen-font-size) * 1.429 * var(--zen-scale));
+    --zen-space-6: calc(var(--zen-font-size) * 1.714 * var(--zen-scale));
+
+    --zen-radius: calc(var(--zen-font-size) * 0.714 * var(--zen-scale));
+    --zen-radius-lg: calc(var(--zen-font-size) * 1 * var(--zen-scale));
+
+    /* Icons and controls. */
+    --zen-icon-sm: calc(var(--zen-font-size) * 0.929 * var(--zen-scale));
+    --zen-icon-md: calc(var(--zen-font-size) * 1.143 * var(--zen-scale));
+    --zen-icon-lg: calc(var(--zen-font-size) * 1.429 * var(--zen-scale));
+    --zen-control: calc(var(--zen-font-size) * 3.43 * var(--zen-scale));
+
+    /* The one row every tab, issue and essential uses: 40px at the default. */
+    --zen-row-height: calc(var(--zen-font-size) * 2.857 * var(--zen-scale));
+    --zen-row-size: var(--zen-row-height);
+    /* The small key on a row, and the horizontal padding of a row. */
+    --zen-mini-key: calc(var(--zen-font-size) * 2 * var(--zen-scale));
+    --zen-row-pad: calc(var(--zen-font-size) * 0.714 * var(--zen-scale));
 
     /*
      * The configurable gaps. Each is picked in pixels and stored as a ratio of a
-     * 12px reference, so at the default font size the number the user chose is the
+     * 14px reference, so at the default font size the number the user chose is the
      * gap in pixels, and it scales with the UI from there. Each one drives exactly
      * one `gap` or margin in one place; the fallbacks are the defaults, for a
      * surface that has not set them.
      */
-    --zen-row-size: calc(
-      var(--zen-icon-lg) + var(--zen-space-2) * 2 + var(--zen-text-base) + var(--zen-text-sm) +
-        var(--zen-space-1)
-    );
-
-    --zen-section-gap: calc(var(--zen-font-size) * var(--zen-section-gap-ratio, 0.333));
-    --zen-tab-gap: calc(var(--zen-font-size) * var(--zen-tab-gap-ratio, 0.333));
-    --zen-folder-gap: calc(var(--zen-font-size) * var(--zen-folder-gap-ratio, 1));
-    --zen-essential-gap: calc(var(--zen-font-size) * var(--zen-essential-gap-ratio, 0.667));
-    --zen-space-gap: calc(var(--zen-font-size) * var(--zen-space-gap-ratio, 0.667));
-    --zen-issue-gap: calc(var(--zen-font-size) * var(--zen-issue-gap-ratio, 0.333));
-    --zen-todo-gap: calc(var(--zen-font-size) * var(--zen-todo-gap-ratio, 0.333));
+    --zen-section-gap: calc(var(--zen-font-size) * var(--zen-section-gap-ratio, 1.429));
+    --zen-tab-gap: calc(var(--zen-font-size) * var(--zen-tab-gap-ratio, 0.286));
+    --zen-folder-gap: calc(var(--zen-font-size) * var(--zen-folder-gap-ratio, 0.857));
+    --zen-essential-gap: calc(var(--zen-font-size) * var(--zen-essential-gap-ratio, 0.571));
+    --zen-space-gap: calc(var(--zen-font-size) * var(--zen-space-gap-ratio, 0.571));
+    --zen-issue-gap: calc(var(--zen-font-size) * var(--zen-issue-gap-ratio, 0.286));
+    --zen-todo-gap: calc(var(--zen-font-size) * var(--zen-todo-gap-ratio, 0.286));
   }
 
   /*
-   * The toolbar popup is a fixed 380×420 panel. These lengths replace the derived
+   * The toolbar popup is a fixed 380x420 panel. These lengths replace the derived
    * ramp above so font size, density, and the gap sliders stay on the overlay.
+   * The same rhythm as the overlay, a notch tighter: 36px rows, 16px card padding.
    * Attribute selectors share a specificity, so this rule has to follow
    * `[data-zen-ui]` to win on the same element.
    */
   [data-zen-ui="popup"] {
-    --zen-font-size: 13px;
-    font-size: 13px;
+    --zen-font-size: 14px;
+    font-size: 14px;
     --zen-scale: 1;
 
     --zen-text-xs: 11px;
-    --zen-text-sm: 11px;
+    --zen-text-sm: 12px;
     --zen-text-md: 13px;
-    --zen-text-base: 13px;
-    --zen-text-lg: 14px;
+    --zen-text-base: 14px;
+    --zen-text-lg: 16px;
+    --zen-text-display: 26px;
 
     --zen-space-1: 4px;
     --zen-space-2: 8px;
-    --zen-space-3: 8px;
+    --zen-space-3: 12px;
     --zen-space-4: 16px;
+    --zen-space-5: 12px;
+    --zen-space-6: 16px;
+    --zen-status-gap: 10px;
 
-    --zen-radius: 6px;
-    --zen-radius-lg: 8px;
+    --zen-radius: 10px;
+    --zen-radius-lg: 14px;
 
-    --zen-icon-sm: 11px;
-    --zen-icon-md: 14px;
-    --zen-icon-lg: 16px;
-    --zen-control: 32px;
+    --zen-icon-sm: 13px;
+    --zen-icon-md: 16px;
+    --zen-icon-lg: 18px;
+    --zen-control: 36px;
 
-    --zen-tile-space: 8rem;
-    --zen-tile-essential: 10rem;
+    --zen-row-height: 32px;
+    --zen-row-size: 32px;
+    --zen-mini-key: 24px;
+    --zen-row-pad: 8px;
 
-    --zen-row-size: 48px;
-
-    --zen-section-gap: 4px;
+    --zen-section-gap: 12px;
     --zen-tab-gap: 4px;
-    --zen-folder-gap: 12px;
+    --zen-folder-gap: 8px;
     --zen-essential-gap: 8px;
     --zen-space-gap: 8px;
     --zen-issue-gap: 4px;
     --zen-todo-gap: 4px;
+  }
+
+  /*
+   * SPEC-01 "Hardware" theme tokens. Declared on `[data-zen-ui]` rather than
+   * `:root` so they exist inside the content script's shadow root. The dark block
+   * wins on specificity; a surface picks it with `data-theme="dark"`.
+   */
+  [data-zen-ui] {
+    --zs-chassis: #e8e8e5;
+    --zs-highlight: rgb(255 255 255 / 70%);
+    --zs-card: #fafaf8;
+    --zs-card-hi: #fff;
+    --zs-ink-1: #161616;
+    --zs-ink-2: #4c4c4a;
+    /* Darker than the mockup's #8d8d89 so small hints clear 4.5:1 on the card. */
+    --zs-ink-3: #72726d;
+    --zs-hair: #dcdcd8;
+    --zs-line: #c9c9c4;
+    --zs-line-soft: rgb(0 0 0 / 6%);
+    --zs-line-medium: rgb(0 0 0 / 10%);
+    --zs-line-strong: rgb(0 0 0 / 16%);
+    --zs-lcd: #111;
+    --zs-lcd-ink: #f4f4f2;
+    --zs-lcd-dim: #8a8a8a;
+    --zs-key: #f4f4f1;
+    --zs-key-edge: #cfcfca;
+    --zs-pressed: #ececea;
+    --zs-red: #ff2a1f;
+    /* The red for text on a card, where the LED red is too light to read. */
+    --zs-red-ink: #d4201a;
+    --zs-red-glow: rgb(255 42 31 / 55%);
+    --zs-green: #15803d;
+    --zs-led-off: #c8c8c4;
+    --zs-track: #2a2a2a;
+    --zs-scrim: rgb(20 20 20 / 45%);
+    --zs-scrim-soft: rgb(20 20 20 / 30%);
+    --zs-shadow: 0 1px 0 #fff inset, 0 14px 26px -16px rgb(0 0 0 / 30%), 0 2px 5px rgb(0 0 0 / 6%);
+    --zs-key-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 95%), 0 3px 0 var(--zs-key-edge),
+      0 5px 8px -3px rgb(0 0 0 / 18%);
+    --zs-well: inset 0 2px 5px rgb(0 0 0 / 12%), inset 0 0 0 1px rgb(0 0 0 / 5%);
+    --zs-lcd-shadow: inset 0 3px 8px rgb(0 0 0 / 80%), 0 1px 0 rgb(255 255 255 / 60%);
+
+    /* Radii, as multiples of the font size like every other size here. */
+    --zs-r-card: calc(var(--zen-font-size) * 1.3);
+    --zs-r-lcd: calc(var(--zen-font-size) * 1);
+    --zs-r-key: calc(var(--zen-font-size) * 0.85);
+    --zs-r-seg: calc(var(--zen-font-size) * 0.85);
+
+    color: var(--zs-ink-1);
+    color-scheme: light;
+    font-family: var(--font-mono);
+  }
+
+  [data-zen-ui][data-theme="dark"] {
+    --zs-chassis: #121212;
+    --zs-highlight: rgb(255 255 255 / 5%);
+    --zs-card: #1b1b1b;
+    --zs-card-hi: #222;
+    --zs-ink-1: #ededea;
+    --zs-ink-2: #a9a9a4;
+    /* Lighter than the mockup's #6d6d69 so small hints clear 4.5:1 on the card. */
+    --zs-ink-3: #8a8a85;
+    --zs-hair: #2c2c2c;
+    --zs-line: #3a3a3a;
+    --zs-line-soft: rgb(255 255 255 / 8%);
+    --zs-line-medium: rgb(255 255 255 / 14%);
+    --zs-line-strong: rgb(255 255 255 / 20%);
+    --zs-lcd: #070707;
+    --zs-key: #262626;
+    --zs-key-edge: #0c0c0c;
+    --zs-pressed: #151515;
+    --zs-red-ink: #ff5a50;
+    --zs-green: #4ade80;
+    --zs-led-off: #3a3a3a;
+    --zs-track: #050505;
+    --zs-scrim: rgb(0 0 0 / 60%);
+    --zs-scrim-soft: rgb(0 0 0 / 40%);
+    --zs-shadow:
+      0 1px 0 rgb(255 255 255 / 6%) inset, 0 16px 30px -16px rgb(0 0 0 / 90%),
+      0 2px 4px rgb(0 0 0 / 50%);
+    --zs-key-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 9%), 0 3px 0 var(--zs-key-edge),
+      0 5px 8px -3px rgb(0 0 0 / 70%);
+    --zs-well: inset 0 2px 6px rgb(0 0 0 / 70%), inset 0 0 0 1px rgb(255 255 255 / 3%);
+    --zs-lcd-shadow: inset 0 3px 8px rgb(0 0 0 / 90%), 0 1px 0 rgb(255 255 255 / 6%);
+    color-scheme: dark;
+  }
+
+  /* Options and other full-page surfaces: the theme, at the page's own text size. */
+  [data-zen-ui="page"] {
+    --zen-font-size: 13px;
+    font-size: 13px;
+  }
+
+  .zs-chassis {
+    background-color: var(--zs-chassis);
+    background-image: radial-gradient(circle at 20% 0%, var(--zs-highlight), transparent 60%);
+    color: var(--zs-ink-1);
+  }
+
+  .zs-card {
+    background-color: var(--zs-card);
+    border-radius: var(--zs-r-card);
+    box-shadow: var(--zs-shadow);
+  }
+
+  .zs-well {
+    background-color: var(--zs-pressed);
+    box-shadow: var(--zs-well);
+  }
+
+  .zs-lcd {
+    background-color: var(--zs-lcd);
+    color: var(--zs-lcd-ink);
+    border-radius: var(--zs-r-lcd);
+    box-shadow: var(--zs-lcd-shadow);
+  }
+
+  /* A hardware key: sits proud on its edge, and sinks 2px when pressed or latched. */
+  .zs-key {
+    background-color: var(--zs-key);
+    border: 1px solid var(--zs-key-edge);
+    border-radius: var(--zs-r-key);
+    box-shadow: var(--zs-key-shadow);
+    color: var(--zs-ink-1);
+    cursor: pointer;
+    position: relative;
+    transition:
+      transform 60ms ease-out,
+      box-shadow 60ms ease-out;
+  }
+
+  .zs-key:hover:not(:disabled) {
+    background-color: var(--zs-card-hi);
+  }
+
+  .zs-key:active:not(:disabled),
+  .zs-key[aria-pressed="true"],
+  .zs-key[aria-checked="true"] {
+    transform: translateY(2px);
+    box-shadow: var(--zs-well);
+  }
+
+  .zs-key:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .zs-key:focus-visible {
+    outline: 2px solid var(--zs-red);
+    outline-offset: 2px;
+  }
+
+  /* The small icon key on a row: a lighter edge, so a column of them stays quiet. */
+  .zs-key-mini {
+    width: var(--zen-mini-key);
+    height: var(--zen-mini-key);
+    border-radius: calc(var(--zen-mini-key) * 0.29);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 60%),
+      0 2px 0 var(--zs-key-edge);
+  }
+
+  .zs-key-mini:active:not(:disabled),
+  .zs-key-mini[aria-pressed="true"] {
+    transform: translateY(1px);
+    box-shadow: var(--zs-well);
+  }
+
+  /* A lamp set into a key's corner, for keys that latch. */
+  .zs-key > .zs-led {
+    position: absolute;
+    top: 12%;
+    right: 12%;
+    width: calc(var(--zen-font-size) * 0.3);
+    height: calc(var(--zen-font-size) * 0.3);
+  }
+
+  .zs-key-red {
+    background-color: var(--zs-red);
+    border-color: transparent;
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 35%),
+      0 3px 0 rgb(0 0 0 / 22%),
+      0 6px 14px -4px var(--zs-red-glow);
+  }
+
+  .zs-key-red:hover:not(:disabled) {
+    background-color: var(--zs-red);
+    filter: brightness(1.06);
+  }
+
+  .zs-led {
+    display: inline-block;
+    flex: none;
+    width: calc(var(--zen-font-size) * 0.42);
+    height: calc(var(--zen-font-size) * 0.42);
+    border-radius: 50%;
+    background-color: var(--zs-led-off);
+  }
+
+  .zs-led[data-on] {
+    background-color: var(--zs-red);
+    box-shadow: 0 0 6px var(--zs-red-glow);
+  }
+
+  .zs-label {
+    font-size: var(--zen-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--zs-ink-2);
+  }
+
+  .zs-label-red {
+    color: var(--zs-red-ink);
+  }
+
+  /*
+   * Numbered section headers. The number comes from a CSS counter that the list
+   * resets, so it follows render order with no markup or text of its own.
+   */
+  .zs-counter {
+    counter-reset: zs-section;
+  }
+
+  .zs-section-label {
+    display: flex;
+    align-items: center;
+    gap: var(--zen-space-3);
+    height: var(--zen-space-6);
+    margin-bottom: var(--zen-space-2);
+    font-family: var(--font-mono);
+    font-size: var(--zen-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--zs-ink-2);
+    border: 0;
+    padding: 0;
+  }
+
+  .zs-section-label::before {
+    counter-increment: zs-section;
+    content: counter(zs-section, decimal-leading-zero);
+    color: var(--zs-red-ink);
+    font-weight: 600;
+  }
+
+  .zs-section-label::after {
+    content: "";
+    order: 1;
+    flex: 1;
+    height: 1px;
+    background-color: var(--zs-hair);
+  }
+
+  .zs-section-label > .zs-section-count {
+    order: 2;
+    color: var(--zs-ink-3);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+  }
+
+  /* A column card header: glyph or number, label, hairline, then a figure on the right. */
+  .zs-head {
+    display: flex;
+    align-items: center;
+    gap: var(--zen-space-3);
+    height: var(--zen-space-6);
+    margin-bottom: var(--zen-space-2);
+    min-width: 0;
+    font-family: var(--font-mono);
+    font-size: var(--zen-text-xs);
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--zs-ink-2);
+  }
+
+  .zs-head-rule {
+    flex: 1;
+    min-width: var(--zen-space-2);
+    height: 1px;
+    background-color: var(--zs-hair);
+  }
+
+  .zs-head-glyph {
+    flex: none;
+    color: var(--zs-red-ink);
+    font-weight: 600;
+  }
+
+  /* The folder heading is a button: the chevron key first, then number, name, rule, count. */
+  .zs-folder-header {
+    width: 100%;
+    min-width: 0;
+    cursor: pointer;
+    background: transparent;
+    text-align: left;
+  }
+
+  .zs-folder-header > .zs-folder-toggle {
+    order: -1;
+  }
+
+  .zs-folder-header:hover > .zs-folder-toggle {
+    color: var(--zs-ink-1);
+  }
+
+  .zs-folder-header:focus-visible {
+    outline: 2px solid var(--zs-red);
+    outline-offset: 2px;
+    border-radius: var(--zen-radius);
+  }
+
+  /* A sub-folder heading: the same, without a number. */
+  .zs-section-label[data-sub] {
+    height: calc(var(--zen-row-height) * 0.9);
+    margin-bottom: 0;
+    letter-spacing: 0.14em;
+  }
+
+  .zs-section-label[data-sub]::before {
+    content: none;
+  }
+
+  /* Sub-folders and tree children hang off a left hairline. */
+  .zs-sub {
+    display: flex;
+    flex-direction: column;
+    margin-left: calc(var(--zen-font-size) * 1.286);
+    padding-left: var(--zen-space-3);
+    border-left: 1px solid var(--zs-hair);
+  }
+
+  /*
+   * The one row. Tabs, essentials, issues and the NOW strip share it: icon, title,
+   * meta pushed right, and the three keys only while the row is selected, hovered
+   * or holds focus. The keys stay in the DOM, so Tab still reaches them and
+   * `:focus-within` brings them back.
+   */
+  .zs-row {
+    position: relative;
+  }
+
+  .zs-row[data-selected="true"]::before,
+  .zs-row[data-issue-selected="true"]::before,
+  .zs-row[data-todo-selected="true"]::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 28%;
+    bottom: 28%;
+    width: calc(var(--zen-font-size) * 0.214);
+    border-radius: 2px;
+    background-color: var(--zs-red);
+  }
+
+  .zs-row-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-family: var(--font-title);
+    font-size: var(--zen-text-base);
+    font-weight: 500;
+  }
+
+  .zs-meta {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--zen-space-2);
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: var(--zen-text-xs);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    color: var(--zs-ink-3);
+  }
+
+  .zs-meta-timer {
+    color: var(--zs-red-ink);
+  }
+
+  .zs-acts {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: calc(var(--zen-font-size) * 0.43);
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 90ms ease-out;
+  }
+
+  .zs-row:hover .zs-acts,
+  .zs-row:focus-within .zs-acts,
+  .zs-row[data-selected="true"] .zs-acts,
+  .zs-row[data-issue-selected="true"] .zs-acts,
+  .zs-row[data-keep] .zs-acts,
+  .zs-acts[data-always] {
+    max-width: none;
+    margin-left: var(--zen-space-2);
+    overflow: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* A small lamp after the title of a todo, while its keys are put away. */
+  .zs-row:hover .zs-todo-dot,
+  .zs-row:focus-within .zs-todo-dot,
+  .zs-row[data-selected="true"] .zs-todo-dot,
+  .zs-row[data-issue-selected="true"] .zs-todo-dot,
+  .zs-row[data-keep] .zs-todo-dot {
+    display: none;
+  }
+
+  /* A recessed tray, the floor a collapsible panel's content sits on. */
+  .zs-tray {
+    background-color: var(--zs-pressed);
+    box-shadow: var(--zs-well);
+    border-radius: var(--zs-r-key);
+    padding: var(--zen-space-2);
+  }
+
+  /*
+   * Accordion: a numbered, uppercase header with a lamp, over a tray whose height
+   * eases between 0fr and 1fr (no pixel heights). The number is a CSS counter
+   * that each list resets, so nested accordions count from 01 again.
+   */
+  .zs-acc-list {
+    counter-reset: zs-acc;
+  }
+
+  .zs-acc-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--zen-space-2);
+    width: 100%;
+    min-width: 0;
+    padding: var(--zen-space-2);
+    border: 0;
+    border-radius: var(--zen-radius);
+    background: transparent;
+    color: var(--zs-ink-2);
+    cursor: pointer;
+    font: inherit;
+    font-size: var(--zen-text-sm);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .zs-acc-trigger::before {
+    counter-increment: zs-acc;
+    content: counter(zs-acc, decimal-leading-zero);
+    flex: none;
+    color: var(--zs-ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .zs-acc-trigger:hover {
+    color: var(--zs-ink-1);
+  }
+
+  .zs-acc-trigger:focus-visible {
+    outline: 2px solid var(--zs-red);
+    outline-offset: -2px;
+  }
+
+  .zs-acc-label {
+    flex: 1;
+  }
+
+  .zs-acc-count {
+    flex: none;
+    color: var(--zs-ink-3);
+  }
+
+  .zs-acc-trigger .zs-led {
+    transition:
+      background-color 160ms ease-out,
+      box-shadow 160ms ease-out;
+  }
+
+  .zs-acc-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 280ms cubic-bezier(0.3, 0.9, 0.3, 1);
+  }
+
+  .zs-acc[data-open] > .zs-acc-panel {
+    grid-template-rows: 1fr;
+  }
+
+  .zs-acc-clip {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .zs-acc-panel,
+    .zs-acc-trigger .zs-led {
+      transition: none;
+    }
+  }
+
+  /*
+   * Tree node (the "rack tree" folders): a keycap toggle, an uppercase label, a
+   * hairline filling the gap and a count. Children sit under a dotted guide line.
+   * The panel reuses the accordion's 0fr to 1fr height ease.
+   */
+  .zs-tree-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--zen-space-2);
+    width: 100%;
+    min-width: 0;
+    min-height: calc(var(--zen-row-height) * 0.9);
+    padding: 0 var(--zen-space-1);
+    border: 0;
+    border-radius: var(--zen-radius);
+    background: transparent;
+    color: var(--zs-ink-2);
+    cursor: pointer;
+    font: inherit;
+    font-family: var(--font-mono);
+    font-size: var(--zen-text-xs);
+    text-align: left;
+  }
+
+  .zs-tree-trigger:focus-visible {
+    outline: 2px solid var(--zs-red);
+    outline-offset: -2px;
+  }
+
+  .zs-tree-toggle {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: calc(var(--zen-font-size) * 1.571 * var(--zen-scale));
+    height: calc(var(--zen-font-size) * 1.571 * var(--zen-scale));
+    border-radius: calc(var(--zen-font-size) * 0.5 * var(--zen-scale));
+    background-color: var(--zs-key);
+    box-shadow: var(--zs-key-shadow);
+    color: var(--zs-ink-2);
+  }
+
+  .zs-tree-trigger[aria-expanded="true"] .zs-tree-toggle {
+    background-color: var(--zs-pressed);
+    box-shadow: var(--zs-well);
+  }
+
+  .zs-tree-trigger:hover .zs-tree-toggle {
+    color: var(--zs-ink-1);
+  }
+
+  .zs-tree-label {
+    flex: 0 1 auto;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .zs-tree-prefix {
+    color: var(--zs-ink-3);
+    font-weight: 400;
+  }
+
+  .zs-tree-rule {
+    flex: 1;
+    min-width: var(--zen-space-2);
+    height: 1px;
+    background-color: var(--zs-hair);
+  }
+
+  .zs-tree-chip {
+    flex: none;
+    padding: calc(var(--zen-space-1) * 0.75) var(--zen-space-2);
+    border-radius: calc(var(--zs-r-key) * 0.4);
+    background-color: var(--zs-lcd);
+    color: var(--zs-lcd-ink);
+    font-family: var(--font-mono);
+    font-size: var(--zen-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+  }
+
+  .zs-tree-count {
+    flex: none;
+    color: var(--zs-ink-3);
+    font-size: var(--zen-text-xs);
+    letter-spacing: 0.08em;
+  }
+
+  .zs-tree-kids {
+    margin-left: calc(var(--zen-font-size) * 1.286);
+    padding-left: var(--zen-space-3);
+    border-left: 1px solid var(--zs-hair);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .zs-tree-trigger .zs-led {
+      transition: none;
+    }
+  }
+
+  /*
+   * SPEC-01 controls: switch, slider and dial. Sizes are multiples of the font
+   * size, so they follow it like the rest of the type and spacing ramps. The
+   * real control is a native input laid over the drawing, which keeps focus,
+   * keyboard and screen-reader behaviour free.
+   */
+  .zs-switch {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    gap: calc(var(--zen-font-size) * 0.6);
+    cursor: pointer;
+    position: relative;
+  }
+
+  .zs-switch[data-disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .zs-switch-text {
+    font-size: calc(var(--zen-font-size) * 0.65);
+    letter-spacing: 0.14em;
+    color: var(--zs-ink-3);
+  }
+
+  .zs-switch[data-on] .zs-switch-text[data-for="on"],
+  .zs-switch:not([data-on]) .zs-switch-text[data-for="off"] {
+    color: var(--zs-ink-1);
+    font-weight: 600;
+  }
+
+  .zs-switch-track {
+    position: relative;
+    flex: none;
+    width: calc(var(--zen-font-size) * 3.1);
+    height: calc(var(--zen-font-size) * 1.7);
+    border-radius: calc(var(--zen-font-size) * 0.85);
+    background-color: var(--zs-pressed);
+    box-shadow: var(--zs-well);
+    transition:
+      background-color 120ms ease-out,
+      box-shadow 120ms ease-out;
+  }
+
+  .zs-switch-nub {
+    position: absolute;
+    top: calc(var(--zen-font-size) * 0.15);
+    left: calc(var(--zen-font-size) * 0.15);
+    width: calc(var(--zen-font-size) * 1.4);
+    height: calc(var(--zen-font-size) * 1.4);
+    border-radius: 50%;
+    background-color: var(--zs-card-hi);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 80%),
+      0 2px 4px rgb(0 0 0 / 35%);
+    transition: transform 140ms cubic-bezier(0.45, 0, 0.15, 1);
+  }
+
+  .zs-switch[data-on] .zs-switch-track {
+    background-color: var(--zs-red);
+    box-shadow:
+      inset 0 1px 3px rgb(0 0 0 / 25%),
+      0 0 10px -2px var(--zs-red-glow);
+  }
+
+  .zs-switch[data-on] .zs-switch-nub {
+    transform: translateX(calc(var(--zen-font-size) * 1.4));
+    background-color: #fff;
+  }
+
+  .zs-switch-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: inherit;
+  }
+
+  .zs-switch:has(.zs-switch-input:focus-visible) .zs-switch-track {
+    outline: 2px solid var(--zs-red);
+    outline-offset: 2px;
+  }
+
+  .zs-slider {
+    --zs-thumb: calc(var(--zen-font-size) * 1.4);
+    position: relative;
+    flex: none;
+    width: var(--zs-slider-width, calc(var(--zen-font-size) * 14.6));
+    height: var(--zs-thumb);
+  }
+
+  .zs-slider-bar,
+  .zs-slider-fill {
+    position: absolute;
+    top: calc(var(--zs-thumb) * 0.39);
+    left: 0;
+    height: calc(var(--zs-thumb) * 0.28);
+    border-radius: calc(var(--zs-thumb) * 0.17);
+  }
+
+  .zs-slider-bar {
+    right: 0;
+    background-color: var(--zs-track, #2a2a2a);
+  }
+
+  .zs-slider-fill {
+    background-color: var(--zs-red);
+    box-shadow: 0 0 8px -1px var(--zs-red-glow);
+  }
+
+  .zs-slider-thumb {
+    position: absolute;
+    top: 0;
+    width: var(--zs-thumb);
+    height: var(--zs-thumb);
+    border-radius: 50%;
+    background-color: var(--zs-card-hi);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 90%),
+      0 2px 5px rgb(0 0 0 / 35%),
+      0 0 0 1px var(--zs-key-edge);
+  }
+
+  .zs-slider-ticks {
+    position: absolute;
+    top: calc(var(--zs-thumb) * 1.1);
+    left: calc(var(--zs-thumb) / 2);
+    right: calc(var(--zs-thumb) / 2);
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+  }
+
+  .zs-slider-ticks > i {
+    width: 1px;
+    height: calc(var(--zs-thumb) * 0.22);
+    background-color: var(--zs-ink-3);
+    opacity: 0.6;
+  }
+
+  .zs-slider-ticks > i:nth-child(5n + 1) {
+    height: calc(var(--zs-thumb) * 0.39);
+    opacity: 1;
+  }
+
+  .zs-slider-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+    appearance: none;
+    background: transparent;
+  }
+
+  .zs-slider-input:disabled {
+    cursor: not-allowed;
+  }
+
+  .zs-slider-input::-moz-range-thumb {
+    width: var(--zs-thumb);
+    height: var(--zs-thumb);
+    border: 0;
+  }
+
+  .zs-slider-input::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--zs-thumb);
+    height: var(--zs-thumb);
+  }
+
+  .zs-slider[data-disabled] {
+    opacity: 0.5;
+  }
+
+  .zs-slider:has(.zs-slider-input:focus-visible) .zs-slider-thumb {
+    outline: 2px solid var(--zs-red);
+    outline-offset: 2px;
+  }
+
+  /* The LCD readout beside a slider or under the dial. */
+  .zs-readout {
+    min-width: calc(var(--zen-font-size) * 4.2);
+    padding: calc(var(--zen-font-size) * 0.4) calc(var(--zen-font-size) * 0.6);
+    border-radius: calc(var(--zen-font-size) * 0.55);
+    text-align: right;
+    font-size: var(--zen-text-md);
+    font-weight: 500;
+    white-space: nowrap;
+    flex: none;
+  }
+
+  .zs-readout > u {
+    margin-left: 2px;
+    color: var(--zs-lcd-dim);
+    font-size: calc(var(--zen-font-size) * 0.77);
+    text-decoration: none;
+  }
+
+  /* A rotary dial, a bit over three times the font size across. */
+  .zs-dial {
+    --zs-dial-size: calc(var(--zen-font-size) * 3.2);
+    position: relative;
+    display: block;
+    flex: none;
+    width: var(--zs-dial-size);
+    height: var(--zs-dial-size);
+    margin: 0 auto;
+    border-radius: 50%;
+    cursor: ns-resize;
+    touch-action: none;
+  }
+
+  /* While turning, the cursor disappears (pointer lock hides it too). */
+  .zs-dial[data-turning] {
+    cursor: none;
+  }
+
+  .zs-dial[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .zs-dial:focus-visible {
+    outline: 2px solid var(--zs-red);
+    outline-offset: 3px;
+  }
+
+  .zs-dial-ticks {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: repeating-conic-gradient(
+      from -135deg,
+      var(--zs-ink-3) 0 1.2deg,
+      transparent 1.2deg 13.5deg
+    );
+    mask: radial-gradient(
+      circle closest-side,
+      transparent 74%,
+      #000 77%,
+      #000 99%,
+      transparent 100%
+    );
+  }
+
+  .zs-dial-cap {
+    position: absolute;
+    inset: 14.5%;
+    border-radius: 50%;
+    background-color: var(--zs-card-hi);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 90%),
+      0 4px 10px rgb(0 0 0 / 30%),
+      0 0 0 1px var(--zs-key-edge);
+  }
+
+  .zs-dial-dot {
+    position: absolute;
+    width: calc(var(--zs-dial-size) * 0.1);
+    height: calc(var(--zs-dial-size) * 0.1);
+    border-radius: 50%;
+    background-color: var(--zs-red);
+    box-shadow: 0 0 6px var(--zs-red-glow);
+    transform: translate(-50%, -50%);
+  }
+
+  /* The settings page's grid of modules: two columns when wide, one when narrow. */
+  .zs-mod-host {
+    container-type: inline-size;
+  }
+
+  .zs-mod-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--zen-space-4);
+    counter-reset: zs-mod;
+  }
+
+  .zs-mod-two {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--zen-space-3) calc(var(--zen-font-size) * 1.7);
+  }
+
+  @container (min-width: 40rem) {
+    .zs-mod-grid,
+    .zs-mod-two {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .zs-mod-wide {
+      grid-column: span 2;
+    }
+  }
+
+  .zs-mod-head {
+    display: flex;
+    align-items: center;
+    gap: var(--zen-space-3);
+    margin: 0;
+    font-size: var(--zen-text-sm);
+    font-weight: 400;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--zs-ink-2);
+  }
+
+  .zs-mod-head::before {
+    counter-increment: zs-mod;
+    content: counter(zs-mod, decimal-leading-zero);
+    color: var(--zs-red-ink);
+    font-weight: 600;
+  }
+
+  .zs-mod-head::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background-color: var(--zs-hair);
+  }
+
+  .zs-mod-head > .zs-mod-meta {
+    order: 2;
+    color: var(--zs-ink-3);
+  }
+
+  /* Tabular mono digits, for countdowns. */
+  .zs-digits {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
   }
 
   .zen-search-row {
@@ -185,7 +1159,7 @@
 
   .zen-scroll {
     scrollbar-width: thin;
-    scrollbar-color: var(--color-zen-line) transparent;
+    scrollbar-color: var(--zs-ink-3) transparent;
   }
 
   .zen-scroll::-webkit-scrollbar {
@@ -197,29 +1171,20 @@
   }
 
   .zen-scroll::-webkit-scrollbar-thumb {
-    background: var(--color-zen-line);
+    background: var(--zs-ink-3);
     border-radius: 4px;
   }
 
   .zen-scroll::-webkit-scrollbar-thumb:hover {
-    background: var(--color-zen-subtle);
+    background: var(--zs-ink-2);
   }
 
+  /* Fill the overlay stage edge to edge; the column count no longer sets a shape. */
   [data-omnibar] {
-    aspect-ratio: 1 / 1;
-    width: min(80vw, 90dvh);
-    max-height: 90dvh;
+    width: 100%;
+    height: 100%;
     min-height: 0;
-  }
-
-  [data-omnibar][data-omnibar-aspect="3/2"] {
-    aspect-ratio: 3 / 2;
-    width: min(80vw, calc(90dvh * 3 / 2));
-  }
-
-  [data-omnibar][data-omnibar-aspect="2/1"] {
-    aspect-ratio: 2 / 1;
-    width: min(80vw, calc(90dvh * 2));
+    border-radius: 0;
   }
 
   /*

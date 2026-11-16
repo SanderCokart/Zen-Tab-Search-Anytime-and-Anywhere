@@ -48,6 +48,7 @@ function tabRankingSignature(tab: TabInfo): string {
     tab.active === true ? "1" : "0",
     tab.essential === true ? "1" : "0",
     tab.lastOpenedAt ?? "",
+    tab.forgeTargetBranch ?? "",
   ].join("\0");
 }
 

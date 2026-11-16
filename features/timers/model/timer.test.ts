@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatLcdCountdown,
+  formatShortCountdown,
   composeTimerLabel,
   formatHumanDuration,
   formatTimerCountdown,
@@ -97,5 +99,32 @@ describe("isAllowedTimerEnd", () => {
     const now = 1_000_000;
     expect(isAllowedTimerEnd(now + MAX_TIMER_MS + 1, now)).toBe(false);
     expect(isAllowedTimerEnd(now + MAX_TIMER_MS, now)).toBe(true);
+  });
+});
+
+describe("formatShortCountdown", () => {
+  const minute = 60_000;
+  const hour = 60 * minute;
+
+  it("stays on one short token at every scale", () => {
+    expect(formatShortCountdown(0)).toBe("0s");
+    expect(formatShortCountdown(45_000)).toBe("45s");
+    expect(formatShortCountdown(27 * minute + 40_000)).toBe("27m 40s");
+    expect(formatShortCountdown(5 * minute + 3_000)).toBe("5m 03s");
+    expect(formatShortCountdown(8 * hour)).toBe("8h 00m");
+    expect(formatShortCountdown(2 * hour + 5 * minute)).toBe("2h 05m");
+    expect(formatShortCountdown(51 * hour)).toBe("2d 03h");
+  });
+
+  it("never goes negative", () => {
+    expect(formatShortCountdown(-5_000)).toBe("0s");
+  });
+});
+
+describe("formatLcdCountdown", () => {
+  it("reads as a clock under an hour and as the short form above", () => {
+    expect(formatLcdCountdown(27 * 60_000 + 40_000)).toBe("27:40");
+    expect(formatLcdCountdown(9_000)).toBe("00:09");
+    expect(formatLcdCountdown(8 * 3_600_000)).toBe("8h 00m");
   });
 });

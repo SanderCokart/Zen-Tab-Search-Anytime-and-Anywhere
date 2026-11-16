@@ -35,8 +35,9 @@ export function StatusButton({
       aria-haspopup="menu"
       aria-expanded={open}
       data-testid="zen-status-button"
+      data-own-sound=""
       data-traffic-light-trigger=""
-      class={cn("inline-flex cursor-pointer items-center border-0 bg-transparent", className)}
+      class={cn("inline-flex cursor-pointer items-center", className)}
       onClick={(event) => {
         event.stopPropagation();
         onOpenMenu(tab, event.currentTarget.getBoundingClientRect());

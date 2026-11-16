@@ -13,7 +13,7 @@ import { cn } from "@/shared/ui/cn";
 type InstallState = { kind: "idle" } | { kind: "installing" } | { kind: "failed"; error: string };
 
 const actionClass =
-  "border-zen-line bg-zen-chip text-zen-text cursor-pointer rounded-[var(--zen-radius)] border px-[var(--zen-space-2)] py-[var(--zen-space-1)] font-[inherit] text-[length:var(--zen-text-sm)] hover:underline disabled:cursor-default disabled:opacity-60";
+  "zs-key px-[var(--zen-space-2)] py-[var(--zen-space-1)] font-[inherit] text-[length:var(--zen-text-sm)] uppercase tracking-[0.1em]";
 
 /** `4.0.2` with the parts that differ from the installed version in green. */
 function LatestVersion({ latest, current }: { latest: string; current: string }) {
@@ -23,7 +23,7 @@ function LatestVersion({ latest, current }: { latest: string; current: string })
         <span key={index}>
           {index > 0 && "."}
           <span
-            class={cn(changed && "font-semibold text-green-400")}
+            class={cn(changed && "text-zen-ok font-semibold")}
             data-changed={changed || undefined}
           >
             {text}
@@ -120,7 +120,7 @@ export function UpdateNotice() {
         class="text-zen-text flex min-w-0 cursor-pointer items-center gap-[var(--zen-space-1)] border-0 bg-transparent p-0 font-[inherit] text-[length:var(--zen-text-xs)] hover:underline"
         onClick={() => setOpen((current) => !current)}
       >
-        <span aria-hidden="true" class="text-green-400">
+        <span aria-hidden="true" class="text-zen-ok">
           ⬆
         </span>
         <span class="truncate">There is a new version available! Latest:</span>
@@ -131,8 +131,8 @@ export function UpdateNotice() {
         // Opens upwards, since the status bar sits at the bottom of the search.
         <div
           class={cn(
-            "border-zen-line bg-zen-raised absolute right-0 bottom-full z-10 mb-[var(--zen-space-2)]",
-            "flex w-max max-w-[min(32em,90vw)] flex-col gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] border p-[var(--zen-space-2)]",
+            "zs-card absolute right-0 bottom-full z-10 mb-[var(--zen-space-2)] tracking-normal normal-case",
+            "flex w-max max-w-[min(32em,90vw)] flex-col gap-[var(--zen-space-2)] p-[var(--zen-space-3)]",
             "text-[length:var(--zen-text-sm)] shadow-[0_4px_16px_rgba(0,0,0,0.4)]",
           )}
           data-testid="zen-update-panel"
@@ -146,7 +146,7 @@ export function UpdateNotice() {
             {status.canInstall && (
               <button
                 type="button"
-                class={actionClass}
+                class={cn(actionClass, "zs-key-red")}
                 disabled={install.kind === "installing"}
                 data-testid="zen-update-install"
                 onClick={installNow}

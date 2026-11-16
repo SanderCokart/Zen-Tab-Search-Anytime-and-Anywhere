@@ -3,7 +3,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-const outputDir = path.join(fileURLToPath(new URL("..", import.meta.url)), "docs", "screenshots");
+const screenshotsRoot = path.join(
+  fileURLToPath(new URL("..", import.meta.url)),
+  "docs",
+  "screenshots",
+);
+
+/**
+ * Every capture runs once per colour scheme. The display theme defaults to
+ * "system", so the browser's colour scheme decides which theme renders. Light
+ * keeps the bare file names; dark goes to `dark/` with the same names.
+ */
+const THEMES = [
+  { name: "light", colorScheme: "light", outputDir: screenshotsRoot },
+  { name: "dark", colorScheme: "dark", outputDir: path.join(screenshotsRoot, "dark") },
+] as const;
 
 type Capture = {
   scene: string;
@@ -226,7 +240,7 @@ const captures: Capture[] = [
     scene: "display-settings",
     file: "display-settings.png",
     ready: async (page) => {
-      await expect(page.getByRole("heading", { name: "Display options" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
     },
     fullPage: true,
   },
@@ -234,20 +248,20 @@ const captures: Capture[] = [
     scene: "display-settings",
     file: "mcp-settings.png",
     ready: async (page) => {
-      await expect(page.getByRole("heading", { name: "Display options" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
     },
-    locator: "fieldset:has([data-testid='zen-bridgeEnabled'])",
+    locator: "section:has([data-testid='zen-bridgeEnabled'])",
   },
   {
     scene: "display-settings",
     file: "external-links-settings.png",
     ready: async (page) => {
-      await expect(page.getByRole("heading", { name: "Display options" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
     },
     after: async (page) => {
       await page.locator("[data-testid='zen-reuseExternalTabs']").check();
     },
-    locator: "fieldset:has([data-testid='zen-reuseExternalTabs'])",
+    locator: "section:has([data-testid='zen-reuseExternalTabs'])",
   },
   {
     scene: "timer-popup",
@@ -279,52 +293,56 @@ const captures: Capture[] = [
   },
 ];
 
-test.describe("README screenshots", () => {
-  test.beforeAll(async () => {
-    await mkdir(outputDir, { recursive: true });
-  });
+for (const theme of THEMES) {
+  test.describe(`README screenshots (${theme.name})`, () => {
+    test.use({ colorScheme: theme.colorScheme });
 
-  for (const capture of captures) {
-    test(capture.file, async ({ page }) => {
-      await page.goto(`/screenshots/index.html?scene=${capture.scene}`);
-      await (capture.ready?.(page) ?? Promise.resolve());
-      await capture.after?.(page);
-      const target = path.join(outputDir, capture.file);
-      const options = { path: target, animations: "disabled" as const };
-      if (capture.around) {
-        const boxes = await page
-          .locator(capture.around)
-          .evaluateAll((elements) =>
-            elements.map((element) => element.getBoundingClientRect().toJSON() as DOMRect),
-          );
-        const margin = 12;
-        const left = Math.min(...boxes.map((box) => box.left)) - margin;
-        const top = Math.min(...boxes.map((box) => box.top)) - margin;
-        const right = Math.max(...boxes.map((box) => box.right)) + margin;
-        const bottom = Math.max(...boxes.map((box) => box.bottom)) + margin;
-        await page.screenshot({
-          ...options,
-          clip: { x: left, y: top, width: right - left, height: bottom - top },
-        });
-        return;
-      }
-      if (capture.locator) {
-        await page.locator(capture.locator).screenshot(options);
-        return;
-      }
-      if (capture.clip === "popup") {
-        await page.locator("[data-harness-popup]").screenshot(options);
-        return;
-      }
-      if (capture.clip === "card") {
-        await page.locator("[data-harness-card]").screenshot(options);
-        return;
-      }
-      if (capture.clip === "omnibar") {
-        await page.locator("[data-omnibar]").screenshot(options);
-        return;
-      }
-      await page.screenshot({ ...options, fullPage: capture.fullPage === true });
+    test.beforeAll(async () => {
+      await mkdir(theme.outputDir, { recursive: true });
     });
-  }
-});
+
+    for (const capture of captures) {
+      test(capture.file, async ({ page }) => {
+        await page.goto(`/screenshots/index.html?scene=${capture.scene}`);
+        await (capture.ready?.(page) ?? Promise.resolve());
+        await capture.after?.(page);
+        const target = path.join(theme.outputDir, capture.file);
+        const options = { path: target, animations: "disabled" as const };
+        if (capture.around) {
+          const boxes = await page
+            .locator(capture.around)
+            .evaluateAll((elements) =>
+              elements.map((element) => element.getBoundingClientRect().toJSON() as DOMRect),
+            );
+          const margin = 12;
+          const left = Math.min(...boxes.map((box) => box.left)) - margin;
+          const top = Math.min(...boxes.map((box) => box.top)) - margin;
+          const right = Math.max(...boxes.map((box) => box.right)) + margin;
+          const bottom = Math.max(...boxes.map((box) => box.bottom)) + margin;
+          await page.screenshot({
+            ...options,
+            clip: { x: left, y: top, width: right - left, height: bottom - top },
+          });
+          return;
+        }
+        if (capture.locator) {
+          await page.locator(capture.locator).screenshot(options);
+          return;
+        }
+        if (capture.clip === "popup") {
+          await page.locator("[data-harness-popup]").screenshot(options);
+          return;
+        }
+        if (capture.clip === "card") {
+          await page.locator("[data-harness-card]").screenshot(options);
+          return;
+        }
+        if (capture.clip === "omnibar") {
+          await page.locator("[data-omnibar]").screenshot(options);
+          return;
+        }
+        await page.screenshot({ ...options, fullPage: capture.fullPage === true });
+      });
+    }
+  });
+}

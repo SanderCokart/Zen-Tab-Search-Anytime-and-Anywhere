@@ -150,8 +150,10 @@ a `createShadowRootUi` container, set to `position: modal` with a very high
 keeps the page's event handlers from stealing keystrokes; the top layer keeps the
 page from stacking anything above it.
 
-It also owns `collectForgePageInfo()`, which scrapes the title and body of a GitLab
-or GitHub page from a list of known selectors. That is the only DOM-scraping code in
+It also owns `collectForgePageInfo()`, which scrapes the title, body and MR/PR target
+branch of a GitLab or GitHub page from a list of known selectors. The background
+asks for the branch whenever an MR/PR tab loads and remembers it under
+`forgeTargetBranches`, since the URL does not carry it. That is the only DOM-scraping code in
 the repo, and it lives here because it is the only context that can see the page.
 
 ---
