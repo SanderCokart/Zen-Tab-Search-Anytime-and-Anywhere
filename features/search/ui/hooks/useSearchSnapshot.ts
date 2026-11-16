@@ -47,6 +47,7 @@ function tabRankingSignature(tab: TabInfo): string {
     tab.folderId ?? "",
     tab.active === true ? "1" : "0",
     tab.essential === true ? "1" : "0",
+    tab.pinned === true ? "1" : "0",
     tab.lastOpenedAt ?? "",
     tab.forgeTargetBranch ?? "",
   ].join("\0");

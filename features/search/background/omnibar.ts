@@ -2,7 +2,10 @@ import { debugLog } from "@/shared/debug";
 import { sendTabMessage } from "@/shared/messaging/client";
 import { isUsableTabId } from "@/shared/types";
 import { formatError, LOG_PREFIX } from "@/shared/log";
-import { toggleSearchPopup } from "@/features/search/background/popup";
+import {
+  SEARCH_POPUP_FALLBACK_ENABLED,
+  toggleSearchPopup,
+} from "@/features/search/background/popup";
 import { isContentScriptInjectableUrl } from "@/shared/urls";
 import { resolveAnchorTabId } from "@/features/zen/anchor";
 import {
@@ -137,7 +140,7 @@ export async function toggleOmnibar(
 
   const tabId = await resolveAnchorTabId(preferredTabId);
   if (!isUsableTabId(tabId)) {
-    await toggleSearchPopup();
+    if (SEARCH_POPUP_FALLBACK_ENABLED) await toggleSearchPopup();
     return;
   }
 
@@ -165,5 +168,5 @@ export async function toggleOmnibar(
     }
   }
 
-  await toggleSearchPopup();
+  if (SEARCH_POPUP_FALLBACK_ENABLED) await toggleSearchPopup();
 }

@@ -283,13 +283,25 @@
   }
 
   .zs-chassis {
-    background-color: var(--zs-chassis);
-    background-image: radial-gradient(circle at 20% 0%, var(--zs-highlight), transparent 60%);
+    background-color: color-mix(
+      in srgb,
+      var(--zs-chassis) calc(var(--zs-bg-opacity, 1) * 100%),
+      transparent
+    );
+    background-image: radial-gradient(
+      circle at 20% 0%,
+      color-mix(in srgb, var(--zs-highlight) calc(var(--zs-bg-opacity, 1) * 100%), transparent),
+      transparent 60%
+    );
     color: var(--zs-ink-1);
   }
 
   .zs-card {
-    background-color: var(--zs-card);
+    background-color: color-mix(
+      in srgb,
+      var(--zs-card) calc(var(--zs-bg-opacity, 1) * 100%),
+      transparent
+    );
     border-radius: var(--zs-r-card);
     box-shadow: var(--zs-shadow);
   }
@@ -461,7 +473,7 @@
     display: flex;
     align-items: center;
     gap: var(--zen-space-3);
-    height: var(--zen-space-6);
+    min-height: var(--zen-space-6);
     margin-bottom: var(--zen-space-2);
     min-width: 0;
     font-family: var(--font-mono);
@@ -477,6 +489,15 @@
     min-width: var(--zen-space-2);
     height: 1px;
     background-color: var(--zs-hair);
+  }
+
+  /* Two equal rules, so whatever sits between them is the middle of the line. */
+  .zs-head-split {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: var(--zen-space-3);
+    min-width: 0;
   }
 
   .zs-head-glyph {
@@ -517,6 +538,13 @@
 
   .zs-section-label[data-sub]::before {
     content: none;
+  }
+
+  /* A sub-folder is its own outlined group, hung off its parent's guide line. */
+  .zs-subfolder {
+    border: 1px solid var(--zs-line-medium);
+    border-radius: var(--zen-radius);
+    padding: var(--zen-space-2);
   }
 
   /* Sub-folders and tree children hang off a left hairline. */
@@ -1024,7 +1052,7 @@
     touch-action: none;
   }
 
-  /* While turning, the cursor disappears (pointer lock hides it too). */
+  /* While turning, hide the cursor without taking pointer lock. */
   .zs-dial[data-turning] {
     cursor: none;
   }

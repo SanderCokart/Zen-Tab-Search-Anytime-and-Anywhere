@@ -7,6 +7,7 @@ import type { SpaceInfo, TabInfo } from "@/shared/messaging/protocol";
  */
 export type {
   FolderInfo,
+  OverlayFolderInfo,
   HostOverrideGroup,
   HostProxyReport,
   HostProxyStatus,
@@ -46,6 +47,11 @@ export function isActivatableTab(tab: TabInfo): boolean {
 
 export function isEssentialTab(tab: TabInfo): boolean {
   return tab.essential === true;
+}
+
+/** Pinned tabs and essentials both have a stored URL Zen can edit or replace. */
+export function isPinnedTab(tab: TabInfo): boolean {
+  return tab.pinned === true || isEssentialTab(tab);
 }
 
 export function tabBrowserId(tab: TabInfo): number | undefined {

@@ -1,4 +1,4 @@
-/* global ExtensionAPI, ChromeUtils, Cu, Services */
+/* global ExtensionAPI, ChromeUtils, Cu, Services, console, setTimeout */
 
 const DEBUG = false;
 
@@ -15,7 +15,7 @@ this.zenTabs = class extends ExtensionAPI {
   }
 
   getAPI(context) {
-    const extensionApi = this;
+    const extensionApi = this; // eslint-disable-line @typescript-eslint/no-this-alias -- closures below outlive this method
     const { tabManager } = context.extension;
     const LOG_PREFIX = "[zen-tab-search experiment]";
 
@@ -621,16 +621,21 @@ this.zenTabs = class extends ExtensionAPI {
     }
 
     function getFolderPath(tab) {
-      let group = tab?.group;
       const folders = [];
-      while (group) {
-        if (group.isZenFolder) {
-          folders.push({
-            id: String(group.id || ""),
-            name: String(group.label || "Folder"),
-          });
+      const seen = new Set();
+      let node = tab?.group?.isZenFolder ? tab.group : tab?.closest?.("zen-folder");
+      while (node?.isZenFolder && !seen.has(node)) {
+        seen.add(node);
+        folders.push({
+          id: String(node.id || ""),
+          name: String(node.label || "Folder"),
+        });
+        if (node.group?.isZenFolder) {
+          node = node.group;
+          continue;
         }
-        group = group.group;
+        const parent = node.parentElement?.closest?.("zen-folder");
+        node = parent && parent !== node ? parent : null;
       }
       return folders.reverse();
     }
@@ -707,6 +712,7 @@ this.zenTabs = class extends ExtensionAPI {
         folderName: folder?.name || undefined,
         folderPath: folderPath.length ? folderPath : undefined,
         essential: tab.getAttribute("zen-essential") === "true",
+        pinned: !!tab.pinned,
         active: win.gBrowser?.selectedTab === tab,
       };
     }
@@ -1063,8 +1069,11 @@ this.zenTabs = class extends ExtensionAPI {
 
       const container = doc.createElementNS(HTML_NS, "div");
       container.id = `zen-tab-search-omnibar-${id}`;
+      // no-drag: Zen marks its sidebar and toolbars as window-drag regions, and the
+      // OS hit-tests those through anything on top that does not opt out. Over one,
+      // a click drags the window and a right-click opens the Windows system menu.
       container.style.cssText =
-        "position:fixed;inset:0;z-index:2147483647;display:flex;visibility:hidden;pointer-events:none;background:transparent;";
+        "position:fixed;inset:0;z-index:2147483647;display:flex;visibility:hidden;pointer-events:none;background:transparent;-moz-window-dragging:no-drag;";
 
       // Mirrors how Firefox builds extension popup browsers (ExtensionPopups.sys.mjs).
       const browser = doc.createXULElement("browser");
@@ -1075,6 +1084,9 @@ this.zenTabs = class extends ExtensionAPI {
       browser.setAttribute("transparent", "true");
       browser.setAttribute("tooltip", "aHTMLTooltip");
       browser.setAttribute("autocompletepopup", "PopupAutoComplete");
+      // The search page draws its own tab menu. Firefox's content menu would open
+      // on top of it and swallow the next click, so the parent never shows it here.
+      browser.setAttribute("disablecontextmenu", "true");
       if (extension.remote) {
         browser.setAttribute("remote", "true");
         browser.setAttribute("remoteType", extension.remoteType);
@@ -1083,7 +1095,8 @@ this.zenTabs = class extends ExtensionAPI {
           String(extension.policy.browsingContextGroupId),
         );
       }
-      browser.style.cssText = "flex:1;width:100%;height:100%;background:transparent;";
+      browser.style.cssText =
+        "flex:1;width:100%;height:100%;background:transparent;-moz-window-dragging:no-drag;";
       container.append(browser);
       (doc.body || doc.documentElement).append(container);
 
@@ -1548,6 +1561,8 @@ this.zenTabs = class extends ExtensionAPI {
           }
         },
 
+        // The anchor is part of the experiment method shape; this call finds the tab by id.
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         async activateTab(tabId, anchorTabId = -1) {
           try {
             if (!Number.isInteger(tabId) || tabId < 0) {
@@ -1944,6 +1959,57 @@ this.zenTabs = class extends ExtensionAPI {
             return tabs.length;
           } catch (error) {
             throw new Error(`clearEssential failed: ${formatError(error)}`);
+          }
+        },
+
+        async getPinnedUrl(tabId) {
+          try {
+            const [tab] = nativeTabsFor([tabId]);
+            const stored = tab._zenPinnedInitialState?.entry?.url;
+            return String(stored || tab.linkedBrowser?.currentURI?.spec || "");
+          } catch (error) {
+            throw new Error(`getPinnedUrl failed: ${formatError(error)}`);
+          }
+        },
+
+        async setPinnedUrl(tabId, url) {
+          try {
+            const [tab] = nativeTabsFor([tabId]);
+            if (!tab.pinned) {
+              throw new Error("Tab is not pinned.");
+            }
+            const win = chromeWindowForNativeTab(tab);
+            if (typeof win?.gZenWindowSync?.setPinnedUrl !== "function") {
+              throw new Error("Zen pinned URL is not available in this window.");
+            }
+            const image = tab.zenStaticIcon || tab.image || null;
+            win.gZenWindowSync.setPinnedUrl(tab, url, image);
+            return true;
+          } catch (error) {
+            throw new Error(`setPinnedUrl failed: ${formatError(error)}`);
+          }
+        },
+
+        async replacePinnedUrlWithCurrent(tabId) {
+          try {
+            const [tab] = nativeTabsFor([tabId]);
+            if (!tab.pinned) {
+              throw new Error("Tab is not pinned.");
+            }
+            const win = chromeWindowForNativeTab(tab);
+            const manager = win?.gZenPinnedTabManager;
+            if (typeof manager?.replacePinnedUrlWithCurrent === "function") {
+              manager.replacePinnedUrlWithCurrent(tab);
+              return true;
+            }
+            if (typeof win?.gZenWindowSync?.setPinnedTabState === "function") {
+              win.gZenWindowSync.setPinnedTabState(tab);
+              manager?.resetPinChangedUrl?.(tab);
+              return true;
+            }
+            throw new Error("Zen pinned URL is not available in this window.");
+          } catch (error) {
+            throw new Error(`replacePinnedUrlWithCurrent failed: ${formatError(error)}`);
           }
         },
       }),

@@ -517,9 +517,21 @@ describe("forge issue entries", () => {
 
 describe("parseForgeNavigatorQuery", () => {
   it("treats leading # or ! as issue-navigator focus and strips them from the filter", () => {
-    expect(parseForgeNavigatorQuery("#42")).toEqual({ active: true, filterQuery: "42" });
-    expect(parseForgeNavigatorQuery("! 7")).toEqual({ active: true, filterQuery: "7" });
-    expect(parseForgeNavigatorQuery(" #fix")).toEqual({ active: true, filterQuery: "fix" });
+    expect(parseForgeNavigatorQuery("#42")).toEqual({
+      active: true,
+      filterQuery: "42",
+      kind: "issues",
+    });
+    expect(parseForgeNavigatorQuery("! 7")).toEqual({
+      active: true,
+      filterQuery: "7",
+      kind: "requests",
+    });
+    expect(parseForgeNavigatorQuery(" #fix")).toEqual({
+      active: true,
+      filterQuery: "fix",
+      kind: "issues",
+    });
     expect(parseForgeNavigatorQuery("fix #42")).toEqual({
       active: false,
       filterQuery: "fix #42",

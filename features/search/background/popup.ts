@@ -2,6 +2,13 @@ import { debugWarn } from "@/shared/debug";
 import { isUsableTabId } from "@/shared/types";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 
+/**
+ * When the window-hosted omnibar cannot open, Alt+F used to open the toolbar
+ * popup, and a failed `browserAction.openPopup` used to open `popup.html` in
+ * its own window. Both paths stay in this file; flip this to restore them.
+ */
+export const SEARCH_POPUP_FALLBACK_ENABLED = false;
+
 let fallbackPopupWindowId: number | undefined;
 
 export function forgetSearchPopupWindow(windowId: number): void {
@@ -49,6 +56,10 @@ export async function openSearchPopup(): Promise<void> {
       `${LOG_PREFIX} browserAction.openPopup failed, trying popup window:`,
       formatError(error),
     );
+  }
+
+  if (!SEARCH_POPUP_FALLBACK_ENABLED) {
+    return;
   }
 
   try {

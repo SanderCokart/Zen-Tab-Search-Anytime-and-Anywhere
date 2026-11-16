@@ -182,8 +182,8 @@ export default defineContentScript({
         return;
       }
       // An error thrown here would reject the background's sendMessage, which
-      // reads that as "no overlay on this page" and opens the toolbar popup
-      // too. The overlay did get the command, so log and always acknowledge.
+      // reads that as "no overlay on this page". The overlay did get the
+      // command, so log and always acknowledge.
       try {
         if (command.type === "toggleOmnibar") {
           if (isOmnibarShown()) hideOmnibar();

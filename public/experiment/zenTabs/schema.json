@@ -512,6 +512,50 @@
             "description": "Extension tab IDs"
           }
         ]
+      },
+      {
+        "name": "getPinnedUrl",
+        "type": "function",
+        "description": "Returns the stored pinned URL for a pinned or essential tab",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabId",
+            "type": "integer",
+            "description": "Extension tab ID"
+          }
+        ]
+      },
+      {
+        "name": "setPinnedUrl",
+        "type": "function",
+        "description": "Sets the stored pinned URL for a pinned or essential tab",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabId",
+            "type": "integer",
+            "description": "Extension tab ID"
+          },
+          {
+            "name": "url",
+            "type": "string",
+            "description": "http(s) URL to store as the pinned URL"
+          }
+        ]
+      },
+      {
+        "name": "replacePinnedUrlWithCurrent",
+        "type": "function",
+        "description": "Stores the tab's current page URL as its pinned URL",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabId",
+            "type": "integer",
+            "description": "Extension tab ID"
+          }
+        ]
       }
     ]
   }

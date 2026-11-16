@@ -3,9 +3,13 @@ import {
   countForgeEntriesByKind,
   filterForgeEntriesByKind,
   forgeRequestsLabel,
+  hidesForgeEntryInOverlay,
   type ForgeKindFilter,
 } from "@/features/forge/model/forge-filter";
-import type { ForgeCollapsedSet } from "@/features/forge/model/forge-collapse";
+import {
+  openedForgeCollapsed,
+  type ForgeCollapsedSet,
+} from "@/features/forge/model/forge-collapse";
 import {
   bestForgeNavigatorIndex,
   buildForgeIssueEntries,
@@ -89,12 +93,16 @@ export function useSearchResults({
   );
 
   const visibleTabs = useMemo(() => {
-    if (!(layout === "overlay" && displaySettings.filterIssuesInOverlay)) {
+    if (layout !== "overlay") {
       return labeledTabs;
     }
-    const issueTabs = new Set(allForgeEntries.map((entry) => entry.tab));
-    return labeledTabs.filter((tab) => !issueTabs.has(tab));
-  }, [allForgeEntries, displaySettings.filterIssuesInOverlay, labeledTabs, layout]);
+    const hiddenTabs = new Set(
+      allForgeEntries
+        .filter((entry) => hidesForgeEntryInOverlay(entry, displaySettings))
+        .map((entry) => entry.tab),
+    );
+    return hiddenTabs.size === 0 ? labeledTabs : labeledTabs.filter((tab) => !hiddenTabs.has(tab));
+  }, [allForgeEntries, displaySettings, labeledTabs, layout]);
 
   // "@" sends the keyboard to the todo column; the rest of the query still
   // filters the tab list and the issue navigator, as "!" and "#" do.
@@ -106,6 +114,18 @@ export function useSearchResults({
         ? { active: false, filterQuery: todoNavigatorQuery.filterQuery }
         : parseForgeNavigatorQuery(query),
     [query, todoNavigatorQuery],
+  );
+
+  /** `#` and `!` pick a kind; otherwise the All / Issues / MRs control does. */
+  const effectiveKindFilter: ForgeKindFilter = forgeNavigatorQuery.kind ?? forgeKindFilter;
+
+  const forgeTreeCollapsed = useMemo(
+    () =>
+      openedForgeCollapsed(
+        forgeCollapsed ?? new Set(),
+        forgeNavigatorQuery.active ? effectiveKindFilter : undefined,
+      ),
+    [effectiveKindFilter, forgeCollapsed, forgeNavigatorQuery.active],
   );
 
   /** Every todo tab, whatever the query; decides whether the column is shown at all. */
@@ -135,20 +155,16 @@ export function useSearchResults({
   // The current tab's issue is shown by the strip under the search bar, so with
   // issue tabs kept out of the tab list it stays out of the navigator too until
   // a query re-ranks.
-  const { rest: restBeforeKind } = useMemo(
-    () =>
-      layout === "overlay" &&
-      displaySettings.filterIssuesInOverlay &&
-      !forgeNavigatorQuery.filterQuery.trim()
-        ? splitCurrentForgeEntry(filteredForgeIssueEntries)
-        : { current: undefined, rest: filteredForgeIssueEntries },
-    [
-      displaySettings.filterIssuesInOverlay,
-      filteredForgeIssueEntries,
-      forgeNavigatorQuery.filterQuery,
-      layout,
-    ],
-  );
+  const { rest: restBeforeKind } = useMemo(() => {
+    if (layout !== "overlay" || forgeNavigatorQuery.filterQuery.trim()) {
+      return { current: undefined, rest: filteredForgeIssueEntries };
+    }
+    const current = filteredForgeIssueEntries.find((entry) => entry.tab.active === true);
+    if (!current || !hidesForgeEntryInOverlay(current, displaySettings)) {
+      return { current: undefined, rest: filteredForgeIssueEntries };
+    }
+    return splitCurrentForgeEntry(filteredForgeIssueEntries);
+  }, [displaySettings, filteredForgeIssueEntries, forgeNavigatorQuery.filterQuery, layout]);
 
   // The kind tabs count what the query left, before the kind filter narrows it.
   const forgeKindCounts = useMemo(() => countForgeEntriesByKind(restBeforeKind), [restBeforeKind]);
@@ -156,8 +172,8 @@ export function useSearchResults({
   const requestsLabel = useMemo(() => forgeRequestsLabel(forgeIssueEntries), [forgeIssueEntries]);
 
   const listedForgeIssueEntries = useMemo(
-    () => filterForgeEntriesByKind(restBeforeKind, forgeKindFilter),
-    [forgeKindFilter, restBeforeKind],
+    () => filterForgeEntriesByKind(restBeforeKind, effectiveKindFilter),
+    [effectiveKindFilter, restBeforeKind],
   );
 
   /** The tab the overlay was opened over, whatever the query or filters. */
@@ -171,8 +187,8 @@ export function useSearchResults({
   // What the arrow keys walk: the visible entries only, so a hidden or
   // collapsed one can never be selected.
   const navigatorEntries = useMemo(
-    () => flattenForgeNavigatorEntries(listedForgeIssueEntries, forgeSortMode, forgeCollapsed),
-    [forgeCollapsed, forgeSortMode, listedForgeIssueEntries],
+    () => flattenForgeNavigatorEntries(listedForgeIssueEntries, forgeSortMode, forgeTreeCollapsed),
+    [forgeTreeCollapsed, forgeSortMode, listedForgeIssueEntries],
   );
 
   const bestForgeIndex = useMemo(
@@ -220,6 +236,7 @@ export function useSearchResults({
 
   // What a query matched, and the part of it the list shows: rows under a collapsed
   // folder stay in the folder's count but are not rows, so no key can select them.
+  // The current tab is the exception and stays selectable in its folder.
   const matchedItems = filtered.items;
   const collapsedFolders = useMemo(
     () =>
@@ -270,6 +287,8 @@ export function useSearchResults({
     todoTabs,
     rankedForgeIssueEntries,
     listedForgeIssueEntries,
+    effectiveKindFilter,
+    forgeTreeCollapsed,
     currentTab,
     currentTabForgeEntry,
     forgeKindCounts,

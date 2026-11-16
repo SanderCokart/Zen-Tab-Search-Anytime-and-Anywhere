@@ -81,7 +81,7 @@ Every option in this guide lives in **Display options**. Open it from the ⚙ ge
 
 ![Omnibar with spaces, folders, GitHub/GitLab issues, and todos](docs/screenshots/search-omnibar.png)
 
-Type to filter. With **Show issues only in the issue navigator** on, issue and MR/PR tabs stay in the middle column and drop out of the tab list.
+Type to filter. **Show issues only in the Issue Navigator** and **Show merge requests or pull requests only in the Issue Navigator** keep those tabs in the middle column and drop them out of the tab list, independently.
 
 ![Filtering the omnibar to GitLab issues and merge requests](docs/screenshots/search-query.png)
 

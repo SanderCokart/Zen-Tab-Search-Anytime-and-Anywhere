@@ -117,7 +117,18 @@ export function installBrowserMock(
       case "setTabStatus":
       case "clearTodos":
       case "getDebugInfo":
+      case "closeTab":
+      case "moveTabToFolder":
+      case "removeTabFromFolder":
+      case "setPinnedUrl":
+      case "replacePinnedUrlWithCurrent":
         return undefined;
+      case "getFolders":
+        return [];
+      case "getPinnedUrl":
+        return (
+          snapshot.tabs.find((tab) => tab.id === message.tabId)?.url ?? "https://example.com/"
+        );
       default: {
         const exhaustive: never = message;
         throw new Error(`Unhandled harness message: ${JSON.stringify(exhaustive)}`);

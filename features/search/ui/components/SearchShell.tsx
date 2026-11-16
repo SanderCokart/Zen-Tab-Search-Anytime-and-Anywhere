@@ -41,6 +41,7 @@ export function SearchShell({
 }) {
   const theme = useResolvedTheme(displaySettings.theme);
   const textColor = customColor(displaySettings.textColor);
+  const backgroundPercent = Math.round(displaySettings.backgroundOpacity * 100);
   // Only the overlay, and only when it should hold its size on screen, needs the zoom.
   const zoom = usePageZoom(layout === "overlay" && !displaySettings.respectZoom);
 
@@ -64,6 +65,7 @@ export function SearchShell({
         data-zen-ui="popup"
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
+        onContextMenu={(event) => event.preventDefault()}
         data-theme={theme}
         style={{ colorScheme: theme, color: textColor }}
       >
@@ -74,13 +76,17 @@ export function SearchShell({
 
   return frame(
     <div
-      class="bg-zen-overlay flex h-full w-full items-center justify-center backdrop-blur-[8px]"
+      class="bg-zen-overlay flex h-full w-full items-center justify-center"
       onClick={onClose}
+      onContextMenu={(event) => event.preventDefault()}
       data-zen-ui
       data-theme={theme}
       data-omnibar-stage={open ? "open" : "loading"}
       style={{
         ...uiScaleStyle(displaySettings, "overlay", zoom),
+        "--zs-bg-opacity": String(backgroundPercent / 100),
+        backgroundColor: `color-mix(in srgb, var(--zs-scrim) ${backgroundPercent}%, transparent)`,
+        backdropFilter: `blur(${(backgroundPercent / 100) * 8}px)`,
         colorScheme: theme,
         color: textColor,
       }}

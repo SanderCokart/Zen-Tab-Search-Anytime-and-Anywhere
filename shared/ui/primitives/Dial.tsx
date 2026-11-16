@@ -52,7 +52,6 @@ export function Dial({
         travel: number;
         lastY: number;
         value: number;
-        locked: boolean;
       }
     | undefined
   >(undefined);
@@ -74,27 +73,17 @@ export function Dial({
     commit(next);
   };
 
-  // While turning, the pointer is locked like on SPEC-01: the cursor disappears,
-  // movement is read as raw deltas (so the drag never runs into a screen edge),
-  // and the cursor comes back where the drag started. Without pointer lock the
-  // cursor is still hidden through `data-turning`.
+  // While turning, the cursor is hidden through `data-turning`. Pointer lock
+  // is not used: Firefox and Zen always put up a "press Escape to take back
+  // control" banner for it, and pointer capture already keeps the drag.
   const endDrag = () => {
     const state = drag.current;
     drag.current = undefined;
     state?.element.removeAttribute("data-turning");
-    if (state && document.pointerLockElement === state.element) document.exitPointerLock?.();
   };
 
   useEffect(() => {
-    // Escape or a focus change can drop the lock mid-turn; end the turn with it.
-    const onLockChange = () => {
-      const state = drag.current;
-      if (state?.locked && document.pointerLockElement !== state.element) endDrag();
-      if (state && document.pointerLockElement === state.element) state.locked = true;
-    };
-    document.addEventListener("pointerlockchange", onLockChange);
     return () => {
-      document.removeEventListener("pointerlockchange", onLockChange);
       endDrag();
     };
   }, []);
@@ -102,30 +91,18 @@ export function Dial({
   const onPointerDown = (event: JSX.TargetedPointerEvent<HTMLDivElement>) => {
     if (disabled || event.button !== 0) return;
     const element = event.currentTarget;
-    drag.current = { element, travel: 0, lastY: event.clientY, value, locked: false };
+    drag.current = { element, travel: 0, lastY: event.clientY, value };
     element.setAttribute("data-turning", "");
     element.setPointerCapture?.(event.pointerId);
     element.focus();
-    try {
-      const request = element.requestPointerLock?.() as Promise<void> | undefined;
-      // Newer engines return a promise; a refusal just leaves the cursor hidden.
-      request?.catch?.(() => undefined);
-    } catch {
-      // No pointer lock: the captured pointer and hidden cursor still work.
-    }
   };
 
   const onPointerMove = (event: JSX.TargetedPointerEvent<HTMLDivElement>) => {
     const state = drag.current;
     if (!state) return;
-    // A locked pointer stops moving clientY, so use the raw deltas then.
-    // Up or right turns the dial up.
-    const delta =
-      document.pointerLockElement === state.element
-        ? event.movementY - event.movementX
-        : event.clientY - state.lastY;
+    // Up turns the dial up.
+    state.travel += event.clientY - state.lastY;
     state.lastY = event.clientY;
-    state.travel += delta;
     commit(dragValue(state.value, state.travel, min, max, step));
   };
 

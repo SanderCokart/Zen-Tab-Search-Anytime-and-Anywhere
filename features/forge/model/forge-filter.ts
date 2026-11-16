@@ -33,6 +33,18 @@ export function countForgeEntriesByKind(entries: readonly ForgeIssueEntry[]): Fo
   return { all: entries.length, issues, requests: entries.length - issues };
 }
 
+export function isForgeRequest(entry: ForgeIssueEntry): boolean {
+  return entry.ref.kind !== "issue";
+}
+
+/** Whether this tab should stay out of the overlay's tab list. */
+export function hidesForgeEntryInOverlay(
+  entry: ForgeIssueEntry,
+  settings: { filterIssuesInOverlay: boolean; filterRequestsInOverlay: boolean },
+): boolean {
+  return isForgeRequest(entry) ? settings.filterRequestsInOverlay : settings.filterIssuesInOverlay;
+}
+
 /** "PRs" when every entry is a GitHub one, otherwise "MRs". */
 export function forgeRequestsLabel(entries: readonly ForgeIssueEntry[]): "PRs" | "MRs" {
   return entries.length > 0 && entries.every((entry) => entry.ref.platform === "github")

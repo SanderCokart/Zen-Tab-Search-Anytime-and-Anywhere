@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import type { ForgeKindFilter } from "@/features/forge/model/forge-filter";
 import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import type {
   ForgeIssueProjectGroup,
@@ -26,6 +27,25 @@ export function forgeProjectKey(platform: string, projectLabel: string): string 
 
 export function forgeIssuesKey(platform: string, projectLabel: string): string {
   return `issues:${platform}:${projectLabel}`;
+}
+
+/** Every project, Issues folder and branch folder, in the order the tree draws them. */
+export function forgeTreeKeys(providers: readonly ForgeIssueProviderGroup[]): string[] {
+  const keys: string[] = [];
+  for (const provider of providers) {
+    for (const project of provider.projects) {
+      keys.push(forgeProjectKey(provider.platform, project.projectLabel));
+      if (project.issues.length > 0) {
+        keys.push(forgeIssuesKey(provider.platform, project.projectLabel));
+      }
+      for (const branch of project.branches) {
+        keys.push(
+          forgeBranchKey(provider.platform, project.projectLabel, branch.targetBranch),
+        );
+      }
+    }
+  }
+  return keys;
 }
 
 export function forgeBranchKey(
@@ -72,6 +92,27 @@ function projectEntries(
  * Issues folders and branch folders contribute nothing. Takes the grouped
  * entries so this file needs only the types of `ranking.ts`, which calls it.
  */
+/**
+ * Groups a `#` or `!` query needs open: the project, and the Issues or
+ * request folders of that kind. Stored collapse is left as it was.
+ */
+export function openedForgeCollapsed(
+  collapsed: ForgeCollapsedSet,
+  kind: ForgeKindFilter | undefined,
+): ForgeCollapsedSet {
+  if (!kind) {
+    return collapsed;
+  }
+  const next = new Set<string>();
+  for (const key of collapsed) {
+    if (key.startsWith("project:")) continue;
+    if (kind === "all" || (kind === "issues" && key.startsWith("issues:"))) continue;
+    if (kind === "requests" && key.startsWith("branch:")) continue;
+    next.add(key);
+  }
+  return next;
+}
+
 export function visibleForgeEntries(
   providers: readonly ForgeIssueProviderGroup[],
   collapsed: ForgeCollapsedSet,

@@ -23,6 +23,7 @@ export const tabInfoSchema = v.object({
   folderName: v.optional(v.string()),
   folderPath: v.optional(v.array(folderInfoSchema)),
   essential: v.optional(v.boolean()),
+  pinned: v.optional(v.boolean()),
   lastOpenedAt: v.optional(v.number()),
   score: v.optional(v.number()),
   active: v.optional(v.boolean()),
@@ -163,6 +164,16 @@ export const updateStatusSchema = v.object({
   checkedAt: v.nullable(v.number()),
 });
 
+/** A Zen folder as the overlay's Move to folder menu lists it. */
+export const overlayFolderInfoSchema = v.object({
+  id: v.string(),
+  name: v.string(),
+  spaceId: v.string(),
+  spaceName: v.string(),
+  parentId: v.optional(v.string()),
+  collapsed: v.fallback(v.boolean(), false),
+});
+
 export const errorResponseSchema = v.object({
   error: v.string(),
 });
@@ -286,6 +297,36 @@ export const extensionRequestSchema = v.variant("type", [
   v.object({
     type: v.literal("installUpdate"),
   }),
+  v.object({
+    type: v.literal("closeTab"),
+    tabId: tabIdSchema,
+  }),
+  v.object({
+    type: v.literal("getFolders"),
+    anchorTabId: optionalTabIdSchema,
+  }),
+  v.object({
+    type: v.literal("moveTabToFolder"),
+    tabId: tabIdSchema,
+    folderId: v.pipe(v.string(), v.minLength(1)),
+  }),
+  v.object({
+    type: v.literal("removeTabFromFolder"),
+    tabId: tabIdSchema,
+  }),
+  v.object({
+    type: v.literal("getPinnedUrl"),
+    tabId: tabIdSchema,
+  }),
+  v.object({
+    type: v.literal("setPinnedUrl"),
+    tabId: tabIdSchema,
+    url: v.pipe(v.string(), v.minLength(1)),
+  }),
+  v.object({
+    type: v.literal("replacePinnedUrlWithCurrent"),
+    tabId: tabIdSchema,
+  }),
 ]);
 
 export const contentCommandSchema = v.variant("type", [
@@ -369,6 +410,13 @@ export const EXTENSION_REQUEST_TYPES = [
   "getUpdateStatus",
   "openUpdate",
   "installUpdate",
+  "closeTab",
+  "getFolders",
+  "moveTabToFolder",
+  "removeTabFromFolder",
+  "getPinnedUrl",
+  "setPinnedUrl",
+  "replacePinnedUrlWithCurrent",
 ] as const;
 
 /**
@@ -377,6 +425,7 @@ export const EXTENSION_REQUEST_TYPES = [
  * re-exports them so feature code does not have to reach into the protocol.
  */
 export type FolderInfo = v.InferOutput<typeof folderInfoSchema>;
+export type OverlayFolderInfo = v.InferOutput<typeof overlayFolderInfoSchema>;
 export type ForgePageInfo = v.InferOutput<typeof forgePageInfoSchema>;
 export type TabInfo = v.InferOutput<typeof tabInfoSchema>;
 export type TabTimer = v.InferOutput<typeof tabTimerSchema>;
@@ -433,6 +482,13 @@ export type ExtensionSuccessMap = {
   getUpdateStatus: UpdateStatus;
   openUpdate: void;
   installUpdate: void;
+  closeTab: void;
+  getFolders: OverlayFolderInfo[];
+  moveTabToFolder: void;
+  removeTabFromFolder: void;
+  getPinnedUrl: string;
+  setPinnedUrl: void;
+  replacePinnedUrlWithCurrent: void;
 };
 
 const clearTimerResponseSchema = v.object({
@@ -553,7 +609,16 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
       return v.parse(updateStatusSchema, value) as ExtensionSuccessMap[T];
     case "openUpdate":
     case "installUpdate":
+    case "closeTab":
+    case "moveTabToFolder":
+    case "removeTabFromFolder":
+    case "setPinnedUrl":
+    case "replacePinnedUrlWithCurrent":
       return undefined as ExtensionSuccessMap[T];
+    case "getFolders":
+      return v.parse(v.array(overlayFolderInfoSchema), value) as ExtensionSuccessMap[T];
+    case "getPinnedUrl":
+      return v.parse(v.string(), value) as ExtensionSuccessMap[T];
     default: {
       const exhaustive: never = type;
       throw new Error(`Unhandled message type: ${String(exhaustive)}`);

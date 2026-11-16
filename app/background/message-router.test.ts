@@ -54,6 +54,13 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
     })),
     openUpdate: vi.fn(async () => undefined),
     installUpdate: vi.fn(async () => undefined),
+    closeTab: vi.fn(async () => undefined),
+    getFolders: vi.fn(async () => []),
+    moveTabToFolder: vi.fn(async () => undefined),
+    removeTabFromFolder: vi.fn(async () => undefined),
+    getPinnedUrl: vi.fn(async () => "https://example.com"),
+    setPinnedUrl: vi.fn(async () => undefined),
+    replacePinnedUrlWithCurrent: vi.fn(async () => undefined),
     isAllowedTimerEnd: vi.fn(() => true),
     ...overrides,
   };
@@ -227,6 +234,38 @@ describe("dispatchExtensionMessage", () => {
     await Promise.all([cached.promise, forced.promise]);
     expect(api.getUpdateStatus).toHaveBeenNthCalledWith(1, false);
     expect(api.getUpdateStatus).toHaveBeenNthCalledWith(2, true);
+  });
+
+  it("dispatches closeTab, folder moves and pinned URL updates", async () => {
+    const api = handlers();
+    const close = dispatchExtensionMessage(api, { type: "closeTab", tabId: 4 });
+    const folders = dispatchExtensionMessage(api, { type: "getFolders" });
+    const move = dispatchExtensionMessage(api, {
+      type: "moveTabToFolder",
+      tabId: 4,
+      folderId: "docs",
+    });
+    const replace = dispatchExtensionMessage(api, {
+      type: "replacePinnedUrlWithCurrent",
+      tabId: 4,
+    });
+    if (
+      !close.handled ||
+      !close.async ||
+      !folders.handled ||
+      !folders.async ||
+      !move.handled ||
+      !move.async ||
+      !replace.handled ||
+      !replace.async
+    ) {
+      throw new Error("expected async dispatch");
+    }
+    await Promise.all([close.promise, folders.promise, move.promise, replace.promise]);
+    expect(api.closeTab).toHaveBeenCalledWith(4);
+    expect(api.getFolders).toHaveBeenCalled();
+    expect(api.moveTabToFolder).toHaveBeenCalledWith(4, "docs");
+    expect(api.replacePinnedUrlWithCurrent).toHaveBeenCalledWith(4);
   });
 
   it("dispatches setTabStatus, including clearing it with none", async () => {

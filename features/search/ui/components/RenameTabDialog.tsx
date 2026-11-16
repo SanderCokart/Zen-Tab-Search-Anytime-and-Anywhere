@@ -2,6 +2,7 @@ import { useEffect, useRef } from "preact/hooks";
 import { clearButtonClass, primaryButtonClass } from "@/features/search/ui/lib/styles";
 import type { TabInfo } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
+import { useTypingSound } from "@/shared/ui/sound/useTypingSound";
 
 export interface RenameTabDialogProps {
   tab: TabInfo;
@@ -21,6 +22,7 @@ export function RenameTabDialog({
   onCancel,
 }: RenameTabDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const typing = useTypingSound();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -43,6 +45,8 @@ export function RenameTabDialog({
             class="zs-well focus:border-zen-accent border-zen-line-soft rounded-[var(--zs-r-lcd)] border px-[var(--zen-space-2)] py-[var(--zen-space-2)] font-[inherit] text-inherit outline-none"
             value={value}
             onInput={(event) => onChange(event.currentTarget.value)}
+            onKeyDown={typing.onKeyDown}
+            onKeyUp={typing.onKeyUp}
           />
         </label>
         {error && (

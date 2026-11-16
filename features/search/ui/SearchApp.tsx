@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
-import { nearestCollapsedGroup, groupToCollapse } from "@/features/forge/model/forge-collapse";
+import {
+  forgeTreeKeys,
+  nearestCollapsedGroup,
+  groupToCollapse,
+} from "@/features/forge/model/forge-collapse";
 import type { ForgeKindFilter } from "@/features/forge/model/forge-filter";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
 import { useForgeCollapse, useStoredCollapse } from "@/features/forge/ui/useForgeCollapse";
-import { TAB_FOLDER_COLLAPSED_STORAGE_KEY } from "@/features/search/model/tab-folder-collapse";
+import {
+  collectTabFolderKeys,
+  TAB_FOLDER_COLLAPSED_STORAGE_KEY,
+} from "@/features/search/model/tab-folder-collapse";
 import {
   flattenForgeNavigatorEntries,
   groupForgeIssueEntries,
   type ForgeIssueSortMode,
 } from "@/features/search/model/ranking";
-import { summarizeSearch } from "@/features/search/model/stats";
+import { pluralize, summarizeSearch } from "@/features/search/model/stats";
 import { TimersDock } from "@/features/timers/ui/TimersDock";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
 import { UpdateNotice } from "@/features/updates/ui/UpdateNotice";
@@ -22,6 +29,8 @@ import { CurrentTabStrip } from "@/features/search/ui/components/CurrentTabStrip
 import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersPanel";
 import { OmnibarViewPanel } from "@/features/search/ui/components/OmnibarViewPanel";
 import { StatusBar } from "@/features/search/ui/components/StatusBar";
+import { parsePinnedUrl } from "@/features/search/model/pinned-url";
+import { EditPinnedUrlDialog } from "@/features/search/ui/components/EditPinnedUrlDialog";
 import { RenameTabDialog } from "@/features/search/ui/components/RenameTabDialog";
 import { SearchInput } from "@/features/search/ui/components/SearchInput";
 import { SearchResultsList } from "@/features/search/ui/components/SearchResultsList";
@@ -48,9 +57,10 @@ import type { OmnibarView } from "@/shared/messaging/protocol";
 import { isActivatableTab, tabBrowserId, type SearchItem, type TabInfo } from "@/shared/types";
 import { type ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import { cn } from "@/shared/ui/cn";
+import { CollapseAllButton } from "@/shared/ui/primitives/CollapseAllButton";
 import { Led } from "@/shared/ui/primitives/Led";
 import { useSoundEngine } from "@/shared/ui/sound/SoundContext";
-import { customColor } from "@/features/settings/model/display-settings";
+import { backgroundPaint, customColor } from "@/features/settings/model/display-settings";
 
 export type { SearchLayout };
 
@@ -99,6 +109,12 @@ export function SearchApp({
   const [statusMenu, setStatusMenu] = useState<{ tabId: number; x: number; y: number } | null>(
     null,
   );
+  const [pinnedUrlDialog, setPinnedUrlDialog] = useState<{
+    tab: TabInfo;
+    tabId: number;
+    value: string;
+    error: string | null;
+  } | null>(null);
 
   const {
     tabs,
@@ -268,7 +284,7 @@ export function SearchApp({
   const onToggleTodo = useCallback(
     (tabId: number) => {
       const wasTodo = todos.has(tabId);
-      sound.play(wasTodo ? "latch-up" : "latch-down");
+      sound.play(wasTodo ? "success" : "latch-down");
       todoActions.setTodo(tabId, wasTodo ? "none" : "todo");
     },
     [sound, todoActions, todos],
@@ -357,6 +373,39 @@ export function SearchApp({
     "inline-flex shrink-0 items-center justify-center p-0",
     "size-[var(--zen-control)]",
   );
+
+  const tabFolderKeys = useMemo(
+    () => collectTabFolderKeys(results.itemGroups),
+    [results.itemGroups],
+  );
+  // A "#" or "@" query still filters the tab list with whatever follows the prefix.
+  const tabFilter =
+    results.forgeNavigatorQuery.active || results.todoNavigatorQuery.active
+      ? results.forgeNavigatorQuery.filterQuery
+      : query;
+  const showTabCollapse =
+    layout === "overlay" &&
+    displaySettings.groupFolders &&
+    tabFilter.trim() === "" &&
+    tabFolderKeys.length > 0;
+  // Stored keys, not the folders held open so the current tab stays visible.
+  const tabsAllCollapsed =
+    showTabCollapse && tabFolderKeys.every((key) => tabFolderCollapse.collapsed.has(key));
+  const tabCount = results.matchedItems.filter((item) => item.kind === "tab").length;
+  const onToggleAllTabs = () => {
+    tabFolderCollapse.setKeys(tabsAllCollapsed ? [] : tabFolderKeys);
+  };
+
+  const forgeKeys = useMemo(
+    () => forgeTreeKeys(groupForgeIssueEntries(results.listedForgeIssueEntries, forgeSortMode)),
+    [forgeSortMode, results.listedForgeIssueEntries],
+  );
+  const showForgeCollapse = forgeKeys.length > 0 && !results.forgeNavigatorQuery.active;
+  const forgeAllCollapsed =
+    showForgeCollapse && forgeKeys.every((key) => results.forgeTreeCollapsed.has(key));
+  const onToggleAllForge = () => {
+    forgeCollapse.setKeys(forgeAllCollapsed ? [] : forgeKeys);
+  };
 
   return (
     <SearchShell
@@ -492,40 +541,90 @@ export function SearchApp({
       >
         {/* Scrolls inside the frame, so the status bar stays in view under it. */}
         <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-          <ul
+          <div
             class={cn(
-              "zs-card zen-scroll zs-counter m-0 flex min-h-0 list-none flex-col overflow-y-auto",
-              "gap-[var(--zen-section-gap)] p-[var(--zen-space-5)]",
-              "flex-1",
-              compact && "min-h-[60px]",
+              "flex min-h-0 min-w-0 flex-1 flex-col",
+              layout === "overlay" && "zs-card overflow-hidden p-[var(--zen-space-5)]",
             )}
-            style={{ backgroundColor: customColor(displaySettings.folderBackgroundColor) }}
-            role="listbox"
+            style={
+              layout === "overlay"
+                ? {
+                    backgroundColor: backgroundPaint(
+                      customColor(displaySettings.folderBackgroundColor),
+                    ),
+                  }
+                : undefined
+            }
           >
-            <SearchResultsList
-              groups={results.itemGroups}
-              itemIndices={results.itemIndices}
-              selectedIndex={navigation.selectedIndex}
-              navigateForge={navigation.activePane !== "tabs"}
-              displaySettings={displaySettings}
-              collapsedFolders={results.collapsedFolders}
-              onToggleFolder={tabFolderCollapse.toggle}
-              timers={timers}
-              todos={todos}
-              statuses={statuses}
-              timerTabId={timerTabId}
-              statusMenuTabId={statusMenu?.tabId ?? null}
-              registerOption={navigation.registerOption}
-              onActivate={activateItem}
-              onContextMenu={openContextMenu}
-              onToggleTodo={onToggleTodo}
-              onToggleTimerForm={onToggleTimerForm}
-              onOpenTimerPopup={openTimer}
-              onSetTimer={timerActions.setTimer}
-              onClearTimer={timerActions.clearTimer}
-              onOpenStatusMenu={toggleStatusMenu}
-            />
-          </ul>
+            {layout === "overlay" && (
+              <div class="zs-head">
+                <strong class="min-w-0 truncate font-[inherit] font-medium">Tabs</strong>
+                {showTabCollapse ? (
+                  <span class="zs-head-split">
+                    <span class="zs-head-rule" aria-hidden="true" />
+                    <CollapseAllButton
+                      collapsed={tabsAllCollapsed}
+                      onToggle={onToggleAllTabs}
+                      testId="zen-collapse-tabs"
+                    />
+                    <span class="zs-head-rule" aria-hidden="true" />
+                  </span>
+                ) : (
+                  <span class="zs-head-rule" aria-hidden="true" />
+                )}
+                <span
+                  class="text-zen-danger shrink-0"
+                  data-testid="zen-tab-count"
+                  title={pluralize(tabCount, "tab")}
+                >
+                  {tabCount}
+                </span>
+              </div>
+            )}
+            <ul
+              class={cn(
+                "zen-scroll zs-counter m-0 flex min-h-0 list-none flex-col overflow-y-auto",
+                "gap-[var(--zen-section-gap)]",
+                "flex-1",
+                layout !== "overlay" && "zs-card p-[var(--zen-space-5)]",
+                compact && "min-h-[60px]",
+              )}
+              style={
+                layout === "overlay"
+                  ? undefined
+                  : {
+                      backgroundColor: backgroundPaint(
+                        customColor(displaySettings.folderBackgroundColor),
+                      ),
+                    }
+              }
+              role="listbox"
+            >
+              <SearchResultsList
+                groups={results.itemGroups}
+                itemIndices={results.itemIndices}
+                selectedIndex={navigation.selectedIndex}
+                navigateForge={navigation.activePane !== "tabs"}
+                displaySettings={displaySettings}
+                collapsedFolders={results.collapsedFolders}
+                onToggleFolder={tabFolderCollapse.toggle}
+                timers={timers}
+                todos={todos}
+                statuses={statuses}
+                timerTabId={timerTabId}
+                statusMenuTabId={statusMenu?.tabId ?? null}
+                registerOption={navigation.registerOption}
+                onActivate={activateItem}
+                onContextMenu={openContextMenu}
+                onToggleTodo={onToggleTodo}
+                onToggleTimerForm={onToggleTimerForm}
+                onOpenTimerPopup={openTimer}
+                onSetTimer={timerActions.setTimer}
+                onClearTimer={timerActions.clearTimer}
+                onOpenStatusMenu={toggleStatusMenu}
+              />
+            </ul>
+          </div>
           {(loadError ||
             (results.matchedItems.length === 0 &&
               results.visibleTabs.length + spaces.length > 0)) && (
@@ -541,23 +640,26 @@ export function SearchApp({
         {layout === "overlay" && results.forgeIssueEntries.length > 0 && (
           <ForgeIssueNavigator
             entries={results.listedForgeIssueEntries}
-            backgroundColor={customColor(displaySettings.issueBackgroundColor)}
+            backgroundColor={backgroundPaint(customColor(displaySettings.issueBackgroundColor))}
             truncate={displaySettings.truncateIssueTitles}
             sortMode={forgeSortMode}
             keyboardEntries={results.navigatorEntries}
-            kindFilter={forgeKindFilter}
+            kindFilter={results.effectiveKindFilter}
             kindCounts={results.forgeKindCounts}
             requestsLabel={results.requestsLabel}
             onKindFilterChange={(filter) => {
               setForgeKindFilter(filter);
               navigation.setSelectedForgeIndex(0);
             }}
-            collapsed={forgeCollapse.collapsed}
+            collapsed={results.forgeTreeCollapsed}
             onToggleGroup={forgeCollapse.toggle}
+            allCollapsed={forgeAllCollapsed}
+            onToggleAll={showForgeCollapse ? onToggleAllForge : undefined}
             selectedIndex={navigation.activePane === "forge" ? navigation.selectedForgeIndex : -1}
             onActivate={activateForgeEntry}
             onSelect={navigation.setSelectedForgeIndex}
             onToggleSort={() => {
+              sound.play("tick");
               setForgeSortMode((current) => (current === "recent" ? "old" : "recent"));
               navigation.setSelectedForgeIndex(0);
             }}
@@ -583,7 +685,7 @@ export function SearchApp({
                 allTabs={results.allTodoTabs}
                 statuses={statuses}
                 statusMenuTabId={statusMenu?.tabId ?? null}
-                backgroundColor={customColor(displaySettings.issueBackgroundColor)}
+                backgroundColor={backgroundPaint(customColor(displaySettings.issueBackgroundColor))}
                 truncate={displaySettings.truncateIssueTitles}
                 selectedIndex={
                   navigation.activePane === "todos" ? navigation.selectedTodoIndex : -1
@@ -593,6 +695,7 @@ export function SearchApp({
                 onDone={(tab) => {
                   const tabId = tabBrowserId(tab);
                   if (tabId !== undefined) {
+                    sound.play("success");
                     todoActions.setTodo(tabId, "none");
                   }
                 }}
@@ -606,7 +709,7 @@ export function SearchApp({
             {timers.size > 0 && (
               <TimersDock
                 timers={timers}
-                backgroundColor={customColor(displaySettings.issueBackgroundColor)}
+                backgroundColor={backgroundPaint(customColor(displaySettings.issueBackgroundColor))}
                 onClearAll={timerActions.clearAllTimers}
                 onClearTimer={timerActions.clearTimer}
                 onActivateTimer={(tabId) => {
@@ -658,6 +761,7 @@ export function SearchApp({
             const tabId = tabBrowserId(contextMenu.tab);
             setContextMenu(null);
             if (tabId !== undefined) {
+              sound.play(status === "none" ? "success" : "latch-down");
               todoActions.setTodo(tabId, status);
             }
           }}
@@ -667,6 +771,63 @@ export function SearchApp({
             if (tabId !== undefined) {
               statusActions.setStatus(tabId, light);
             }
+          }}
+          onCloseTab={(tabId) => {
+            setContextMenu(null);
+            void sendExtensionMessage({ type: "closeTab", tabId }).catch((error) =>
+              debugError("Could not close tab:", error),
+            );
+          }}
+          onEditPinnedUrl={(tabId) => {
+            const tab = contextMenu.tab;
+            setContextMenu(null);
+            setPinnedUrlDialog({ tab, tabId, value: tab.url, error: null });
+            void sendExtensionMessage({ type: "getPinnedUrl", tabId })
+              .then((url) => {
+                setPinnedUrlDialog((current) =>
+                  current?.tabId === tabId ? { ...current, value: url || current.value } : current,
+                );
+              })
+              .catch((error) => debugError("Could not read pinned URL:", error));
+          }}
+          onReplacePinnedUrl={(tabId) => {
+            setContextMenu(null);
+            void sendExtensionMessage({ type: "replacePinnedUrlWithCurrent", tabId }).catch(
+              (error) => debugError("Could not replace pinned URL:", error),
+            );
+          }}
+          onMoveToFolder={(tabId, folderId) => {
+            setContextMenu(null);
+            void sendExtensionMessage({ type: "moveTabToFolder", tabId, folderId }).catch((error) =>
+              debugError("Could not move tab to folder:", error),
+            );
+          }}
+          onRemoveFromFolder={(tabId) => {
+            setContextMenu(null);
+            void sendExtensionMessage({ type: "removeTabFromFolder", tabId }).catch((error) =>
+              debugError("Could not remove tab from folder:", error),
+            );
+          }}
+        />
+      )}
+
+      {pinnedUrlDialog && (
+        <EditPinnedUrlDialog
+          value={pinnedUrlDialog.value}
+          error={pinnedUrlDialog.error}
+          onChange={(value) => setPinnedUrlDialog({ ...pinnedUrlDialog, value, error: null })}
+          onCancel={() => setPinnedUrlDialog(null)}
+          onSubmit={(value) => {
+            const url = parsePinnedUrl(value);
+            if (!url) {
+              setPinnedUrlDialog({ ...pinnedUrlDialog, error: "Enter a valid http(s) URL." });
+              return;
+            }
+            const tabId = pinnedUrlDialog.tabId;
+            setPinnedUrlDialog(null);
+            void sendExtensionMessage({ type: "setPinnedUrl", tabId, url }).catch((error) =>
+              debugError("Could not set pinned URL:", error),
+            );
           }}
         />
       )}

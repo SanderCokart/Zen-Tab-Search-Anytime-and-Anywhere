@@ -8,9 +8,13 @@ vi.mock("@/shared/messaging/client", () => ({
   sendTabMessage: vi.fn(async () => undefined),
 }));
 
-vi.mock("@/features/search/background/popup", () => ({
-  toggleSearchPopup: vi.fn(async () => undefined),
-}));
+vi.mock("@/features/search/background/popup", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/search/background/popup")>();
+  return {
+    ...actual,
+    toggleSearchPopup: vi.fn(async () => undefined),
+  };
+});
 
 vi.mock("@/features/zen/anchor", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/zen/anchor")>();
@@ -95,6 +99,6 @@ describe("toggleOmnibar", () => {
     await toggleOmnibar(20, { preferredUrl: "about:config", warmSnapshot });
 
     expect(warmSnapshot).not.toHaveBeenCalled();
-    expect(toggleSearchPopupMock).toHaveBeenCalled();
+    expect(toggleSearchPopupMock).not.toHaveBeenCalled();
   });
 });

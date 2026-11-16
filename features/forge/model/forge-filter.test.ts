@@ -3,6 +3,7 @@ import {
   countForgeEntriesByKind,
   filterForgeEntriesByKind,
   forgeRequestsLabel,
+  hidesForgeEntryInOverlay,
 } from "@/features/forge/model/forge-filter";
 import type { ForgeIssueEntry, ForgeKind, ForgePlatform } from "@/features/forge/model/forge-label";
 
@@ -49,6 +50,38 @@ describe("countForgeEntriesByKind", () => {
   it("counts each kind and the total", () => {
     expect(countForgeEntriesByKind(entries)).toEqual({ all: 5, issues: 3, requests: 2 });
     expect(countForgeEntriesByKind([])).toEqual({ all: 0, issues: 0, requests: 0 });
+  });
+});
+
+describe("hidesForgeEntryInOverlay", () => {
+  const issue = entries[0]!;
+  const mergeRequest = entries[1]!;
+
+  it("hides each kind on its own switch", () => {
+    expect(
+      hidesForgeEntryInOverlay(issue, {
+        filterIssuesInOverlay: true,
+        filterRequestsInOverlay: false,
+      }),
+    ).toBe(true);
+    expect(
+      hidesForgeEntryInOverlay(mergeRequest, {
+        filterIssuesInOverlay: true,
+        filterRequestsInOverlay: false,
+      }),
+    ).toBe(false);
+    expect(
+      hidesForgeEntryInOverlay(issue, {
+        filterIssuesInOverlay: false,
+        filterRequestsInOverlay: true,
+      }),
+    ).toBe(false);
+    expect(
+      hidesForgeEntryInOverlay(mergeRequest, {
+        filterIssuesInOverlay: false,
+        filterRequestsInOverlay: true,
+      }),
+    ).toBe(true);
   });
 });
 

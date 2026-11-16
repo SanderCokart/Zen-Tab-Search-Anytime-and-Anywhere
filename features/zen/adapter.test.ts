@@ -65,6 +65,42 @@ describe("createZenWorkspaceAdapter with a fake experiment API", () => {
     expect(getAllTabs).toHaveBeenCalledWith(22);
   });
 
+  it("fills nested folder paths from the folder list", async () => {
+    const getAllTabs = vi.fn(async () => [
+      tab({ id: 1, title: "Nested", folderId: "infra", folderName: "Infra" }),
+    ]);
+    const listFolders = vi.fn(async () => [
+      { id: "docs", name: "Docs", spaceId: "s", spaceName: "Work", collapsed: false },
+      {
+        id: "infra",
+        name: "Infra",
+        spaceId: "s",
+        spaceName: "Work",
+        parentId: "docs",
+        collapsed: false,
+      },
+    ]);
+    const workspace = createZenWorkspaceAdapter({
+      resolveAnchorTabId: async () => 1,
+      getZenTabsApi: () => ({ getAllTabs, listFolders }),
+      browser: {
+        queryTabs: async () => [{ id: 1, title: "Nested", windowId: 1 }],
+        getTab: async (tabId) => ({ id: tabId, windowId: 1 }),
+        focusWindow: async () => undefined,
+        activateTab: async () => undefined,
+      },
+    });
+
+    await expect(workspace.listTabs()).resolves.toEqual([
+      expect.objectContaining({
+        folderPath: [
+          { id: "docs", name: "Docs" },
+          { id: "infra", name: "Infra" },
+        ],
+      }),
+    ]);
+  });
+
   it("lists Zen tabs instead of falling back to browser.tabs", async () => {
     const workspace = createFakeAdapter();
     const { queryTabs } = createTabQuery(workspace);

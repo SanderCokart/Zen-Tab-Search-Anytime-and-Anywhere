@@ -1,9 +1,13 @@
 import type { SearchItemGroup } from "@/features/search/model/ranking";
-import { tabFolderKey } from "@/features/search/model/tab-folder-collapse";
+import { isCurrentTab, tabFolderKey } from "@/features/search/model/tab-folder-collapse";
 import { TabFolderHeader } from "@/features/search/ui/components/TabFolderHeader";
 import { TabSearchRow } from "@/features/search/ui/components/TabSearchRow";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
-import { customColor, type DisplaySettings } from "@/features/settings/model/display-settings";
+import {
+  backgroundPaint,
+  customColor,
+  type DisplaySettings,
+} from "@/features/settings/model/display-settings";
 import { statusRowClass } from "@/features/status/ui/traffic-light";
 import {
   formatSpaceDisplayTitle,
@@ -59,7 +63,13 @@ export function SearchResultsList(props: SearchResultsListProps) {
   return <>{renderGroups(props, props.groups, 0)}</>;
 }
 
-function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], level: number) {
+function renderGroups(
+  props: SearchResultsListProps,
+  groups: SearchItemGroup[],
+  level: number,
+  /** A closed panel is drawing this group, so it must not repeat the current-tab row. */
+  suppressKeep = false,
+) {
   const { displaySettings } = props;
 
   return groups.map((group, groupIndex) => {
@@ -69,7 +79,7 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
         (item) => item.kind === "tab" && isEssentialTab(item.data),
       );
       const tabs = group.items.filter((item) => item.kind === "tab" && !isEssentialTab(item.data));
-      const spaceColor = customColor(displaySettings.spaceBackgroundColor);
+      const spaceColor = backgroundPaint(customColor(displaySettings.spaceBackgroundColor));
 
       return (
         <section key={`ungrouped-${level}-${groupIndex}`} class="contents">
@@ -126,18 +136,20 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
     const count = countTabs(group);
     const folderKey = tabFolderKey(group.folderId);
     const open = !props.collapsedFolders.has(folderKey);
+    const showCurrent =
+      !open && !suppressKeep && folderContainsCurrent(group) ? currentBranch(group) : undefined;
 
     return (
       <li
         key={`${group.folderId}-${level}-${groupIndex}`}
         class={cn(
-          "min-w-0",
+          "zs-acc min-w-0",
           // A sub-folder follows its siblings by the folder gap; top-level sections are
           // spaced by the list's own section gap.
-          level > 0 && "mt-[var(--zen-folder-gap)]",
+          level > 0 && "zs-subfolder mt-[var(--zen-folder-gap)]",
         )}
         data-testid="zen-folder-section"
-        data-open={open}
+        data-open={open || undefined}
       >
         <TabFolderHeader
           open={open}
@@ -148,20 +160,41 @@ function renderGroups(props: SearchResultsListProps, groups: SearchItemGroup[], 
         >
           {group.folderName}
         </TabFolderHeader>
-        {open && (
-          <ul
-            class={cn(
-              "m-0 flex list-none flex-col gap-[var(--zen-tab-gap)] p-0",
-              level > 0 && "zs-sub",
-            )}
-          >
-            {group.items.map((item) => renderItem(props, item))}
-            {renderGroups(props, group.children, level + 1)}
+        {showCurrent && (
+          <ul class="zs-tree-kids m-0 flex list-none flex-col gap-[var(--zen-tab-gap)]">
+            {showCurrent.items.map((item) => renderItem(props, item))}
+            {renderGroups(props, showCurrent.children, level + 1)}
           </ul>
         )}
+        {/* Stays mounted, like an issue folder, so the height can ease shut. */}
+        <div class="zs-acc-panel" role="region" aria-hidden={!open}>
+          <div class="zs-acc-clip" inert={!open}>
+            <ul class="zs-tree-kids m-0 flex list-none flex-col gap-[var(--zen-tab-gap)]">
+              {(showCurrent ? group.items.filter((item) => !isCurrentTab(item)) : group.items).map(
+                (item) => renderItem(props, item, open),
+              )}
+              {renderGroups(props, group.children, level + 1, !open)}
+            </ul>
+          </div>
+        </div>
       </li>
     );
   });
+}
+
+/** The current tab, and the sub-folders that lead to it. Everything else stays folded. */
+function currentBranch(group: SearchItemGroup): {
+  items: SearchItem[];
+  children: SearchItemGroup[];
+} {
+  return {
+    items: group.items.filter(isCurrentTab),
+    children: group.children.filter(folderContainsCurrent),
+  };
+}
+
+function folderContainsCurrent(group: SearchItemGroup): boolean {
+  return group.items.some(isCurrentTab) || group.children.some(folderContainsCurrent);
 }
 
 /** Every tab in a folder, sub-folders included. */
@@ -176,7 +209,7 @@ function itemKey(item: SearchItem): string {
   return `tab:${item.data.id ?? "none"}:${item.data.domId ?? item.data.url}`;
 }
 
-function renderItem(props: SearchResultsListProps, item: SearchItem) {
+function renderItem(props: SearchResultsListProps, item: SearchItem, interactive = true) {
   const {
     itemIndices,
     selectedIndex,
@@ -198,14 +231,16 @@ function renderItem(props: SearchResultsListProps, item: SearchItem) {
   } = props;
 
   const index = itemIndices.get(item) ?? -1;
-  const selected = !navigateForge && selectedIndex === index;
+  const selected = interactive && index >= 0 && !navigateForge && selectedIndex === index;
   const tabId = item.kind === "tab" ? tabBrowserId(item.data) : undefined;
   const light = tabId === undefined ? undefined : statuses.get(tabId);
 
   return (
     <li
       key={itemKey(item)}
-      ref={(element) => registerOption(index, element)}
+      ref={(element) => {
+        if (interactive && index >= 0) registerOption(index, element);
+      }}
       data-testid="zen-search-item"
       data-selected={selected ? "true" : undefined}
       data-status-light={light}

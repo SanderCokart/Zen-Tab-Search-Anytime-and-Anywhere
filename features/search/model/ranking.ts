@@ -386,6 +386,11 @@ export interface NavigatorQuery {
   filterQuery: string;
 }
 
+export interface ForgeNavigatorQuery extends NavigatorQuery {
+  /** `#` lists issues; `!` lists merge requests and pull requests. */
+  kind?: "issues" | "requests";
+}
+
 /** Typing one of these first sends the keyboard to the issue navigator. */
 export const FORGE_NAVIGATOR_PREFIXES = ["!", "#"] as const;
 /** Typing this first sends the keyboard to the todo column. */
@@ -399,8 +404,15 @@ function parseNavigatorQuery(query: string, prefixes: readonly string[]): Naviga
   return { active: false, filterQuery: query };
 }
 
-export function parseForgeNavigatorQuery(query: string): NavigatorQuery {
-  return parseNavigatorQuery(query, FORGE_NAVIGATOR_PREFIXES);
+export function parseForgeNavigatorQuery(query: string): ForgeNavigatorQuery {
+  const trimmed = query.trimStart();
+  if (trimmed.startsWith("#")) {
+    return { active: true, filterQuery: trimmed.slice(1).trimStart(), kind: "issues" };
+  }
+  if (trimmed.startsWith("!")) {
+    return { active: true, filterQuery: trimmed.slice(1).trimStart(), kind: "requests" };
+  }
+  return { active: false, filterQuery: query };
 }
 
 export function parseTodoNavigatorQuery(query: string): NavigatorQuery {

@@ -12,7 +12,10 @@ export const DISPLAY_SETTINGS_STORAGE_KEY = "displaySettings";
  */
 const DEFAULTS = {
   detectForgeIssues: true,
+  /** Overlay only: keep issue tabs in the issue navigator instead of the tab list. */
   filterIssuesInOverlay: true,
+  /** Overlay only: keep merge-request and pull-request tabs in the issue navigator. */
+  filterRequestsInOverlay: true,
   groupFolders: true,
   groupSubfolders: true,
   /** Leave the spaces grid out of that surface. The other surface is unaffected. */
@@ -41,6 +44,11 @@ const DEFAULTS = {
   soundEnabled: true,
   /** 0..1, the level the sounds are scaled to. */
   soundVolume: DEFAULT_SOUND_VOLUME,
+  /**
+   * How solid the omnibar background is, from clear (0) to solid (1).
+   * Text and controls stay opaque.
+   */
+  backgroundOpacity: 0.75,
   /** Focus an already-open tab when another app opens the same address. */
   reuseExternalTabs: false,
   /** Light, dark, or whichever the system asks for. */
@@ -107,6 +115,27 @@ export function customColor(value: string): string | undefined {
   return HEX_COLOR.test(value) ? value : undefined;
 }
 
+/** Lowest omnibar-background opacity: 0 is fully transparent, so the page behind shows through. */
+export const MIN_BACKGROUND_OPACITY = 0;
+/** Fully solid. The stored default is 75%. */
+export const MAX_BACKGROUND_OPACITY = 1;
+
+/** Snaps an omnibar background opacity onto the dial's 5% steps, inside 0%..100%. */
+export function clampBackgroundOpacity(value: number): number {
+  const clamped = Math.min(MAX_BACKGROUND_OPACITY, Math.max(MIN_BACKGROUND_OPACITY, value));
+  const steps = Math.round((clamped - MIN_BACKGROUND_OPACITY) / 0.05);
+  return Math.round((MIN_BACKGROUND_OPACITY + steps * 0.05) * 100) / 100;
+}
+
+/**
+ * A background colour that follows `--zs-bg-opacity`. At 1 it is the colour
+ * itself; below that the page behind the overlay shows through it.
+ */
+export function backgroundPaint(color: string | undefined): string | undefined {
+  if (color === undefined) return undefined;
+  return `color-mix(in srgb, ${color} calc(var(--zs-bg-opacity, 1) * 100%), transparent)`;
+}
+
 /** A stored value that falls back to the default instead of failing the parse. */
 function boolean(fallback: boolean) {
   return v.fallback(v.boolean(), fallback);
@@ -158,6 +187,7 @@ const displaySettingsSchema = v.pipe(
     v.object({
       detectForgeIssues: boolean(DEFAULTS.detectForgeIssues),
       filterIssuesInOverlay: boolean(DEFAULTS.filterIssuesInOverlay),
+      filterRequestsInOverlay: boolean(DEFAULTS.filterRequestsInOverlay),
       groupFolders: boolean(DEFAULTS.groupFolders),
       groupSubfolders: boolean(DEFAULTS.groupSubfolders),
       hideSpacesInPopup: boolean(DEFAULTS.hideSpacesInPopup),
@@ -178,6 +208,7 @@ const displaySettingsSchema = v.pipe(
       todoGap: gap(DEFAULTS.todoGap),
       soundEnabled: boolean(DEFAULTS.soundEnabled),
       soundVolume: scalar(DEFAULTS.soundVolume, clampVolume),
+      backgroundOpacity: scalar(DEFAULTS.backgroundOpacity, clampBackgroundOpacity),
       reuseExternalTabs: boolean(DEFAULTS.reuseExternalTabs),
       theme: v.fallback(v.picklist(THEME_PREFERENCES), DEFAULTS.theme),
       textColor: color("textColor"),
@@ -190,6 +221,7 @@ const displaySettingsSchema = v.pipe(
   v.transform((settings) => ({
     ...settings,
     filterIssuesInOverlay: settings.detectForgeIssues && settings.filterIssuesInOverlay,
+    filterRequestsInOverlay: settings.detectForgeIssues && settings.filterRequestsInOverlay,
     groupSubfolders: settings.groupFolders && settings.groupSubfolders,
   })),
 );

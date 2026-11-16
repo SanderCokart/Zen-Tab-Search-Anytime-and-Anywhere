@@ -288,6 +288,34 @@ export default defineBackground(() => {
       await hideOmnibar();
     },
     installUpdate: updateService.install,
+    closeTab: async (tabId) => {
+      await workspace.closeTab(tabId);
+      notify();
+    },
+    getFolders: async (anchorTabId) => {
+      try {
+        return await workspace.listFolders(anchorTabId);
+      } catch {
+        return [];
+      }
+    },
+    moveTabToFolder: async (tabId, folderId) => {
+      await workspace.moveTabsToFolder([tabId], folderId);
+      notify();
+    },
+    removeTabFromFolder: async (tabId) => {
+      await workspace.removeTabsFromFolder([tabId]);
+      notify();
+    },
+    getPinnedUrl: (tabId) => workspace.getPinnedUrl(tabId),
+    setPinnedUrl: async (tabId, url) => {
+      await workspace.setPinnedUrl(tabId, url);
+      notify();
+    },
+    replacePinnedUrlWithCurrent: async (tabId) => {
+      await workspace.replacePinnedUrlWithCurrent(tabId);
+      notify();
+    },
     anchorTabIdForSender: (sender) =>
       sender.tab === undefined && sender.url?.startsWith(browser.runtime.getURL(OMNIBAR_PAGE))
         ? getOmnibarAnchorTabId()

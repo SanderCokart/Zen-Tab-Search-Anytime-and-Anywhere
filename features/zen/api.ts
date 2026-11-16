@@ -69,6 +69,9 @@ export interface ZenTabsApi {
   deleteSpace?(spaceIds: string[], anchorTabId?: number): Promise<number>;
   setEssential?(tabIds: number[]): Promise<number>;
   clearEssential?(tabIds: number[]): Promise<number>;
+  getPinnedUrl?(tabId: number): Promise<string>;
+  setPinnedUrl?(tabId: number, url: string): Promise<boolean>;
+  replacePinnedUrlWithCurrent?(tabId: number): Promise<boolean>;
 }
 
 export function getZenTabsApi(): ZenTabsApi | undefined {

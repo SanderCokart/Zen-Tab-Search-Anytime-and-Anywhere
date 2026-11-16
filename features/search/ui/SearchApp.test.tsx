@@ -43,8 +43,8 @@ function mountSearchApp(
   initialView?: OmnibarView,
   snapshotTimers: Partial<TabTimer>[] = [],
 ) {
-  const sendMessage = vi.fn(async ({ type }: { type: string }) => {
-    if (type === "getSnapshot") {
+  const sendMessage = vi.fn(async (message: { type: string; tabId?: number }) => {
+    if (message.type === "getSnapshot") {
       return {
         tabs: snapshotTabs,
         spaces: snapshotSpaces,
@@ -53,8 +53,14 @@ function mountSearchApp(
         statuses: snapshotStatuses,
       };
     }
-    if (type === "getTab") {
+    if (message.type === "getTab") {
       return snapshotTabs[0];
+    }
+    if (message.type === "getFolders") {
+      return [{ id: "docs", name: "Docs", spaceId: "s", spaceName: "Work", collapsed: false }];
+    }
+    if (message.type === "getPinnedUrl") {
+      return snapshotTabs.find((tab) => tab.id === message.tabId)?.url ?? "https://example.com/";
     }
     return undefined;
   });
@@ -243,6 +249,10 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-tab-context-menu']")).toBeTruthy(),
     );
+
+    const row = root.querySelector("[data-testid='zen-search-item']")!;
+    row.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 2 }));
+    expect(root.querySelector("[data-testid='zen-tab-context-menu']")).toBeTruthy();
 
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -497,8 +507,10 @@ describe("SearchApp", () => {
     expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(0);
     await vi.waitFor(() => expect(root.textContent).toContain("Recent"));
     expect(root.querySelector("span[title^='Last opened:']")).not.toBeNull();
+    play.mockClear();
     root.querySelector<HTMLButtonElement>("button[title='Change issue sorting']")?.click();
     await vi.waitFor(() => expect(root.textContent).toContain("Old"));
+    expect(play).toHaveBeenCalledWith("tick");
 
     const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
     input.value = "42";
@@ -517,6 +529,20 @@ describe("SearchApp", () => {
       }),
     );
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("lets the page show through the overlay at the chosen background opacity", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", { backgroundOpacity: 0.5 });
+
+    const stage = await vi.waitFor(() => {
+      const element = root.querySelector<HTMLElement>("[data-omnibar-stage]");
+      expect(element?.style.getPropertyValue("--zs-bg-opacity")).toBe("0.5");
+      return element!;
+    });
+    expect(stage.style.backdropFilter).toBe("blur(4px)");
 
     render(null, root);
     root.remove();
@@ -898,6 +924,154 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("keeps a todo row looking like other tab rows when it has no status color", async () => {
+    const { root } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [{ tabId: 2, status: "todo" }],
+    );
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-done-button']")).not.toBeNull(),
+    );
+    const todoRow = root.querySelector("[data-testid='zen-todo-column'] .zs-row")!;
+    expect(todoRow.className).not.toContain("bg-red-500/");
+    expect(todoRow.className).not.toMatch(/zs-red/);
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("closes a tab and edits a pinned URL from the context menu", async () => {
+    const { root, sendMessage } = mountSearchApp(vi.fn(), [
+      { ...tabs[0], pinned: true, url: "https://mail.example.com/" },
+    ]);
+    await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
+
+    const event = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 20,
+      clientY: 20,
+    });
+    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+
+    const menu = () => root.querySelector("[data-testid='zen-tab-context-menu']");
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Close tab"));
+    expect(menu()?.textContent).toContain("Edit pinned URL");
+    expect(menu()?.textContent).toContain("Replace pinned URL with current");
+    expect(menu()?.textContent).toContain("Move to folder");
+    expect(
+      [...menu()!.querySelectorAll("[role='menuitem']")].map((node) =>
+        node.textContent?.replace(/\s+/g, " ").trim(),
+      ),
+    ).toEqual([
+      "Close tab",
+      "Rename",
+      "Move to folder",
+      "Edit pinned URL",
+      "Replace pinned URL with current",
+      "Mark as todo",
+      "Timer",
+      "⇄Host overrides…",
+    ]);
+
+    [...menu()!.querySelectorAll("[role='menuitem']")]
+      .find((node) => node.textContent?.includes("Move to folder"))
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-tab-folder-menu']")?.textContent).toContain(
+        "Work · Docs",
+      ),
+    );
+    [...root.querySelectorAll("[role='menuitem']")]
+      .find((node) => node.textContent?.includes("Docs"))
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "moveTabToFolder",
+        tabId: 1,
+        folderId: "docs",
+      }),
+    );
+
+    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Close tab"));
+    [...menu()!.querySelectorAll("[role='menuitem']")]
+      .find((node) => node.textContent?.includes("Close tab"))
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "closeTab", tabId: 1 }),
+    );
+
+    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(menu()?.textContent).toContain("Replace pinned URL with current"),
+    );
+    [...menu()!.querySelectorAll("[role='menuitem']")]
+      .find((node) => node.textContent?.includes("Replace pinned URL with current"))
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "replacePinnedUrlWithCurrent",
+        tabId: 1,
+      }),
+    );
+
+    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Edit pinned URL"));
+    [...menu()!.querySelectorAll("[role='menuitem']")]
+      .find((node) => node.textContent?.includes("Edit pinned URL"))
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("form")?.textContent).toContain("Edit pinned URL"),
+    );
+    const input = root.querySelector("form input") as HTMLInputElement;
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "getPinnedUrl", tabId: 1 }),
+    );
+    await vi.waitFor(() => expect(input.value).toBe("https://mail.example.com/"));
+    input.value = "https://mail.example.com/inbox";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() => expect(input.value).toBe("https://mail.example.com/inbox"));
+    root.querySelector<HTMLButtonElement>("form button[type='submit']")!.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "setPinnedUrl",
+        tabId: 1,
+        url: "https://mail.example.com/inbox",
+      }),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
   it("clears the todos of one status color after confirming", async () => {
     const confirm = vi.spyOn(window, "confirm");
     const { root, sendMessage } = mountSearchApp(
@@ -1013,12 +1187,13 @@ describe("SearchApp", () => {
     row().dispatchEvent(
       new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 20, clientY: 20 }),
     );
-    await vi.waitFor(() => expect(menu()?.textContent).toContain("Status"));
+    await vi.waitFor(() => expect(menu()?.querySelector("[aria-label='Status']")).toBeTruthy());
     expect(
-      [...menu()!.querySelectorAll("[role='menuitemradio']")].map((item) => item.textContent),
-    ).toEqual(["Red", "Orange", "Green"]);
-    // No color yet, so there is nothing to clear.
-    expect(menu()!.querySelector("[data-traffic-light='none']")).toBeNull();
+      [...menu()!.querySelectorAll("[role='menuitemradio']")].map((item) =>
+        item.getAttribute("aria-label"),
+      ),
+    ).toEqual(["Red", "Orange", "Green", "No status"]);
+    expect(menu()!.querySelector("[data-traffic-light='none']")).toBeTruthy();
 
     menu()!.querySelector<HTMLButtonElement>("[data-traffic-light='green']")!.click();
     await vi.waitFor(() => expect(menu()).toBeNull());
@@ -1055,7 +1230,7 @@ describe("SearchApp", () => {
         clientY: 20,
       }),
     );
-    await vi.waitFor(() => expect(menu()?.textContent).toContain("Status"));
+    await vi.waitFor(() => expect(menu()?.querySelector("[aria-label='Status']")).toBeTruthy());
     expect(menu()!.querySelector("[data-traffic-light='red']")!.getAttribute("aria-checked")).toBe(
       "true",
     );
@@ -1121,6 +1296,7 @@ describe("SearchApp", () => {
     expect(sendMessage).toHaveBeenCalledWith({ type: "setTodo", tabId: 2, status: "none" });
     expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "switchTab" }));
     expect(onClose).not.toHaveBeenCalled();
+    expect(play).toHaveBeenCalledWith("success");
 
     render(null, root);
     root.remove();
@@ -1229,6 +1405,36 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("keeps pull-request tabs in overlay results when only issues are filtered out", async () => {
+    const forgeTabs = [
+      {
+        ...tabs[0],
+        title: "Fix search",
+        url: "https://github.com/acme/project/issues/42",
+      },
+      {
+        ...tabs[1],
+        title: "Ship it",
+        url: "https://github.com/acme/project/pull/9",
+      },
+    ];
+    const { root } = mountSearchApp(vi.fn(), forgeTabs, "overlay", {
+      detectForgeIssues: true,
+      filterIssuesInOverlay: true,
+      filterRequestsInOverlay: false,
+    });
+
+    await vi.waitFor(() => expect(root.textContent).toContain("Issues and requests"));
+    const tabTitles = [...root.querySelectorAll("[data-testid='zen-search-item']")].map(
+      (item) => item.textContent,
+    );
+    expect(tabTitles.some((title) => title?.includes("Fix search"))).toBe(false);
+    expect(tabTitles.some((title) => title?.includes("Ship it"))).toBe(true);
+
+    render(null, root);
+    root.remove();
+  });
+
   it("moves arrow navigation to the issue navigator when the query starts with # or !", async () => {
     const mixedTabs = [
       {
@@ -1270,6 +1476,18 @@ describe("SearchApp", () => {
       ),
     );
     expect(root.querySelector("[data-selected='true']")).toBeNull();
+    expect(root.querySelector("[role='radio'][aria-checked='true']")?.textContent).toContain(
+      "Issues",
+    );
+
+    input.value = "!";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-issue-selected='true']")?.textContent).toContain(
+        "Improve filters",
+      ),
+    );
+    expect(root.querySelector("[role='radio'][aria-checked='true']")?.textContent).toContain("MRs");
 
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
     await vi.waitFor(() =>
@@ -1278,13 +1496,6 @@ describe("SearchApp", () => {
     expect(root.querySelector("[data-issue-selected='true']")).toBeNull();
 
     input.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
-    await vi.waitFor(() =>
-      expect(root.querySelector("[data-issue-selected='true']")?.textContent).toContain(
-        "Fix search",
-      ),
-    );
-
-    input.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
     await vi.waitFor(() =>
       expect(root.querySelector("[data-issue-selected='true']")?.textContent).toContain(
         "Improve filters",
@@ -1588,6 +1799,11 @@ describe("SearchApp", () => {
 
     await vi.waitFor(() => expect(root.querySelector("form")?.textContent).toContain("Rename tab"));
     const input = root.querySelector("form input") as HTMLInputElement;
+    play.mockClear();
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "D", bubbles: true }));
+    expect(play).toHaveBeenCalledWith("type");
+    input.dispatchEvent(new KeyboardEvent("keyup", { key: "D", bubbles: true }));
+    expect(play).toHaveBeenCalledWith("type-up");
     input.value = "Docs";
     input.dispatchEvent(new InputEvent("input", { bubbles: true }));
     await vi.waitFor(() => expect(input.value).toBe("Docs"));
@@ -1804,6 +2020,37 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     unmount();
   });
 
+  it("collapses every issue group from the header and expands them again", async () => {
+    const { root, set, unmount } = mountOverlay({ snapshotTabs: forgeSnapshotTabs() });
+    await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(5));
+
+    const button = () =>
+      root.querySelector<HTMLButtonElement>("[data-testid='zen-collapse-issues']")!;
+    expect(button().textContent).toBe("Collapse all");
+    expect(button().previousElementSibling?.classList.contains("zs-head-rule")).toBe(true);
+    expect(button().nextElementSibling?.classList.contains("zs-head-rule")).toBe(true);
+    expect(button().closest(".zs-head")?.textContent).toContain("Recent");
+
+    button().click();
+    await vi.waitFor(() => expect(button().textContent).toBe("Expand all"));
+    const triggers = [...root.querySelectorAll<HTMLButtonElement>(".zs-tree-trigger")];
+    expect(triggers.length).toBeGreaterThan(0);
+    expect(triggers.every((trigger) => trigger.getAttribute("aria-expanded") === "false")).toBe(
+      true,
+    );
+    const stored = set.mock.calls.map((call) => call[0]?.forgeCollapsedGroups).find(Array.isArray);
+    expect(stored).toHaveLength(4);
+
+    button().click();
+    await vi.waitFor(() => expect(button().textContent).toBe("Collapse all"));
+    expect(
+      [...root.querySelectorAll(".zs-tree-trigger")].every(
+        (trigger) => trigger.getAttribute("aria-expanded") === "true",
+      ),
+    ).toBe(true);
+    unmount();
+  });
+
   it("collapses a branch, shows its count, and walks the keyboard past it", async () => {
     const { root, set, input, press, unmount } = mountOverlay({
       snapshotTabs: forgeSnapshotTabs(),
@@ -1823,8 +2070,7 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
       forgeCollapsedGroups: [`branch:gitlab:${GITLAB}:main`],
     });
 
-    input().value = "#";
-    input().dispatchEvent(new InputEvent("input", { bubbles: true }));
+    input().dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
     await vi.waitFor(() => expect(selectedUrl(root)).not.toBe(""));
     const seen = new Set<string>();
     for (let step = 0; step < 8; step++) {
@@ -1842,6 +2088,24 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     unmount();
   });
 
+  it("opens collapsed issue folders when the query starts with #", async () => {
+    const { root, input, unmount } = mountOverlay({
+      snapshotTabs: forgeSnapshotTabs(),
+      stored: { forgeCollapsedGroups: [`issues:gitlab:${GITLAB}`, `project:gitlab:${GITLAB}`] },
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector(".zs-tree-trigger")?.getAttribute("aria-expanded")).toBe("false"),
+    );
+
+    input().value = "#";
+    input().dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() => expect(selectedUrl(root)).toContain("/issues/"));
+    const issues = folder(root, "Issues");
+    expect(issues.trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(issues.clip.hasAttribute("inert")).toBe(false);
+    unmount();
+  });
+
   it("starts with the groups that were left collapsed", async () => {
     const { root, unmount } = mountOverlay({
       snapshotTabs: forgeSnapshotTabs(),
@@ -1855,12 +2119,11 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
   });
 
   it("collapses with Alt+Left and expands the nearest collapsed group with Alt+Right", async () => {
-    const { root, set, input, press, unmount } = mountOverlay({
+    const { root, set, press, unmount } = mountOverlay({
       snapshotTabs: forgeSnapshotTabs(),
     });
     await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(5));
-    input().value = "#";
-    input().dispatchEvent(new InputEvent("input", { bubbles: true }));
+    press("Tab");
     await vi.waitFor(() => expect(selectedUrl(root)).toContain("/issues/10"));
 
     const issues = folder(root, "Issues");
@@ -2171,8 +2434,78 @@ describe("SearchApp tab folders", () => {
     [...root.querySelectorAll<HTMLButtonElement>("[data-testid='zen-folder-group']")].find(
       (button) => button.textContent?.includes(name),
     )!;
+  // A closed folder keeps its rows mounted for the height animation, so a row
+  // inside a hidden panel does not count as showing.
   const rows = (root: HTMLElement) =>
-    [...root.querySelectorAll("[data-testid='zen-search-item']")].map((row) => row.textContent);
+    [...root.querySelectorAll("[data-testid='zen-search-item']")]
+      .filter((row) => row.closest(".zs-acc-panel[aria-hidden='true']") === null)
+      .map((row) => row.textContent);
+
+  it("collapses every folder from the header and expands them again", async () => {
+    const { root, set, unmount } = mountOverlay({ snapshotTabs: folderTabs() });
+    await vi.waitFor(() => expect(rows(root)).toHaveLength(4));
+
+    const button = () =>
+      root.querySelector<HTMLButtonElement>("[data-testid='zen-collapse-tabs']")!;
+    const head = () => button().closest(".zs-head")!;
+    expect(button().textContent).toBe("Collapse all");
+    expect(button().previousElementSibling?.classList.contains("zs-head-rule")).toBe(true);
+    expect(button().nextElementSibling?.classList.contains("zs-head-rule")).toBe(true);
+    expect(head().querySelector("[data-testid='zen-tab-count']")?.textContent).toBe("4");
+
+    button().click();
+    await vi.waitFor(() => expect(rows(root)).toHaveLength(1));
+    expect(rows(root)[0]).toContain("Delta loose");
+    expect(button().textContent).toBe("Expand all");
+    expect(set).toHaveBeenCalledWith({
+      tabFolderCollapsed: ["folder:docs", "folder:infra"],
+    });
+
+    button().click();
+    await vi.waitFor(() => expect(rows(root)).toHaveLength(4));
+    expect(button().textContent).toBe("Collapse all");
+    expect(set).toHaveBeenLastCalledWith({ tabFolderCollapsed: [] });
+    unmount();
+  });
+
+  it("keeps the current tab visible in its folder when every folder is collapsed", async () => {
+    const other = { id: "other", name: "Other" };
+    const snapshotTabs = [
+      ...folderTabs().map((tab) => ({ ...tab, active: tab.id === 3 })),
+      {
+        id: 5,
+        title: "Epsilon other",
+        url: "https://example.com/e",
+        windowId: 1,
+        folderPath: [other],
+      },
+    ];
+    const { root, unmount } = mountOverlay({ snapshotTabs });
+    await vi.waitFor(() => expect(rows(root)).toHaveLength(5));
+
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-collapse-tabs']")!.click();
+    await vi.waitFor(() =>
+      expect(header(root, "Other").getAttribute("aria-expanded")).toBe("false"),
+    );
+    expect(header(root, "Docs").getAttribute("aria-expanded")).toBe("false");
+    expect(header(root, "Infra").getAttribute("aria-expanded")).toBe("false");
+    expect(rows(root).some((title) => title?.includes("Gamma infra"))).toBe(true);
+    expect(rows(root).some((title) => title?.includes("Alpha doc"))).toBe(false);
+    expect(rows(root).some((title) => title?.includes("Beta doc"))).toBe(false);
+    expect(rows(root).some((title) => title?.includes("Epsilon other"))).toBe(false);
+    expect(root.querySelector("[data-testid='zen-collapse-tabs']")?.textContent).toBe("Expand all");
+
+    header(root, "Docs").click();
+    await vi.waitFor(() =>
+      expect(rows(root).some((title) => title?.includes("Alpha doc"))).toBe(true),
+    );
+    expect(rows(root).some((title) => title?.includes("Beta doc"))).toBe(true);
+    expect(rows(root).some((title) => title?.includes("Gamma infra"))).toBe(true);
+    expect(root.querySelector("[data-testid='zen-collapse-tabs']")?.textContent).toBe(
+      "Collapse all",
+    );
+    unmount();
+  });
 
   it("collapses a folder from its chevron, keeps its count, and stores the choice", async () => {
     const { root, set, unmount } = mountOverlay({ snapshotTabs: folderTabs() });
@@ -2186,6 +2519,10 @@ describe("SearchApp tab folders", () => {
       expect(header(root, "Docs").getAttribute("aria-expanded")).toBe("false"),
     );
     // Its sub-folder goes with it; the count still says what is inside.
+    // The rows stay mounted so the panel can ease shut, the same way an issue folder does.
+    const docsPanel = header(root, "Docs").closest("li")?.querySelector(".zs-acc-panel");
+    expect(docsPanel?.getAttribute("aria-hidden")).toBe("true");
+    expect(docsPanel?.querySelector(".zs-acc-clip")?.hasAttribute("inert")).toBe(true);
     expect(rows(root)).toHaveLength(1);
     expect(rows(root)[0]).toContain("Delta loose");
     expect(header(root, "Docs").querySelector(".zs-section-count")?.textContent).toBe("3");
@@ -2203,8 +2540,8 @@ describe("SearchApp tab folders", () => {
 
     header(root, "Infra").click();
     await vi.waitFor(() => expect(rows(root)).toHaveLength(3));
-    expect(root.textContent).not.toContain("Gamma infra");
-    expect(root.textContent).toContain("Alpha doc");
+    expect(rows(root).some((title) => title?.includes("Gamma infra"))).toBe(false);
+    expect(rows(root).some((title) => title?.includes("Alpha doc"))).toBe(true);
     unmount();
   });
 
@@ -2227,11 +2564,35 @@ describe("SearchApp tab folders", () => {
 
     input().value = "alpha";
     input().dispatchEvent(new InputEvent("input", { bubbles: true }));
-    await vi.waitFor(() => expect(root.textContent).toContain("Alpha doc"));
+    await vi.waitFor(() =>
+      expect(rows(root).some((title) => title?.includes("Alpha doc"))).toBe(true),
+    );
 
     input().value = "";
     input().dispatchEvent(new InputEvent("input", { bubbles: true }));
-    await vi.waitFor(() => expect(root.textContent).not.toContain("Alpha doc"));
+    await vi.waitFor(() =>
+      expect(rows(root).some((title) => title?.includes("Alpha doc"))).toBe(false),
+    );
+    unmount();
+  });
+
+  it("keeps nested folders in one tree when grouping by subfolders is on", async () => {
+    const { root, unmount } = mountOverlay({ snapshotTabs: folderTabs() });
+    await vi.waitFor(() => expect(header(root, "Infra")).toBeTruthy());
+    expect(
+      header(root, "Docs").closest("li")?.querySelector("[data-testid='zen-folder-section']"),
+    ).toBe(header(root, "Infra").closest("li"));
+    unmount();
+  });
+
+  it("flattens nested folders into the parent when grouping by subfolders is off", async () => {
+    const { root, unmount } = mountOverlay({
+      snapshotTabs: folderTabs(),
+      displaySettings: { groupFolders: true, groupSubfolders: false },
+    });
+    await vi.waitFor(() => expect(header(root, "Docs")).toBeTruthy());
+    expect(header(root, "Infra")).toBeUndefined();
+    expect(rows(root).some((title) => title?.includes("Gamma infra"))).toBe(true);
     unmount();
   });
 

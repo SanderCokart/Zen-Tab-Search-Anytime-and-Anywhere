@@ -2,8 +2,7 @@ import type { JSX, Ref } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { cn } from "@/shared/ui/cn";
 import { Lcd } from "@/shared/ui/primitives/Lcd";
-import { useSound } from "@/shared/ui/sound/SoundContext";
-import type { SoundVoice } from "@/shared/ui/sound/engine";
+import { useTypingSound } from "@/shared/ui/sound/useTypingSound";
 
 export interface SearchInputProps {
   inputRef: Ref<HTMLInputElement>;
@@ -13,17 +12,6 @@ export interface SearchInputProps {
   inert?: boolean;
   onQueryChange: (query: string) => void;
   onKeyDown: (event: JSX.TargetedKeyboardEvent<HTMLInputElement>) => void;
-}
-
-/** The key-down voice for a key, or none for one that makes no noise. */
-function keyDownVoice(event: KeyboardEvent): SoundVoice | undefined {
-  if (event.ctrlKey || event.metaKey) return undefined;
-  if (event.key === " ") return "type-space";
-  if (event.key === "Backspace" || event.key === "Delete") return "type-big";
-  if (event.key.length === 1) return "type";
-  // Alt+arrows belong to the issue groups, which tick for themselves.
-  if (event.key.startsWith("Arrow") && !event.altKey) return "tick";
-  return undefined;
 }
 
 /**
@@ -39,7 +27,7 @@ export function SearchInput({
   onQueryChange,
   onKeyDown,
 }: SearchInputProps) {
-  const { play } = useSound();
+  const typing = useTypingSound();
   const [value, setValue] = useState(initialValue);
   const frameRef = useRef<number | undefined>(undefined);
   const queryRef = useRef(value);
@@ -100,8 +88,7 @@ export function SearchInput({
           });
         }}
         onKeyDown={(event) => {
-          const voice = keyDownVoice(event);
-          if (voice) play(voice);
+          typing.onKeyDown(event);
           if (
             event.key === "Enter" ||
             event.key === "Tab" ||
@@ -112,11 +99,7 @@ export function SearchInput({
           }
           onKeyDown(event);
         }}
-        onKeyUp={(event) => {
-          // Only the keys that typed have a release to hear.
-          const voice = keyDownVoice(event);
-          if (voice && voice !== "tick") play("type-up");
-        }}
+        onKeyUp={typing.onKeyUp}
       />
     </Lcd>
   );

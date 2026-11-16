@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  backgroundPaint,
+  clampBackgroundOpacity,
   customColor,
   DEFAULT_DISPLAY_SETTINGS,
   readDisplaySettings,
@@ -14,6 +16,7 @@ describe("display settings", () => {
       displaySettings: {
         detectForgeIssues: false,
         filterIssuesInOverlay: true,
+        filterRequestsInOverlay: true,
         groupFolders: false,
         groupSubfolders: true,
       },
@@ -34,6 +37,7 @@ describe("display settings", () => {
       ...DEFAULT_DISPLAY_SETTINGS,
       detectForgeIssues: false,
       filterIssuesInOverlay: false,
+      filterRequestsInOverlay: false,
       groupFolders: false,
       groupSubfolders: false,
     });
@@ -47,6 +51,7 @@ describe("display settings", () => {
       ...DEFAULT_DISPLAY_SETTINGS,
       detectForgeIssues: false,
       filterIssuesInOverlay: false,
+      filterRequestsInOverlay: false,
       groupFolders: false,
       groupSubfolders: false,
     });
@@ -55,9 +60,34 @@ describe("display settings", () => {
         ...DEFAULT_DISPLAY_SETTINGS,
         detectForgeIssues: false,
         filterIssuesInOverlay: false,
+        filterRequestsInOverlay: false,
         groupFolders: false,
         groupSubfolders: false,
       },
+    });
+  });
+
+  it("keeps overlay issue and request filters independent when detection is on", async () => {
+    const get = vi.fn(async () => ({
+      displaySettings: {
+        detectForgeIssues: true,
+        filterIssuesInOverlay: true,
+        filterRequestsInOverlay: false,
+      },
+    }));
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: { get, set: vi.fn(async () => undefined) },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+
+    await expect(readDisplaySettings()).resolves.toEqual({
+      ...DEFAULT_DISPLAY_SETTINGS,
+      filterIssuesInOverlay: true,
+      filterRequestsInOverlay: false,
     });
   });
 
@@ -261,6 +291,37 @@ describe("display settings", () => {
     it("paints only a real hex value", () => {
       expect(customColor("auto")).toBeUndefined();
       expect(customColor("#abcdef")).toBe("#abcdef");
+      expect(backgroundPaint(undefined)).toBeUndefined();
+      expect(backgroundPaint("#abcdef")).toBe(
+        "color-mix(in srgb, #abcdef calc(var(--zs-bg-opacity, 1) * 100%), transparent)",
+      );
+    });
+  });
+
+  describe("background opacity", () => {
+    function store(displaySettings: unknown) {
+      Object.assign(globalThis, {
+        browser: {
+          storage: {
+            local: { get: vi.fn(async () => ({ displaySettings })), set: vi.fn() },
+            onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+          },
+        },
+      });
+    }
+
+    it("defaults to 75% and stays inside 0% to 100% on 5% steps", async () => {
+      store({});
+      await expect(readDisplaySettings()).resolves.toMatchObject({ backgroundOpacity: 0.75 });
+      expect(clampBackgroundOpacity(0.2)).toBe(0.2);
+      expect(clampBackgroundOpacity(-0.3)).toBe(0);
+      expect(clampBackgroundOpacity(0)).toBe(0);
+      store({ backgroundOpacity: 0 });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ backgroundOpacity: 0 });
+      expect(clampBackgroundOpacity(1.4)).toBe(1);
+      expect(clampBackgroundOpacity(0.73)).toBe(0.75);
+      store({ backgroundOpacity: 0.62 });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ backgroundOpacity: 0.6 });
     });
   });
 

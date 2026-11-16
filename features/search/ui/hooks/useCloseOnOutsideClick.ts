@@ -20,6 +20,11 @@ export function useCloseOnOutsideClick(
       return;
     }
     const handle = (event: PointerEvent) => {
+      // Right-click opens the menu; Firefox can fire that pointerdown after
+      // `contextmenu`, which would close the menu in the same gesture.
+      if (event.button !== 0) {
+        return;
+      }
       if (event.target instanceof Element && event.target.closest(insideSelector)) {
         return;
       }

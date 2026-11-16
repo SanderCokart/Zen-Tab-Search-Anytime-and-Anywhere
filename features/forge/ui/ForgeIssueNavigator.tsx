@@ -30,6 +30,7 @@ import {
 } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 import { Led } from "@/shared/ui/primitives/Led";
+import { CollapseAllButton } from "@/shared/ui/primitives/CollapseAllButton";
 import { TreeNode } from "@/shared/ui/primitives/TreeNode";
 import { Segmented } from "@/shared/ui/primitives/Segmented";
 
@@ -56,6 +57,8 @@ export function ForgeIssueNavigator({
   onKindFilterChange,
   collapsed,
   onToggleGroup,
+  allCollapsed = false,
+  onToggleAll,
   selectedIndex,
   onActivate,
   onSelect,
@@ -89,6 +92,10 @@ export function ForgeIssueNavigator({
   /** Keys of the collapsed groups; see `forge-collapse.ts`. */
   collapsed: ReadonlySet<string>;
   onToggleGroup: (key: string) => void;
+  /** True when every project and folder is collapsed. */
+  allCollapsed?: boolean;
+  /** Collapses every group, or expands them when they already are. Left out, no button. */
+  onToggleAll?: () => void;
   selectedIndex: number;
   onActivate: (entry: ForgeIssueEntry) => void;
   onSelect: (index: number) => void;
@@ -212,7 +219,19 @@ export function ForgeIssueNavigator({
         <div class="zs-head">
           <PrefixHint prefixes={FORGE_NAVIGATOR_PREFIXES} column="issues and requests" />
           <strong class="min-w-0 truncate font-[inherit] font-medium">Issues and requests</strong>
-          <span class="zs-head-rule" aria-hidden="true" />
+          {onToggleAll ? (
+            <span class="zs-head-split">
+              <span class="zs-head-rule" aria-hidden="true" />
+              <CollapseAllButton
+                collapsed={allCollapsed}
+                onToggle={onToggleAll}
+                testId="zen-collapse-issues"
+              />
+              <span class="zs-head-rule" aria-hidden="true" />
+            </span>
+          ) : (
+            <span class="zs-head-rule" aria-hidden="true" />
+          )}
           <button
             type="button"
             class="text-zen-danger shrink-0 cursor-pointer border-0 bg-transparent p-0 font-[inherit] tracking-[inherit] uppercase"

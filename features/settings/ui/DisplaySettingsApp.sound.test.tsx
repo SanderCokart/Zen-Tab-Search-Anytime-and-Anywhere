@@ -196,54 +196,23 @@ describe("sound on the settings page", () => {
     );
   });
 
-  it("locks and hides the pointer while the dial turns, reading raw movement", async () => {
+  it("hides the pointer while the dial turns and reads vertical movement", async () => {
     await mount({ soundEnabled: true, soundVolume: 0.4 });
     const dial = byId("zen-sound-volume");
-    let locked: Element | null = null;
-    Object.defineProperty(document, "pointerLockElement", {
-      configurable: true,
-      get: () => locked,
-    });
-    const exitPointerLock = vi.fn(() => {
-      locked = null;
-    });
-    Object.defineProperty(document, "exitPointerLock", {
-      configurable: true,
-      value: exitPointerLock,
-    });
-    const requestPointerLock = vi.fn(() => {
-      locked = dial;
-      document.dispatchEvent(new Event("pointerlockchange"));
-      return Promise.resolve();
-    });
-    Object.defineProperty(dial, "requestPointerLock", {
-      configurable: true,
-      value: requestPointerLock,
-    });
-    const pointer = (type: string, init: Partial<Record<string, number>> = {}) => {
-      const event = new MouseEvent(type, { bubbles: true, button: 0, clientY: 100 });
-      for (const [key, value] of Object.entries(init)) {
-        Object.defineProperty(event, key, { value });
-      }
-      dial.dispatchEvent(event);
+    const pointer = (type: string, clientY: number) => {
+      dial.dispatchEvent(new MouseEvent(type, { bubbles: true, button: 0, clientY }));
     };
 
-    pointer("pointerdown");
-    expect(requestPointerLock).toHaveBeenCalled();
+    pointer("pointerdown", 100);
     expect(dial.hasAttribute("data-turning")).toBe(true);
 
-    // Locked, clientY no longer moves: the raw upward movement turns it up.
-    pointer("pointermove", { movementX: 0, movementY: -60, clientY: 100 });
+    pointer("pointermove", 40);
     await vi.waitFor(() =>
       expect(Number(byId("zen-sound-volume").getAttribute("aria-valuenow"))).toBeGreaterThan(0.4),
     );
 
-    pointer("pointerup");
-    expect(exitPointerLock).toHaveBeenCalled();
+    pointer("pointerup", 40);
     expect(byId("zen-sound-volume").hasAttribute("data-turning")).toBe(false);
-
-    delete (document as { pointerLockElement?: unknown }).pointerLockElement;
-    delete (document as { exitPointerLock?: unknown }).exitPointerLock;
   });
 
   it("leaves the dial and test keys off while interface sounds are off", async () => {

@@ -4,10 +4,12 @@ import {
   forgeGroupKeys,
   forgeIssuesKey,
   forgeProjectKey,
+  forgeTreeKeys,
   groupToCollapse,
   groupToExpand,
   MAX_COLLAPSED_GROUPS,
   nearestCollapsedGroup,
+  openedForgeCollapsed,
   parseCollapsedGroups,
   toggleCollapsedKey,
 } from "@/features/forge/model/forge-collapse";
@@ -57,6 +59,18 @@ describe("group keys", () => {
     expect(forgeIssuesKey("gitlab", "a/b")).toBe("issues:gitlab:a/b");
     expect(forgeBranchKey("gitlab", "a/b", "main")).toBe("branch:gitlab:a/b:main");
     expect(forgeBranchKey("gitlab", "a/b", undefined)).toBe("branch:gitlab:a/b:?");
+  });
+
+  it("lists each project, its Issues folder and its branches", () => {
+    expect(forgeTreeKeys(groupForgeIssueEntries(all, "recent"))).toEqual([
+      forgeProjectKey("gitlab", "a/b"),
+      forgeIssuesKey("gitlab", "a/b"),
+      forgeBranchKey("gitlab", "a/b", "main"),
+      forgeBranchKey("gitlab", "a/b", "develop"),
+      forgeBranchKey("gitlab", "a/b", undefined),
+      forgeProjectKey("gitlab", "c/d"),
+      forgeIssuesKey("gitlab", "c/d"),
+    ]);
   });
 
   it("finds the project and folder an entry sits under", () => {
@@ -160,5 +174,21 @@ describe("collapsed group storage", () => {
     expect(parseCollapsedGroups(Array.from({ length: 300 }, (_, i) => `k${i}`))).toHaveLength(
       MAX_COLLAPSED_GROUPS,
     );
+  });
+});
+
+describe("openedForgeCollapsed", () => {
+  const collapsed = new Set(["project:gitlab:a/b", "issues:gitlab:a/b", "branch:gitlab:a/b:main"]);
+
+  it("leaves stored collapse alone when no prefix kind is in play", () => {
+    expect(openedForgeCollapsed(collapsed, undefined)).toBe(collapsed);
+  });
+
+  it("opens projects and Issues folders for a # query", () => {
+    expect([...openedForgeCollapsed(collapsed, "issues")]).toEqual(["branch:gitlab:a/b:main"]);
+  });
+
+  it("opens projects and request folders for a ! query", () => {
+    expect([...openedForgeCollapsed(collapsed, "requests")]).toEqual(["issues:gitlab:a/b"]);
   });
 });

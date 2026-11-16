@@ -481,11 +481,11 @@ part of *this* build just sent:
   options page uses, so a value restored from storage and one just moved on a slider
   end up identical.
 
-The two dependent options — `filterIssuesInOverlay` under `detectForgeIssues`, and
-`groupSubfolders` under `groupFolders` — are resolved in a `v.transform` over the
-whole object rather than per field. They depend on another field's *normalised*
-value, and reading it off the raw input would get it wrong whenever the parent had
-itself fallen back.
+The dependent options — `filterIssuesInOverlay` and `filterRequestsInOverlay` under
+`detectForgeIssues`, and `groupSubfolders` under `groupFolders` — are resolved in a
+`v.transform` over the whole object rather than per field. They depend on another
+field's *normalised* value, and reading it off the raw input would get it wrong
+whenever the parent had itself fallen back.
 
 ---
 

@@ -48,6 +48,7 @@ describe("DisplaySettingsApp", () => {
       displaySettings: {
         detectForgeIssues: true,
         filterIssuesInOverlay: true,
+        filterRequestsInOverlay: true,
         groupFolders: false,
         groupSubfolders: false,
         hideSpacesInPopup: false,
@@ -69,6 +70,7 @@ describe("DisplaySettingsApp", () => {
         reuseExternalTabs: false,
         soundEnabled: true,
         soundVolume: 0.4,
+        backgroundOpacity: 0.75,
         theme: "system",
         textColor: "auto",
         issueBackgroundColor: "auto",
@@ -113,13 +115,18 @@ describe("DisplaySettingsApp", () => {
     const overlayOnly = root.querySelector<HTMLInputElement>(
       "[data-testid='zen-filterIssuesInOverlay']",
     )!;
+    const requestsOnly = root.querySelector<HTMLInputElement>(
+      "[data-testid='zen-filterRequestsInOverlay']",
+    )!;
     detect.click();
 
     await vi.waitFor(() => expect(overlayOnly.disabled).toBe(true));
+    expect(requestsOnly.disabled).toBe(true);
     expect(set).toHaveBeenCalledWith({
       displaySettings: {
         detectForgeIssues: false,
         filterIssuesInOverlay: false,
+        filterRequestsInOverlay: false,
         groupFolders: true,
         groupSubfolders: true,
         hideSpacesInPopup: false,
@@ -141,6 +148,7 @@ describe("DisplaySettingsApp", () => {
         reuseExternalTabs: false,
         soundEnabled: true,
         soundVolume: 0.4,
+        backgroundOpacity: 0.75,
         theme: "system",
         textColor: "auto",
         issueBackgroundColor: "auto",
@@ -190,6 +198,7 @@ describe("DisplaySettingsApp", () => {
         displaySettings: {
           detectForgeIssues: true,
           filterIssuesInOverlay: true,
+          filterRequestsInOverlay: true,
           groupFolders: true,
           groupSubfolders: true,
           hideSpacesInPopup: false,
@@ -211,6 +220,7 @@ describe("DisplaySettingsApp", () => {
           reuseExternalTabs: false,
           soundEnabled: true,
           soundVolume: 0.4,
+          backgroundOpacity: 0.75,
           theme: "system",
           textColor: "auto",
           issueBackgroundColor: "auto",
@@ -335,6 +345,43 @@ describe("DisplaySettingsApp", () => {
       }),
     );
     expect(root.querySelector("main")?.getAttribute("data-theme")).toBe("dark");
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("turns the omnibar background down from the opacity dial", async () => {
+    const set = vi.fn(async () => undefined);
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: {
+            get: vi.fn(async () => ({ displaySettings: {} })),
+            set,
+          },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    render(<DisplaySettingsApp />, root);
+
+    const dial = await vi.waitFor(() => {
+      const element = root.querySelector<HTMLElement>("[data-testid='zen-background-opacity']");
+      expect(element?.getAttribute("aria-disabled")).not.toBe("true");
+      return element!;
+    });
+    expect(dial.getAttribute("aria-valuemin")).toBe("0");
+    expect(dial.getAttribute("aria-valuemax")).toBe("1");
+    expect(dial.getAttribute("aria-valuenow")).toBe("0.75");
+    dial.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+
+    await vi.waitFor(() =>
+      expect(set).toHaveBeenCalledWith({
+        displaySettings: { ...DEFAULT_DISPLAY_SETTINGS, backgroundOpacity: 0.7 },
+      }),
+    );
 
     render(null, root);
     root.remove();

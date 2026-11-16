@@ -2,6 +2,7 @@ import {
   isUsableTabId,
   type HostOverrideGroup,
   type HostProxyReport,
+  type OverlayFolderInfo,
   type TodoStatus,
   type TrafficLight,
   type UpdateStatus,
@@ -43,6 +44,13 @@ export interface MessageRouterHandlers {
   getUpdateStatus(force: boolean): Promise<UpdateStatus>;
   openUpdate(page: "download" | "releaseNotes"): Promise<void>;
   installUpdate(): Promise<void>;
+  closeTab(tabId: number): Promise<void>;
+  getFolders(anchorTabId?: number): Promise<OverlayFolderInfo[]>;
+  moveTabToFolder(tabId: number, folderId: string): Promise<void>;
+  removeTabFromFolder(tabId: number): Promise<void>;
+  getPinnedUrl(tabId: number): Promise<string>;
+  setPinnedUrl(tabId: number, url: string): Promise<void>;
+  replacePinnedUrlWithCurrent(tabId: number): Promise<void>;
   /** Anchor for a sender that is not a tab, such as the window-hosted omnibar. */
   anchorTabIdForSender?(sender: MessageSender): number | undefined;
   isAllowedTimerEnd(endAt: number): boolean;
@@ -173,6 +181,20 @@ function handleParsedRequest(
       return handlers.openUpdate(message.page);
     case "installUpdate":
       return handlers.installUpdate();
+    case "closeTab":
+      return handlers.closeTab(message.tabId);
+    case "getFolders":
+      return handlers.getFolders(anchorTabId);
+    case "moveTabToFolder":
+      return handlers.moveTabToFolder(message.tabId, message.folderId);
+    case "removeTabFromFolder":
+      return handlers.removeTabFromFolder(message.tabId);
+    case "getPinnedUrl":
+      return handlers.getPinnedUrl(message.tabId);
+    case "setPinnedUrl":
+      return handlers.setPinnedUrl(message.tabId, message.url);
+    case "replacePinnedUrlWithCurrent":
+      return handlers.replacePinnedUrlWithCurrent(message.tabId);
   }
 }
 

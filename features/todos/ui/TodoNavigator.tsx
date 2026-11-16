@@ -103,7 +103,7 @@ export function TodoNavigator({
         <span class="flex shrink-0 items-center gap-[var(--zen-space-2)]">
           <span class="text-zen-danger">{allTabs.length} to do</span>
           <select
-            class="zs-key text-zen-subtle hover:text-zen-text px-[var(--zen-space-1)] font-[inherit] text-[length:var(--zen-text-xs)] tracking-[0.04em] normal-case"
+            class="zs-key text-zen-subtle hover:text-zen-text h-[var(--zen-control)] cursor-pointer py-0 pr-[var(--zen-space-5)] pl-[var(--zen-space-3)] font-[inherit] text-[length:var(--zen-text-sm)] leading-none tracking-[0.04em] normal-case"
             aria-label="Clear todos"
             title="Mark several todos as done"
             data-testid="zen-todo-clear"
@@ -176,11 +176,7 @@ export function TodoNavigator({
               class={cn(
                 "zs-row flex w-full max-w-full min-w-0 shrink-0 flex-col gap-[calc(var(--zen-font-size)*0.43)] rounded-[var(--zen-radius-lg)]",
                 "px-[var(--zen-space-3)] py-[var(--zen-space-3)]",
-                light
-                  ? statusRowClass(light, selected)
-                  : selected
-                    ? "bg-[color-mix(in_srgb,var(--zs-red)_18%,var(--zs-card))]"
-                    : "bg-[color-mix(in_srgb,var(--zs-red)_9%,var(--zs-card))]",
+                statusRowClass(light, selected),
               )}
               data-status-light={light}
               data-todo-selected={selected ? "true" : undefined}

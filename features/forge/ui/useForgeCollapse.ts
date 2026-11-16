@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   FORGE_COLLAPSED_STORAGE_KEY,
+  MAX_COLLAPSED_GROUPS,
   parseCollapsedGroups,
   toggleCollapsedKey,
 } from "@/features/forge/model/forge-collapse";
@@ -13,6 +14,8 @@ export interface CollapseState {
   toggle: (key: string) => void;
   /** Collapses or expands one group; a no-op when it is already so. */
   setCollapsed: (key: string, collapsed: boolean) => void;
+  /** Replaces the whole set: every key collapsed, or none. */
+  setKeys: (keys: readonly string[]) => void;
 }
 
 export type ForgeCollapseState = CollapseState;
@@ -28,13 +31,13 @@ export function useForgeCollapse(): ForgeCollapseState {
 
 /** The same, for any list of collapsed keys kept under `storageKey` in `storage.local`. */
 export function useStoredCollapse(storageKey: string): CollapseState {
-  const [keys, setKeys] = useState<string[]>([]);
+  const [keys, setStoredKeys] = useState<string[]>([]);
   // The latest list, so two toggles in one tick compose instead of overwriting.
   const keysRef = useRef(keys);
 
   const apply = useCallback((next: string[]) => {
     keysRef.current = next;
-    setKeys(next);
+    setStoredKeys(next);
   }, []);
 
   useEffect(() => {
@@ -80,6 +83,21 @@ export function useStoredCollapse(storageKey: string): CollapseState {
     [write],
   );
 
+  const setKeys = useCallback(
+    (next: readonly string[]) => {
+      const limited = [...next].slice(-MAX_COLLAPSED_GROUPS);
+      const current = keysRef.current;
+      if (
+        limited.length === current.length &&
+        limited.every((key, index) => key === current[index])
+      ) {
+        return;
+      }
+      write(limited);
+    },
+    [write],
+  );
+
   const collapsed = useMemo(() => new Set(keys), [keys]);
-  return { collapsed, toggle, setCollapsed };
+  return { collapsed, toggle, setCollapsed, setKeys };
 }

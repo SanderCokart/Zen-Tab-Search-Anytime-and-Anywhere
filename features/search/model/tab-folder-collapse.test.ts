@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { groupSearchItems } from "@/features/search/model/ranking";
 import {
   activeCollapsedFolders,
+  collectTabFolderKeys,
   isUnderCollapsedFolder,
   tabFolderKey,
 } from "@/features/search/model/tab-folder-collapse";
@@ -46,6 +48,22 @@ describe("tab folder collapse", () => {
     const collapsed = new Set([tabFolderKey("infra")]);
 
     expect(isUnderCollapsedFolder(tab(2, [docs, infra]), collapsed, false)).toBe(false);
+  });
+
+  it("lists every folder, a parent before its sub-folder", () => {
+    const groups = groupSearchItems([tab(1, [docs]), tab(2, [docs, infra]), tab(3)]);
+
+    expect(collectTabFolderKeys(groups)).toEqual(["folder:docs", "folder:infra"]);
+  });
+
+  it("keeps the current tab out of a collapsed folder and hides its neighbours", () => {
+    const collapsed = new Set([tabFolderKey("docs"), tabFolderKey("infra")]);
+    const current = tab(3, [docs, infra]);
+    current.data.active = true;
+
+    expect(isUnderCollapsedFolder(current, collapsed)).toBe(false);
+    expect(isUnderCollapsedFolder(tab(1, [docs]), collapsed)).toBe(true);
+    expect(isUnderCollapsedFolder(tab(2, [docs, infra]), collapsed)).toBe(true);
   });
 
   it("ignores collapse while a query is active, or when folders are not grouped", () => {

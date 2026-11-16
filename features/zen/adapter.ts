@@ -7,6 +7,7 @@ import {
   zenAnchorTabId,
 } from "@/features/zen/anchor";
 import { getZenTabsApi, type RenameSelection, type ZenTabsApi } from "@/features/zen/api";
+import { applyFolderPaths } from "@/features/zen/folder-path";
 import type { ZenFolderInfo } from "@/shared/messaging/bridge-protocol";
 
 export interface BrowserTabSnapshot {
@@ -17,6 +18,7 @@ export interface BrowserTabSnapshot {
   windowId?: number;
   active?: boolean;
   lastAccessed?: number;
+  pinned?: boolean;
 }
 
 export type TabQueryInfo = {
@@ -84,6 +86,9 @@ export interface WorkspaceAdapter {
   deleteSpaces(spaceIds: string[], anchorTabId?: number): Promise<void>;
   setEssential(tabIds: number[]): Promise<void>;
   clearEssential(tabIds: number[]): Promise<void>;
+  getPinnedUrl(tabId: number): Promise<string>;
+  setPinnedUrl(tabId: number, url: string): Promise<void>;
+  replacePinnedUrlWithCurrent(tabId: number): Promise<void>;
 }
 
 export interface ZenWorkspaceAdapterOptions {
@@ -158,6 +163,7 @@ function mapBrowserTabs(
       windowId: tab.windowId ?? -1,
       lastOpenedAt: tab.lastAccessed,
       active: tabId === focusedTabId,
+      pinned: tab.pinned === true,
     };
   });
 }
@@ -223,11 +229,18 @@ export function createZenWorkspaceAdapter(
 
     try {
       debugLog(`${LOG_PREFIX} queryTabs via zenTabs.getAllTabs`, { anchorTabId: tabId });
-      const tabs = await zenTabs.getAllTabs(zenAnchorTabId(tabId));
+      const anchor = zenAnchorTabId(tabId);
+      const tabs = await zenTabs.getAllTabs(anchor);
       if (!tabs) {
         return undefined;
       }
-      return enrichZenTabs(tabs, tabId);
+      let folders: ZenFolderInfo[] = [];
+      try {
+        folders = (await zenTabs.listFolders?.(anchor)) ?? [];
+      } catch {
+        folders = [];
+      }
+      return enrichZenTabs(applyFolderPaths(tabs, folders), tabId);
     } catch (error) {
       console.error(`${LOG_PREFIX} Could not read tabs across Zen spaces:`, formatError(error));
       await logDebugInfo?.("queryTabs getAllTabs", tabId);
@@ -625,6 +638,37 @@ export function createZenWorkspaceAdapter(
         throw new Error("Zen essentials API unavailable");
       }
       await zenTabs.clearEssential(tabIds);
+    },
+
+    async getPinnedUrl(tabId) {
+      const zenTabs = getApi();
+      if (!zenTabs?.getPinnedUrl) {
+        const tab = await host.getTab(tabId);
+        return tab.url || "";
+      }
+      return zenTabs.getPinnedUrl(tabId);
+    },
+
+    async setPinnedUrl(tabId, url) {
+      const zenTabs = getApi();
+      if (!zenTabs?.setPinnedUrl) {
+        throw new Error("Zen pinned URL is not available");
+      }
+      const updated = await zenTabs.setPinnedUrl(tabId, url);
+      if (!updated) {
+        throw new Error("Could not set the pinned URL");
+      }
+    },
+
+    async replacePinnedUrlWithCurrent(tabId) {
+      const zenTabs = getApi();
+      if (!zenTabs?.replacePinnedUrlWithCurrent) {
+        throw new Error("Zen pinned URL is not available");
+      }
+      const updated = await zenTabs.replacePinnedUrlWithCurrent(tabId);
+      if (!updated) {
+        throw new Error("Could not replace the pinned URL");
+      }
     },
   };
 }

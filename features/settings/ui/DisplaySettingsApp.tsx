@@ -4,6 +4,8 @@ import {
   AUTO_SWATCH,
   customColor,
   DEFAULT_DISPLAY_SETTINGS,
+  MAX_BACKGROUND_OPACITY,
+  MIN_BACKGROUND_OPACITY,
   readDisplaySettings,
   saveDisplaySettings,
   type DisplaySettings,
@@ -276,6 +278,24 @@ export function DisplaySettingsApp() {
                   })}
                 </div>
               </div>
+              <div class="flex w-fit flex-col items-center gap-[var(--zen-space-2)] text-center">
+                <Dial
+                  label="Background opacity"
+                  data-testid="zen-background-opacity"
+                  min={MIN_BACKGROUND_OPACITY}
+                  max={MAX_BACKGROUND_OPACITY}
+                  step={0.05}
+                  disabled={!loaded}
+                  value={settings.backgroundOpacity}
+                  valueText={`${Math.round(settings.backgroundOpacity * 100)} percent`}
+                  onChange={(backgroundOpacity) => updateSettings({ backgroundOpacity })}
+                />
+                <Lcd class="zs-readout zs-digits">
+                  {Math.round(settings.backgroundOpacity * 100)}
+                  <u>%</u>
+                </Lcd>
+                <span class={monoLabelClass}>Opacity</span>
+              </div>
             </Module>
 
             <Module title="Size">
@@ -386,7 +406,7 @@ export function DisplaySettingsApp() {
               </div>
             </Module>
 
-            <Module title="Gaps" meta={`px at default size, steps of ${GAP_STEP}`} wide>
+            <Module title="Gaps" wide>
               <p class="m-0 font-[family-name:var(--font-title)] text-[length:var(--zen-text-sm)] text-[var(--zs-ink-3)]">
                 Each one moves a single gap and nothing else; padding inside rows and tiles follows
                 Density.
@@ -411,7 +431,7 @@ export function DisplaySettingsApp() {
                     />
                   </div>
                 ))}
-                <div class="flex items-center justify-end">
+                <div class="flex items-center justify-self-end">
                   <button
                     type="button"
                     class={settingsKeyClass}
@@ -514,6 +534,7 @@ export function DisplaySettingsApp() {
                     updateSettings({
                       detectForgeIssues: checked,
                       filterIssuesInOverlay: checked && settings.filterIssuesInOverlay,
+                      filterRequestsInOverlay: checked && settings.filterRequestsInOverlay,
                     })
                   }
                 >
@@ -533,9 +554,25 @@ export function DisplaySettingsApp() {
                 >
                   <span
                     class={monoLabelClass}
-                    title="Removes issue and pull-request tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect."
+                    title="Removes issue tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect."
                   >
-                    Show issues only in the issue navigator
+                    Show issues only in the Issue Navigator
+                  </span>
+                </Switch>
+                <Switch
+                  class={cn(!settings.detectForgeIssues && "opacity-50")}
+                  data-testid="zen-filterRequestsInOverlay"
+                  checked={settings.filterRequestsInOverlay}
+                  disabled={!loaded || !settings.detectForgeIssues}
+                  onChange={(filterRequestsInOverlay) =>
+                    updateSettings({ filterRequestsInOverlay })
+                  }
+                >
+                  <span
+                    class={monoLabelClass}
+                    title="Removes merge-request and pull-request tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect."
+                  >
+                    Show merge requests or pull requests only in the Issue Navigator
                   </span>
                 </Switch>
               </div>
