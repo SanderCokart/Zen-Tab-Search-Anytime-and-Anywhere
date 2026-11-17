@@ -569,10 +569,9 @@
    * or holds focus. The keys stay in the DOM, so Tab still reaches them and
    * `:focus-within` brings them back.
    *
-   * On a result row the keys are taken out of flow. Showing them used to expand
-   * a max-width: 0 box and fade it in; a fast pass down the list cancelled that
-   * fade on the rows underneath. They now appear at once, and the line only
-   * pads over to keep the meta beside them.
+   * On a result row the keys are taken out of flow and shown with no transition.
+   * The host slides over with a transform, and the title fades under it, so a
+   * fast pass does not relayout the list.
    */
   .zs-row {
     position: relative;
@@ -596,6 +595,14 @@
     width: calc(var(--zen-font-size) * 0.214);
     border-radius: 2px;
     background-color: var(--zs-red);
+  }
+
+  .zs-row-main {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--zen-space-3);
+    min-width: 0;
   }
 
   .zs-row-title {
@@ -652,13 +659,26 @@
     pointer-events: none;
   }
 
-  .zs-row:hover .zs-row-line,
-  .zs-row:focus-within .zs-row-line,
-  .zs-row[data-selected="true"] .zs-row-line,
-  .zs-row[data-issue-selected="true"] .zs-row-line,
-  .zs-row[data-keep] .zs-row-line,
-  .zs-row:has(.zs-acts[data-always]) .zs-row-line {
-    padding-right: calc(var(--zs-acts-inset) + var(--zen-acts-width) + var(--zen-space-3));
+  .zs-row:hover .zs-meta,
+  .zs-row:focus-within .zs-meta,
+  .zs-row[data-selected="true"] .zs-meta,
+  .zs-row[data-issue-selected="true"] .zs-meta,
+  .zs-row[data-keep] .zs-meta,
+  .zs-row:has(.zs-acts[data-always]) .zs-meta {
+    transform: translateX(calc(-1 * (var(--zen-acts-width) + var(--zen-space-3))));
+  }
+
+  .zs-row:hover .zs-row-main,
+  .zs-row:focus-within .zs-row-main,
+  .zs-row[data-selected="true"] .zs-row-main,
+  .zs-row[data-issue-selected="true"] .zs-row-main,
+  .zs-row[data-keep] .zs-row-main,
+  .zs-row:has(.zs-acts[data-always]) .zs-row-main {
+    mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - var(--zen-acts-width) - var(--zen-space-3) * 2),
+      transparent calc(100% - var(--zen-acts-width) - var(--zen-space-3))
+    );
   }
 
   .zs-row:hover .zs-acts,
@@ -1213,16 +1233,6 @@
   .zs-digits {
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.04em;
-  }
-
-  /*
-   * Skip layout for rows that are off screen. Hover used to fade and expand the
-   * keys inside this containment; that work is gone, so a fast pass can still
-   * show the keys on every row it actually crosses.
-   */
-  .zen-search-row {
-    content-visibility: auto;
-    contain-intrinsic-size: auto var(--zen-row-size);
   }
 
   .zen-icon {
