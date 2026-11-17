@@ -17,7 +17,9 @@ import { Led } from "@/shared/ui/primitives/Led";
 /**
  * The todo, timer and status buttons for a tab, shared by the result rows and
  * the issue column. They are put away until the row is selected, hovered or holds
- * focus (see `.zs-acts`). A todo shows a checked checkbox, anything else an empty one.
+ * focus (see `.zs-acts`). On a result row they float over the right edge so the
+ * list does not relayout as the pointer moves. A todo shows a checked checkbox,
+ * anything else an empty one.
  */
 export function TabActions({
   tab,

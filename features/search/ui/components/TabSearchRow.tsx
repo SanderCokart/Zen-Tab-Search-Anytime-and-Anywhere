@@ -46,7 +46,7 @@ export const TabSearchRow = memo(function TabSearchRow({
 
   return (
     <div class="flex min-w-0 flex-1 flex-col">
-      <div class="flex min-h-[var(--zen-row-height)] min-w-0 items-center gap-[var(--zen-space-3)]">
+      <div class="zs-row-line flex min-h-[var(--zen-row-height)] min-w-0 items-center gap-[var(--zen-space-3)]">
         {tab.favIconUrl && (
           <img src={tab.favIconUrl} alt="" class="size-[var(--zen-icon-lg)] shrink-0 rounded-md" />
         )}
@@ -68,19 +68,19 @@ export const TabSearchRow = memo(function TabSearchRow({
             {tab.workspaceName || hostname(tab.url)}
           </span>
         </span>
-        <TabActions
-          tab={tab}
-          timer={timer}
-          timerOpen={timerOpen}
-          isTodo={isTodo}
-          light={light}
-          statusMenuOpen={statusMenuOpen}
-          onToggleTodo={onToggleTodo}
-          onOpenStatusMenu={onOpenStatusMenu}
-          onToggleTimer={onToggleTimer}
-          onOpenTimerPopup={onOpenTimerPopup}
-        />
       </div>
+      <TabActions
+        tab={tab}
+        timer={timer}
+        timerOpen={timerOpen}
+        isTodo={isTodo}
+        light={light}
+        statusMenuOpen={statusMenuOpen}
+        onToggleTodo={onToggleTodo}
+        onOpenStatusMenu={onOpenStatusMenu}
+        onToggleTimer={onToggleTimer}
+        onOpenTimerPopup={onOpenTimerPopup}
+      />
       {timerOpen && tabId !== undefined && (
         <div class="pb-[var(--zen-space-2)]">
           <TimerForm

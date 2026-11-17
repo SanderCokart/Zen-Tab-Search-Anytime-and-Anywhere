@@ -223,9 +223,10 @@ function renderItem(props: SearchResultsListProps, item: SearchItem, interactive
       }}
       data-testid="zen-search-item"
       data-selected={selected ? "true" : undefined}
+      data-essential={item.kind === "tab" && isEssentialTab(item.data) ? "true" : undefined}
       data-status-light={light}
       class={cn(
-        "zen-search-row zs-row flex min-w-0 cursor-pointer items-center transition-colors",
+        "zen-search-row zs-row flex min-w-0 cursor-pointer items-center",
         "rounded-[var(--zen-radius)] px-[var(--zen-row-pad)]",
         item.kind === "space" &&
           "min-h-[calc(var(--zen-row-height)*1.1)] justify-center gap-[var(--zen-space-2)] text-center",

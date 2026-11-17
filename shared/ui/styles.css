@@ -568,9 +568,21 @@
    * meta pushed right, and the three keys only while the row is selected, hovered
    * or holds focus. The keys stay in the DOM, so Tab still reaches them and
    * `:focus-within` brings them back.
+   *
+   * On a result row the keys are taken out of flow. Showing them used to expand
+   * a max-width: 0 box and fade it in; a fast pass down the list cancelled that
+   * fade on the rows underneath. They now appear at once, and the line only
+   * pads over to keep the meta beside them.
    */
   .zs-row {
     position: relative;
+    --zen-acts-width: calc(var(--zen-mini-key) * 3 + var(--zen-font-size) * 0.43 * 2);
+    --zs-acts-inset: 0px;
+  }
+
+  /* Essentials have no todo key, so the reserved gap is two keys, not three. */
+  .zs-row[data-essential] {
+    --zen-acts-width: calc(var(--zen-mini-key) * 2 + var(--zen-font-size) * 0.43);
   }
 
   .zs-row[data-selected="true"]::before,
@@ -616,11 +628,37 @@
     flex: none;
     align-items: center;
     gap: calc(var(--zen-font-size) * 0.43);
-    max-width: 0;
-    overflow: hidden;
+  }
+
+  /* The current-tab strip keeps its keys in flow. */
+  .zs-acts[data-always] {
+    margin-left: var(--zen-space-2);
+  }
+
+  /* Issue rows pad the line; the keys sit inside that inset. Tab rows inherit 0. */
+  .zs-row > .zs-row-line {
+    padding-right: var(--zen-row-pad);
+    --zs-acts-inset: var(--zen-row-pad);
+  }
+
+  .zs-row .zs-acts {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    right: var(--zen-row-pad);
+    height: var(--zen-row-height);
+    margin-left: 0;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 90ms ease-out;
+  }
+
+  .zs-row:hover .zs-row-line,
+  .zs-row:focus-within .zs-row-line,
+  .zs-row[data-selected="true"] .zs-row-line,
+  .zs-row[data-issue-selected="true"] .zs-row-line,
+  .zs-row[data-keep] .zs-row-line,
+  .zs-row:has(.zs-acts[data-always]) .zs-row-line {
+    padding-right: calc(var(--zs-acts-inset) + var(--zen-acts-width) + var(--zen-space-3));
   }
 
   .zs-row:hover .zs-acts,
@@ -628,10 +666,7 @@
   .zs-row[data-selected="true"] .zs-acts,
   .zs-row[data-issue-selected="true"] .zs-acts,
   .zs-row[data-keep] .zs-acts,
-  .zs-acts[data-always] {
-    max-width: none;
-    margin-left: var(--zen-space-2);
-    overflow: visible;
+  .zs-row .zs-acts[data-always] {
     opacity: 1;
     pointer-events: auto;
   }
@@ -641,8 +676,9 @@
   .zs-row:focus-within .zs-todo-dot,
   .zs-row[data-selected="true"] .zs-todo-dot,
   .zs-row[data-issue-selected="true"] .zs-todo-dot,
-  .zs-row[data-keep] .zs-todo-dot {
-    display: none;
+  .zs-row[data-keep] .zs-todo-dot,
+  .zs-row:has(.zs-acts[data-always]) .zs-todo-dot {
+    visibility: hidden;
   }
 
   /* A recessed tray, the floor a collapsible panel's content sits on. */
@@ -1179,6 +1215,11 @@
     letter-spacing: 0.04em;
   }
 
+  /*
+   * Skip layout for rows that are off screen. Hover used to fade and expand the
+   * keys inside this containment; that work is gone, so a fast pass can still
+   * show the keys on every row it actually crosses.
+   */
   .zen-search-row {
     content-visibility: auto;
     contain-intrinsic-size: auto var(--zen-row-size);

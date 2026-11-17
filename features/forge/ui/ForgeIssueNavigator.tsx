@@ -152,7 +152,7 @@ export function ForgeIssueNavigator({
             }}
             onContextMenu={(event) => onContextMenu(entry.tab, event)}
           >
-            <div class="flex min-h-[var(--zen-row-height)] min-w-0 items-center px-[var(--zen-row-pad)]">
+            <div class="zs-row-line flex min-h-[var(--zen-row-height)] min-w-0 items-center pl-[var(--zen-row-pad)]">
               <button
                 type="button"
                 class="flex h-full min-h-[var(--zen-row-height)] min-w-0 flex-1 cursor-pointer items-center gap-[var(--zen-space-3)] overflow-hidden border-0 bg-transparent p-0 text-left font-[inherit] text-inherit"
@@ -179,19 +179,19 @@ export function ForgeIssueNavigator({
                   )}
                 </span>
               </button>
-              <TabActions
-                tab={entry.tab}
-                timer={timer}
-                timerOpen={timerOpen}
-                isTodo={isTodo}
-                light={light}
-                statusMenuOpen={tabId !== undefined && statusMenuTabId === tabId}
-                onOpenStatusMenu={onOpenStatusMenu}
-                onToggleTodo={onToggleTodo}
-                onToggleTimer={onToggleTimerForm}
-                onOpenTimerPopup={onOpenTimerPopup}
-              />
             </div>
+            <TabActions
+              tab={entry.tab}
+              timer={timer}
+              timerOpen={timerOpen}
+              isTodo={isTodo}
+              light={light}
+              statusMenuOpen={tabId !== undefined && statusMenuTabId === tabId}
+              onOpenStatusMenu={onOpenStatusMenu}
+              onToggleTodo={onToggleTodo}
+              onToggleTimer={onToggleTimerForm}
+              onOpenTimerPopup={onOpenTimerPopup}
+            />
             {timerOpen && tabId !== undefined && (
               <div class="px-[var(--zen-row-pad)] pb-[var(--zen-space-2)]">
                 <TimerForm

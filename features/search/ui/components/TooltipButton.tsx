@@ -1,7 +1,10 @@
 import type { ComponentChildren, JSX } from "preact";
 import { createPortal } from "preact/compat";
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { cn } from "@/shared/ui/cn";
+
+/** A sweep down the list should not open a tooltip, measure it, and portal it on every row. */
+const TOOLTIP_DELAY_MS = 280;
 
 type TooltipAnchor = { rect: DOMRect; container: Element };
 
@@ -33,7 +36,8 @@ function tooltipStyle({ rect }: TooltipAnchor): JSX.CSSProperties {
  * An icon button with a styled tooltip. The tooltip is portalled to the search
  * surface's root and fixed to the viewport, so a row's `overflow-hidden`, its
  * paint containment and the column's scroll area cannot clip it. It shows on
- * hover and keyboard focus, and hides once the button is clicked.
+ * hover, after a short pause so a fast pass does not spawn one per row, on
+ * keyboard focus immediately, and hides once the button is clicked.
  */
 export function TooltipButton({
   label,
@@ -48,12 +52,30 @@ export function TooltipButton({
   ...rest
 }: TooltipButtonProps) {
   const [anchor, setAnchor] = useState<TooltipAnchor | null>(null);
+  const pending = useRef<number | undefined>(undefined);
+  const cancel = () => {
+    if (pending.current !== undefined) {
+      window.clearTimeout(pending.current);
+      pending.current = undefined;
+    }
+  };
+  useEffect(() => cancel, []);
   const show = (element: HTMLElement) =>
     setAnchor({
       rect: element.getBoundingClientRect(),
       container: element.closest("[data-zen-ui]") ?? document.body,
     });
-  const hide = () => setAnchor(null);
+  const hide = () => {
+    cancel();
+    setAnchor(null);
+  };
+  const showAfterPause = (element: HTMLElement) => {
+    cancel();
+    pending.current = window.setTimeout(() => {
+      pending.current = undefined;
+      show(element);
+    }, TOOLTIP_DELAY_MS);
+  };
 
   return (
     <>
@@ -63,7 +85,7 @@ export function TooltipButton({
         aria-label={label}
         class={className}
         onMouseEnter={(event) => {
-          show(event.currentTarget);
+          showAfterPause(event.currentTarget);
           onMouseEnter?.(event);
         }}
         onMouseLeave={(event) => {
