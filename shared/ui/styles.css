@@ -569,9 +569,9 @@
    * or holds focus. The keys stay in the DOM, so Tab still reaches them and
    * `:focus-within` brings them back.
    *
-   * On a result row the keys are taken out of flow and shown with no transition.
-   * The title and host stay put. Sliding or fading them kept the row wash a
-   * frame behind the pointer.
+   * On a result row the keys are taken out of flow. A moving pointer only
+   * changes the row wash. The keys wait a moment, so a fast pass does not
+   * paint them on every row, and they still show at once when the pointer rests.
    */
   .zs-row {
     position: relative;
@@ -641,27 +641,44 @@
     height: var(--zen-row-height);
     margin-left: 0;
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
+    transition: none;
   }
 
-  .zs-row:hover .zs-acts,
+  .zs-row:hover .zs-acts {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+      opacity 0s linear 60ms,
+      visibility 0s linear 60ms;
+  }
+
   .zs-row:focus-within .zs-acts,
   .zs-row[data-selected="true"] .zs-acts,
   .zs-row[data-issue-selected="true"] .zs-acts,
   .zs-row[data-keep] .zs-acts,
   .zs-row .zs-acts[data-always] {
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
+    transition: none;
   }
 
   /* A small lamp after the title of a todo, while its keys are put away. */
-  .zs-row:hover .zs-todo-dot,
+  .zs-row:hover .zs-todo-dot {
+    visibility: hidden;
+    transition: visibility 0s linear 60ms;
+  }
+
   .zs-row:focus-within .zs-todo-dot,
   .zs-row[data-selected="true"] .zs-todo-dot,
   .zs-row[data-issue-selected="true"] .zs-todo-dot,
   .zs-row[data-keep] .zs-todo-dot,
   .zs-row:has(.zs-acts[data-always]) .zs-todo-dot {
     visibility: hidden;
+    transition: none;
   }
 
   /* A recessed tray, the floor a collapsible panel's content sits on. */
