@@ -17,7 +17,7 @@ this.zenTabs = class extends ExtensionAPI {
   getAPI(context) {
     const extensionApi = this; // eslint-disable-line @typescript-eslint/no-this-alias -- closures below outlive this method
     const { tabManager } = context.extension;
-    const LOG_PREFIX = "[zen-tab-search experiment]";
+    const LOG_PREFIX = "[zen-deck experiment]";
 
     function debugLog(label, details) {
       if (!DEBUG) {
@@ -1068,7 +1068,7 @@ this.zenTabs = class extends ExtensionAPI {
       const id = `${Date.now().toString(36)}-${nextOverlayId++}`;
 
       const container = doc.createElementNS(HTML_NS, "div");
-      container.id = `zen-tab-search-omnibar-${id}`;
+      container.id = `zen-deck-omnibar-${id}`;
       // no-drag: Zen marks its sidebar and toolbars as window-drag regions, and the
       // OS hit-tests those through anything on top that does not opt out. Over one,
       // a click drags the window and a right-click opens the Windows system menu.

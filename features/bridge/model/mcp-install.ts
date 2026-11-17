@@ -1,11 +1,11 @@
 /** Name the MCP server is registered under in client configs. */
-export const MCP_SERVER_NAME = "zen-tab-search";
+export const MCP_SERVER_NAME = "zen-deck";
 
 /** File name the settings page downloads the server as. */
-export const MCP_SERVER_FILE_NAME = "zen-tab-search-mcp.mjs";
+export const MCP_SERVER_FILE_NAME = "zen-deck-mcp.mjs";
 
 /** Path inside the extension package; matches the asset added in wxt.config.ts. */
-export const MCP_SERVER_ASSET_PATH = "mcp/zen-tab-search-mcp.mjs";
+export const MCP_SERVER_ASSET_PATH = "mcp/zen-deck-mcp.mjs";
 
 /** Stand-ins the user replaces: where they saved the server, and the token from this page. */
 export const MCP_PATH_PLACEHOLDER = `<path-to>/${MCP_SERVER_FILE_NAME}`;

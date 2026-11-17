@@ -1,4 +1,4 @@
-export const LOG_PREFIX = "[zen-tab-search]";
+export const LOG_PREFIX = "[zen-deck]";
 
 export function formatError(error: unknown): string {
   if (error instanceof Error) {

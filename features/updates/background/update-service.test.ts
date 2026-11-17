@@ -6,12 +6,12 @@ import {
 } from "@/features/updates/background/update-service";
 import { RELEASE_DOWNLOAD_PREFIX } from "@/features/updates/model/release";
 
-const zipUrl = `${RELEASE_DOWNLOAD_PREFIX}v4.0.2/zen-tab-search-v4.0.2-firefox.zip`;
+const zipUrl = `${RELEASE_DOWNLOAD_PREFIX}v4.0.2/zen-deck-v4.0.2-firefox.zip`;
 
 const githubRelease = {
   tag_name: "v4.0.2",
   html_url: "https://github.com/x/y/releases/tag/v4.0.2",
-  assets: [{ name: "zen-tab-search-v4.0.2-firefox.zip", browser_download_url: zipUrl }],
+  assets: [{ name: "zen-deck-v4.0.2-firefox.zip", browser_download_url: zipUrl }],
 };
 
 const latest = {

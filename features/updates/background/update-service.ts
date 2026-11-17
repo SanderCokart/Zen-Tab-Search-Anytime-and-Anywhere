@@ -124,7 +124,7 @@ export function createUpdateService(overrides: Partial<UpdateServiceDeps> = {}) 
   async function availableUpdate(): Promise<LatestRelease> {
     const status = await getStatus();
     if (!status.updateAvailable || !status.latest) {
-      throw new Error("Zen Tab Search is up to date.");
+      throw new Error("Zen Deck is up to date.");
     }
     return status.latest;
   }

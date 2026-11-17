@@ -9,7 +9,7 @@ import { buildMcp, MCP_OUTFILE } from "./scripts/build-mcp.mjs";
 
 // Where the bundled MCP server sits inside the extension. Must match MCP_SERVER_ASSET_PATH
 // in features/bridge/model/mcp-install.ts.
-const MCP_SERVER_ASSET = "mcp/zen-tab-search-mcp.mjs";
+const MCP_SERVER_ASSET = "mcp/zen-deck-mcp.mjs";
 
 // The overlay's fonts, shipped as plain files (see shared/ui/page-fonts.ts for why).
 const FONT_WEIGHTS = [400, 500, 600];
@@ -28,8 +28,9 @@ export default defineConfig({
     ...(zipSources === false ? { zipSources } : {}),
   },
   manifest: {
-    name: "Zen Tab Search",
-    description: "Fuzzy search for tabs in Zen Browser with a modern omnibar overlay",
+    name: "Zen Deck",
+    description:
+      "Control surface for Zen Browser: tab search, spaces, timers, hosts, and AI agents.",
     permissions: [
       "tabs",
       "<all_urls>",
@@ -46,13 +47,13 @@ export default defineConfig({
         suggested_key: {
           default: "Alt+F",
         },
-        description: "Open tab search omnibar (in-page overlay when possible)",
+        description: "Open the Zen Deck omnibar",
       },
       // Custom command so the background script can toggle the popup closed when pressed again.
       // (_execute_browser_action is handled by the browser and cannot be intercepted.)
       // Unmapped by default; assign a key in about:addons → Manage Extension Shortcuts.
       "toggle-popup": {
-        description: "Open Zen Tab Search popup",
+        description: "Open Zen Deck popup",
       },
       "change-tab-label": {
         suggested_key: {
@@ -110,7 +111,7 @@ export default defineConfig({
     },
     browser_specific_settings: {
       gecko: {
-        id: "zen-tab-search@extension.example",
+        id: "zen-deck@extension.example",
         strict_min_version: "128.0",
         data_collection_permissions: {
           required: ["none"],

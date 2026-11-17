@@ -19,7 +19,7 @@ function printUsage() {
       "  npm run zip:no-sources",
       "  npm run zip -- --no-sources <name>",
       "",
-      "By default the Firefox zip is named zen-tab-search-demo-firefox.zip,",
+      "By default the Firefox zip is named zen-deck-demo-firefox.zip,",
       "and a sources zip is written beside it.",
       "Provide a name to replace the demo label, or --tag to use a release tag.",
       "--no-sources skips the sources zip. npm run zip:no-sources does the same.",
@@ -133,7 +133,7 @@ function main() {
   });
 
   console.log("");
-  console.log(`Created .output/zen-tab-search-${zipLabel}-firefox.zip`);
+  console.log(`Created .output/zen-deck-${zipLabel}-firefox.zip`);
   if (parsed.noSources) {
     console.log("Skipped the sources zip.");
   }

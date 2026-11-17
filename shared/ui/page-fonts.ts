@@ -1,4 +1,4 @@
-const STYLE_ID = "zen-tab-search-fonts";
+const STYLE_ID = "zen-deck-fonts";
 const WEIGHTS = [400, 500, 600];
 // Family name as CSS uses it, and the `fonts/` file prefix the build copies it under.
 const FONTS = [

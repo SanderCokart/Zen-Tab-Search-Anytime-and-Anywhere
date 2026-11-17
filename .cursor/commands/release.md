@@ -1,4 +1,4 @@
-Prepare and publish a new GitHub release of the Zen Tab Search Firefox extension. Run commands yourself unless blocked.
+Prepare and publish a new GitHub release of the Zen Deck Firefox extension. Run commands yourself unless blocked.
 
 Follow the `repo-git-and-release` skill. Do not rewrite the worktree to fix line endings (`npm run format` on the whole tree, `git add --renormalize`, or deleting checked-out files).
 

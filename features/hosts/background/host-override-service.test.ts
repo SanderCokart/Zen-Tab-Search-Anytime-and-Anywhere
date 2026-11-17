@@ -48,7 +48,7 @@ function fakePorts(): HostProxyPorts & { running: Map<string, number> } {
     }),
     forgetPorts: vi.fn(() => running.clear()),
     status: async () => ({
-      logPath: "C:\\Temp\\zen-tab-search-hosts.log",
+      logPath: "C:\\Temp\\zen-deck-hosts.log",
       running: [...running].map(([ip, port]) => ({
         ip,
         port,
@@ -291,7 +291,7 @@ describe("host override service", () => {
     await service.resolveProxy({ tabId: 1, url: "https://example.com/" });
 
     await expect(service.getStatus()).resolves.toEqual({
-      logPath: "C:\\Temp\\zen-tab-search-hosts.log",
+      logPath: "C:\\Temp\\zen-deck-hosts.log",
       proxies: [
         { ip: "10.0.0.1", port: 40_000, routed: 1, connected: 1, open: 1, lastError: "" },
         {

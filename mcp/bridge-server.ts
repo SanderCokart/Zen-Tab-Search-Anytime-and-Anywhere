@@ -18,7 +18,7 @@ const YIELD_GRACE_MS = 1_000;
 const DEFAULT_RETRY_MS = { held: 5_000, transient: 1_000, other: 5_000 };
 
 const ENABLE_HINT =
-  'Check that Zen is open, that the installed Zen Tab Search build includes the MCP bridge, and that "AI agents (MCP)" is turned on in its settings.';
+  'Check that Zen is open, that the installed Zen Deck build includes the MCP bridge, and that "AI agents (MCP)" is turned on in its settings.';
 
 export interface BridgeHolder {
   pid: number;
@@ -65,7 +65,7 @@ function tokensMatch(expected: string, received: string): boolean {
 }
 
 /**
- * Asks whatever holds `port` who it is. Another zen-tab-search server answers
+ * Asks whatever holds `port` who it is. Another zen-deck server answers
  * the probe; a refused connection means nothing is listening (the bind failure
  * was transient, such as a closing socket in TIME_WAIT); anything else is some
  * other program.
@@ -117,7 +117,7 @@ export function probePort(port: number, timeoutMs = PROBE_TIMEOUT_MS): Promise<P
 }
 
 /**
- * Asks the zen-tab-search server holding `port` to hand it over. Only a peer
+ * Asks the zen-deck server holding `port` to hand it over. Only a peer
  * with the right token can make it yield. Resolves true once the holder has
  * released the port; false for anything else (wrong token, an older server
  * that does not understand yield, or no answer).
@@ -161,7 +161,7 @@ export function requestYield(
  * Loopback WebSocket server that the Zen extension dials into.
  *
  * Only one process can own the port. A server started at launch takes it over
- * from an older zen-tab-search server (for example one started by another
+ * from an older zen-deck server (for example one started by another
  * Cursor window). The older one stays passive and takes the port back only once
  * it is free. A server that cannot take over keeps running, reports who holds
  * the port, and takes over as soon as it is free.
@@ -223,13 +223,13 @@ export class ZenBridge {
       case "transient":
         return `Port ${port} was briefly unavailable, but nothing is listening on it (for example a closed connection still in TIME_WAIT). Retrying every second; try again in a moment.`;
       case "other-program":
-        return `Port ${port} is in use by a program that is not a zen-tab-search MCP server. The Zen extension always connects to port ${port}, so that program has to stop first. Retrying every few seconds.`;
+        return `Port ${port} is in use by a program that is not a zen-deck MCP server. The Zen extension always connects to port ${port}, so that program has to stop first. Retrying every few seconds.`;
       case "held": {
         const { holder } = this.#state;
-        return `Port ${port} is held by another zen-tab-search MCP server (process ${holder.pid}, version ${holder.version}, started ${holder.startedAt}, Zen ${holder.zenConnected ? "connected to it" : "not connected"}). It was most likely started by another MCP client such as Claude or Cursor, and only one server can talk to Zen. Quit that client or remove zen-tab-search from its MCP config, or end process ${holder.pid}. This server takes over automatically once the port is free.`;
+        return `Port ${port} is held by another zen-deck MCP server (process ${holder.pid}, version ${holder.version}, started ${holder.startedAt}, Zen ${holder.zenConnected ? "connected to it" : "not connected"}). It was most likely started by another MCP client such as Claude or Cursor, and only one server can talk to Zen. Quit that client or remove zen-deck from its MCP config, or end process ${holder.pid}. This server takes over automatically once the port is free.`;
       }
       case "yielded":
-        return `Port ${port} was taken over by another zen-tab-search MCP server (process ${this.#state.to}), so this one stays passive. Only one server can talk to Zen at a time. Restart this MCP client to take the port back, or it takes over automatically once the other server exits.`;
+        return `Port ${port} was taken over by another zen-deck MCP server (process ${this.#state.to}), so this one stays passive. Only one server can talk to Zen at a time. Restart this MCP client to take the port back, or it takes over automatically once the other server exits.`;
       case "listening":
         break;
     }
@@ -361,7 +361,7 @@ export class ZenBridge {
       `port ${this.#requestedPort} taken over by MCP server ${to}; this server stays passive`,
     );
     this.#dropClient(
-      new Error("Taken over by a newer zen-tab-search MCP server. Try again in a moment."),
+      new Error("Taken over by a newer zen-deck MCP server. Try again in a moment."),
     );
     this.#server?.close();
     this.#server = undefined;
@@ -456,7 +456,7 @@ export class ZenBridge {
         if (!hello || !tokensMatch(this.#token, hello.token)) {
           this.#reject(
             socket,
-            `Zen tried to connect at ${new Date().toISOString()}, but its token does not match ZEN_BRIDGE_TOKEN. Copy the token again from "AI agents (MCP)" in Zen Tab Search's settings, update ZEN_BRIDGE_TOKEN in your MCP client's config, and restart the client.`,
+            `Zen tried to connect at ${new Date().toISOString()}, but its token does not match ZEN_BRIDGE_TOKEN. Copy the token again from "AI agents (MCP)" in Zen Deck's settings, update ZEN_BRIDGE_TOKEN in your MCP client's config, and restart the client.`,
           );
           return;
         }
@@ -506,7 +506,7 @@ export class ZenBridge {
     ) {
       return undefined;
     }
-    return `Version mismatch: the Zen Tab Search extension uses bridge protocol ${String(hello.protocolVersion)} but this MCP server (version ${this.#version}) uses ${BRIDGE_PROTOCOL_VERSION}. Install the extension and zen-tab-search-mcp.mjs from the same release, then restart Zen and your MCP client.`;
+    return `Version mismatch: the Zen Deck extension uses bridge protocol ${String(hello.protocolVersion)} but this MCP server (version ${this.#version}) uses ${BRIDGE_PROTOCOL_VERSION}. Install the extension and zen-deck-mcp.mjs from the same release, then restart Zen and your MCP client.`;
   }
 
   #settle(response: BridgeResponse): void {

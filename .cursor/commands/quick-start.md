@@ -1,4 +1,4 @@
-Get this Zen Tab Search Firefox extension project running locally. Execute the steps yourself — do not only list instructions.
+Get this Zen Deck Firefox extension project running locally. Execute the steps yourself — do not only list instructions.
 
 This extension is Firefox/Zen only (MV2). `webExt.disabled` is intentional: `npm run dev` does not launch a browser. The user loads the temporary add-on by hand.
 

@@ -1,4 +1,4 @@
-# The architecture of Zen Tab Search
+# The architecture of Zen Deck
 
 A guide for contributors. `CLAUDE.md` is the short reference card; this is the long
 version, told as a story — what the extension is trying to do, why the code is
@@ -107,7 +107,7 @@ room.
 | [popup/](entrypoints/popup) | The toolbar popup. Renders `SearchApp` in `layout="popup"`. |
 | [options/](entrypoints/options) | The settings page. Renders `DisplaySettingsApp`. |
 | [timer-popup/](entrypoints/timer-popup) | A small window for setting a timer on one tab. |
-| [zen-tab-search.content/](entrypoints/zen-tab-search.content) | Content script on `<all_urls>`. Renders `SearchApp` in `layout="overlay"`. |
+| [zen-deck.content/](entrypoints/zen-deck.content) | Content script on `<all_urls>`. Renders `SearchApp` in `layout="overlay"`. |
 
 Three of them are three lines of wiring:
 
@@ -142,7 +142,7 @@ plugged in — and it should stay a wiring file. Logic belongs in the feature.
 
 ### The content script is a shadow-DOM overlay
 
-[zen-tab-search.content/index.tsx](entrypoints/zen-tab-search.content/index.tsx) runs
+[zen-deck.content/index.tsx](entrypoints/zen-deck.content/index.tsx) runs
 on every page and does nothing until told to. On command it mounts `SearchApp` into
 a `createShadowRootUi` container, set to `position: modal` with a very high
 `z-index` and promoted to the top layer via the Popover API

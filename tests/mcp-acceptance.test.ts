@@ -278,7 +278,7 @@ beforeEach(async () => {
   });
   await vi.waitFor(() => expect(bridge.connected).toBe(true));
 
-  const server = new McpServer({ name: "zen-tab-search", version: "test" });
+  const server = new McpServer({ name: "zen-deck", version: "test" });
   registerZenTools(server, bridge);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   client = new Client({ name: "acceptance", version: "1" });
@@ -295,7 +295,32 @@ afterEach(async () => {
   extension = undefined;
 });
 
+const MCP_TOOLS = [
+  "zen_activate_tab",
+  "zen_apply_patch",
+  "zen_close_tab",
+  "zen_delete_folder",
+  "zen_delete_space",
+  "zen_detect_forge_tabs",
+  "zen_get_pinned_url",
+  "zen_list_folders",
+  "zen_list_tabs",
+  "zen_list_timers",
+  "zen_list_todos",
+  "zen_move_tab",
+  "zen_set_color",
+  "zen_set_pinned_url",
+  "zen_set_timer",
+  "zen_set_todo",
+  "zen_status",
+] as const;
+
 describe("MCP acceptance", () => {
+  it("registers a small tool list", async () => {
+    const { tools } = await client.listTools();
+    expect(tools.map((tool) => tool.name).sort()).toEqual([...MCP_TOOLS]);
+  });
+
   it("lists tab counts without returning individual tabs", async () => {
     const counts = await call("zen_list_tabs", { fields: "counts" });
     expect(counts).toEqual({
@@ -317,98 +342,43 @@ describe("MCP acceptance", () => {
     expect(all.tabs.find((tab: { id: number }) => tab.id === 3)).toMatchObject({ global: true });
   });
 
-  it("creates a Google folder in General, opens Drive, Docs and Sheets into it, and does it again without duplicates", async () => {
-    const spaces = await call("zen_list_spaces");
-    const general = spaces.find((space: { name: string }) => space.name === "General");
-
-    const folder = await call("zen_create_folder", { name: "Google", spaceId: general.id });
-    expect(folder).toMatchObject({
-      created: true,
-      name: "Google",
-      spaceId: "general",
-      path: "General / Google",
+  it("opens a tab into a folder through zen_apply_patch", async () => {
+    const patched = await call("zen_apply_patch", {
+      nodes: [
+        {
+          type: "space",
+          id: "work",
+          children: [
+            {
+              type: "folder",
+              name: "Reading",
+              children: [{ type: "tab", name: "Article", url: "https://example.com/article" }],
+            },
+          ],
+        },
+      ],
     });
-    const again = await call("zen_create_folder", { name: "google ", spaceId: general.id });
-    expect(again).toMatchObject({
-      created: false,
-      reused: true,
-      folderId: folder.folderId,
-      path: "General / Google",
-    });
-    expect(again.note).toMatch(/Reused existing folder "Google"/);
-    expect(zen.folders).toHaveLength(1);
-
-    const services = ["drive", "docs", "sheets"];
-    const first = await call("zen_open_google_workspace", { services, folderId: folder.folderId });
-    expect(first).toMatchObject({ created: 3, existing: 0, failed: 0 });
-    expect(first.target).toEqual({
-      spaceId: "general",
-      spaceName: "General",
-      folderId: folder.folderId,
-      folderName: "Google",
-    });
-    for (const result of first.results) {
-      expect(result).toMatchObject({
-        status: "created",
-        spaceId: "general",
-        folderId: folder.folderId,
-        folderName: "Google",
-      });
-      expect(typeof result.tabId).toBe("number");
-    }
-    // Docs is already open in the Work space, but that does not count for the Google folder.
-    expect(first.results.map((result: { url: string }) => result.url)).toEqual([
-      "https://drive.google.com/",
-      "https://docs.google.com/document/",
-      "https://docs.google.com/spreadsheets/",
+    expect(patched.results.map((entry: { status: string }) => entry.status)).toEqual([
+      "patched",
+      "created",
+      "created",
     ]);
-
-    const tabCount = zen.tabs.length;
-    const second = await call("zen_open_google_workspace", { services, folderId: folder.folderId });
-    expect(second).toMatchObject({ created: 0, existing: 3, failed: 0 });
-    expect(second.results.map((result: { tabId: number }) => result.tabId)).toEqual(
-      first.results.map((result: { tabId: number }) => result.tabId),
-    );
-    expect(zen.tabs).toHaveLength(tabCount);
-
-    const inFolder = await call("zen_list_tabs", {
-      folderId: folder.folderId,
-      groupBy: "folder",
-      fields: "full",
-    });
-    expect(inFolder.totalTabs).toBe(3);
-    expect(inFolder.spaces[0].folders[0]).toMatchObject({
-      folderId: folder.folderId,
-      folderName: "Google",
-    });
-    expect(inFolder.spaces[0].folders[0].tabs.map((tab: { id: number }) => tab.id).sort()).toEqual(
-      first.results.map((result: { tabId: number }) => result.tabId).sort(),
-    );
-  });
-
-  it("opens a single tab into a folder and reports where it went", async () => {
-    const { folderId } = await call("zen_create_folder", { name: "Reading", spaceId: "work" });
-    const opened = await call("zen_open_tab", { url: "https://example.com/article", folderId });
-    expect(opened).toMatchObject({
-      created: true,
-      url: "https://example.com/article",
+    const tabId = patched.results[2].id as number;
+    const folderId = patched.results[1].id as string;
+    expect(zen.tabs.find((tab) => tab.id === tabId)).toMatchObject({
+      pinned: true,
       spaceId: "work",
-      spaceName: "Work",
       folderId,
-      folderName: "Reading",
     });
-    expect(zen.tabs.find((tab) => tab.id === opened.tabId)).toMatchObject({ pinned: true });
   });
 
-  it("refuses non-web URLs and a folder from another space without opening anything", async () => {
+  it("refuses non-web URLs without opening anything", async () => {
     const before = zen.tabs.length;
-    await expect(call("zen_open_tab", { url: "javascript:alert(1)" })).rejects.toThrow(
-      /http and https/,
-    );
-    const { folderId } = await call("zen_create_folder", { name: "Reading", spaceId: "work" });
     await expect(
-      call("zen_open_tab", { url: "https://example.com", folderId, spaceId: "general" }),
-    ).rejects.toThrow('Folder "Reading" is in space "Work"');
+      call("zen_apply_patch", {
+        nodes: [{ type: "tab", name: "Bad", url: "javascript:alert(1)", spaceId: "general" }],
+      }),
+    ).rejects.toThrow(/http and https/);
     expect(zen.tabs).toHaveLength(before);
   });
 
@@ -427,44 +397,20 @@ describe("MCP acceptance", () => {
     expect(status.problem).toMatch(/Zen disconnected at .* reconnects within a minute/);
   });
 
-  it("creates a nested folder, applies a patch tree, then closes a tab and deletes the empty folder", async () => {
-    const space = await call("zen_create_space", { name: "Client" });
-    expect(space).toMatchObject({ created: true, name: "Client" });
-    const again = await call("zen_create_space", { name: "client " });
-    expect(again).toMatchObject({ created: false, reused: true, spaceId: space.spaceId });
-
-    const parent = await call("zen_create_folder", { name: "Docs", spaceId: space.spaceId });
-    const nested = await call("zen_create_folder", {
-      name: "API",
-      parentPath: "Client / Docs",
-    });
-    expect(nested).toMatchObject({
-      created: true,
-      name: "API",
-      spaceId: space.spaceId,
-      parentId: parent.folderId,
-      path: "Client / Docs / API",
-    });
-    const reused = await call("zen_create_folder", { name: "api", parentPath: "Client / Docs" });
-    expect(reused).toMatchObject({ created: false, reused: true, folderId: nested.folderId });
-    const listed = await call("zen_list_folders");
-    expect(listed.find((entry: { id: string }) => entry.id === nested.folderId)).toMatchObject({
-      path: "Client / Docs / API",
-    });
-
+  it("creates a nested layout with zen_apply_patch, then closes and deletes", async () => {
     const patched = await call("zen_apply_patch", {
       nodes: [
         {
           type: "space",
-          id: space.spaceId,
+          name: "Client",
           children: [
             {
               type: "folder",
-              id: parent.folderId,
+              name: "Docs",
               children: [
                 {
                   type: "folder",
-                  id: nested.folderId,
+                  name: "API",
                   children: [{ type: "tab", name: "Spec", url: "https://example.com/spec" }],
                 },
               ],
@@ -474,45 +420,67 @@ describe("MCP acceptance", () => {
       ],
     });
     expect(patched.results.map((entry: { status: string }) => entry.status)).toEqual([
-      "patched",
-      "patched",
-      "patched",
+      "created",
+      "created",
+      "created",
       "created",
     ]);
+    const spaceId = patched.results[0].id as string;
+    const nestedId = patched.results[2].id as string;
     const tabId = patched.results[3].id as number;
+    const listed = await call("zen_list_folders");
+    expect(listed.find((entry: { id: string }) => entry.id === nestedId)).toMatchObject({
+      path: "Client / Docs / API",
+    });
     expect(zen.tabs.find((tab) => tab.id === tabId)).toMatchObject({
-      spaceId: space.spaceId,
-      folderId: nested.folderId,
+      spaceId,
+      folderId: nestedId,
     });
 
-    await call("zen_set_essential", { tabIds: [tabId] });
-    await call("zen_clear_essential", { tabIds: [tabId] });
+    await call("zen_apply_patch", {
+      nodes: [{ type: "tab", id: tabId, essential: true }],
+    });
+    await call("zen_apply_patch", {
+      nodes: [{ type: "tab", id: tabId, essential: false }],
+    });
     await call("zen_close_tab", { tabIds: [tabId] });
-    await expect(
-      call("zen_delete_folder", { folderIds: [nested.folderId] }),
-    ).resolves.toMatchObject({
+    await expect(call("zen_delete_folder", { folderIds: [nestedId] })).resolves.toMatchObject({
       deleted: 1,
     });
-    expect(zen.folders.find((folder) => folder.id === nested.folderId)).toBeUndefined();
+    expect(zen.folders.find((folder) => folder.id === nestedId)).toBeUndefined();
 
-    await expect(call("zen_delete_space", { spaceIds: [space.spaceId] })).resolves.toMatchObject({
+    await expect(call("zen_delete_space", { spaceIds: [spaceId] })).resolves.toMatchObject({
       deleted: 1,
-      spaceIds: [space.spaceId],
+      spaceIds: [spaceId],
     });
-    expect(zen.spaces.find((entry) => entry.id === space.spaceId)).toBeUndefined();
+    expect(zen.spaces.find((entry) => entry.id === spaceId)).toBeUndefined();
   });
 
   it("reads and sets the stored URL of a pinned tab", async () => {
-    const { folderId } = await call("zen_create_folder", { name: "Mail", spaceId: "work" });
-    const opened = await call("zen_open_tab", { url: "https://mail.example/", folderId });
-    await expect(call("zen_get_pinned_url", { tabId: opened.tabId })).resolves.toMatchObject({
-      tabId: opened.tabId,
+    const patched = await call("zen_apply_patch", {
+      nodes: [
+        {
+          type: "space",
+          id: "work",
+          children: [
+            {
+              type: "folder",
+              name: "Mail",
+              children: [{ type: "tab", name: "Mail", url: "https://mail.example/" }],
+            },
+          ],
+        },
+      ],
+    });
+    const tabId = patched.results[2].id as number;
+    await expect(call("zen_get_pinned_url", { tabId })).resolves.toMatchObject({
+      tabId,
       url: "https://mail.example/",
     });
     await expect(
-      call("zen_set_pinned_url", { tabId: opened.tabId, url: "https://mail.example/starred" }),
-    ).resolves.toEqual({ tabId: opened.tabId, url: "https://mail.example/starred" });
-    expect(zen.tabs.find((tab) => tab.id === opened.tabId)?.pinnedUrl).toBe(
+      call("zen_set_pinned_url", { tabId, url: "https://mail.example/starred" }),
+    ).resolves.toEqual({ tabId, url: "https://mail.example/starred" });
+    expect(zen.tabs.find((tab) => tab.id === tabId)?.pinnedUrl).toBe(
       "https://mail.example/starred",
     );
   });

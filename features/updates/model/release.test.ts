@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseLatestRelease, RELEASE_DOWNLOAD_PREFIX } from "@/features/updates/model/release";
 
-const zipUrl = `${RELEASE_DOWNLOAD_PREFIX}v4.0.2/zen-tab-search-v4.0.2-firefox.zip`;
+const zipUrl = `${RELEASE_DOWNLOAD_PREFIX}v4.0.2/zen-deck-v4.0.2-firefox.zip`;
 
 function release(overrides: Record<string, unknown> = {}) {
   return {
@@ -9,10 +9,10 @@ function release(overrides: Record<string, unknown> = {}) {
     html_url: "https://github.com/x/y/releases/tag/v4.0.2",
     assets: [
       {
-        name: "zen-tab-search-mcp.mjs",
+        name: "zen-deck-mcp.mjs",
         browser_download_url: `${RELEASE_DOWNLOAD_PREFIX}v4.0.2/mcp`,
       },
-      { name: "zen-tab-search-v4.0.2-firefox.zip", browser_download_url: zipUrl },
+      { name: "zen-deck-v4.0.2-firefox.zip", browser_download_url: zipUrl },
     ],
     ...overrides,
   };
@@ -36,7 +36,7 @@ describe("parseLatestRelease", () => {
   it("refuses a zip hosted anywhere but this repository's releases", () => {
     const assets = [
       {
-        name: "zen-tab-search-v4.0.2-firefox.zip",
+        name: "zen-deck-v4.0.2-firefox.zip",
         browser_download_url: "https://evil.test/a.zip",
       },
     ];

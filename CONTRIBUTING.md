@@ -1,4 +1,4 @@
-# Contributing to Zen Tab Search Anytime and Anywhere
+# Contributing to Zen Deck
 
 Thanks for your interest in contributing. This project is a fork (with rewritten git history) of Anton Dobrovinskiy's original Zen Tab Search under the MIT license. Anton retains the copyright as per the MIT terms.
 

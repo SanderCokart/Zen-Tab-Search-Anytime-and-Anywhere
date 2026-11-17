@@ -12,7 +12,7 @@
 
 // Every experiment script of an add-on shares one global; keep everything local.
 (() => {
-  const FILE_NAME = "zen-tab-search-settings.json";
+  const FILE_NAME = "zen-deck-settings.json";
   const MAX_BYTES = 1024 * 1024;
 
   function getBackupFile() {

@@ -17,12 +17,12 @@ if (process.argv.includes("--version")) {
 
 // stdout carries the MCP protocol, so every log line goes to stderr.
 function log(message: string): void {
-  process.stderr.write(`[zen-tab-search-mcp] ${message}\n`);
+  process.stderr.write(`[zen-deck-mcp] ${message}\n`);
 }
 
 const token = process.env.ZEN_BRIDGE_TOKEN?.trim();
 if (!token) {
-  log('ZEN_BRIDGE_TOKEN is not set. Copy it from "AI agents (MCP)" in Zen Tab Search\'s settings.');
+  log('ZEN_BRIDGE_TOKEN is not set. Copy it from "AI agents (MCP)" in Zen Deck\'s settings.');
   process.exit(1);
 }
 
@@ -33,7 +33,7 @@ const bridge = new ZenBridge({ token, port, version: VERSION, log });
 // and keeps retrying so it takes over once the other server exits.
 await bridge.start();
 
-const server = new McpServer({ name: "zen-tab-search", version: VERSION });
+const server = new McpServer({ name: "zen-deck", version: VERSION });
 registerZenTools(server, bridge);
 await server.connect(new StdioServerTransport());
 log(`MCP server ${VERSION} ready`);

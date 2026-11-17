@@ -28,7 +28,7 @@ describe("experiment scripts", () => {
 
 describe("zenUpdate", () => {
   const url =
-    "https://github.com/SanderCokart/Zen-Tab-Search-Anytime-and-Anywhere/releases/download/v4.0.2/zen-tab-search-v4.0.2-firefox.zip";
+    "https://github.com/SanderCokart/Zen-Deck/releases/download/v4.0.2/zen-deck-v4.0.2-firefox.zip";
 
   /** Runs the experiment against a fake AddonManager whose download holds `addon`. */
   function installer(addon: { id: string; version: string }) {
@@ -66,7 +66,7 @@ describe("zenUpdate", () => {
     vm.runInContext(experimentSource("zenUpdate"), global);
     const Api = (global as Record<string, new () => { getAPI(context: unknown): unknown }>)
       .zenUpdate!;
-    const api = new Api().getAPI({ extension: { id: "zen-tab-search@extension.example" } }) as {
+    const api = new Api().getAPI({ extension: { id: "zen-deck@extension.example" } }) as {
       zenUpdate: { installFromUrl(url: string, version: string): Promise<void> };
     };
     return { install, installFromUrl: api.zenUpdate.installFromUrl };
@@ -74,7 +74,7 @@ describe("zenUpdate", () => {
 
   it("installs this add-on's release at the expected version", async () => {
     const { install, installFromUrl } = installer({
-      id: "zen-tab-search@extension.example",
+      id: "zen-deck@extension.example",
       version: "4.0.2",
     });
     await expect(installFromUrl(url, "4.0.2")).resolves.toBeUndefined();
@@ -83,7 +83,7 @@ describe("zenUpdate", () => {
 
   it("refuses URLs outside the repository's releases", async () => {
     const { installFromUrl } = installer({
-      id: "zen-tab-search@extension.example",
+      id: "zen-deck@extension.example",
       version: "4.0.2",
     });
     await expect(installFromUrl("https://evil.test/a.zip", "4.0.2")).rejects.toThrow(
@@ -97,7 +97,7 @@ describe("zenUpdate", () => {
     expect(other.install.cancelled).toBe(true);
     expect(other.install.installed).toBe(false);
 
-    const older = installer({ id: "zen-tab-search@extension.example", version: "4.0.1" });
+    const older = installer({ id: "zen-deck@extension.example", version: "4.0.1" });
     await expect(older.installFromUrl(url, "4.0.2")).rejects.toThrow("version 4.0.1, not 4.0.2");
     expect(older.install.installed).toBe(false);
   });

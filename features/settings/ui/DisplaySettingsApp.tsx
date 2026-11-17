@@ -581,6 +581,23 @@ export function DisplaySettingsApp() {
             </Module>
 
             <BridgeSettings />
+
+            <Module title="Credits" wide>
+              <p class="m-0 text-[length:var(--zen-text-base)] leading-relaxed text-[var(--zs-ink-2)]">
+                Zen Deck is a fork of{" "}
+                <a
+                  class="text-[var(--zs-ink)] underline"
+                  href="https://github.com/AntonDobrovinskiy/Zen-Tab-Search"
+                >
+                  Anton Dobrovinskiy&apos;s Zen Tab Search
+                </a>
+                , MIT. Look and interface sounds come from{" "}
+                <a class="text-[var(--zs-ink)] underline" href="https://github.com/shuding/spec-01">
+                  Shu Ding&apos;s SPEC-01
+                </a>
+                .
+              </p>
+            </Module>
           </div>
           <div class="mt-[var(--zen-space-4)] flex justify-end">
             <button

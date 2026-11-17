@@ -8,10 +8,10 @@ const { version } = JSON.parse(
   fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 );
 
-export const MCP_OUTFILE = path.join(rootDir, "mcp", "dist", "zen-tab-search-mcp.mjs");
+export const MCP_OUTFILE = path.join(rootDir, "mcp", "dist", "zen-deck-mcp.mjs");
 
 // Bundles the MCP server and its dependencies into one file so an MCP client
-// only needs `node mcp/dist/zen-tab-search-mcp.mjs`, with no install step.
+// only needs `node mcp/dist/zen-deck-mcp.mjs`, with no install step.
 export async function buildMcp() {
   await build({
     absWorkingDir: rootDir,

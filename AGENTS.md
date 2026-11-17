@@ -1,4 +1,4 @@
-# Zen Tab Search — architecture guide
+# Zen Deck — architecture guide
 
 A Firefox/Zen Browser extension (WXT + Preact + Tailwind v4 + valibot) that provides
 fuzzy tab search, tab timers and automatic GitLab/GitHub labels.
@@ -15,7 +15,7 @@ is type-clean and lint-clean, so any error you see is one you introduced.
 Other scripts: `npm run dev` (live-reloading dev build), `npm run build`,
 `npm run format`, `npm run lint:web-ext` (builds, then runs the Firefox
 add-on linter), `npm run mcp:build` (bundles the MCP server to
-`mcp/dist/zen-tab-search-mcp.mjs`), `npm run screenshots` (Playwright captures
+`mcp/dist/zen-deck-mcp.mjs`), `npm run screenshots` (Playwright captures
 of the mocked UI harness into `docs/screenshots/`).
 
 ## Layout
@@ -110,7 +110,7 @@ surface asks it for data.
 - **Settings backup** (`features/settings/background/settings-backup.ts`): Firefox
   deletes storage.local on uninstall (including removing a temporary add-on with
   the same ID), so the third experiment, `zenBackup`, mirrors the settings keys to
-  `zen-tab-search-settings.json` in the profile. When storage holds none of them,
+  `zen-deck-settings.json` in the profile. When storage holds none of them,
   the background restores from that file and reloads the extension. A new storage
   key that is a user setting belongs in `BACKED_UP_STORAGE_KEYS`.
 - **Updates** (`features/updates/`): the background asks GitHub for the latest

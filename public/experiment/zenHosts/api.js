@@ -1,4 +1,4 @@
-/* global ExtensionAPI, ChromeUtils, Cc, Ci, Cr */
+/* global ExtensionAPI, ChromeUtils, Cc, Ci, Cr, console */
 
 /**
  * Loopback HTTP proxies that send everything they receive to one fixed IP.
@@ -32,13 +32,13 @@
   const IP_PATTERN = /^[0-9a-fA-F:.]+$/;
   const CONNECT_TIMEOUT_MS = 15_000;
   const CONNECT_POLL_MS = 100;
-  const LOG_PREFIX = "[zen-tab-search hosts]";
-  const LOG_FILE_NAME = "zen-tab-search-hosts.log";
+  const LOG_PREFIX = "[zen-deck hosts]";
+  const LOG_FILE_NAME = "zen-deck-hosts.log";
   const MAX_LOG_BYTES = 2 * 1024 * 1024;
 
   let logFile = null;
 
-  /** `zen-tab-search-hosts.log` in the OS temp folder (%TEMP% on Windows). */
+  /** `zen-deck-hosts.log` in the OS temp folder (%TEMP% on Windows). */
   function getLogFile() {
     if (!logFile) {
       logFile = Cc["@mozilla.org/file/directory_service;1"]

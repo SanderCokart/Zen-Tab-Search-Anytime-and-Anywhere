@@ -5,35 +5,19 @@ import {
   tabSummarySchema,
   zenFolderInfoSchema,
   type BridgeCommand,
-  type TabSummary,
 } from "@/shared/messaging/bridge-protocol";
-import { spaceInfoSchema, TRAFFIC_LIGHTS, type SpaceInfo } from "@/shared/messaging/protocol";
+import { spaceInfoSchema, TRAFFIC_LIGHTS } from "@/shared/messaging/protocol";
 import type { ZenBridge } from "./bridge-server";
-import { findReusableFolder, folderPath, requireFolder } from "./folders";
+import { folderPath } from "./folders";
 import { applyPatchTree, type PatchTreeNode } from "./patch-tree";
-import { findReusableSpace } from "./spaces";
-import {
-  findServiceTab,
-  GOOGLE_SERVICE_DEFINITIONS,
-  GOOGLE_SERVICES,
-  type GoogleService,
-} from "./google-workspace";
 import { buildTabListView, TAB_FIELDS, TAB_GROUPINGS } from "./tab-view";
 
 const tabId = z.number().int().min(0).describe("Tab ID from zen_list_tabs");
 const tabIds = z.array(tabId).min(1).max(200).describe("Tab IDs from zen_list_tabs");
-const spaceId = z.string().min(1).describe("Space ID from zen_list_spaces");
-const spaceIds = z.array(spaceId).min(1).max(200).describe("Space IDs from zen_list_spaces");
+const spaceId = z.string().min(1).describe("Space ID from zen_list_tabs");
+const spaceIds = z.array(spaceId).min(1).max(200).describe("Space IDs from zen_list_tabs");
 const folderId = z.string().min(1).describe("Folder ID from zen_list_folders or zen_list_tabs");
 const folderIds = z.array(folderId).min(1).max(200).describe("Folder IDs from zen_list_folders");
-const folderPathInput = z
-  .string()
-  .trim()
-  .min(1)
-  .max(500)
-  .describe(
-    'Folder path from zen_list_folders, for example "Work / repo / master". Use this when two folders share a name.',
-  );
 const folderName = z.string().trim().min(1).max(120).describe("Folder name");
 const spaceName = z.string().trim().min(1).max(120).describe("Space name");
 const webUrl = z
@@ -91,23 +75,10 @@ function asError(error: unknown) {
   return { isError: true, content: [{ type: "text" as const, text: message }] };
 }
 
-/** Where a tab ended up, in the shape the open tools return. */
-function tabLocation(tab: TabSummary) {
-  return {
-    tabId: tab.id,
-    title: tab.title,
-    url: tab.url,
-    spaceId: tab.spaceId ?? null,
-    spaceName: tab.spaceName ?? null,
-    folderId: tab.folderId ?? null,
-    folderName: tab.folderName ?? null,
-  };
-}
-
 /**
- * Registers one MCP tool per Zen operation. Each tool validates its input
- * with zod for the agent, then forwards bridge commands; the extension
- * validates them again with valibot before touching Zen.
+ * Registers the MCP tools. Each tool validates its input with zod for the
+ * agent, then forwards bridge commands; the extension validates them again
+ * with valibot before touching Zen. Layout writes go through zen_apply_patch.
  */
 export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
   /** A tool that runs several bridge commands and returns `run`'s result as JSON. */
@@ -149,48 +120,22 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
     v.parse(v.array(spaceInfoSchema), await bridge.request({ type: "listSpaces" }));
   const fetchFolders = async () =>
     v.parse(v.array(zenFolderInfoSchema), await bridge.request({ type: "listFolders" }));
-  const resolveFolder = async (input: { folderId?: string; path?: string }) =>
-    requireFolder(await fetchFolders(), input);
   const fetchTabs = async (filter: { spaceId?: string; folderId?: string }) =>
     v.parse(v.array(tabSummarySchema), await bridge.request({ type: "listTabs", ...filter }));
-  const openTab = async (command: Omit<Extract<BridgeCommand, { type: "openTab" }>, "type">) =>
-    v.parse(tabSummarySchema, await bridge.request({ type: "openTab", ...command }));
-
-  function pickSpace(spaces: SpaceInfo[], requested?: string): SpaceInfo {
-    const space = requested
-      ? spaces.find((entry) => entry.id === requested)
-      : spaces.find((entry) => entry.isActive);
-    if (!space) {
-      throw new Error(
-        requested
-          ? `Space not found: ${requested}. Get space IDs from zen_list_spaces.`
-          : "Zen reported no active space. Pass spaceId explicitly.",
-      );
-    }
-    return space;
-  }
 
   server.registerTool(
     "zen_status",
     {
       description:
-        "Check whether Zen is connected, and if not, why: Zen not connected yet, wrong token, version mismatch, or the port held by another MCP client's server (with its process ID). Call this first if other zen_ tools fail.",
+        "Whether Zen is connected, and if not why (token, version, port held). Call first if other zen_ tools fail.",
       annotations: readOnly,
     },
     async () => asText(bridge.status()),
   );
 
-  tool(
-    "zen_list_spaces",
-    "List Zen spaces (workspaces) with their IDs and which one is active.",
-    {},
-    readOnly,
-    () => ({ type: "listSpaces" }),
-  );
-
   workflow(
     "zen_list_tabs",
-    'List every open tab across Zen spaces in one call. Every result starts with totals: totalTabs, essentialTabs and tabsBySpace (tab counts per space and per folder). Tabs come grouped by space by default. Essential tabs are shared by all spaces, so they are marked global and listed under essentials. A tab with a traffic-light color includes `color` (`red`, `orange` or `green`). Firefox tab IDs change if a tab is closed or restored, so always use IDs from the latest call. Filter with spaceId or folderId (a folder includes its subfolders). Examples: { "fields": "counts" } for totals only; { "groupBy": "none", "fields": "titles" } for every tab as a flat list.',
+    'List tabs. Result always has totals (totalTabs, essentialTabs, tabsBySpace — empty spaces included). fields: "counts" | "titles" | "titles_urls" | "full". groupBy: "space" | "folder" | "none". Color is on each tab. Use latest IDs; they change if a tab is restored.',
     z.object({
       spaceId: spaceId.optional(),
       folderId: folderId.optional(),
@@ -221,7 +166,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   workflow(
     "zen_list_folders",
-    'List Zen folders (tab groups), including empty ones, with their space, parent folder, and `path` (space and ancestors, for example "Work / repo / master"). Use path when two folders share a name.',
+    'Folders (including empty), with space, parent, and path such as "Work / repo / master".',
     z.object({}),
     readOnly,
     async () => {
@@ -231,347 +176,11 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
   );
 
   tool(
-    "zen_get_selected_tabs",
-    "List the tabs currently highlighted (multi-selected) in the active Zen window.",
-    {},
-    readOnly,
-    () => ({ type: "getSelectedTabs" }),
-  );
-
-  workflow(
-    "zen_open_tab",
-    'Open a new tab in the background and return its tabId, title, URL, space and folder. Defaults to the active space. With folderId or path the tab goes straight into that folder (and its space), and Zen pins it, because folders hold pinned tabs. Example: { "url": "https://example.com", "path": "Work / Reading" }.',
-    z.object({
-      url: webUrl,
-      spaceId: spaceId
-        .optional()
-        .describe("Space to open the tab in; defaults to the active space"),
-      folderId: folderId
-        .optional()
-        .describe("Folder to put the tab in; spaceId, if given, must be the folder's space"),
-      path: folderPathInput.optional().describe("Same as folderId, by path instead of id"),
-      activate: z.boolean().default(false).describe("Switch to the new tab (and its space)"),
-      pinned: z.boolean().default(false).describe("Pin the tab; tabs in folders are always pinned"),
-    }),
-    writes,
-    async (input) => {
-      const folder =
-        input.folderId || input.path
-          ? await resolveFolder({ folderId: input.folderId, path: input.path })
-          : undefined;
-      const tab = await openTab({
-        url: input.url,
-        spaceId: input.spaceId,
-        folderId: folder?.id,
-        active: input.activate,
-        pinned: input.pinned,
-      });
-      return { created: true, ...tabLocation(tab) };
-    },
-  );
-
-  workflow(
-    "zen_open_google_workspace",
-    `Open Google services (${GOOGLE_SERVICES.join(", ")}) in a space or folder, skipping any already open there, so repeating the call creates nothing new. Returns one result per service with status "created", "existing" or "failed", plus its tabId and folder. Example: { "services": ["drive", "docs", "sheets"], "path": "Work / Google" }.`,
-    z.object({
-      services: z
-        .array(z.enum(GOOGLE_SERVICES))
-        .min(1)
-        .max(GOOGLE_SERVICES.length)
-        .describe("Services to open, in order"),
-      spaceId: spaceId
-        .optional()
-        .describe("Space to open them in; defaults to the active space, or the folder's space"),
-      folderId: folderId.optional().describe("Folder to open them in"),
-      path: folderPathInput.optional().describe("Same as folderId, by path instead of id"),
-      activateFirst: z
-        .boolean()
-        .default(false)
-        .describe("Switch to the first service's tab afterwards"),
-    }),
-    idempotentWrites,
-    async (input) => {
-      let target: { spaceId: string; spaceName: string; folderId?: string; folderName?: string };
-      if (input.folderId || input.path) {
-        const folder = await resolveFolder({ folderId: input.folderId, path: input.path });
-        if (input.spaceId && folder.spaceId !== input.spaceId) {
-          throw new Error(
-            `Folder "${folder.name}" is in space "${folder.spaceName}" (${folder.spaceId}), not ${input.spaceId}. Leave out spaceId or pick a folder in that space.`,
-          );
-        }
-        target = {
-          spaceId: folder.spaceId,
-          spaceName: folder.spaceName,
-          folderId: folder.id,
-          folderName: folder.name,
-        };
-      } else {
-        const space = pickSpace(await fetchSpaces(), input.spaceId);
-        target = { spaceId: space.id, spaceName: space.name };
-      }
-
-      // Look only where the services should end up: a Docs tab in another
-      // space is a different context and does not count as a duplicate.
-      const openHere = await fetchTabs(
-        target.folderId ? { folderId: target.folderId } : { spaceId: target.spaceId },
-      );
-      const services = [...new Set(input.services)] as GoogleService[];
-      const results: Record<string, unknown>[] = [];
-
-      for (const service of services) {
-        const existing = findServiceTab(service, openHere);
-        if (existing) {
-          results.push({ service, status: "existing", ...tabLocation(existing) });
-          continue;
-        }
-        const url = GOOGLE_SERVICE_DEFINITIONS[service].url;
-        try {
-          const tab = await openTab({
-            url,
-            ...(target.folderId ? { folderId: target.folderId } : { spaceId: target.spaceId }),
-            active: false,
-            pinned: false,
-          });
-          openHere.push(tab);
-          results.push({ service, status: "created", ...tabLocation(tab) });
-        } catch (error) {
-          results.push({
-            service,
-            status: "failed",
-            url,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-      }
-
-      let activated: number | undefined;
-      const first = results.find((result) => typeof result.tabId === "number");
-      if (input.activateFirst && first) {
-        await bridge.request({ type: "activateTab", tabId: first.tabId as number });
-        activated = first.tabId as number;
-      }
-
-      const count = (status: string) => results.filter((result) => result.status === status).length;
-      return {
-        target,
-        created: count("created"),
-        existing: count("existing"),
-        failed: count("failed"),
-        ...(activated !== undefined ? { activatedTabId: activated } : {}),
-        results,
-      };
-    },
-  );
-
-  tool(
     "zen_activate_tab",
-    "Focus a tab. Switches to its space if needed and brings its window forward.",
+    "Focus a tab (switches space if needed).",
     { tabId },
     writes,
     (input) => ({ type: "activateTab", tabId: input.tabId }),
-  );
-
-  tool("zen_switch_space", "Switch the active Zen space.", { spaceId }, writes, (input) => ({
-    type: "switchSpace",
-    spaceId: input.spaceId,
-  }));
-
-  tool(
-    "zen_rename_tab",
-    "Set a custom name on a tab. Works for ordinary tabs (Zen label) and essential tabs (stored by the extension, because Zen has no writable label for them). An empty label removes the custom name and shows the page title again.",
-    {
-      tabId,
-      label: z.string().max(200).describe("New tab name; empty to clear"),
-    },
-    writes,
-    (input) => ({ type: "renameTab", tabId: input.tabId, label: input.label }),
-  );
-
-  workflow(
-    "zen_create_space",
-    'Create a space without switching to it. If a space with the same name already exists, it is reused (created: false) unless allowDuplicate is true. Example: { "name": "Work" }.',
-    z.object({
-      name: spaceName,
-      allowDuplicate: z
-        .boolean()
-        .default(false)
-        .describe("Create a new space even if one with this name already exists"),
-    }),
-    idempotentWrites,
-    async (input) => {
-      const existing = input.allowDuplicate
-        ? undefined
-        : findReusableSpace(await fetchSpaces(), input.name);
-      if (existing) {
-        return {
-          created: false,
-          reused: true,
-          note: `Reused existing space "${existing.name}". Pass allowDuplicate: true to create another.`,
-          spaceId: existing.id,
-          name: existing.name,
-        };
-      }
-      const result = v.parse(
-        v.object({ spaceId: v.string(), name: v.string() }),
-        await bridge.request({ type: "createSpace", name: input.name }),
-      );
-      return { created: true, spaceId: result.spaceId, name: result.name };
-    },
-  );
-
-  tool(
-    "zen_rename_space",
-    "Rename a space.",
-    { spaceId, name: spaceName },
-    idempotentWrites,
-    (input) => ({ type: "renameSpace", spaceId: input.spaceId, name: input.name }),
-  );
-
-  workflow(
-    "zen_create_folder",
-    'Create a folder in a space, or a nested folder with parentId or parentPath, and optionally move tabs into it (Zen pins them). If a folder with the same name already exists in that place, it is reused (created: false, reused: true, plus a note); pass allowDuplicate: true to always create a new one. Example: { "name": "master", "parentPath": "Work / repo" }.',
-    z.object({
-      name: folderName,
-      spaceId: spaceId
-        .optional()
-        .describe(
-          "Space to create the folder in; defaults to the parent folder's space, or the active space",
-        ),
-      parentId: folderId.optional().describe("Parent folder; omit for a top-level folder"),
-      parentPath: folderPathInput.optional().describe("Same as parentId, by path instead of id"),
-      tabIds: tabIds.optional(),
-      allowDuplicate: z
-        .boolean()
-        .default(false)
-        .describe("Create a new folder even if one with this name exists in the same place"),
-    }),
-    idempotentWrites,
-    async (input) => {
-      const folders = await fetchFolders();
-      const parent =
-        input.parentId || input.parentPath
-          ? requireFolder(folders, { folderId: input.parentId, path: input.parentPath })
-          : undefined;
-      let targetSpaceId = input.spaceId;
-      if (parent) {
-        if (targetSpaceId && parent.spaceId !== targetSpaceId) {
-          throw new Error(
-            `Parent folder "${parent.name}" is in space "${parent.spaceName}" (${parent.spaceId}), not ${targetSpaceId}.`,
-          );
-        }
-        targetSpaceId = parent.spaceId;
-      }
-      const space = pickSpace(await fetchSpaces(), targetSpaceId);
-
-      const existing = input.allowDuplicate
-        ? undefined
-        : findReusableFolder(folders, input.name, space.id, parent?.id);
-
-      if (existing) {
-        const path = folderPath(folders, existing);
-        const moved = input.tabIds
-          ? await bridge.request({
-              type: "moveTabsToFolder",
-              tabIds: input.tabIds,
-              folderId: existing.id,
-            })
-          : undefined;
-        return {
-          created: false,
-          reused: true,
-          note: `Reused existing folder "${existing.name}" at ${path}. Pass allowDuplicate: true to create another.`,
-          folderId: existing.id,
-          name: existing.name,
-          path,
-          spaceId: space.id,
-          spaceName: space.name,
-          ...(parent ? { parentId: parent.id } : {}),
-          ...(moved ? { movedTabs: moved } : {}),
-        };
-      }
-
-      const result = v.parse(
-        v.object({ folderId: v.string() }),
-        await bridge.request({
-          type: "createFolder",
-          name: input.name,
-          spaceId: space.id,
-          parentId: parent?.id,
-          tabIds: input.tabIds,
-        }),
-      );
-      const path = parent
-        ? `${folderPath(folders, parent)} / ${input.name}`
-        : `${space.name} / ${input.name}`;
-      return {
-        created: true,
-        folderId: result.folderId,
-        name: input.name,
-        path,
-        spaceId: space.id,
-        spaceName: space.name,
-        ...(parent ? { parentId: parent.id } : {}),
-      };
-    },
-  );
-
-  tool(
-    "zen_rename_folder",
-    "Rename a folder.",
-    { folderId, name: folderName },
-    idempotentWrites,
-    (input) => ({ type: "renameFolder", folderId: input.folderId, name: input.name }),
-  );
-
-  tool(
-    "zen_move_folder",
-    "Move a folder to another space and/or parent folder without switching space. Omit parentId to place it at the space root. Essential tabs inside the folder cannot be moved.",
-    {
-      folderId,
-      spaceId: spaceId.optional().describe("Target space; defaults to the parent folder's space"),
-      parentId: folderId.optional().describe("Target parent folder; omit for the space root"),
-      afterFolderId: folderId.optional().describe("Place this folder directly after that folder"),
-    },
-    idempotentWrites,
-    (input) => ({
-      type: "moveFolder",
-      folderId: input.folderId,
-      spaceId: input.spaceId,
-      parentId: input.parentId,
-      afterFolderId: input.afterFolderId,
-    }),
-  );
-
-  tool(
-    "zen_delete_folder",
-    "Delete empty folders. Fails if any still has tabs or subfolders; move those out first. Nested empty folders are deleted innermost first.",
-    { folderIds },
-    destructive,
-    (input) => ({ type: "deleteFolder", folderIds: input.folderIds }),
-  );
-
-  tool(
-    "zen_delete_space",
-    "Delete spaces and the tabs in them (essentials are kept). Cannot delete the last remaining space.",
-    { spaceIds },
-    destructive,
-    (input) => ({ type: "deleteSpace", spaceIds: input.spaceIds }),
-  );
-
-  tool(
-    "zen_set_essential",
-    "Mark tabs as essential. Essentials are shared by every space and cannot be moved into a folder or another space until zen_clear_essential is called.",
-    { tabIds },
-    idempotentWrites,
-    (input) => ({ type: "setEssential", tabIds: input.tabIds }),
-  );
-
-  tool(
-    "zen_clear_essential",
-    "Remove tabs from Essentials so they can be moved into a folder or another space.",
-    { tabIds },
-    idempotentWrites,
-    (input) => ({ type: "clearEssential", tabIds: input.tabIds }),
   );
 
   tool("zen_close_tab", "Close tabs.", { tabIds }, destructive, (input) => ({
@@ -579,122 +188,81 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
     tabIds: input.tabIds,
   }));
 
-  workflow(
-    "zen_move_tabs_to_folder",
-    'Move tabs into a folder. The tabs are pinned and moved to the folder\'s space. Pass folderId, or path when two folders share a name. Example: { "tabIds": [118], "path": "Work / repo / master" }.',
-    z.object({
-      tabIds,
-      folderId: folderId.optional(),
-      path: folderPathInput.optional(),
-    }),
-    idempotentWrites,
-    async (input) => {
-      const folder = await resolveFolder({ folderId: input.folderId, path: input.path });
-      return bridge.request({
-        type: "moveTabsToFolder",
-        tabIds: input.tabIds,
-        folderId: folder.id,
-      });
-    },
+  tool(
+    "zen_delete_folder",
+    "Delete empty folders. Nested empties are removed innermost first.",
+    { folderIds },
+    destructive,
+    (input) => ({ type: "deleteFolder", folderIds: input.folderIds }),
   );
 
   tool(
-    "zen_remove_tabs_from_folder",
-    "Take tabs out of their folder. They stay in the same space.",
-    { tabIds },
-    idempotentWrites,
-    (input) => ({ type: "removeTabsFromFolder", tabIds: input.tabIds }),
-  );
-
-  tool(
-    "zen_move_tabs_to_space",
-    "Move tabs to another space without switching to it. Essential tabs cannot be moved.",
-    { tabIds, spaceId },
-    idempotentWrites,
-    (input) => ({ type: "moveTabsToSpace", tabIds: input.tabIds, spaceId: input.spaceId }),
+    "zen_delete_space",
+    "Delete spaces and their tabs (essentials kept). Cannot delete the last space.",
+    { spaceIds },
+    destructive,
+    (input) => ({ type: "deleteSpace", spaceIds: input.spaceIds }),
   );
 
   tool(
     "zen_list_timers",
-    "List the running tab timers with the tab, its label and when it ends (endsAt, ISO time). Timers that have already passed are not listed.",
+    "Running tab timers (tab, label, endsAt). Expired timers are omitted.",
     {},
     readOnly,
     () => ({ type: "listTimers" }),
   );
 
-  tool(
+  workflow(
     "zen_set_timer",
-    'Set the same timer on one or more tabs, replacing any timer they already have. "when" takes the same text as the extension\'s timer field: a duration ("30m", "1h 30m", "1d 30m"), a preset ("30 minutes", "1 hour", "7 hours", "Tomorrow 9:00", "Next week"), or a time ("tomorrow at 9am"). A timer must end between 1 minute and 31 days from now. Example: { "tabIds": [118, 119], "when": "45m" }.',
-    {
+    'Set the same timer on tabs. Omit "when" to clear. Same text as the timer field: "45m", "1h 30m", "tomorrow at 9am". 1 minute–31 days.',
+    z.object({
       tabIds,
-      when: z.string().trim().min(1).max(100).describe("When the timer ends, as text"),
+      when: z.string().trim().min(1).max(100).optional().describe("When it ends; omit to clear"),
+    }),
+    idempotentWrites,
+    async (input) => {
+      if (!input.when) {
+        return bridge.request({ type: "clearTimer", tabIds: input.tabIds });
+      }
+      return bridge.request({ type: "setTimer", tabIds: input.tabIds, when: input.when });
     },
-    idempotentWrites,
-    (input) => ({ type: "setTimer", tabIds: input.tabIds, when: input.when }),
   );
 
-  tool(
-    "zen_clear_timer",
-    "Remove timers from tabs. Reports how many of those tabs actually had a timer.",
-    { tabIds },
-    idempotentWrites,
-    (input) => ({ type: "clearTimer", tabIds: input.tabIds }),
-  );
-
-  tool(
-    "zen_list_todos",
-    "List tabs marked as todo, in tab order, with the tab, its title and where it sits.",
-    {},
-    readOnly,
-    () => ({ type: "listTodos" }),
-  );
+  tool("zen_list_todos", "Tabs marked as todo, with title and location.", {}, readOnly, () => ({
+    type: "listTodos",
+  }));
 
   tool(
     "zen_set_todo",
-    'Mark tabs as todo, so they show in the extension\'s todo column. Example: { "tabIds": [118, 119] }.',
-    { tabIds },
+    'Mark tabs as todo, or "done" to clear them.',
+    {
+      tabIds,
+      status: z.enum(["todo", "done"]).default("todo"),
+    },
     idempotentWrites,
-    (input) => ({ type: "setTodo", tabIds: input.tabIds, status: "todo" }),
-  );
-
-  tool(
-    "zen_clear_todo",
-    "Mark tabs' todos as done, which removes them from the todo list. Reports how many of those tabs were actually todos.",
-    { tabIds },
-    idempotentWrites,
-    (input) => ({ type: "clearTodo", tabIds: input.tabIds }),
-  );
-
-  tool(
-    "zen_list_colors",
-    "List tabs that have a traffic-light color (red, orange or green), in tab order, with the tab, its title and where it sits. Colors also appear as `color` on zen_list_tabs. Independent of todos.",
-    {},
-    readOnly,
-    () => ({ type: "listStatuses" }),
+    (input) =>
+      input.status === "done"
+        ? { type: "clearTodo", tabIds: input.tabIds }
+        : { type: "setTodo", tabIds: input.tabIds, status: "todo" },
   );
 
   tool(
     "zen_set_color",
-    'Set the same traffic-light color on one or more tabs, replacing any color they already have. Colors are independent of todos. Example: { "tabIds": [118, 119], "color": "green" }.',
+    "Traffic-light color on tabs: red, orange, green, or none to clear. Also shown on zen_list_tabs.",
     {
       tabIds,
-      color: z.enum(TRAFFIC_LIGHTS).describe("red, orange or green"),
+      color: z.enum([...TRAFFIC_LIGHTS, "none"]),
     },
     idempotentWrites,
-    (input) => ({ type: "setStatus", tabIds: input.tabIds, light: input.color }),
-  );
-
-  tool(
-    "zen_clear_color",
-    "Clear traffic-light colors from tabs. Reports how many of those tabs actually had a color.",
-    { tabIds },
-    idempotentWrites,
-    (input) => ({ type: "clearStatus", tabIds: input.tabIds }),
+    (input) =>
+      input.color === "none"
+        ? { type: "clearStatus", tabIds: input.tabIds }
+        : { type: "setStatus", tabIds: input.tabIds, light: input.color },
   );
 
   tool(
     "zen_get_pinned_url",
-    "Read the stored pinned URL for a pinned or essential tab, plus the URL of the page currently open there (they can differ after navigation). Folders hold pinned tabs, so those tabs work too.",
+    "Stored restore URL of a pinned/essential tab, plus the page open now.",
     { tabId },
     readOnly,
     (input) => ({ type: "getPinnedUrl", tabId: input.tabId }),
@@ -702,30 +270,18 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   tool(
     "zen_set_pinned_url",
-    'Set the stored URL of a pinned or essential tab (the URL it restores to). Does not navigate the tab. Only http and https URLs. Example: { "tabId": 118, "url": "https://mail.example/" }.',
+    "Set the restore URL of a pinned/essential tab. Does not navigate. http(s) only.",
     { tabId, url: webUrl },
     idempotentWrites,
     (input) => ({ type: "setPinnedUrl", tabId: input.tabId, url: input.url }),
   );
 
   tool(
-    "zen_replace_pinned_url",
-    "Store the page currently open in a pinned or essential tab as its pinned URL, the same as the omnibar's replace action.",
-    { tabId },
-    idempotentWrites,
-    (input) => ({ type: "replacePinnedUrlWithCurrent", tabId: input.tabId }),
-  );
-
-  tool(
     "zen_detect_forge_tabs",
-    'Find every open GitHub or GitLab tab (issues, pull requests, merge requests) and label it with its number and title, the same labels the extension gives a selected tab. Covers all open tabs unless tabIds is given. Set dryRun: true to preview the labels without renaming anything. Example: { "dryRun": true }.',
+    "Label open GitHub/GitLab issue, PR and MR tabs. dryRun previews without renaming.",
     {
-      tabIds: z
-        .array(tabId)
-        .max(500)
-        .optional()
-        .describe("Only these tabs; omit to check every open tab"),
-      dryRun: z.boolean().default(false).describe("Report the labels without renaming tabs"),
+      tabIds: z.array(tabId).max(500).optional().describe("Omit to check every open tab"),
+      dryRun: z.boolean().default(false),
     },
     writes,
     (input) => ({ type: "detectForgeTabs", tabIds: input.tabIds, dryRun: input.dryRun }),
@@ -733,14 +289,14 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   workflow(
     "zen_apply_patch",
-    'Apply a PATCH-style tree of spaces, folders and tabs. Nested children inherit spaceId and folderId from their parent. Nodes with an id are patched (rename and/or move); nodes without an id are created (name required, and new tabs also need a url). Does not close tabs or delete folders. Set dryRun: true to get the plan without changing Zen. Example: { "nodes": [{ "type": "space", "name": "Work", "children": [{ "type": "folder", "name": "Docs", "children": [{ "type": "tab", "name": "Drive", "url": "https://drive.google.com/" }] }] }] }.',
+    "Create, rename and move spaces, folders and tabs as a tree. Nested children inherit space/folder. Nodes with id are patched; without id are created (tabs need url). Does not close or delete. dryRun returns the plan. Use this instead of separate create/rename/move/open tools.",
     z.object({
       nodes: z
         .array(patchTreeNode)
         .min(1)
         .max(200)
-        .describe("Root patch nodes; nest folders and tabs under a space to inherit its id"),
-      dryRun: z.boolean().default(false).describe("Return the per-node plan without calling Zen"),
+        .describe("Root nodes; nest folders and tabs under a space"),
+      dryRun: z.boolean().default(false),
     }),
     writes,
     async (input) => {
@@ -759,7 +315,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   tool(
     "zen_move_tab",
-    "Reorder a tab so it sits directly before or after another tab in the same space.",
+    "Reorder a tab before or after another tab in the same space.",
     {
       tabId,
       targetTabId: tabId,

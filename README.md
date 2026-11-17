@@ -1,8 +1,8 @@
-# Zen Tab Search Anytime and Anywhere
+# Zen Deck
 
 Find any tab, switch spaces, add context, and stay focused in Zen Browser.
 
-Zen Tab Search is a fast fuzzy search overlay for tabs, spaces, and custom labels. It is exclusive to [Zen Browser](https://zen-browser.app/).
+Zen Deck is a control surface for [Zen Browser](https://zen-browser.app/): search tabs and spaces, run timers, pin hosts, track issues, and let AI agents drive the same deck.
 
 ## Contents
 
@@ -24,7 +24,6 @@ Zen Tab Search is a fast fuzzy search overlay for tabs, spaces, and custom label
   - [AI agents (MCP)](#ai-agents-mcp)
 - [Important notices](#important-notices)
 - [Credits and license](#credits-and-license)
-  - [Special thanks](#special-thanks)
 - [Why this cannot be published on AMO](#why-this-cannot-be-published-on-amo)
 - [Creating a release](#creating-a-release)
 - [Development](#development)
@@ -35,7 +34,7 @@ Zen Tab Search is a fast fuzzy search overlay for tabs, spaces, and custom label
 
 ### From a GitHub release (recommended)
 
-1. Download the latest `.zip` from the [Releases page](https://github.com/SanderCokart/Zen-Tab-Search-Anytime-and-Anywhere/releases).
+1. Download the latest `.zip` from the [Releases page](https://github.com/SanderCokart/Zen-Deck/releases).
 2. Open `about:config` in Zen Browser.
 3. Set these preferences and restart Zen:
   - `extensions.experiments.enabled` = `true`
@@ -51,7 +50,7 @@ Zen Tab Search is a fast fuzzy search overlay for tabs, spaces, and custom label
 
 ![A newer release in the status bar, with install, download and release notes](docs/screenshots/status-bar-update.png)
 
-**Optional: let AI agents control Zen.** The same release has a `zen-tab-search-mcp.mjs` asset, the MCP server for Claude, Cursor and other MCP clients. It needs Node.js 20 or newer. See [mcp/README.md](mcp/README.md#install) to download it, turn it on in the settings, and register it with your client.
+**Optional: let AI agents control Zen.** The same release has a `zen-deck-mcp.mjs` asset, the MCP server for Claude, Cursor and other MCP clients. It needs Node.js 20 or newer. See [mcp/README.md](mcp/README.md#install) to download it, turn it on in the settings, and register it with your client.
 
 ### Build from source
 
@@ -64,11 +63,11 @@ The zip is produced by WXT, with a sources archive beside it. `npm run zip:no-so
 
 ## Features
 
-Change or assign shortcuts in `about:addons` → **Zen Tab Search** → **Manage Extension Shortcuts** (`Ctrl+Shift+A` opens `about:addons`).
+Change or assign shortcuts in `about:addons` → **Zen Deck** → **Manage Extension Shortcuts** (`Ctrl+Shift+A` opens `about:addons`).
 
 ### Settings
 
-Every option in this guide lives in **Display options**. Open it from the ⚙ gear at the right of the search field on the omnibar. It also sits in `about:addons` → **Zen Tab Search** → **Preferences**. Changes apply as you make them, with no save button.
+Every option in this guide lives in **Display options**. Open it from the ⚙ gear at the right of the search field on the omnibar. It also sits in `about:addons` → **Zen Deck** → **Preferences**. Changes apply as you make them, with no save button.
 
 ![The gear beside the search field opens Display options](docs/screenshots/settings-gear.png)
 
@@ -163,7 +162,7 @@ The status is a traffic light you set per tab: red, orange, and green dots, plus
 
 #### Renaming essential tabs
 
-Zen does not offer a way to rename essential tabs, but Zen Tab Search does. Rename one from its tile and the extension keeps that name itself. It shows on the tile, and search matches it too, so `inbox` finds the essential you named Inbox even though its page is titled Mail. You can find an essential tab by its URL, by the page title from the browser, or by your custom name. The name lives only in the extension's views; Zen's own sidebar keeps the page title.
+Zen does not offer a way to rename essential tabs, but Zen Deck does. Rename one from its tile and the extension keeps that name itself. It shows on the tile, and search matches it too, so `inbox` finds the essential you named Inbox even though its page is titled Mail. You can find an essential tab by its URL, by the page title from the browser, or by your custom name. The name lives only in the extension's views; Zen's own sidebar keeps the page title.
 
 ![Renaming the Mail essential tab to Inbox](docs/screenshots/rename-essential.png)
 
@@ -269,7 +268,7 @@ The four colour keys start on AUTO. Light and dark each keep their own palette u
 
 **Interface sounds** are on by default. Key clicks, latches, and chimes play while you search, rename a tab, edit a pinned URL, set todos, and set timers. The **Volume** dial sets the level. The **Click**, **Tick**, and **Chime** buttons play each voice so you can hear it before you use it. The switch turns every sound off.
 
-The sounds come from the hardware kit in [SPEC-01](https://github.com/shuding/spec-01). Click around the UI and listen to them: they are Shu Ding's work, and we cannot commend him enough. See [Special thanks](#special-thanks).
+The sounds come from the hardware kit in [SPEC-01](https://github.com/shuding/spec-01). Click around the UI and listen to them: they are Shu Ding's work, and we cannot commend him enough. See [Credits and license](#credits-and-license).
 
 <p align="center">
   <picture>
@@ -292,7 +291,7 @@ When another app opens a link in Zen (a mail client, Slack, a terminal), Zen nor
 
 ### AI agents (MCP)
 
-Claude, Cursor, and other MCP clients can list spaces, folders, and tabs, rename tabs (essential tabs included), create and rename folders, move tabs, reorder them, and set tab colors. They can also read and set a pinned tab's stored URL, or replace it with the page the tab is showing now, and work with todos, timers, and GitHub and GitLab labels. Turn the bridge on in Display options, then follow [mcp/README.md](mcp/README.md). It only listens on this computer and only accepts the token from your settings. For an agent on another machine, see [Remote agents over SSH](mcp/README.md#remote-agents-over-ssh).
+Claude, Cursor, and other MCP clients can list tabs and folders, apply a tree patch to create/rename/move spaces, folders and tabs, close and delete, reorder tabs, set colors, timers and todos, edit a pinned tab's restore URL, and label GitHub and GitLab tabs. Turn the bridge on in Display options, then follow [mcp/README.md](mcp/README.md). It only listens on this computer and only accepts the token from your settings. For an agent on another machine, see [Remote agents over SSH](mcp/README.md#remote-agents-over-ssh).
 
 ![AI agents (MCP) setting](docs/screenshots/mcp-settings.png)
 
@@ -305,15 +304,12 @@ Claude, Cursor, and other MCP clients can list spaces, folders, and tabs, rename
 
 ## Credits and license
 
-This project is based on [https://github.com/AntonDobrovinskiy/Zen-Tab-Search](https://github.com/AntonDobrovinskiy/Zen-Tab-Search), which is released under the MIT license. Anton Dobrovinskiy retains the copyright as per the MIT license.
+Zen Deck stands on two pieces of work we could not have done without:
 
-This repository is a fork of that project with rewritten git history.
+- **Anton Dobrovinskiy** — this repository is a fork of [Zen Tab Search](https://github.com/AntonDobrovinskiy/Zen-Tab-Search) (MIT). Anton retains copyright as per that license. The git history here was rewritten.
+- **Shu Ding** ([@shuding](https://github.com/shuding)) — [SPEC-01](https://github.com/shuding/spec-01) is the hardware kit behind the look and the interface sounds ([live demo](https://spec-01.vercel.app)). The keys, wells, LCD, and the clicks, latches, and chimes are his design.
 
 See [LICENSE](LICENSE) for the full MIT license text.
-
-### Special thanks
-
-A huge thank you to **Shu Ding** ([@shuding](https://github.com/shuding)), who created [SPEC-01](https://github.com/shuding/spec-01), the hardware-style UI kit behind this extension's look and interface sounds ([live demo](https://spec-01.vercel.app)). His development made the extension look significantly better and feel much more satisfying to use. The key clicks, latches, and chimes you hear are his design. We cannot thank him enough.
 
 ## Why this cannot be published on AMO
 
@@ -341,7 +337,7 @@ Release checklist:
 2. Confirm GitHub CLI auth with `gh auth status`.
 3. Preview the release with `npm run release -- patch --dry-run --generate-notes`.
 4. Run the release command, for example `npm run release -- patch --generate-notes`.
-5. Confirm the GitHub release contains both assets: `zen-tab-search-<version>-firefox.zip` and `zen-tab-search-mcp.mjs`.
+5. Confirm the GitHub release contains both assets: `zen-deck-<version>-firefox.zip` and `zen-deck-mcp.mjs`.
 
 If a release fails, follow the recovery instructions printed by the script before retrying.
 

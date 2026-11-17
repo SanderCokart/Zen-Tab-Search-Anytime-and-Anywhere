@@ -1,6 +1,3 @@
-// TODO(zen-tab-search): Add a source icon for Zen Tab Search (upstream used icons/icon-512.png).
-// Place icon.png in the repo root, or point sourcePath at the upstream asset, then rerun:
-//   npm run generate-icons
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";

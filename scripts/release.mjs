@@ -6,9 +6,9 @@ import { fileURLToPath } from "node:url";
 const rootDir = fileURLToPath(new URL("..", import.meta.url));
 const packagePath = path.join(rootDir, "package.json");
 const packageLockPath = path.join(rootDir, "package-lock.json");
-// Fixed name so `releases/latest/download/zen-tab-search-mcp.mjs` always
+// Fixed name so `releases/latest/download/zen-deck-mcp.mjs` always
 // serves the MCP server that matches the latest extension.
-const mcpArtifact = path.join(rootDir, "mcp", "dist", "zen-tab-search-mcp.mjs");
+const mcpArtifact = path.join(rootDir, "mcp", "dist", "zen-deck-mcp.mjs");
 // A built experiment whose DEBUG flag follows WXT_DEBUG (scripts/experiment-debug.mjs).
 const builtExperiment = path.join(
   rootDir,
@@ -308,7 +308,7 @@ function printDryRun({ oldVersion, newVersion, tagName, canary, notes }) {
   console.log(`Tag: ${tagName}`);
   console.log(`Title: ${releaseTitle(tagName, canary)}`);
   console.log(`GitHub prerelease: ${canary ? "yes" : "no"}`);
-  console.log(`Assets: zen-tab-search-${tagName}-firefox.zip, zen-tab-search-mcp.mjs`);
+  console.log(`Assets: zen-deck-${tagName}-firefox.zip, zen-deck-mcp.mjs`);
   if (notes.sinceTag) {
     console.log(`Generated notes since: ${notes.sinceTag}`);
   }

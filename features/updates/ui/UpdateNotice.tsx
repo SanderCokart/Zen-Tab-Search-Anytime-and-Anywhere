@@ -172,7 +172,7 @@ export function UpdateNotice() {
           </span>
           {install.kind === "installing" && (
             <span class="text-zen-muted">
-              Zen Tab Search restarts on the new version when it is done.
+              Zen Deck restarts on the new version when it is done.
             </span>
           )}
           {install.kind === "failed" && (

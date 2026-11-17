@@ -5,7 +5,7 @@ import type { UpdateStatus } from "@/shared/types";
 
 const latest = {
   version: "4.0.2",
-  zipUrl: "https://github.com/x/y/releases/download/v4.0.2/zen-tab-search-v4.0.2-firefox.zip",
+  zipUrl: "https://github.com/x/y/releases/download/v4.0.2/zen-deck-v4.0.2-firefox.zip",
   releaseUrl: "https://github.com/x/y/releases/tag/v4.0.2",
 };
 

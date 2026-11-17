@@ -230,7 +230,7 @@ async function checkOpenTarget(workspace: BridgeWorkspace, command: OpenTabComma
   if (command.spaceId) {
     const spaces = await workspace.listSpaces();
     if (!spaces.some((space) => space.id === command.spaceId)) {
-      throw new Error(`Space not found: ${command.spaceId}. Get space IDs from zen_list_spaces.`);
+      throw new Error(`Space not found: ${command.spaceId}. Get space IDs from zen_list_tabs.`);
     }
   }
 }

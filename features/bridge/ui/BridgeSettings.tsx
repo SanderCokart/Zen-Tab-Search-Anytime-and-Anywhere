@@ -81,7 +81,7 @@ export function BridgeSettings() {
       >
         <FieldText
           label="Let a local MCP server control Zen"
-          hint={`Claude, Cursor and other MCP clients can then read and organise your tabs, folders and spaces through the Zen Tab Search MCP server. It connects only over this computer (127.0.0.1:${BRIDGE_PORT}) and only with the token below.`}
+          hint={`Claude, Cursor and other MCP clients can then read and organise your tabs, folders and spaces through the Zen Deck MCP server. It connects only over this computer (127.0.0.1:${BRIDGE_PORT}) and only with the token below.`}
         />
       </Switch>
       {token && (

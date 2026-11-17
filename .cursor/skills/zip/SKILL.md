@@ -1,6 +1,6 @@
 ---
 name: zip
-description: Build the Zen Tab Search Firefox extension zip for testing or installation. Use when the user invokes /zip or asks to create, rebuild, or package the extension zip.
+description: Build the Zen Deck Firefox extension zip for testing or installation. Use when the user invokes /zip or asks to create, rebuild, or package the extension zip.
 disable-model-invocation: true
 ---
 
@@ -16,8 +16,8 @@ The zip is a production build. `WXT_DEBUG` is forced off, so debug logging from 
 
 By default this creates a demo zip:
 
-- `.output/zen-tab-search-demo-firefox.zip`
-- `.output/zen-tab-search-demo-sources.zip`
+- `.output/zen-deck-demo-firefox.zip`
+- `.output/zen-deck-demo-sources.zip`
 
 To build the Firefox zip without the sources archive:
 

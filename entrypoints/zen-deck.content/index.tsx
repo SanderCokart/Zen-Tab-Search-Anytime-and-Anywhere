@@ -14,7 +14,7 @@ export default defineContentScript({
   runAt: "document_end",
   cssInjectionMode: "ui",
   async main(ctx) {
-    debugLog("Zen Tab Search content script loaded at", new Date().toISOString());
+    debugLog("Zen Deck content script loaded at", new Date().toISOString());
     // The shadow root cannot declare its own font; see page-fonts.ts.
     injectPageFonts();
 
@@ -109,7 +109,7 @@ export default defineContentScript({
 
     function createOmnibarUi(): Promise<OmnibarUi> {
       return createShadowRootUi(ctx, {
-        name: "zen-tab-search",
+        name: "zen-deck",
         position: "modal",
         zIndex: OMNIBAR_Z_INDEX,
         css: `

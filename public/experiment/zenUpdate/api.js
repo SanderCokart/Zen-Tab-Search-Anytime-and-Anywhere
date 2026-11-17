@@ -14,7 +14,7 @@
 (() => {
   // Must match RELEASE_DOWNLOAD_PREFIX in features/updates/model/release.ts.
   const RELEASE_DOWNLOAD_PREFIX =
-    "https://github.com/SanderCokart/Zen-Tab-Search-Anytime-and-Anywhere/releases/download/";
+    "https://github.com/SanderCokart/Zen-Deck/releases/download/";
 
   function getExtensionError() {
     try {

@@ -3,7 +3,7 @@ import { parseVersion } from "@/features/updates/model/version";
 import type { LatestRelease } from "@/shared/types";
 
 /** Where releases are published; `scripts/release.mjs` creates them with `gh release create`. */
-export const RELEASES_REPO = "SanderCokart/Zen-Tab-Search-Anytime-and-Anywhere";
+export const RELEASES_REPO = "SanderCokart/Zen-Deck";
 
 /** GitHub's newest non-prerelease, non-draft release, so canaries never show up as updates. */
 export const LATEST_RELEASE_API_URL = `https://api.github.com/repos/${RELEASES_REPO}/releases/latest`;

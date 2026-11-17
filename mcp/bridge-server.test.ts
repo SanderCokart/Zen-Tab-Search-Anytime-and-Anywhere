@@ -87,7 +87,7 @@ describe("ZenBridge", () => {
     await vi.waitFor(() => expect(first.status().bridge).toBe("yielded"));
     expect(first.listening).toBe(false);
     expect(first.unavailableReason).toContain(
-      `taken over by another zen-tab-search MCP server (process ${process.pid})`,
+      `taken over by another zen-deck MCP server (process ${process.pid})`,
     );
     await expect(first.request({ type: "listSpaces" })).rejects.toThrow("stays passive");
 
@@ -203,7 +203,7 @@ describe("probePort", () => {
     await expect(probePort(await freePort())).resolves.toEqual({ kind: "free" });
   });
 
-  it("recognises a program that is not a zen-tab-search server", async () => {
+  it("recognises a program that is not a zen-deck server", async () => {
     const server = createServer((_request, response) => response.end("hello"));
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     try {
