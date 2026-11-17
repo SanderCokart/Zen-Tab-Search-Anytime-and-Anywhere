@@ -26,8 +26,19 @@ const keyClass = cn(
   "h-[var(--zen-mini-key)] px-[var(--zen-space-2)] font-mono text-[length:var(--zen-text-xs)] tracking-[0.1em] uppercase",
 );
 
+const lcdActionClass =
+  "cursor-pointer border-0 bg-transparent p-0 font-mono text-[length:var(--zen-text-xs)] tracking-[0.12em] text-[var(--zs-lcd-dim)] uppercase hover:text-[var(--zs-lcd-ink)]";
+
 /** One large LCD readout for a timer: its name, the big countdown and its end time. */
-export function SoonestTimerLcd({ timer }: { timer: TabTimer }) {
+export function SoonestTimerLcd({
+  timer,
+  onEdit,
+  onClear,
+}: {
+  timer: TabTimer;
+  onEdit?: (tabId: number) => void;
+  onClear?: (tabId: number) => void;
+}) {
   return (
     <Lcd
       class="flex min-w-0 flex-col gap-[var(--zen-space-2)] px-[var(--zen-space-4)] py-[var(--zen-space-4)]"
@@ -39,9 +50,23 @@ export function SoonestTimerLcd({ timer }: { timer: TabTimer }) {
       <span class="zs-digits text-[length:var(--zen-text-display)] leading-none font-medium whitespace-nowrap">
         <TimerCountdown endAt={timer.endAt} prefix="" format="lcd" />
       </span>
-      <span class="truncate text-[length:var(--zen-text-xs)] tracking-[0.06em] text-[var(--zs-lcd-dim)] uppercase">
-        {formatTimerEndTime(timer.endAt)}
-      </span>
+      <div class="flex min-w-0 items-center justify-between gap-[var(--zen-space-3)]">
+        <span class="truncate text-[length:var(--zen-text-xs)] tracking-[0.06em] text-[var(--zs-lcd-dim)] uppercase">
+          {formatTimerEndTime(timer.endAt)}
+        </span>
+        <span class="flex shrink-0 items-center gap-[var(--zen-space-3)]">
+          {onEdit && (
+            <button type="button" class={lcdActionClass} onClick={() => onEdit(timer.tabId)}>
+              Edit
+            </button>
+          )}
+          {onClear && (
+            <button type="button" class={lcdActionClass} onClick={() => onClear(timer.tabId)}>
+              Clear
+            </button>
+          )}
+        </span>
+      </div>
     </Lcd>
   );
 }
