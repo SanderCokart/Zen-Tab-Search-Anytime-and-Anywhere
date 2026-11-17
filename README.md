@@ -2,7 +2,7 @@
 
 Find any tab, switch spaces, add context, and stay focused in Zen Browser.
 
-Zen Tab Search is a fast fuzzy search overlay and popup for tabs, spaces, and custom labels. It is exclusive to [Zen Browser](https://zen-browser.app/).
+Zen Tab Search is a fast fuzzy search overlay for tabs, spaces, and custom labels. It is exclusive to [Zen Browser](https://zen-browser.app/).
 
 ## Contents
 
@@ -13,7 +13,7 @@ Zen Tab Search is a fast fuzzy search overlay and popup for tabs, spaces, and cu
   - [Settings](#settings)
   - [Omnibar](#omnibar)
   - [Folders](#folders)
-  - [Toolbar popup](#toolbar-popup)
+  - [Toolbar popup (removed)](#toolbar-popup-removed)
   - [Status, rename, and the tab menu](#status-rename-and-the-tab-menu)
   - [Pinned URLs](#pinned-urls)
   - [Timers](#timers)
@@ -24,6 +24,7 @@ Zen Tab Search is a fast fuzzy search overlay and popup for tabs, spaces, and cu
   - [AI agents (MCP)](#ai-agents-mcp)
 - [Important notices](#important-notices)
 - [Credits and license](#credits-and-license)
+  - [Special thanks](#special-thanks)
 - [Why this cannot be published on AMO](#why-this-cannot-be-published-on-amo)
 - [Creating a release](#creating-a-release)
 - [Development](#development)
@@ -44,7 +45,7 @@ Zen Tab Search is a fast fuzzy search overlay and popup for tabs, spaces, and cu
 
 **Updating.** The extension checks GitHub for a newer release every few hours. When there is one, the status bar along the bottom of the omnibar shows *There is a new version available!*. Click it to install the update in place (your settings are kept) or to download the zip and install it the same way as above. Otherwise the status bar shows your version and a **Check for updates** button that asks GitHub straight away.
 
-**Status bar.** Under the search, the omnibar and toolbar popup count your tabs, essential tabs and spaces, plus the GitHub and GitLab issue tabs, todos and running timers once there are any.
+**Status bar.** Under the search, the omnibar counts your tabs, essential tabs and spaces, plus the GitHub and GitLab issue tabs, todos and running timers once there are any.
 
 ![Status bar with tab counts and the check for updates button](docs/screenshots/status-bar.png)
 
@@ -67,7 +68,7 @@ Change or assign shortcuts in `about:addons` → **Zen Tab Search** → **Manage
 
 ### Settings
 
-Every option in this guide lives in **Display options**. Open it from the ⚙ gear at the right of the search field, on both the omnibar and the toolbar popup. It also sits in `about:addons` → **Zen Tab Search** → **Preferences**. Changes apply as you make them, with no save button.
+Every option in this guide lives in **Display options**. Open it from the ⚙ gear at the right of the search field on the omnibar. It also sits in `about:addons` → **Zen Tab Search** → **Preferences**. Changes apply as you make them, with no save button.
 
 ![The gear beside the search field opens Display options](docs/screenshots/settings-gear.png)
 
@@ -80,7 +81,24 @@ Every option in this guide lives in **Display options**. Open it from the ⚙ ge
 
 ### Omnibar
 
-`Alt+F` opens the omnibar. On a page the extension can attach to it draws over that tab; otherwise it hosts the same UI in the browser chrome, so search still works with no content tab and no page DOM. It searches titles, URLs, and custom labels across every Zen space. Spaces and essential tabs sit in grids above the list; Zen folders become their own sections. A **NOW** strip under the search field shows the tab you are on, with its status, timer, and todo controls. GitHub and GitLab issues open in a navigator beside the tabs, grouped by project, then by issues and merge or pull requests, with each request's target branch shown. Tabs you marked as todo sit in a third column as tinted blocks, with a **Mark as done** button on each and a **Clear…** dropdown for the whole column. `Up` / `Down` move one result, `Left` / `Right` jump several, `Enter` activates, `Escape` closes. `Tab` moves between the tab list and the issue navigator. A query that starts with `#` lists issues, `!` lists merge and pull requests, and `@` jumps to todos.
+`Alt+F` opens the omnibar over the whole browser window, in the browser chrome. Here is what you get:
+
+- **Search** titles, URLs, and custom labels across every Zen space.
+- **Spaces and essential tabs** sit in grids above the list. Zen folders become their own sections.
+- **NOW strip** under the search field shows the tab you are on, with its status, timer, and todo controls.
+- **Issues** from GitHub and GitLab open in a navigator beside the tabs, grouped by project, with each request's target branch shown.
+- **Todos** sit in a third column as tinted blocks, each with a **Mark as done** button and a **Clear…** dropdown for the whole column.
+- **Keyboard:** `Up` and `Down` move one result, `Left` and `Right` jump several, `Enter` activates, `Escape` closes, and `Tab` moves between the tab list and the issue navigator.
+- **Prefixes:** `#` lists issues, `!` lists merge and pull requests, and `@` jumps to todos.
+
+> **Note:** the browser chrome is the browser's own interface around the page, such as the toolbars, sidebar and tab strip. It is not Google Chrome. Zen is built on Firefox, so this is the Firefox-style chrome you already know.
+
+<details>
+<summary>Why the omnibar lives in the browser chrome</summary>
+
+The omnibar is hosted by the browser window rather than drawn on top of the page. Search therefore works on any page, including pages that have no content the extension can draw over, such as Zen's built-in pages.
+
+</details>
 
 ![Omnibar with spaces, folders, GitHub/GitLab issues, and todos](docs/screenshots/search-omnibar.png)
 
@@ -90,11 +108,13 @@ Type to filter. **Show issues only in the Issue Navigator** and **Show merge req
 
 ### Folders
 
-Click a folder's header to fold it. The Tabs and Issues and requests headers each have a **Collapse all** button in the middle of the rule. It turns into **Expand all** once every group in that column is folded. Folders ease open and shut instead of jumping.
+Click a folder's header to fold it, and the folder eases open or shut again. Folders can be nested, and each subfolder folds on its own.
+
+The Tabs and Issues and requests headers each have a **Collapse all** button in the middle of the rule. It turns into **Expand all** once every group in that column is folded, so one click folds or opens the whole column.
 
 A folded folder still shows its current tab, in the folder where that tab lives, so you always see where you are. Its other tabs stay hidden until you open the folder again. While you type a query, every match shows, even inside folded folders.
 
-**Move to folder** in a tab's menu lists every folder as `Space · Parent / Folder`, parents first, and highlights the folder the tab is in. **Remove from folder** takes the tab out of its folder.
+In a tab's context menu, **Move to folder** lists every folder as `Space · Parent / Folder`, parents first, and highlights the folder the tab is in. **Remove from folder** takes the tab out of its folder.
 
 <table>
   <tr>
@@ -117,23 +137,22 @@ A folded folder still shows its current tab, in the folder where that tab lives,
   </tr>
 </table>
 
-### Toolbar popup
+### Toolbar popup (removed)
 
-The toolbar popup is a compact legacy surface. `Alt+F` no longer opens it; the window-hosted omnibar covers pages with no attachable DOM. It stays fully functional. **Open Zen Tab Search popup** toggles it and ships with no key; assign one in `about:addons` → **Manage Extension Shortcuts**.
-
-<p align="center">
-  <img src="docs/screenshots/search-popup.png" alt="Toolbar popup search" width="420" />
-</p>
+The toolbar popup has been removed. Its code remains in the repository but is inactive and can no longer be reached. Use the omnibar instead: `Alt+F` opens it, and on pages with no attachable DOM it is hosted in the browser chrome, so search still works there.
 
 ### Status, rename, and the tab menu
 
-Right-click a result for its tab menu: **Close tab**, **Rename**, **Move to folder**, the pinned URL actions for pinned and essential tabs, a status row, **Mark as todo**, **Timer**, and **Host overrides**. The right-click opens this menu and nothing else, so Zen's own menu does not appear underneath it. `Alt+R` auto-labels GitLab and GitHub issues and MRs/PRs, or opens Zen's Change Label editor on other pages.
+Right-click a tab to open its context menu. All of the extension's extra features are gathered there, and some of Zen's own browser features are built into it too:
 
-The status is a traffic light you set per tab, shown as a row of red, orange, and green dots with a forbidden sign for no status. It tints the tab's row in every column, and the meaning is up to you, for example:
+- **Close tab**, **Rename**, and **Move to folder** or **Remove from folder**
+- The pinned URL actions for pinned and essential tabs
+- A status row
+- **Mark as todo**, **Timer**, and **Host overrides**
 
-- 🔴 **Red**: blocked, or needs attention first
-- 🟠 **Orange**: in progress, or waiting on someone
-- 🟢 **Green**: done, or good to go
+The right-click opens this menu and nothing else, so Zen's own menu does not appear underneath it. `Alt+R` auto-labels GitLab and GitHub issues and MRs/PRs, or opens Zen's Change Label editor on other pages.
+
+The status is a traffic light you set per tab: red, orange, and green dots, plus a forbidden sign for no status. It tints the tab's row in every column. The colours are blank canvas: what they mean is entirely up to you.
 
 | Context menu | Status |
 | :----------: | :----: |
@@ -143,15 +162,15 @@ The status is a traffic light you set per tab, shown as a row of red, orange, an
 
 #### Renaming essential tabs
 
-Zen gives essential tabs no label you can change, so they always show the page title. Rename one from its tile and the extension keeps that name itself: it shows on the tile and is matched by search, so `inbox` finds the essential you named Inbox even though its page is titled Mail. The name lives only in the extension's views; Zen's own sidebar keeps the page title.
+Zen does not offer a way to rename essential tabs, but Zen Tab Search does. Rename one from its tile and the extension keeps that name itself. It shows on the tile, and search matches it too, so `inbox` finds the essential you named Inbox even though its page is titled Mail. You can find an essential tab by its URL, by the page title from the browser, or by your custom name. The name lives only in the extension's views; Zen's own sidebar keeps the page title.
 
 ![Renaming the Mail essential tab to Inbox](docs/screenshots/rename-essential.png)
 
 ### Pinned URLs
 
-A pinned tab and an essential tab each keep a stored address in Zen. Their tab menu has two actions:
+A pinned tab and an essential tab each keep a stored address in Zen. Their context menu has two actions:
 
-- **Edit pinned URL** opens a dialog with the address. Enter an `http` or `https` address and press **Save**. Anything else is refused with a message.
+- **Edit pinned URL** opens a dialog with the address. Enter a web address and press **Save**. Anything else is refused with a message.
 - **Replace pinned URL with current** stores the address the tab is showing now.
 
 <p align="center">
@@ -163,9 +182,9 @@ A pinned tab and an essential tab each keep a stored address in Zen. Their tab m
 
 ### Timers
 
-`Alt+T` sets a timer on the current tab. The clock on a result and **Timer** in the tab menu open the same controls. Running timers show a countdown on the row. The timers dock in the omnibar shows the soonest one as a large LCD readout, with every running timer listed beneath it, each with **Edit** and **Clear** buttons.
+`Alt+T` sets a timer on the current tab. The clock on a result and **Timer** in the tab menu open the same controls. Running timers show a countdown on the row. The timers dock sits at the bottom of the omnibar. It shows the soonest running timer as a large LCD readout, with up to two upcoming timers listed beneath it, each with **Edit** and **Clear** buttons. The to-dos column above it takes the remaining height and scrolls when it runs long.
 
-The ⏱ button beside the search field, with a badge counting the running timers, opens the **Active timers** list. From there you can jump to a tab, edit a timer, or clear them all. While the list is open the button becomes ✕.
+The ⏱ button beside the search field, with a badge counting the running timers, opens the **Active timers** list with all of them. From there you can jump to a tab, edit a timer, or clear them all. While the list is open the button becomes ✕.
 
 <p align="center">
   <img src="docs/screenshots/timers-button.png" alt="The active timers button beside the search field" width="240" />
@@ -206,11 +225,9 @@ Pin a tab’s hostnames to a fixed IP, like a per-tab hosts file. Open the edito
 
 The **Theme** module picks **System**, **Light**, or **Dark**. System follows the browser's colour scheme. Text, issue, folder, and space colors start on **AUTO**, which takes the colour from the theme, so each theme keeps a fitting palette until you pick your own.
 
-**Background opacity** is a dial from 0% to 100%, in 5% steps, and it starts at 75%. It fades the panels so the page behind the omnibar shows through. Text, keys, and the timer readout stay solid. The options page and the toolbar popup are not affected.
+**Background opacity** is a dial from 0% to 100%, in 5% steps, and it starts at 75%. It fades the panels so the page behind the omnibar shows through. Text, keys, and the timer readout stay solid. The options page is not affected.
 
 The interface uses IBM Plex Mono and Inter, bundled with the extension, so the overlay looks the same on every machine.
-
-**Follow the page zoom level** is off by default. Turn it on to let the overlay grow and shrink with browser zoom. Off keeps the overlay the same size on screen at every zoom level.
 
 <p align="center">
   <picture>
@@ -219,7 +236,7 @@ The interface uses IBM Plex Mono and Inter, bundled with the extension, so the o
   </picture>
 </p>
 
-Hide the spaces grid, the essential-tabs grid, or both, independently on the omnibar and the toolbar popup; hidden ones still turn up as soon as you search. Turn wrapping on when you want the full title. Font size, density, and the gap sliders reshape the omnibar; the popup stays a compact fixed size. Text, issue, folder, and space colors each have their own reset.
+Hide the spaces grid, the essential-tabs grid, or both; hidden ones still turn up as soon as you search. **Truncate** shortens long tab and issue titles by default. Switch it off to wrap the full title onto several lines. Font size, density, and the gap sliders reshape the omnibar. Text, issue, folder, and space colors each have their own reset.
 
 | Hidden grids | Wrapping titles |
 | :----------: | :-------------: |
@@ -233,6 +250,8 @@ Hide the spaces grid, the essential-tabs grid, or both, independently on the omn
 
 **Interface sounds** are on by default. Key clicks, latches, and chimes play while you search, rename a tab, edit a pinned URL, set todos, and set timers. The **Volume** dial sets the level. The **Click**, **Tick**, and **Chime** buttons play each voice so you can hear it before you use it. The switch turns every sound off.
 
+The sounds come from the hardware kit in [SPEC-01](https://github.com/shuding/spec-01). Click around the UI and listen to them: they are Shu Ding's work, and we cannot commend him enough. See [Special thanks](#special-thanks).
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/sound-settings.png">
@@ -242,13 +261,19 @@ Hide the spaces grid, the essential-tabs grid, or both, independently on the omn
 
 ### Reuse an open tab for external links
 
-When another app opens a link in Zen (a mail client, Slack, a terminal), Zen normally opens a new tab every time. Turn on **Reuse an open tab** under **External links** in Display options, and Zen instead switches to the tab that already has that address, across spaces, so the same page does not pile up in duplicates.
+When another app opens a link in Zen (a mail client, Slack, a terminal), Zen normally opens a new tab every time. Turn on **Reuse an open tab** under **External links** in Display options, and Zen switches to a tab that already has that address instead, across spaces, so the same page does not pile up in duplicates.
+
+**For example:**
+
+1. A developer messages you on Slack with a link to a merge request.
+2. You already have that merge request open, either as a pinned tab or as an ordinary tab.
+3. You click the link. Zen switches to your existing tab instead of opening a second copy.
 
 ![External links setting](docs/screenshots/external-links-settings.png)
 
 ### AI agents (MCP)
 
-Claude, Cursor, and other MCP clients can list spaces, folders, and tabs, rename tabs, create and rename folders, move tabs, reorder them, and set tab colors. Turn the bridge on in Display options, then follow [mcp/README.md](mcp/README.md). It only listens on this computer and only accepts the token from your settings. For an agent on another machine, see [Remote agents over SSH](mcp/README.md#remote-agents-over-ssh).
+Claude, Cursor, and other MCP clients can list spaces, folders, and tabs, rename tabs (essential tabs included), create and rename folders, move tabs, reorder them, and set tab colors. They can also read and set a pinned tab's stored URL, or replace it with the page the tab is showing now, and work with todos, timers, and GitHub and GitLab labels. Turn the bridge on in Display options, then follow [mcp/README.md](mcp/README.md). It only listens on this computer and only accepts the token from your settings. For an agent on another machine, see [Remote agents over SSH](mcp/README.md#remote-agents-over-ssh).
 
 ![AI agents (MCP) setting](docs/screenshots/mcp-settings.png)
 
@@ -266,6 +291,10 @@ This project is based on [https://github.com/AntonDobrovinskiy/Zen-Tab-Search](h
 This repository is a fork of that project with rewritten git history.
 
 See [LICENSE](LICENSE) for the full MIT license text.
+
+### Special thanks
+
+A huge thank you to **Shu Ding** ([@shuding](https://github.com/shuding)), who created [SPEC-01](https://github.com/shuding/spec-01), the hardware-style UI kit behind this extension's look and interface sounds ([live demo](https://spec-01.vercel.app)). His development made the extension look significantly better and feel much more satisfying to use. The key clicks, latches, and chimes you hear are his design. We cannot thank him enough.
 
 ## Why this cannot be published on AMO
 
@@ -339,7 +368,7 @@ Pre-commit hooks run through Husky and lint-staged. They format staged JSON, Mar
 ## Project structure
 
 ```
-entrypoints/          WXT entry points (background, content script, popup, options)
+entrypoints/          WXT entry points (background, content script, options)
 app/                  Background wiring that spans features
 features/             search, timers, forge, settings, zen, bridge
 shared/               Wire protocol, types, logging, styles
