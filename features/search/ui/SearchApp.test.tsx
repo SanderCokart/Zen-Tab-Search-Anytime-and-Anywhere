@@ -542,7 +542,7 @@ describe("SearchApp", () => {
       expect(element?.style.getPropertyValue("--zs-bg-opacity")).toBe("0.5");
       return element!;
     });
-    expect(stage.style.backdropFilter).toBe("blur(4px)");
+    expect(stage.style.backdropFilter).toBe("");
 
     render(null, root);
     root.remove();

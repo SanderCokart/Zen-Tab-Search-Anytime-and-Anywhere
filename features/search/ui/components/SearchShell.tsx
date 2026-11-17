@@ -86,8 +86,9 @@ export function SearchShell({
       style={{
         ...uiScaleStyle(displaySettings, "overlay", zoom),
         "--zs-bg-opacity": String(backgroundPercent / 100),
+        // A live backdrop blur is resampled on every hover in Firefox, which
+        // drops frames on a high-refresh display. The scrim dims the page on its own.
         backgroundColor: `color-mix(in srgb, var(--zs-scrim) ${backgroundPercent}%, transparent)`,
-        backdropFilter: `blur(${(backgroundPercent / 100) * 8}px)`,
         colorScheme: theme,
         ...colors,
       }}
