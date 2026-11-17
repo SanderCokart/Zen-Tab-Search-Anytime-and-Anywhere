@@ -59,6 +59,7 @@ describe("tab folder collapse", () => {
   it("keeps the current tab out of a collapsed folder and hides its neighbours", () => {
     const collapsed = new Set([tabFolderKey("docs"), tabFolderKey("infra")]);
     const current = tab(3, [docs, infra]);
+    if (current.kind !== "tab") throw new Error("expected a tab item");
     current.data.active = true;
 
     expect(isUnderCollapsedFolder(current, collapsed)).toBe(false);

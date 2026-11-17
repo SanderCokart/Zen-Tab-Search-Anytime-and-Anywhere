@@ -1874,7 +1874,7 @@ function mountOverlay({
   displaySettings?: Record<string, unknown>;
   stored?: Record<string, unknown>;
 }) {
-  const set = vi.fn(async () => undefined);
+  const set = vi.fn(async (_items: Record<string, unknown>) => undefined);
   const sendMessage = vi.fn(async ({ type }: { type: string }) =>
     type === "getSnapshot"
       ? { tabs: snapshotTabs, spaces: [], timers, todos, statuses: [] }
