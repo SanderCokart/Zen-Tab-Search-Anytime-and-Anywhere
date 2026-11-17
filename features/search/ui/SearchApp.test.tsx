@@ -1127,10 +1127,16 @@ describe("SearchApp", () => {
     expect(confirm).not.toHaveBeenCalled();
     expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "clearTodos" }));
 
-    root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-confirm-button']")!.click();
+    const confirmButton = root.querySelector<HTMLButtonElement>(
+      "[data-testid='zen-todo-clear-confirm-button']",
+    )!;
+    confirmButton.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    confirmButton.click();
     await vi.waitFor(() =>
       expect(sendMessage).toHaveBeenCalledWith({ type: "clearTodos", tabIds: [2] }),
     );
+    expect(play).toHaveBeenCalledWith("success");
+    expect(play).not.toHaveBeenCalledWith("down-primary");
     expect(prompt()).toBeNull();
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-todo-column']")?.textContent).not.toContain(

@@ -131,6 +131,7 @@ export function TodoNavigator({
             <button
               type="button"
               class="zs-key zs-key-red px-[var(--zen-space-2)] font-[inherit] text-[length:var(--zen-text-sm)]"
+              data-own-sound=""
               data-testid="zen-todo-clear-confirm-button"
               onClick={() => {
                 setPendingClear(null);

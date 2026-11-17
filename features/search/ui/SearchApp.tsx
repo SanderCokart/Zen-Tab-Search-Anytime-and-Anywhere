@@ -678,7 +678,10 @@ export function SearchApp({
                     todoActions.setTodo(tabId, "none");
                   }
                 }}
-                onClear={todoActions.clearTodos}
+                onClear={(tabIds) => {
+                  sound.play("success");
+                  todoActions.clearTodos(tabIds);
+                }}
                 onOpenStatusMenu={toggleStatusMenu}
                 onContextMenu={openContextMenu}
               />

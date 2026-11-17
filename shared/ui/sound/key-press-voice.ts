@@ -22,8 +22,8 @@ export function typingReleaseVoice(event: KeyboardEvent): SoundVoice | undefined
 
 /**
  * The voice for a press on a hardware key, small row keys included. Keys that make
- * their own sound (`data-own-sound`: the todo and status latches, the sound test
- * keys) are left out.
+ * their own sound (`data-own-sound`: the todo and status latches, Mark done,
+ * the sound test keys) are left out.
  */
 export function keyPressVoice(
   target: EventTarget | null,
