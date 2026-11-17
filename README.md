@@ -242,6 +242,8 @@ Hide the spaces grid, the essential-tabs grid, or both; hidden ones still turn u
 | :----------: | :-------------: |
 | ![Omnibar without spaces or essential tabs](docs/screenshots/hide-spaces-and-essentials.png) | ![Long titles wrapping onto several lines](docs/screenshots/display-truncation.png) |
 
+**Custom colors** replace the theme's colours for issues, folders, spaces, and text, one at a time. Pick a colour for each and the omnibar uses it in both light and dark. Each colour has a reset that returns it to AUTO. The example shows a warm palette of ivory text on clay, sage, and stone.
+
 | Larger type and density | Custom colors |
 | :---------------------: | :-----------: |
 | ![Omnibar with a larger font size and density](docs/screenshots/spacing-size-and-zoom.png) | ![Omnibar with themed panel colors](docs/screenshots/display-colors.png) |
