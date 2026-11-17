@@ -1,5 +1,6 @@
 import type { ComponentChildren } from "preact";
-import { customColor, type DisplaySettings } from "@/features/settings/model/display-settings";
+import type { DisplaySettings } from "@/features/settings/model/display-settings";
+import { themeColorStyle } from "@/features/settings/model/theme-colors";
 import { uiScaleStyle } from "@/features/settings/model/ui-scale";
 import type { SearchLayout } from "@/features/search/ui/types";
 import { SoundProvider, type SoundApi } from "@/shared/ui/sound/SoundContext";
@@ -13,7 +14,7 @@ import { useResolvedTheme } from "@/shared/ui/theme";
  * The overlay carries `data-zen-ui` and `uiScaleStyle`, so font size, density,
  * and the gap sliders drive the tokens in `shared/ui/styles.css`. The toolbar
  * popup carries `data-zen-ui="popup"`, which pins those tokens to a fixed
- * compact size and never reads the sliders. It only takes the text colour.
+ * compact size and never reads the sliders. Custom colours still apply.
  */
 /**
  * Overlay shape by column count: one tab column is square, two (tabs and
@@ -40,7 +41,7 @@ export function SearchShell({
   children: ComponentChildren;
 }) {
   const theme = useResolvedTheme(displaySettings.theme);
-  const textColor = customColor(displaySettings.textColor);
+  const colors = themeColorStyle(theme, displaySettings);
   const backgroundPercent = Math.round(displaySettings.backgroundOpacity * 100);
   // Only the overlay, and only when it should hold its size on screen, needs the zoom.
   const zoom = usePageZoom(layout === "overlay" && !displaySettings.respectZoom);
@@ -67,7 +68,7 @@ export function SearchShell({
         onPointerUp={onPointerUp}
         onContextMenu={(event) => event.preventDefault()}
         data-theme={theme}
-        style={{ colorScheme: theme, color: textColor }}
+        style={{ colorScheme: theme, ...colors }}
       >
         {children}
       </div>,
@@ -88,7 +89,7 @@ export function SearchShell({
         backgroundColor: `color-mix(in srgb, var(--zs-scrim) ${backgroundPercent}%, transparent)`,
         backdropFilter: `blur(${(backgroundPercent / 100) * 8}px)`,
         colorScheme: theme,
-        color: textColor,
+        ...colors,
       }}
     >
       <div

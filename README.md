@@ -223,7 +223,7 @@ Pin a tab’s hostnames to a fixed IP, like a per-tab hosts file. Open the edito
 
 ### Layout and theme
 
-The **Theme** module picks **System**, **Light**, or **Dark**. System follows the browser's colour scheme. Text, issue, folder, and space colors start on **AUTO**, which takes the colour from the theme, so each theme keeps a fitting palette until you pick your own.
+The **Theme** module picks **System**, **Light**, or **Dark**. System follows the browser's colour scheme. Accent, frame, panels, and text start on **AUTO**, which takes each colour from the theme, so light and dark keep a fitting palette until you pick your own.
 
 **Background opacity** is a dial from 0% to 100%, in 5% steps, and it starts at 75%. It fades the panels so the page behind the omnibar shows through. Text, keys, and the timer readout stay solid. The options page is not affected.
 
@@ -236,13 +236,13 @@ The interface uses IBM Plex Mono and Inter, bundled with the extension, so the o
   </picture>
 </p>
 
-Hide the spaces grid, the essential-tabs grid, or both; hidden ones still turn up as soon as you search. **Truncate** shortens long tab and issue titles by default. Switch it off to wrap the full title onto several lines. Font size, density, and the gap sliders reshape the omnibar. Text, issue, folder, and space colors each have their own reset.
+Hide the spaces grid, the essential-tabs grid, or both; hidden ones still turn up as soon as you search. **Truncate** shortens long tab and issue titles by default. Switch it off to wrap the full title onto several lines. Font size, density, and the gap sliders reshape the omnibar. Accent, frame, panels, and text each have their own reset.
 
 | Hidden grids | Wrapping titles |
 | :----------: | :-------------: |
 | ![Omnibar without spaces or essential tabs](docs/screenshots/hide-spaces-and-essentials.png) | ![Long titles wrapping onto several lines](docs/screenshots/display-truncation.png) |
 
-**Custom colors** replace the theme's colours for issues, folders, spaces, and text, one at a time. Pick a colour for each and the omnibar uses it in both light and dark. Each colour has a reset that returns it to AUTO. The example shows a warm palette of ivory text on clay, sage, and stone.
+**Custom colors** tint the hardware tokens: the red accent, the chassis frame, the cards, and the ink. Pick a colour for each and the omnibar uses it in both light and dark. Each colour has a reset that returns it to AUTO. The example is a warm dark palette, bronze on brown, with the text left on AUTO.
 
 | Larger type and density | Custom colors |
 | :---------------------: | :-----------: |

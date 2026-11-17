@@ -60,7 +60,6 @@ import { cn } from "@/shared/ui/cn";
 import { CollapseAllButton } from "@/shared/ui/primitives/CollapseAllButton";
 import { Led } from "@/shared/ui/primitives/Led";
 import { useSoundEngine } from "@/shared/ui/sound/SoundContext";
-import { backgroundPaint, customColor } from "@/features/settings/model/display-settings";
 
 export type { SearchLayout };
 
@@ -546,15 +545,6 @@ export function SearchApp({
               "flex min-h-0 min-w-0 flex-1 flex-col",
               layout === "overlay" && "zs-card overflow-hidden p-[var(--zen-space-5)]",
             )}
-            style={
-              layout === "overlay"
-                ? {
-                    backgroundColor: backgroundPaint(
-                      customColor(displaySettings.folderBackgroundColor),
-                    ),
-                  }
-                : undefined
-            }
           >
             {layout === "overlay" && (
               <div class="zs-head">
@@ -589,15 +579,6 @@ export function SearchApp({
                 layout !== "overlay" && "zs-card p-[var(--zen-space-5)]",
                 compact && "min-h-[60px]",
               )}
-              style={
-                layout === "overlay"
-                  ? undefined
-                  : {
-                      backgroundColor: backgroundPaint(
-                        customColor(displaySettings.folderBackgroundColor),
-                      ),
-                    }
-              }
               role="listbox"
             >
               <SearchResultsList
@@ -640,7 +621,6 @@ export function SearchApp({
         {layout === "overlay" && results.forgeIssueEntries.length > 0 && (
           <ForgeIssueNavigator
             entries={results.listedForgeIssueEntries}
-            backgroundColor={backgroundPaint(customColor(displaySettings.issueBackgroundColor))}
             truncate={displaySettings.truncateIssueTitles}
             sortMode={forgeSortMode}
             keyboardEntries={results.navigatorEntries}
@@ -685,7 +665,6 @@ export function SearchApp({
                 allTabs={results.allTodoTabs}
                 statuses={statuses}
                 statusMenuTabId={statusMenu?.tabId ?? null}
-                backgroundColor={backgroundPaint(customColor(displaySettings.issueBackgroundColor))}
                 truncate={displaySettings.truncateIssueTitles}
                 selectedIndex={
                   navigation.activePane === "todos" ? navigation.selectedTodoIndex : -1
@@ -707,7 +686,6 @@ export function SearchApp({
             {timers.size > 0 && (
               <TimersDock
                 timers={timers}
-                backgroundColor={backgroundPaint(customColor(displaySettings.issueBackgroundColor))}
                 onClearAll={timerActions.clearAllTimers}
                 onClearTimer={timerActions.clearTimer}
                 onActivateTimer={(tabId) => {

@@ -49,7 +49,6 @@ export function TodoNavigator({
   allTabs = tabs,
   statuses,
   statusMenuTabId,
-  backgroundColor,
   truncate,
   selectedIndex,
   onActivate,
@@ -66,8 +65,6 @@ export function TodoNavigator({
   statuses: Map<number, TrafficLight>;
   /** The tab whose status menu is open, if any. */
   statusMenuTabId: number | null;
-  /** A custom colour; left out, the card takes its colour from the theme. */
-  backgroundColor?: string;
   truncate: boolean;
   selectedIndex: number;
   onActivate: (tab: TabInfo) => void;
@@ -87,7 +84,6 @@ export function TodoNavigator({
   return (
     <aside
       class="zs-card flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-[var(--zen-space-5)]"
-      style={{ backgroundColor }}
       data-testid="zen-todo-column"
     >
       <div class="zs-head">

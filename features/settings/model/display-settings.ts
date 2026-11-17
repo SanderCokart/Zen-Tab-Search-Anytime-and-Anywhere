@@ -54,11 +54,14 @@ const DEFAULTS = {
   /** Light, dark, or whichever the system asks for. */
   theme: "system" as (typeof THEME_PREFERENCES)[number],
   /** "auto" takes the colour from the theme; a hex value overrides it. */
+  accentColor: "auto",
+  chassisColor: "auto",
+  panelColor: "auto",
   textColor: "auto",
-  issueBackgroundColor: "auto",
-  folderBackgroundColor: "auto",
-  spaceBackgroundColor: "auto",
 };
+
+export const THEME_COLOR_KEYS = ["accentColor", "chassisColor", "panelColor", "textColor"] as const;
+export type ThemeColorKey = (typeof THEME_COLOR_KEYS)[number];
 
 /** The value of a colour setting that leaves the colour to the theme. */
 export const AUTO_COLOR = "auto";
@@ -70,11 +73,8 @@ const HEX_COLOR = /^#[0-9a-f]{6}$/i;
  * one of them was never a choice, and would break the light theme, so it
  * migrates back to "auto".
  */
-const LEGACY_DARK_DEFAULTS: Record<string, string> = {
+const LEGACY_DARK_DEFAULTS: Partial<Record<ThemeColorKey, string>> = {
   textColor: "#f5f5f5",
-  issueBackgroundColor: "#252525",
-  folderBackgroundColor: "#2d2d2d",
-  spaceBackgroundColor: "#292929",
 };
 
 /**
@@ -84,29 +84,30 @@ const LEGACY_DARK_DEFAULTS: Record<string, string> = {
  */
 export const AUTO_SWATCH = {
   light: {
+    accentColor: "#ff2a1f",
+    chassisColor: "#e8e8e5",
+    panelColor: "#fafaf8",
     textColor: "#161616",
-    issueBackgroundColor: "#fafaf8",
-    folderBackgroundColor: "#fafaf8",
-    spaceBackgroundColor: "#fafaf8",
   },
   dark: {
+    accentColor: "#ff2a1f",
+    chassisColor: "#121212",
+    panelColor: "#1b1b1b",
     textColor: "#ededea",
-    issueBackgroundColor: "#1b1b1b",
-    folderBackgroundColor: "#1b1b1b",
-    spaceBackgroundColor: "#1b1b1b",
   },
-} as const satisfies Record<"light" | "dark", Record<string, string>>;
+} as const satisfies Record<"light" | "dark", Record<ThemeColorKey, string>>;
 
 /**
  * Whether a stored colour was never a real choice: an old dark default, or a
  * theme swatch the picker saved by mistake. Both migrate back to "auto".
  */
-function isStrayColor(key: keyof typeof LEGACY_DARK_DEFAULTS, value: string): boolean {
+function isStrayColor(key: ThemeColorKey, value: string): boolean {
   const lower = value.toLowerCase();
+  const legacy = LEGACY_DARK_DEFAULTS[key];
   return (
-    lower === LEGACY_DARK_DEFAULTS[key] ||
-    lower === AUTO_SWATCH.light[key as keyof typeof AUTO_SWATCH.light] ||
-    lower === AUTO_SWATCH.dark[key as keyof typeof AUTO_SWATCH.dark]
+    (legacy !== undefined && lower === legacy) ||
+    lower === AUTO_SWATCH.light[key] ||
+    lower === AUTO_SWATCH.dark[key]
   );
 }
 
@@ -127,21 +128,12 @@ export function clampBackgroundOpacity(value: number): number {
   return Math.round((MIN_BACKGROUND_OPACITY + steps * 0.05) * 100) / 100;
 }
 
-/**
- * A background colour that follows `--zs-bg-opacity`. At 1 it is the colour
- * itself; below that the page behind the overlay shows through it.
- */
-export function backgroundPaint(color: string | undefined): string | undefined {
-  if (color === undefined) return undefined;
-  return `color-mix(in srgb, ${color} calc(var(--zs-bg-opacity, 1) * 100%), transparent)`;
-}
-
 /** A stored value that falls back to the default instead of failing the parse. */
 function boolean(fallback: boolean) {
   return v.fallback(v.boolean(), fallback);
 }
 
-function color(key: keyof typeof LEGACY_DARK_DEFAULTS) {
+function color(key: ThemeColorKey) {
   return v.fallback(
     v.pipe(
       v.union([v.literal(AUTO_COLOR), v.pipe(v.string(), v.regex(HEX_COLOR))]),
@@ -211,10 +203,10 @@ const displaySettingsSchema = v.pipe(
       backgroundOpacity: scalar(DEFAULTS.backgroundOpacity, clampBackgroundOpacity),
       reuseExternalTabs: boolean(DEFAULTS.reuseExternalTabs),
       theme: v.fallback(v.picklist(THEME_PREFERENCES), DEFAULTS.theme),
+      accentColor: color("accentColor"),
+      chassisColor: color("chassisColor"),
+      panelColor: color("panelColor"),
       textColor: color("textColor"),
-      issueBackgroundColor: color("issueBackgroundColor"),
-      folderBackgroundColor: color("folderBackgroundColor"),
-      spaceBackgroundColor: color("spaceBackgroundColor"),
     }),
     DEFAULTS,
   ),

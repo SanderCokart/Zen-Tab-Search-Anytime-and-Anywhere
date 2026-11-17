@@ -10,8 +10,6 @@ export interface TimersDockProps {
   onClearTimer: (tabId: number) => void;
   onActivateTimer: (tabId: number) => void;
   onEditTimer?: (tabId: number) => void;
-  /** A custom colour; left out, the card takes its colour from the theme. */
-  backgroundColor?: string;
 }
 
 /**
@@ -26,14 +24,12 @@ export function TimersDock({
   onClearTimer,
   onActivateTimer,
   onEditTimer,
-  backgroundColor,
 }: TimersDockProps) {
   const { soonest, upcoming } = selectDockTimers(timers.values());
 
   return (
     <aside
       class="zs-card flex min-w-0 shrink-0 flex-col overflow-hidden p-[var(--zen-space-5)]"
-      style={{ backgroundColor }}
       data-testid="zen-timers-dock"
     >
       <div class="zs-head">

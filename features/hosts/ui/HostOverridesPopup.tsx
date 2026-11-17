@@ -26,7 +26,7 @@ import { primaryButtonClass } from "@/features/hosts/ui/lib/styles";
 import { TabSummary } from "@/shared/ui/TabSummary";
 import { useResolvedTheme } from "@/shared/ui/theme";
 import { cn } from "@/shared/ui/cn";
-import { customColor } from "@/features/settings/model/display-settings";
+import { themeColorStyle } from "@/features/settings/model/theme-colors";
 
 /** Which form is open: none, a new group, or the group with this ID in this list. */
 type Editing =
@@ -287,7 +287,7 @@ export function HostOverridesPopup({ tabId, onClose, embedded = false }: HostOve
           : {
               ...uiScaleStyle(displaySettings, "popup"),
               colorScheme: theme,
-              color: customColor(displaySettings.textColor),
+              ...themeColorStyle(theme, displaySettings),
             }
       }
     >

@@ -9,7 +9,9 @@ import {
   readDisplaySettings,
   saveDisplaySettings,
   type DisplaySettings,
+  type ThemeColorKey,
 } from "@/features/settings/model/display-settings";
+import { themeColorStyle } from "@/features/settings/model/theme-colors";
 import {
   GAP_STEP,
   MAX_FONT_SIZE,
@@ -35,12 +37,12 @@ import { useResolvedTheme, type ThemePreference } from "@/shared/ui/theme";
 import { ColorPickerField } from "@/features/settings/ui/ColorPickerField";
 import { BridgeSettings } from "@/features/bridge/ui/BridgeSettings";
 
-const COLOR_SETTINGS = [
+const COLOR_SETTINGS: readonly [ThemeColorKey, string, string][] = [
+  ["accentColor", "Accent color", "Accent"],
+  ["chassisColor", "Frame color", "Frame"],
+  ["panelColor", "Panels color", "Panels"],
   ["textColor", "Text color", "Text"],
-  ["issueBackgroundColor", "Issues background", "Issues"],
-  ["folderBackgroundColor", "Folders background", "Folders"],
-  ["spaceBackgroundColor", "Spaces background", "Spaces"],
-] as const;
+];
 
 const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
   { value: "system", label: "System" },
@@ -218,7 +220,7 @@ export function DisplaySettingsApp() {
         data-theme={theme}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
-        style={{ colorScheme: theme, color: customColor(settings.textColor) }}
+        style={{ colorScheme: theme, ...themeColorStyle(theme, settings) }}
       >
         <div class="zs-mod-host mx-auto max-w-[calc(var(--zen-font-size)*60)]">
           <header class="px-[var(--zen-space-1)] pb-[calc(var(--zen-font-size)*1.4)]">

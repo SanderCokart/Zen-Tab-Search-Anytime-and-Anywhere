@@ -548,6 +548,26 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("writes custom theme colours onto the overlay tokens", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", {
+      accentColor: "#e0943a",
+      chassisColor: "#161311",
+      panelColor: "#221c19",
+    });
+
+    const stage = await vi.waitFor(() => {
+      const element = root.querySelector<HTMLElement>("[data-omnibar-stage]");
+      expect(element?.style.getPropertyValue("--zs-red")).toBe("#e0943a");
+      return element!;
+    });
+    expect(stage.style.getPropertyValue("--zs-chassis")).toBe("#161311");
+    expect(stage.style.getPropertyValue("--zs-card")).toBe("#221c19");
+    expect(stage.style.color).toBe("");
+
+    render(null, root);
+    root.remove();
+  });
+
   it("keeps a square overlay when issue detection is on but no issues are open", async () => {
     const { root } = mountSearchApp(vi.fn(), tabs, "overlay", { detectForgeIssues: true });
 

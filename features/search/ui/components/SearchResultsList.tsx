@@ -3,11 +3,7 @@ import { isCurrentTab, tabFolderKey } from "@/features/search/model/tab-folder-c
 import { TabFolderHeader } from "@/features/search/ui/components/TabFolderHeader";
 import { TabSearchRow } from "@/features/search/ui/components/TabSearchRow";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
-import {
-  backgroundPaint,
-  customColor,
-  type DisplaySettings,
-} from "@/features/settings/model/display-settings";
+import type { DisplaySettings } from "@/features/settings/model/display-settings";
 import { statusRowClass } from "@/features/status/ui/traffic-light";
 import {
   formatSpaceDisplayTitle,
@@ -53,11 +49,6 @@ export interface SearchResultsListProps {
 /** Numbered by CSS counter (the list resets it), so no header text changes. */
 const sectionHeaderClass = "zs-section-label";
 
-/** The padding and radius a section needs once the user gives it a colour of its own. */
-function tintedSection(color: string | undefined): string | false {
-  return color !== undefined && "rounded-[var(--zen-radius)] p-[var(--zen-space-2)]";
-}
-
 /** Renders the (possibly folder-nested) tab and space results. */
 export function SearchResultsList(props: SearchResultsListProps) {
   return <>{renderGroups(props, props.groups, 0)}</>;
@@ -70,8 +61,6 @@ function renderGroups(
   /** A closed panel is drawing this group, so it must not repeat the current-tab row. */
   suppressKeep = false,
 ) {
-  const { displaySettings } = props;
-
   return groups.map((group, groupIndex) => {
     if (group.folderId === undefined) {
       const spaces = group.items.filter((item) => item.kind === "space");
@@ -79,16 +68,11 @@ function renderGroups(
         (item) => item.kind === "tab" && isEssentialTab(item.data),
       );
       const tabs = group.items.filter((item) => item.kind === "tab" && !isEssentialTab(item.data));
-      const spaceColor = backgroundPaint(customColor(displaySettings.spaceBackgroundColor));
 
       return (
         <section key={`ungrouped-${level}-${groupIndex}`} class="contents">
           {spaces.length > 0 && (
-            <li
-              class={cn("min-w-0", tintedSection(spaceColor))}
-              style={{ backgroundColor: spaceColor }}
-              data-testid="zen-space-section"
-            >
+            <li class="min-w-0" data-testid="zen-space-section">
               <div class={sectionHeaderClass}>Spaces</div>
               <ul
                 class="m-0 grid list-none grid-cols-3 gap-[var(--zen-space-gap)] p-0"
@@ -99,11 +83,7 @@ function renderGroups(
             </li>
           )}
           {essentialTabs.length > 0 && (
-            <li
-              class={cn("min-w-0", tintedSection(spaceColor))}
-              style={{ backgroundColor: spaceColor }}
-              data-testid="zen-essential-section"
-            >
+            <li class="min-w-0" data-testid="zen-essential-section">
               <div class={sectionHeaderClass}>Essential tabs</div>
               <ul
                 class="m-0 grid list-none grid-cols-2 gap-[var(--zen-essential-gap)] p-0"

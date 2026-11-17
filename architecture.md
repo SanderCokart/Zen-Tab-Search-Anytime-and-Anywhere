@@ -407,6 +407,13 @@ three that size the UI, two that decide whether tab and issue text is cut to one
 and six gap sizes. `DisplaySettingsApp` writes them, every surface subscribes
 via `storage.onChanged`, so changing a colour or a size updates an open overlay live.
 
+The four colours are accent, frame, panels, and text. They write the hardware
+tokens. [themeColorStyle](features/settings/model/theme-colors.ts) turns a picked
+hex into `--zs-red`, `--zs-chassis`, `--zs-card`, or `--zs-ink-1`, plus the derived
+steps (ink and glow, hair and line, raised / pressed / key, quieter inks). Auto
+omits the property so the theme block in `styles.css` stays in charge. Old issue,
+folder, and space fills are dropped on the next read.
+
 #### The size system
 
 Nothing in the search UI hard-codes a pixel size. Two settings —

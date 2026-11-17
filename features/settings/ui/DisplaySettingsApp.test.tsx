@@ -72,10 +72,10 @@ describe("DisplaySettingsApp", () => {
         soundVolume: 0.4,
         backgroundOpacity: 0.75,
         theme: "system",
+        accentColor: "auto",
+        chassisColor: "auto",
+        panelColor: "auto",
         textColor: "auto",
-        issueBackgroundColor: "auto",
-        folderBackgroundColor: "auto",
-        spaceBackgroundColor: "auto",
       },
     });
 
@@ -150,10 +150,10 @@ describe("DisplaySettingsApp", () => {
         soundVolume: 0.4,
         backgroundOpacity: 0.75,
         theme: "system",
+        accentColor: "auto",
+        chassisColor: "auto",
+        panelColor: "auto",
         textColor: "auto",
-        issueBackgroundColor: "auto",
-        folderBackgroundColor: "auto",
-        spaceBackgroundColor: "auto",
       },
     });
 
@@ -222,10 +222,10 @@ describe("DisplaySettingsApp", () => {
           soundVolume: 0.4,
           backgroundOpacity: 0.75,
           theme: "system",
+          accentColor: "auto",
+          chassisColor: "auto",
+          panelColor: "auto",
           textColor: "auto",
-          issueBackgroundColor: "auto",
-          folderBackgroundColor: "auto",
-          spaceBackgroundColor: "auto",
         },
       }),
     );

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "preact/hooks";
 import { debugError } from "@/shared/debug";
 import {
-  customColor,
   DEFAULT_DISPLAY_SETTINGS,
   readDisplaySettings,
   subscribeToDisplaySettingsChanged,
   type DisplaySettings,
 } from "@/features/settings/model/display-settings";
+import { themeColorStyle } from "@/features/settings/model/theme-colors";
 import { uiScaleStyle } from "@/features/settings/model/ui-scale";
 import { sendExtensionMessage, subscribeToSnapshotChanged } from "@/shared/messaging/client";
 import { formatTimerCountdown, stripTimerPrefix } from "@/features/timers/model/timer";
@@ -131,7 +131,7 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
           : {
               ...uiScaleStyle(displaySettings, "popup"),
               colorScheme: theme,
-              color: customColor(displaySettings.textColor),
+              ...themeColorStyle(theme, displaySettings),
             }
       }
     >

@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  backgroundPaint,
   clampBackgroundOpacity,
   customColor,
   DEFAULT_DISPLAY_SETTINGS,
@@ -173,7 +172,7 @@ describe("display settings", () => {
             get: vi.fn(async () => ({
               displaySettings: {
                 textColor: "not-a-color",
-                issueBackgroundColor: "#ABCDEF",
+                accentColor: "#ABCDEF",
                 fontSize: 999,
                 uiScale: -4,
                 // Snapped to the nearest step rather than rejected.
@@ -192,7 +191,7 @@ describe("display settings", () => {
 
     await expect(readDisplaySettings()).resolves.toEqual({
       ...DEFAULT_DISPLAY_SETTINGS,
-      issueBackgroundColor: "#ABCDEF",
+      accentColor: "#ABCDEF",
       fontSize: MAX_FONT_SIZE,
       uiScale: MIN_UI_SCALE,
       tabGap: 12,
@@ -244,10 +243,10 @@ describe("display settings", () => {
     it("follows the system theme and leaves colours to the theme by default", () => {
       expect(DEFAULT_DISPLAY_SETTINGS).toMatchObject({
         theme: "system",
+        accentColor: "auto",
+        chassisColor: "auto",
+        panelColor: "auto",
         textColor: "auto",
-        issueBackgroundColor: "auto",
-        folderBackgroundColor: "auto",
-        spaceBackgroundColor: "auto",
       });
     });
 
@@ -258,43 +257,40 @@ describe("display settings", () => {
       await expect(readDisplaySettings()).resolves.toMatchObject({ theme: "system" });
     });
 
-    it("migrates the old dark default colours back to auto but keeps real choices", async () => {
+    it("migrates the old dark default text colour back to auto and drops region fills", async () => {
       store({
         textColor: "#F5F5F5",
         issueBackgroundColor: "#252525",
         folderBackgroundColor: "#2d2d2d",
         spaceBackgroundColor: "#123456",
+        accentColor: "#e0943a",
       });
       await expect(readDisplaySettings()).resolves.toMatchObject({
         textColor: "auto",
-        issueBackgroundColor: "auto",
-        folderBackgroundColor: "auto",
-        spaceBackgroundColor: "#123456",
+        accentColor: "#e0943a",
+        chassisColor: "auto",
+        panelColor: "auto",
       });
     });
 
     it("migrates a theme swatch the colour picker saved by mistake back to auto", async () => {
       store({
         textColor: "#EDEDEA",
-        issueBackgroundColor: "#1b1b1b",
-        folderBackgroundColor: "#fafaf8",
-        spaceBackgroundColor: "#1c1c1c",
+        accentColor: "#FF2A1F",
+        chassisColor: "#121212",
+        panelColor: "#fafaf8",
       });
       await expect(readDisplaySettings()).resolves.toMatchObject({
         textColor: "auto",
-        issueBackgroundColor: "auto",
-        folderBackgroundColor: "auto",
-        spaceBackgroundColor: "#1c1c1c",
+        accentColor: "auto",
+        chassisColor: "auto",
+        panelColor: "auto",
       });
     });
 
-    it("paints only a real hex value", () => {
+    it("keeps a real hex and ignores a non-colour", () => {
       expect(customColor("auto")).toBeUndefined();
       expect(customColor("#abcdef")).toBe("#abcdef");
-      expect(backgroundPaint(undefined)).toBeUndefined();
-      expect(backgroundPaint("#abcdef")).toBe(
-        "color-mix(in srgb, #abcdef calc(var(--zs-bg-opacity, 1) * 100%), transparent)",
-      );
     });
   });
 

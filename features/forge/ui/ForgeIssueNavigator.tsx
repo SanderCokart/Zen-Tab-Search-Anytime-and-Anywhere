@@ -47,7 +47,6 @@ export const TAG_CLASS: Record<ForgeRowTag, string> = {
 
 export function ForgeIssueNavigator({
   entries,
-  backgroundColor,
   truncate,
   sortMode,
   keyboardEntries,
@@ -77,8 +76,6 @@ export function ForgeIssueNavigator({
   onOpenStatusMenu,
 }: {
   entries: ForgeIssueEntry[];
-  /** A custom colour; left out, the card takes its colour from the theme. */
-  backgroundColor?: string;
   truncate: boolean;
   sortMode: ForgeIssueSortMode;
   /** The entries in arrow-key order: only the visible ones, so collapsed groups have no index. */
@@ -212,10 +209,7 @@ export function ForgeIssueNavigator({
 
   return (
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-      <aside
-        class="zs-card flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-[var(--zen-space-5)]"
-        style={{ backgroundColor }}
-      >
+      <aside class="zs-card flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-[var(--zen-space-5)]">
         <div class="zs-head">
           <PrefixHint prefixes={FORGE_NAVIGATOR_PREFIXES} column="issues and requests" />
           <strong class="min-w-0 truncate font-[inherit] font-medium">Issues and requests</strong>
