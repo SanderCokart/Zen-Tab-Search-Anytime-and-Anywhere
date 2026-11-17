@@ -24,6 +24,28 @@ export const DEMO_SPACES: SpaceInfo[] = [
   { id: RESEARCH, name: "Research", icon: "📚", isActive: false },
 ];
 
+/** Zen folders as the Move to folder menu lists them, nested Search inside Product. */
+export const DEMO_FOLDERS = [
+  { id: "folder-product", name: "Product", spaceId: WORK, spaceName: "Work", collapsed: false },
+  {
+    id: "folder-search",
+    name: "Search",
+    spaceId: WORK,
+    spaceName: "Work",
+    parentId: "folder-product",
+    collapsed: false,
+  },
+  {
+    id: "folder-infra",
+    name: "Infra",
+    spaceId: WORK,
+    spaceName: "Work",
+    parentId: "folder-product",
+    collapsed: false,
+  },
+  { id: "folder-docs", name: "Docs", spaceId: WORK, spaceName: "Work", collapsed: false },
+];
+
 export const DEMO_TABS: TabInfo[] = [
   {
     id: 1,

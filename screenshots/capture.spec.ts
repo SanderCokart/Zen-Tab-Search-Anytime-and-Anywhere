@@ -207,6 +207,59 @@ const captures: Capture[] = [
   },
   {
     scene: "search-omnibar",
+    file: "tab-move-to-folder.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      await (await tabRow(page)).click({ button: "right" });
+      await page.getByRole("menuitem", { name: "Move to folder" }).click();
+      await expect(page.locator("[data-testid='zen-tab-folder-menu']")).toBeVisible();
+    },
+    clip: "omnibar",
+  },
+  {
+    scene: "search-omnibar",
+    file: "pinned-url.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      await page
+        .locator("[data-testid='zen-essential-grid'] [data-testid='zen-search-item']")
+        .first()
+        .click({ button: "right" });
+      await page.getByRole("menuitem", { name: "Edit pinned URL" }).click();
+      await expect(page.getByText("Edit pinned URL").first()).toBeVisible();
+    },
+    clip: "omnibar",
+  },
+  {
+    scene: "collapsed-folders",
+    file: "collapse-all.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      await page.locator("[data-testid='zen-collapse-tabs']").click();
+      await page.locator("[data-testid='zen-collapse-issues']").click();
+      await expect(page.locator("[data-testid='zen-collapse-tabs']")).toHaveText("Expand all");
+      await expect(page.locator("[data-testid='zen-collapse-issues']")).toHaveText("Expand all");
+    },
+    clip: "omnibar",
+  },
+  {
+    scene: "display-settings",
+    file: "background-opacity-settings.png",
+    ready: async (page) => {
+      await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+    },
+    locator: "section:has([data-testid='zen-background-opacity'])",
+  },
+  {
+    scene: "display-settings",
+    file: "sound-settings.png",
+    ready: async (page) => {
+      await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+    },
+    locator: "section:has([data-testid='zen-sound-enabled'])",
+  },
+  {
+    scene: "search-omnibar",
     file: "status-bar.png",
     ready: (page) => waitForSearch(page, true),
     around: "[data-testid='zen-status-bar']",

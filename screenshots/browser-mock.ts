@@ -1,7 +1,9 @@
+import packageJson from "@/package.json";
 import type { DisplaySettings } from "@/features/settings/model/display-settings";
 import type { ExtensionRequest, SearchSnapshot } from "@/shared/messaging/protocol";
 import type { HostOverrideGroup, TabInfo } from "@/shared/types";
 import {
+  DEMO_FOLDERS,
   DEMO_GLOBAL_HOST_GROUPS,
   DEMO_HOST_GROUPS,
   DEMO_PROXY_REPORT,
@@ -87,7 +89,7 @@ export function installBrowserMock(
         return 1;
       case "getUpdateStatus":
         return {
-          currentVersion: "4.0.2",
+          currentVersion: packageJson.version,
           latest: updateAvailable
             ? {
                 version: "4.1.0",
@@ -124,7 +126,7 @@ export function installBrowserMock(
       case "replacePinnedUrlWithCurrent":
         return undefined;
       case "getFolders":
-        return [];
+        return DEMO_FOLDERS;
       case "getPinnedUrl":
         return (
           snapshot.tabs.find((tab) => tab.id === message.tabId)?.url ?? "https://example.com/"

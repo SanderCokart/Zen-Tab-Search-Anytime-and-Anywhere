@@ -68,6 +68,16 @@ const SCENES: Record<string, HarnessScene> = {
     },
   },
   "folder-groups": { id: "folder-groups", surface: "search", layout: "overlay" },
+  // Forge tabs stay in the list here, so the current PR sits in its collapsed folder.
+  "collapsed-folders": {
+    id: "collapsed-folders",
+    surface: "search",
+    layout: "overlay",
+    displaySettings: {
+      filterIssuesInOverlay: false,
+      filterRequestsInOverlay: false,
+    },
+  },
   "timers-from-search": {
     id: "timers-from-search",
     surface: "search",
