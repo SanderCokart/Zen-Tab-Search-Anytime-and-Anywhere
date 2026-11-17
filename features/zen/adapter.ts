@@ -228,7 +228,6 @@ export function createZenWorkspaceAdapter(
     }
 
     try {
-      debugLog(`${LOG_PREFIX} queryTabs via zenTabs.getAllTabs`, { anchorTabId: tabId });
       const anchor = zenAnchorTabId(tabId);
       const tabs = await zenTabs.getAllTabs(anchor);
       if (!tabs) {
