@@ -29,7 +29,6 @@ import {
   type TrafficLight,
 } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
-import { Led } from "@/shared/ui/primitives/Led";
 import { CollapseAllButton } from "@/shared/ui/primitives/CollapseAllButton";
 import { TreeNode } from "@/shared/ui/primitives/TreeNode";
 import { Segmented } from "@/shared/ui/primitives/Segmented";
@@ -165,7 +164,6 @@ export function ForgeIssueNavigator({
                   {parts.ref}
                 </span>
                 <span class={cn("zs-row-title", entryTextClass(truncate))}>{parts.title}</span>
-                {isTodo && <Led on class="zs-todo-dot" />}
                 <span class="zs-meta">
                   {timer && (
                     <span class="zs-meta-timer zs-digits">
@@ -179,19 +177,19 @@ export function ForgeIssueNavigator({
                   )}
                 </span>
               </button>
+              <TabActions
+                tab={entry.tab}
+                timer={timer}
+                timerOpen={timerOpen}
+                isTodo={isTodo}
+                light={light}
+                statusMenuOpen={tabId !== undefined && statusMenuTabId === tabId}
+                onOpenStatusMenu={onOpenStatusMenu}
+                onToggleTodo={onToggleTodo}
+                onToggleTimer={onToggleTimerForm}
+                onOpenTimerPopup={onOpenTimerPopup}
+              />
             </div>
-            <TabActions
-              tab={entry.tab}
-              timer={timer}
-              timerOpen={timerOpen}
-              isTodo={isTodo}
-              light={light}
-              statusMenuOpen={tabId !== undefined && statusMenuTabId === tabId}
-              onOpenStatusMenu={onOpenStatusMenu}
-              onToggleTodo={onToggleTodo}
-              onToggleTimer={onToggleTimerForm}
-              onOpenTimerPopup={onOpenTimerPopup}
-            />
             {timerOpen && tabId !== undefined && (
               <div class="px-[var(--zen-row-pad)] pb-[var(--zen-space-2)]">
                 <TimerForm

@@ -16,10 +16,8 @@ import { Led } from "@/shared/ui/primitives/Led";
 
 /**
  * The todo, timer and status buttons for a tab, shared by the result rows and
- * the issue column. They are put away until the row is selected, hovered or holds
- * focus (see `.zs-acts`). On a result row they float over the right edge so the
- * list does not relayout as the pointer moves. A todo shows a checked checkbox,
- * anything else an empty one.
+ * the issue column. They stay visible, so hovering a row does not bring them in.
+ * A todo shows a checked checkbox, anything else an empty one.
  */
 export function TabActions({
   tab,
@@ -46,7 +44,7 @@ export function TabActions({
   onToggleTimer: (tabId: number) => void;
   onOpenTimerPopup: (tabId: number) => void;
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
-  /** Keep the keys showing, as on the current-tab strip, instead of only on the active row. */
+  /** Kept for the current-tab strip, which spaces its keys with the same flag. */
   always?: boolean;
 }) {
   const tabId = tabBrowserId(tab);
