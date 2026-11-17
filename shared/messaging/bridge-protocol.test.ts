@@ -123,6 +123,36 @@ describe("layout commands", () => {
   });
 });
 
+describe("pinned URL commands", () => {
+  it("accepts get, set and replace for a web URL", () => {
+    expect(
+      parseBridgeRequest({ id: "1", command: { type: "getPinnedUrl", tabId: 4 } })?.command,
+    ).toEqual({
+      type: "getPinnedUrl",
+      tabId: 4,
+    });
+    expect(
+      parseBridgeRequest({
+        id: "1",
+        command: { type: "setPinnedUrl", tabId: 4, url: " https://mail.example/" },
+      })?.command,
+    ).toEqual({ type: "setPinnedUrl", tabId: 4, url: "https://mail.example/" });
+    expect(
+      parseBridgeRequest({ id: "1", command: { type: "replacePinnedUrlWithCurrent", tabId: 4 } })
+        ?.command,
+    ).toEqual({ type: "replacePinnedUrlWithCurrent", tabId: 4 });
+  });
+
+  it("rejects anything that is not an http or https URL", () => {
+    expect(
+      parseBridgeRequest({
+        id: "1",
+        command: { type: "setPinnedUrl", tabId: 4, url: "javascript:alert(1)" },
+      }),
+    ).toBeUndefined();
+  });
+});
+
 describe("openTab command", () => {
   it("accepts web URLs with defaults for active and pinned", () => {
     expect(

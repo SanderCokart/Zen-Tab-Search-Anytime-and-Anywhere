@@ -12,7 +12,7 @@ export const BRIDGE_PORT = 47652;
 export const BRIDGE_URL = `ws://127.0.0.1:${BRIDGE_PORT}`;
 export const BRIDGE_TOKEN_STORAGE_KEY = "mcpBridgeToken";
 // Bump when a command is added or changed, so mismatched releases say so.
-export const BRIDGE_PROTOCOL_VERSION = 6;
+export const BRIDGE_PROTOCOL_VERSION = 7;
 
 const tabIdSchema = v.pipe(v.number(), v.integer(), v.minValue(0));
 const tabIdsSchema = v.pipe(v.array(tabIdSchema), v.minLength(1), v.maxLength(200));
@@ -51,6 +51,7 @@ export const tabSummarySchema = v.object({
   folderName: v.optional(v.string()),
   folderPath: v.optional(v.array(folderInfoSchema)),
   essential: v.optional(v.boolean()),
+  pinned: v.optional(v.boolean()),
   active: v.optional(v.boolean()),
   /** Traffic-light color the user (or an agent) set on the tab. */
   color: v.optional(v.picklist(TRAFFIC_LIGHTS)),
@@ -164,6 +165,13 @@ export const bridgeCommandSchema = v.variant("type", [
     // Report what would be labelled without renaming anything.
     dryRun: v.optional(v.boolean(), false),
   }),
+  v.object({ type: v.literal("getPinnedUrl"), tabId: tabIdSchema }),
+  v.object({
+    type: v.literal("setPinnedUrl"),
+    tabId: tabIdSchema,
+    url: webUrlSchema,
+  }),
+  v.object({ type: v.literal("replacePinnedUrlWithCurrent"), tabId: tabIdSchema }),
 ]);
 
 /** One tab that forge detection looked at. */

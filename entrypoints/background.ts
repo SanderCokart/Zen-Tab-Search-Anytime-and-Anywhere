@@ -38,6 +38,10 @@ import {
 import { registerBrowserExternalTabReuse } from "@/features/intercept/background/external-tab";
 import { startBridgeClient } from "@/features/bridge/background/bridge-client";
 import { createBridgeCommandHandler } from "@/features/bridge/background/zen-commands";
+import {
+  ESSENTIAL_TAB_NAMES_KEY,
+  parseEssentialTabNames,
+} from "@/features/search/model/essential-tab-names";
 import { BRIDGE_TOKEN_STORAGE_KEY } from "@/shared/messaging/bridge-protocol";
 import { createTodoService } from "@/features/todos/background/todo-service";
 import { createStatusService } from "@/features/status/background/status-service";
@@ -343,6 +347,16 @@ export default defineBackground(() => {
           notify();
         },
         getStatuses: statusService.getStatuses,
+      },
+      essentialNames: {
+        getNames: async () =>
+          parseEssentialTabNames(
+            (await browser.storage.local.get(ESSENTIAL_TAB_NAMES_KEY))[ESSENTIAL_TAB_NAMES_KEY],
+          ),
+        setNames: async (names) => {
+          await browser.storage.local.set({ [ESSENTIAL_TAB_NAMES_KEY]: names });
+          notify();
+        },
       },
       detectForgeLabels: async (tabs, options) => {
         const detections = await detectForgeLabels(workspace, tabs, options);

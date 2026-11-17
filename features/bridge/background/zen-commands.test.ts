@@ -41,6 +41,9 @@ function workspace(partial: Partial<BridgeWorkspace> = {}): BridgeWorkspace {
     deleteSpaces: async () => undefined,
     setEssential: async () => undefined,
     clearEssential: async () => undefined,
+    getPinnedUrl: async () => "https://example.com",
+    setPinnedUrl: async () => undefined,
+    replacePinnedUrlWithCurrent: async () => undefined,
     ...partial,
   };
 }
@@ -291,5 +294,109 @@ describe("createBridgeCommandHandler", () => {
       handle({ type: "createFolder", name: "Nested", spaceId: "work", parentId: "folder-1" }),
     ).resolves.toEqual({ folderId: "folder-2" });
     expect(createFolder).toHaveBeenCalledWith("Nested", "work", [], "folder-1");
+  });
+
+  describe("pinned URL", () => {
+    const pinned = tab({ id: 8, pinned: true, url: "https://mail.example/inbox" });
+
+    it("reads, sets and replaces the stored URL on a pinned tab", async () => {
+      const getPinnedUrl = vi.fn(async () => "https://mail.example/");
+      const setPinnedUrl = vi.fn(async () => undefined);
+      const replacePinnedUrlWithCurrent = vi.fn(async () => undefined);
+      const handle = createBridgeCommandHandler(
+        workspace({
+          listTabs: async () => [pinned],
+          getTab: async () => pinned,
+          getPinnedUrl,
+          setPinnedUrl,
+          replacePinnedUrlWithCurrent,
+        }),
+      );
+
+      await expect(handle({ type: "getPinnedUrl", tabId: 8 })).resolves.toEqual({
+        tabId: 8,
+        url: "https://mail.example/",
+        currentUrl: "https://mail.example/inbox",
+      });
+      await expect(
+        handle({ type: "setPinnedUrl", tabId: 8, url: "https://mail.example/starred" }),
+      ).resolves.toEqual({ tabId: 8, url: "https://mail.example/starred" });
+      await expect(handle({ type: "replacePinnedUrlWithCurrent", tabId: 8 })).resolves.toEqual({
+        tabId: 8,
+        url: "https://mail.example/inbox",
+      });
+      expect(setPinnedUrl).toHaveBeenCalledWith(8, "https://mail.example/starred");
+      expect(replacePinnedUrlWithCurrent).toHaveBeenCalledWith(8);
+    });
+
+    it("refuses an unpinned tab before touching Zen", async () => {
+      const setPinnedUrl = vi.fn(async () => undefined);
+      const handle = createBridgeCommandHandler(
+        workspace({
+          listTabs: async () => [tab({ id: 8 })],
+          getTab: async () => tab({ id: 8 }),
+          setPinnedUrl,
+        }),
+      );
+      await expect(
+        handle({ type: "setPinnedUrl", tabId: 8, url: "https://mail.example/" }),
+      ).rejects.toThrow("Tab 8 is not pinned");
+      expect(setPinnedUrl).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("essential names", () => {
+    const essential = tab({ id: 3, essential: true, domId: "ess-1", title: "Mail" });
+
+    it("stores a name for an essential tab instead of calling Zen setLabel", async () => {
+      const setLabel = vi.fn(async () => true);
+      const names: Record<string, string> = {};
+      const handle = createBridgeCommandHandler(
+        workspace({
+          listTabs: async () => [essential],
+          getTab: async () => essential,
+          setLabel,
+        }),
+        {
+          timers: {
+            setTabTimer: async () => {
+              throw new Error("unused");
+            },
+            clearTabTimer: async () => false,
+            getActiveTimers: async () => [],
+          },
+          todos: { setTodo: async () => undefined, getTodos: async () => [] },
+          statuses: { setStatus: async () => undefined, getStatuses: async () => [] },
+          essentialNames: {
+            getNames: async () => names,
+            setNames: async (next) => {
+              for (const key of Object.keys(names)) {
+                delete names[key];
+              }
+              Object.assign(names, next);
+            },
+          },
+          detectForgeLabels: async () => [],
+        },
+      );
+
+      await expect(handle({ type: "renameTab", tabId: 3, label: " Inbox " })).resolves.toEqual({
+        tabId: 3,
+        label: "Inbox",
+        essential: true,
+      });
+      expect(setLabel).not.toHaveBeenCalled();
+      expect(names).toEqual({ "ess-1": "Inbox" });
+
+      const listed = (await handle({ type: "listTabs" })) as { id: number; customLabel?: string }[];
+      expect(listed.find((entry) => entry.id === 3)).toMatchObject({ customLabel: "Inbox" });
+
+      await expect(handle({ type: "renameTab", tabId: 3, label: "  " })).resolves.toEqual({
+        tabId: 3,
+        label: "",
+        essential: true,
+      });
+      expect(names).toEqual({});
+    });
   });
 });

@@ -378,7 +378,7 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
 
   tool(
     "zen_rename_tab",
-    "Set a custom name on a tab. An empty label removes the custom name and shows the page title again.",
+    "Set a custom name on a tab. Works for ordinary tabs (Zen label) and essential tabs (stored by the extension, because Zen has no writable label for them). An empty label removes the custom name and shows the page title again.",
     {
       tabId,
       label: z.string().max(200).describe("New tab name; empty to clear"),
@@ -690,6 +690,30 @@ export function registerZenTools(server: McpServer, bridge: ZenBridge): void {
     { tabIds },
     idempotentWrites,
     (input) => ({ type: "clearStatus", tabIds: input.tabIds }),
+  );
+
+  tool(
+    "zen_get_pinned_url",
+    "Read the stored pinned URL for a pinned or essential tab, plus the URL of the page currently open there (they can differ after navigation). Folders hold pinned tabs, so those tabs work too.",
+    { tabId },
+    readOnly,
+    (input) => ({ type: "getPinnedUrl", tabId: input.tabId }),
+  );
+
+  tool(
+    "zen_set_pinned_url",
+    'Set the stored URL of a pinned or essential tab (the URL it restores to). Does not navigate the tab. Only http and https URLs. Example: { "tabId": 118, "url": "https://mail.example/" }.',
+    { tabId, url: webUrl },
+    idempotentWrites,
+    (input) => ({ type: "setPinnedUrl", tabId: input.tabId, url: input.url }),
+  );
+
+  tool(
+    "zen_replace_pinned_url",
+    "Store the page currently open in a pinned or essential tab as its pinned URL, the same as the omnibar's replace action.",
+    { tabId },
+    idempotentWrites,
+    (input) => ({ type: "replacePinnedUrlWithCurrent", tabId: input.tabId }),
   );
 
   tool(

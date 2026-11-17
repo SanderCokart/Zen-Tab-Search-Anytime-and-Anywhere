@@ -38,6 +38,9 @@ function workspace(tabs: TabInfo[] = []): BridgeWorkspace {
     deleteSpaces: async () => undefined,
     setEssential: async () => undefined,
     clearEssential: async () => undefined,
+    getPinnedUrl: async () => "https://example.com",
+    setPinnedUrl: async () => undefined,
+    replacePinnedUrlWithCurrent: async () => undefined,
     getTab: async (tabId) => ({
       id: tabId,
       title: "Tab",
@@ -73,6 +76,10 @@ function services(
       setStatus: vi.fn(async () => undefined),
       getStatuses: vi.fn(async () => []),
       ...statuses,
+    },
+    essentialNames: {
+      getNames: vi.fn(async () => ({})),
+      setNames: vi.fn(async () => undefined),
     },
     detectForgeLabels: vi.fn(async () => []),
   };

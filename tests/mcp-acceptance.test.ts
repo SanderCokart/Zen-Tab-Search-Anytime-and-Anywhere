@@ -27,6 +27,7 @@ interface FakeTab {
   folderId?: string;
   essential?: boolean;
   pinned?: boolean;
+  pinnedUrl?: string;
 }
 
 /** An in-memory Zen with two spaces. New tabs stay at about:blank, like a tab that has not loaded yet. */
@@ -75,6 +76,7 @@ function createFakeZen() {
           }
         : {}),
       ...(tab.essential ? { essential: true } : {}),
+      ...(tab.pinned || tab.essential ? { pinned: true } : {}),
     };
   };
   const findTab = (id: number) => {
@@ -200,9 +202,16 @@ function createFakeZen() {
       return tabIds.length;
     },
     moveTab: async () => undefined,
-    openTab: async (_url, { pinned }) => {
+    openTab: async (url, { pinned }) => {
       const id = nextTabId++;
-      tabs.push({ id, url: "about:blank", title: "New Tab", spaceId: "general", pinned });
+      tabs.push({
+        id,
+        url: "about:blank",
+        title: "New Tab",
+        spaceId: "general",
+        pinned,
+        pinnedUrl: url,
+      });
       return id;
     },
     closeTab: async (id) => {
@@ -214,6 +223,23 @@ function createFakeZen() {
       }
     },
     getTab: async (id) => toInfo(findTab(id)),
+    getPinnedUrl: async (id) => {
+      const tab = findTab(id);
+      return tab.pinnedUrl ?? tab.url;
+    },
+    setPinnedUrl: async (id, url) => {
+      const tab = findTab(id);
+      if (!tab.pinned && !tab.essential) {
+        throw new Error("Tab is not pinned.");
+      }
+      tab.pinnedUrl = url;
+    },
+    replacePinnedUrlWithCurrent: async (id) => {
+      const tab = findTab(id);
+      if (!tab.pinned && !tab.essential) {
+        throw new Error("Tab is not pinned.");
+      }
+    },
   };
 
   return { workspace, tabs, folders, spaces };
@@ -474,5 +500,20 @@ describe("MCP acceptance", () => {
       spaceIds: [space.spaceId],
     });
     expect(zen.spaces.find((entry) => entry.id === space.spaceId)).toBeUndefined();
+  });
+
+  it("reads and sets the stored URL of a pinned tab", async () => {
+    const { folderId } = await call("zen_create_folder", { name: "Mail", spaceId: "work" });
+    const opened = await call("zen_open_tab", { url: "https://mail.example/", folderId });
+    await expect(call("zen_get_pinned_url", { tabId: opened.tabId })).resolves.toMatchObject({
+      tabId: opened.tabId,
+      url: "https://mail.example/",
+    });
+    await expect(
+      call("zen_set_pinned_url", { tabId: opened.tabId, url: "https://mail.example/starred" }),
+    ).resolves.toEqual({ tabId: opened.tabId, url: "https://mail.example/starred" });
+    expect(zen.tabs.find((tab) => tab.id === opened.tabId)?.pinnedUrl).toBe(
+      "https://mail.example/starred",
+    );
   });
 });

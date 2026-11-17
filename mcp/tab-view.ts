@@ -97,6 +97,7 @@ function viewTab(tab: TabSummary, fields: TabFields, withContext: boolean): TabV
     ...(tab.active ? { active: true } : {}),
     // Essential tabs are pinned across every space, so they have no space of their own.
     ...(tab.essential ? { essential: true, global: true } : {}),
+    ...(tab.pinned && !tab.essential ? { pinned: true } : {}),
     ...(tab.color ? { color: tab.color } : {}),
     ...(isLoading(tab) ? { loading: true } : {}),
   };

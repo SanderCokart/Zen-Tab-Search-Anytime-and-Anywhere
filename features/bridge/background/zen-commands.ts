@@ -1,8 +1,11 @@
 import type { WorkspaceAdapter } from "@/features/zen/adapter";
 import type { ForgeDetection } from "@/features/forge/background/label-command";
+import { applyEssentialTabNames } from "@/features/search/model/essential-tab-names";
 import { isAllowedTimerEnd, parseTimerInput } from "@/features/timers/model/timer";
 import type { BridgeCommand, TabSummary } from "@/shared/messaging/bridge-protocol";
 import {
+  isEssentialTab,
+  isPinnedTab,
   isUsableTabId,
   type TabInfo,
   type TabStatus,
@@ -38,6 +41,9 @@ export type BridgeWorkspace = Pick<
   | "deleteSpaces"
   | "setEssential"
   | "clearEssential"
+  | "getPinnedUrl"
+  | "setPinnedUrl"
+  | "replacePinnedUrlWithCurrent"
 >;
 
 /** Timer operations, backed by the same service the timer UI uses. */
@@ -59,11 +65,18 @@ export interface BridgeStatuses {
   getStatuses(tabIds: number[]): Promise<TabStatus[]>;
 }
 
+/** Essential-tab names live in storage, because Zen has no writable label for them. */
+export interface BridgeEssentialNames {
+  getNames(): Promise<Record<string, string>>;
+  setNames(names: Record<string, string>): Promise<void>;
+}
+
 /** Everything beyond the Zen workspace that a bridge command may need. */
 export interface BridgeServices {
   timers: BridgeTimers;
   todos: BridgeTodos;
   statuses: BridgeStatuses;
+  essentialNames: BridgeEssentialNames;
   /** Labels the given tabs (or only reports them when `dryRun`). */
   detectForgeLabels(tabs: TabInfo[], options: { dryRun: boolean }): Promise<ForgeDetection[]>;
 }
@@ -81,6 +94,10 @@ const unavailableServices: BridgeServices = {
   statuses: {
     setStatus: async () => unavailable("status colors"),
     getStatuses: async () => [],
+  },
+  essentialNames: {
+    getNames: async () => ({}),
+    setNames: async () => unavailable("essential tab names"),
   },
   detectForgeLabels: async () => unavailable("forge detection"),
 };
@@ -144,6 +161,7 @@ export function summarizeTab(tab: TabInfo): TabSummary {
     ...(tab.folderName ? { folderName: tab.folderName } : {}),
     ...(tab.folderPath?.length ? { folderPath: tab.folderPath } : {}),
     ...(tab.essential ? { essential: true } : {}),
+    ...(tab.pinned ? { pinned: true } : {}),
     ...(tab.active ? { active: true } : {}),
   };
 }
@@ -270,10 +288,18 @@ export function createBridgeCommandHandler(
     });
   }
 
+  async function summarizeTabs(tabs: TabInfo[]): Promise<TabSummary[]> {
+    const names = await services.essentialNames.getNames();
+    return withColors(applyEssentialTabNames(tabs, names).map(summarize));
+  }
+
   function commandTabIds(command: BridgeCommand): number[] | undefined {
     switch (command.type) {
       case "activateTab":
       case "renameTab":
+      case "getPinnedUrl":
+      case "setPinnedUrl":
+      case "replacePinnedUrlWithCurrent":
         return [command.tabId];
       case "moveTabBefore":
       case "moveTabAfter":
@@ -354,7 +380,8 @@ export function createBridgeCommandHandler(
       }
 
       case "listTodos": {
-        const tabs = await workspace.listTabs();
+        const names = await services.essentialNames.getNames();
+        const tabs = applyEssentialTabNames(await workspace.listTabs(), names);
         const byId = new Map(
           tabs.flatMap((tab) => (isUsableTabId(tab.id) ? [[tab.id, tab] as const] : [])),
         );
@@ -390,7 +417,8 @@ export function createBridgeCommandHandler(
       }
 
       case "listStatuses": {
-        const tabs = await workspace.listTabs();
+        const names = await services.essentialNames.getNames();
+        const tabs = applyEssentialTabNames(await workspace.listTabs(), names);
         const byId = new Map(
           tabs.flatMap((tab) => (isUsableTabId(tab.id) ? [[tab.id, tab] as const] : [])),
         );
@@ -448,7 +476,7 @@ export function createBridgeCommandHandler(
 
       case "listTabs": {
         const tabs = await workspace.listTabs();
-        return withColors(tabs.filter((tab) => matchesListFilter(tab, command)).map(summarize));
+        return summarizeTabs(tabs.filter((tab) => matchesListFilter(tab, command)));
       }
 
       case "listFolders":
@@ -456,7 +484,7 @@ export function createBridgeCommandHandler(
 
       case "getSelectedTabs": {
         const tabs = await workspace.listSelectedTabs();
-        return withColors(tabs.map(summarize));
+        return summarizeTabs(tabs);
       }
 
       case "activateTab":
@@ -468,11 +496,29 @@ export function createBridgeCommandHandler(
         return { spaceId: command.spaceId };
 
       case "renameTab": {
-        const renamed = await workspace.setLabel(command.label.trim(), command.tabId, true);
+        const tab = await workspace.getTab(command.tabId);
+        const label = command.label.trim();
+        if (isEssentialTab(tab)) {
+          const domId = tab.domId?.trim();
+          if (!domId) {
+            throw new Error(
+              `Tab ${command.tabId} is essential and has no DOM id, so it cannot be renamed.`,
+            );
+          }
+          const names = { ...(await services.essentialNames.getNames()) };
+          if (label) {
+            names[domId] = label;
+          } else {
+            delete names[domId];
+          }
+          await services.essentialNames.setNames(names);
+          return { tabId: command.tabId, label, essential: true };
+        }
+        const renamed = await workspace.setLabel(label, command.tabId, true);
         if (!renamed) {
           throw new Error(`Tab ${command.tabId} could not be renamed.`);
         }
-        return { tabId: command.tabId, label: command.label.trim() };
+        return { tabId: command.tabId, label };
       }
 
       case "createFolder": {
@@ -555,6 +601,40 @@ export function createBridgeCommandHandler(
 
       case "openTab":
         return openTab(workspace, command, pendingUrls);
+
+      case "getPinnedUrl": {
+        const tab = await workspace.getTab(command.tabId);
+        if (!isPinnedTab(tab)) {
+          throw new Error(
+            `Tab ${command.tabId} is not pinned. Only pinned and essential tabs have a stored URL.`,
+          );
+        }
+        const url = await workspace.getPinnedUrl(command.tabId);
+        return { tabId: command.tabId, url, currentUrl: tab.url };
+      }
+
+      case "setPinnedUrl": {
+        const tab = await workspace.getTab(command.tabId);
+        if (!isPinnedTab(tab)) {
+          throw new Error(
+            `Tab ${command.tabId} is not pinned. Only pinned and essential tabs have a stored URL.`,
+          );
+        }
+        await workspace.setPinnedUrl(command.tabId, command.url);
+        return { tabId: command.tabId, url: command.url };
+      }
+
+      case "replacePinnedUrlWithCurrent": {
+        const tab = await workspace.getTab(command.tabId);
+        if (!isPinnedTab(tab)) {
+          throw new Error(
+            `Tab ${command.tabId} is not pinned. Only pinned and essential tabs have a stored URL.`,
+          );
+        }
+        await workspace.replacePinnedUrlWithCurrent(command.tabId);
+        const updated = await workspace.getTab(command.tabId);
+        return { tabId: command.tabId, url: updated.url };
+      }
     }
   };
 }
