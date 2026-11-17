@@ -110,7 +110,7 @@ export function TabContextMenu({
   return (
     <div
       ref={menuRef}
-      class="zs-card border-zen-line-medium fixed z-50 min-w-[180px] rounded-[var(--zs-r-lcd)] border p-[var(--zen-space-1)]"
+      class="zs-menu border-zen-line-medium fixed z-50 min-w-[180px] rounded-[var(--zs-r-lcd)] border p-[var(--zen-space-1)]"
       style={{ left: `${position.left}px`, top: `${position.top}px` }}
       data-testid="zen-tab-context-menu"
       role="menu"

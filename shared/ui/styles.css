@@ -306,6 +306,13 @@
     box-shadow: var(--zs-shadow);
   }
 
+  /* Menus stay solid whatever the background opacity, so their text stays readable. */
+  .zs-menu {
+    background-color: var(--zs-card);
+    border-radius: var(--zs-r-card);
+    box-shadow: var(--zs-shadow);
+  }
+
   .zs-well {
     background-color: var(--zs-pressed);
     box-shadow: var(--zs-well);
