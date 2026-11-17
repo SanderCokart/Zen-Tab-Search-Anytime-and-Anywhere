@@ -23,6 +23,8 @@ function printUsage() {
       "and a sources zip is written beside it.",
       "Provide a name to replace the demo label, or --tag to use a release tag.",
       "--no-sources skips the sources zip. npm run zip:no-sources does the same.",
+      "The zip is a production build. Debug logging stays off, even when",
+      ".env.local sets WXT_DEBUG=true for npm run dev.",
     ].join("\n"),
   );
 }
@@ -122,8 +124,11 @@ function main() {
   const zipLabel = resolveLabel(parsed);
   console.log(`Zip label: ${zipLabel}`);
 
+  // .env.local turns WXT_DEBUG on for npm run dev, and Vite loads it for this
+  // zip too. process.env outranks that file, so the installed build stays quiet.
   run("Creating extension zip", "npx", ["wxt", "zip", "-b", "firefox"], {
     ZIP_ARTIFACT_LABEL: zipLabel,
+    WXT_DEBUG: "false",
     ...(parsed.noSources ? { ZIP_SOURCES: "false" } : {}),
   });
 

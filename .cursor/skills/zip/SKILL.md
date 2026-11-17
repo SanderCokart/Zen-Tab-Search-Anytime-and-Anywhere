@@ -12,6 +12,8 @@ Run the package command immediately from the project root:
 npm run zip
 ```
 
+The zip is a production build. `WXT_DEBUG` is forced off, so debug logging from `.env.local` is not included. `npm run dev` is the debug build.
+
 By default this creates a demo zip:
 
 - `.output/zen-tab-search-demo-firefox.zip`
