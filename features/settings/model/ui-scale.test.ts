@@ -14,6 +14,7 @@ import {
   cancelZoom,
   normalizeZoom,
   resolveBaseFontSize,
+  stepFontSize,
   uiScaleStyle,
 } from "@/features/settings/model/ui-scale";
 
@@ -23,6 +24,15 @@ const settings = (overrides: Partial<typeof DEFAULT_DISPLAY_SETTINGS> = {}) => (
 });
 
 describe("ui scale", () => {
+  it("steps the font size one pixel per wheel notch, within range", () => {
+    expect(stepFontSize(14, -100)).toBe(15);
+    expect(stepFontSize(14, 100)).toBe(13);
+    expect(stepFontSize(14, 0)).toBe(14);
+    expect(stepFontSize(MAX_FONT_SIZE, -1)).toBe(MAX_FONT_SIZE);
+    expect(stepFontSize(MIN_FONT_SIZE, 1)).toBe(MIN_FONT_SIZE);
+    expect(stepFontSize(14, Number.NaN)).toBe(14);
+  });
+
   it("clamps out-of-range and non-finite values", () => {
     expect(clampFontSize(999)).toBe(MAX_FONT_SIZE);
     expect(clampFontSize(1)).toBe(MIN_FONT_SIZE);

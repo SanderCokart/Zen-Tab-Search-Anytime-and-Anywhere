@@ -45,6 +45,17 @@ export function clampFontSize(value: number): number {
   return clamp(value, MIN_FONT_SIZE, MAX_FONT_SIZE);
 }
 
+/**
+ * The font size one wheel notch away: scrolling up (negative `deltaY`) grows it by
+ * 1px, scrolling down shrinks it, and the result stays inside the font size range.
+ */
+export function stepFontSize(current: number, deltaY: number): number {
+  if (!Number.isFinite(deltaY) || deltaY === 0) {
+    return clampFontSize(current);
+  }
+  return clampFontSize(clampFontSize(current) + (deltaY < 0 ? 1 : -1));
+}
+
 export function clampUiScale(value: number): number {
   return clamp(value, MIN_UI_SCALE, MAX_UI_SCALE);
 }
