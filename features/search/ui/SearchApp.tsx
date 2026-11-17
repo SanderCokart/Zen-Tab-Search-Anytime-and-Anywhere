@@ -702,8 +702,6 @@ export function SearchApp({
                 onClear={todoActions.clearTodos}
                 onOpenStatusMenu={toggleStatusMenu}
                 onContextMenu={openContextMenu}
-                // With timers below, the todos stop at half the column and scroll inside it.
-                class={timers.size > 0 ? "max-h-[50%] flex-initial" : "flex-1"}
               />
             )}
             {timers.size > 0 && (

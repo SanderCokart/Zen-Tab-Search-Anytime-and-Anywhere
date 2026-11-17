@@ -26,6 +26,26 @@ const keyClass = cn(
   "h-[var(--zen-mini-key)] px-[var(--zen-space-2)] font-mono text-[length:var(--zen-text-xs)] tracking-[0.1em] uppercase",
 );
 
+/** One large LCD readout for a timer: its name, the big countdown and its end time. */
+export function SoonestTimerLcd({ timer }: { timer: TabTimer }) {
+  return (
+    <Lcd
+      class="flex min-w-0 flex-col gap-[var(--zen-space-2)] px-[var(--zen-space-4)] py-[var(--zen-space-4)]"
+      data-testid="zen-timers-dock-soonest"
+    >
+      <span class="truncate text-[length:var(--zen-text-xs)] tracking-[0.06em] text-[var(--zs-lcd-dim)] uppercase">
+        Next · {timerName(timer)}
+      </span>
+      <span class="zs-digits text-[length:var(--zen-text-display)] leading-none font-medium whitespace-nowrap">
+        <TimerCountdown endAt={timer.endAt} prefix="" format="lcd" />
+      </span>
+      <span class="truncate text-[length:var(--zen-text-xs)] tracking-[0.06em] text-[var(--zs-lcd-dim)] uppercase">
+        {formatTimerEndTime(timer.endAt)}
+      </span>
+    </Lcd>
+  );
+}
+
 /**
  * The running timers: optionally one large LCD for the next one, then compact rows
  * of name, a short countdown chip and the Edit / Clear keys.
@@ -41,22 +61,7 @@ export function ActiveTimersList({
 
   return (
     <div class="flex min-w-0 flex-col gap-[var(--zen-space-2)]">
-      {showLcd && soonest && (
-        <Lcd
-          class="flex min-w-0 flex-col gap-[var(--zen-space-2)] px-[var(--zen-space-4)] py-[var(--zen-space-4)]"
-          data-testid="zen-timers-dock-soonest"
-        >
-          <span class="truncate text-[length:var(--zen-text-xs)] tracking-[0.06em] text-[var(--zs-lcd-dim)] uppercase">
-            Next · {timerName(soonest)}
-          </span>
-          <span class="zs-digits text-[length:var(--zen-text-display)] leading-none font-medium whitespace-nowrap">
-            <TimerCountdown endAt={soonest.endAt} prefix="" format="lcd" />
-          </span>
-          <span class="truncate text-[length:var(--zen-text-xs)] tracking-[0.06em] text-[var(--zs-lcd-dim)] uppercase">
-            {formatTimerEndTime(soonest.endAt)}
-          </span>
-        </Lcd>
-      )}
+      {showLcd && soonest && <SoonestTimerLcd timer={soonest} />}
       <ul class="zen-scroll m-0 flex max-h-[calc(var(--zen-font-size)*17)] list-none flex-col overflow-y-auto p-0">
         {timers.map((timer) => (
           <li

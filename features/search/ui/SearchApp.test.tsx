@@ -2185,14 +2185,56 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     expect(dock.querySelector("[data-testid='zen-timers-dock-soonest']")?.textContent).toContain(
       "Soonest timer",
     );
-    expect(dock.querySelectorAll("li")).toHaveLength(2);
-    // The todos stop at half the column and scroll inside it, above the dock.
-    expect(column.className).toContain("max-h-[50%]");
+    // The soonest timer is the readout, so the rows only list the other one.
+    expect(dock.querySelectorAll("li")).toHaveLength(1);
+    expect(dock.querySelector("li")?.textContent).toContain("Later timer");
+    // The todos take the rest of the column and scroll inside their own list.
+    expect(column.className).toContain("flex-1");
+    expect(column.className).not.toContain("max-h-[50%]");
+    expect(dock.className).toContain("shrink-0");
+    expect(column.querySelector(".zen-scroll")?.className).toContain("overflow-y-auto");
     expect(column.querySelector(".zen-scroll")?.children.length).toBe(30);
     expect(column.parentElement).toBe(dock.parentElement);
     expect(column.compareDocumentPosition(dock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // One right column, not a fourth.
     expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("3/2");
+    unmount();
+  });
+
+  it("lists only the soonest three timers in the dock and leaves the rest to the drawer", async () => {
+    const minutes = [5, 50, 20, 90, 120];
+    const names = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
+    const { root, unmount } = mountOverlay({
+      snapshotTabs: tabs,
+      timers: minutes.map((minute, index) => ({
+        timerId: `t${index}`,
+        tabId: index + 1,
+        endAt: Date.now() + minute * 60 * 1000,
+        title: names[index]!,
+        originalLabel: "",
+        url: "",
+      })),
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-timers-dock']")).not.toBeNull(),
+    );
+    const dock = root.querySelector("[data-testid='zen-timers-dock']")!;
+    expect(dock.querySelector("[data-testid='zen-timers-dock-soonest']")?.textContent).toContain(
+      "Alpha",
+    );
+    const rows = [...dock.querySelectorAll("li")].map((row) => row.textContent ?? "");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toContain("Charlie");
+    expect(rows[1]).toContain("Bravo");
+    expect(dock.textContent).not.toContain("Delta");
+    expect(dock.textContent).not.toContain("Echo");
+    // Each shown row keeps its Edit and Clear keys.
+    expect(dock.querySelectorAll("li button").length).toBe(rows.length * 3);
+
+    // The ⏱ button lists all five.
+    root.querySelector<HTMLButtonElement>("button[title='Show active timers']")!.click();
+    await vi.waitFor(() => expect(root.textContent).toContain("Echo"));
+    expect(root.textContent).toContain("Delta");
     unmount();
   });
 

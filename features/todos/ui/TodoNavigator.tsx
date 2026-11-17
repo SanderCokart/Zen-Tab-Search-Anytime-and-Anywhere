@@ -58,7 +58,6 @@ export function TodoNavigator({
   onClear,
   onOpenStatusMenu,
   onContextMenu,
-  class: className = "flex-1",
 }: {
   /** The rows to list: every todo, or the ones an "@" query matches. */
   tabs: TabInfo[];
@@ -79,8 +78,6 @@ export function TodoNavigator({
   /** Opens the status menu under the button at `anchor`. */
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
   onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
-  /** How the column sizes itself in its parent; fills it by default. */
-  class?: string;
 }) {
   // The omnibar is a <browser> in Zen's chrome, not a tab, so `window.confirm`
   // has nowhere to show and returns false: the confirmation lives in the column.
@@ -89,10 +86,7 @@ export function TodoNavigator({
     pendingClear === null ? [] : todoTabIdsToClear(allTabs, statuses, pendingClear);
   return (
     <aside
-      class={cn(
-        "zs-card flex min-h-0 min-w-0 flex-col overflow-hidden p-[var(--zen-space-5)]",
-        className,
-      )}
+      class="zs-card flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-[var(--zen-space-5)]"
       style={{ backgroundColor }}
       data-testid="zen-todo-column"
     >

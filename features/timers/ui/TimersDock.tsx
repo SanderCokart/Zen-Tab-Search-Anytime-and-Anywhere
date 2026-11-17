@@ -1,4 +1,5 @@
-import { ActiveTimersList } from "@/features/timers/ui/ActiveTimersList";
+import { selectDockTimers } from "@/features/timers/model/dock";
+import { ActiveTimersList, SoonestTimerLcd } from "@/features/timers/ui/ActiveTimersList";
 import type { TabTimer } from "@/shared/types";
 import { clearButtonClass } from "@/shared/ui/button-styles";
 import { cn } from "@/shared/ui/cn";
@@ -14,9 +15,10 @@ export interface TimersDockProps {
 }
 
 /**
- * The "Timers" card under the todo column: one large LCD for the timer that ends
- * first, then a compact row per running timer. It reads the same timers the
- * "Active timers" drawer does and acts through the same handlers.
+ * The "Timers" card at the bottom of the todo column: one large LCD for the timer
+ * that ends first, then a compact row for each of the next two. Timers beyond
+ * those three are only in the "Active timers" drawer. The card takes only the
+ * height it needs; the todos above it take the rest.
  */
 export function TimersDock({
   timers,
@@ -26,11 +28,11 @@ export function TimersDock({
   onEditTimer,
   backgroundColor,
 }: TimersDockProps) {
-  const sorted = [...timers.values()].sort((a, b) => a.endAt - b.endAt);
+  const { soonest, upcoming } = selectDockTimers(timers.values());
 
   return (
     <aside
-      class="zs-card flex min-h-0 min-w-0 shrink flex-col overflow-hidden p-[var(--zen-space-5)]"
+      class="zs-card flex min-w-0 shrink-0 flex-col overflow-hidden p-[var(--zen-space-5)]"
       style={{ backgroundColor }}
       data-testid="zen-timers-dock"
     >
@@ -40,7 +42,7 @@ export function TimersDock({
         </span>
         <strong class="min-w-0 truncate font-[inherit] font-medium">Timers</strong>
         <span class="zs-head-rule" aria-hidden="true" />
-        {sorted.length > 1 && (
+        {timers.size > 1 && (
           <button
             type="button"
             class={cn(
@@ -53,10 +55,10 @@ export function TimersDock({
           </button>
         )}
       </div>
-      <div class="zen-scroll min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+      <div class="flex min-w-0 flex-col gap-[var(--zen-space-2)]">
+        {soonest && <SoonestTimerLcd timer={soonest} />}
         <ActiveTimersList
-          showLcd
-          timers={sorted}
+          timers={upcoming}
           onClearTimer={onClearTimer}
           onActivateTimer={onActivateTimer}
           onEditTimer={onEditTimer}
