@@ -35,7 +35,7 @@ export function OmnibarViewPanel({
         <span class="zs-label text-zen-muted">Click a timer to go to its tab</span>
       )}
       {/* Padded so focus outlines, drawn outside their field, are not clipped by the scroll box. */}
-      <div class="zen-scroll zs-card min-h-0 flex-1 overflow-y-auto p-[var(--zen-space-5)]">
+      <div class="zen-scroll zs-card flex min-h-0 flex-1 flex-col overflow-y-auto p-[var(--zen-space-5)]">
         {view.kind === "timers" && (
           <ActiveTimersPanel
             bare

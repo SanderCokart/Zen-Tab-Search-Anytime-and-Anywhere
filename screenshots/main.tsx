@@ -67,7 +67,7 @@ function HarnessApp() {
   }
   if (scene.surface === "timer") {
     return (
-      <CardFrame widthClass="w-[380px]">
+      <CardFrame widthClass="w-[960px]">
         <TimerPopup tabId={1} onClose={() => undefined} />
       </CardFrame>
     );

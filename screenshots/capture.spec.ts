@@ -143,7 +143,7 @@ const captures: Capture[] = [
     ready: async (page) => {
       await page.locator("[data-testid='zen-search-input']").waitFor();
       await page.locator("[data-omnibar-stage='open']").waitFor();
-      await expect(page.getByText("Presets")).toBeVisible();
+      await expect(page.getByRole("textbox", { name: "Days" })).toBeVisible();
     },
     clip: "omnibar",
   },
@@ -320,7 +320,7 @@ const captures: Capture[] = [
     scene: "timer-popup",
     file: "timer-natural-language.png",
     ready: async (page) => {
-      await expect(page.getByText("Presets")).toBeVisible();
+      await expect(page.getByRole("textbox", { name: "Days" })).toBeVisible();
     },
     after: async (page) => {
       await page.getByPlaceholder("tomorrow at 9am or 1d 30m").fill("friday at 5pm");
@@ -332,7 +332,7 @@ const captures: Capture[] = [
     scene: "timer-popup",
     file: "timer-popup.png",
     ready: async (page) => {
-      await expect(page.getByText("Presets")).toBeVisible();
+      await expect(page.getByRole("textbox", { name: "Days" })).toBeVisible();
     },
     clip: "card",
   },

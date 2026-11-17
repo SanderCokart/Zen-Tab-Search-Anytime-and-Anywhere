@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useCallback, useEffect, useState } from "preact/hooks";
 import { debugError } from "@/shared/debug";
 import {
   DEFAULT_DISPLAY_SETTINGS,
@@ -9,7 +9,7 @@ import {
 import { themeColorStyle } from "@/features/settings/model/theme-colors";
 import { uiScaleStyle } from "@/features/settings/model/ui-scale";
 import { sendExtensionMessage, subscribeToSnapshotChanged } from "@/shared/messaging/client";
-import { formatTimerCountdown, stripTimerPrefix } from "@/features/timers/model/timer";
+import { formatTimerEndShort, stripTimerPrefix } from "@/features/timers/model/timer";
 import type { TabInfo, TabTimer } from "@/shared/types";
 import { formatTabDisplayTitle } from "@/shared/types";
 import { TimerForm } from "@/features/timers/ui/TimerForm";
@@ -29,6 +29,8 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
   const [timer, setTimer] = useState<TabTimer>();
   const [now, setNow] = useState(Date.now());
   const [error, setError] = useState<string>();
+  const [previewEnd, setPreviewEnd] = useState<number>();
+  const onPreview = useCallback((endAt: number) => setPreviewEnd(endAt), []);
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const theme = useResolvedTheme(displaySettings.theme);
 
@@ -120,8 +122,8 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
   return (
     <div
       class={cn(
-        "flex flex-col gap-[var(--zen-space-2)]",
-        !embedded && "zs-chassis min-h-screen p-[var(--zen-space-3)]",
+        "flex min-h-0 flex-col gap-[var(--zen-space-4)]",
+        embedded ? "min-h-full flex-1" : "zs-chassis h-screen p-[var(--zen-space-4)]",
       )}
       data-zen-ui={embedded ? undefined : true}
       data-theme={embedded ? undefined : theme}
@@ -135,27 +137,32 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
             }
       }
     >
-      <TabSummary
-        label="Timer for"
-        tab={tab}
-        title={
-          tab
-            ? formatTabDisplayTitle({
-                ...tab,
-                customLabel: stripTimerPrefix(tab.customLabel || ""),
-              })
-            : "Loading tab…"
-        }
-      />
-      {timer && (
-        <p class="text-zen-timer zs-digits m-0 text-[length:var(--zen-text-xs)]">
-          Current timer {formatTimerCountdown(timer.endAt, now)}
-        </p>
-      )}
+      <div class="flex items-start justify-between gap-[var(--zen-space-4)]">
+        <TabSummary
+          plain
+          label="Timer for"
+          tab={tab}
+          title={
+            tab
+              ? formatTabDisplayTitle({
+                  ...tab,
+                  customLabel: stripTimerPrefix(tab.customLabel || ""),
+                })
+              : "Loading tab…"
+          }
+        />
+        {previewEnd !== undefined && (
+          <p class="text-zen-timer zs-digits m-0 shrink-0 pt-[var(--zen-space-4)] text-[length:var(--zen-text-lg)]">
+            Ends {formatTimerEndShort(previewEnd)}
+          </p>
+        )}
+      </div>
       <TimerForm
         timer={timer}
+        now={now}
         disabled={!tab}
         error={error}
+        onPreview={onPreview}
         onSet={(endAt) => {
           void sendExtensionMessage({ type: "setTimer", tabId, endAt })
             .then(onClose)

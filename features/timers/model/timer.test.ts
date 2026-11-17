@@ -3,8 +3,12 @@ import {
   formatLcdCountdown,
   formatShortCountdown,
   composeTimerLabel,
+  durationParts,
+  endAtFromDuration,
   formatHumanDuration,
   formatTimerCountdown,
+  formatTimerEndSentence,
+  formatTimerEndShort,
   fromDatetimeLocalValue,
   isAllowedTimerEnd,
   MAX_TIMER_MS,
@@ -70,6 +74,50 @@ describe("parseTimerInput", () => {
   it("returns null for blank or unsupported input", () => {
     expect(parseTimerInput(" ", now)).toBeNull();
     expect(parseTimerInput("sometime maybe", now)).toBeNull();
+  });
+
+  it("reads the preset labels", () => {
+    expect(parseTimerInput("30 minutes", now)).toBe(now.getTime() + 30 * 60_000);
+    expect(parseTimerInput("1 hour", now)).toBe(now.getTime() + 60 * 60_000);
+    expect(parseTimerInput("7 hours", now)).toBe(now.getTime() + 7 * 60 * 60_000);
+    expect(parseTimerInput("Tomorrow 9:00", now)).toBe(new Date(2026, 8, 16, 9, 0, 0, 0).getTime());
+    expect(parseTimerInput("Next week", now)).not.toBeNull();
+    expect(parseTimerInput("Next month", now)).not.toBeNull();
+  });
+});
+
+describe("duration parts", () => {
+  const now = new Date(2026, 10, 17, 9, 0, 0, 0).getTime();
+
+  it("splits a remaining time into days, hours and minutes", () => {
+    expect(durationParts(now + (14 * 60 + 19) * 60_000, now)).toEqual({
+      days: 0,
+      hours: 14,
+      minutes: 19,
+    });
+    expect(durationParts(now + (26 * 60 + 3) * 60_000 + 59_000, now)).toEqual({
+      days: 1,
+      hours: 2,
+      minutes: 3,
+    });
+  });
+
+  it("builds an end time and clamps each part to its field", () => {
+    expect(endAtFromDuration({ days: 1, hours: 2, minutes: 3 }, now)).toBe(
+      now + (26 * 60 + 3) * 60_000,
+    );
+    expect(endAtFromDuration({ days: 0, hours: 99, minutes: -4 }, now)).toBe(
+      now + 23 * 60 * 60_000,
+    );
+  });
+});
+
+describe("timer end phrases", () => {
+  const end = new Date(2026, 10, 17, 9, 0, 0, 0).getTime();
+
+  it("formats the short and sentence forms in en-US", () => {
+    expect(formatTimerEndShort(end, "en-US")).toBe("Tue 9:00 AM");
+    expect(formatTimerEndSentence(end, "en-US")).toBe("Ends Tuesday, Nov 17 at 9:00 AM");
   });
 });
 

@@ -31,13 +31,16 @@ describe("TimerForm", () => {
     );
     expect(preset).toBeTruthy();
     preset!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLInputElement>("input[type='text']")?.value).toBe("30 minutes"),
+    );
 
     root
       .querySelector("form")!
       .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     await vi.waitFor(() => expect(onSet).toHaveBeenCalledTimes(1));
     const endAt = onSet.mock.calls[0]![0] as number;
-    expect(endAt).toBeGreaterThan(Date.now());
+    expect(endAt).toBeGreaterThan(Date.now() + 20 * 60_000);
     expect(endAt).toBeLessThanOrEqual(Date.now() + 31 * 60_000);
 
     render(null, root);
@@ -59,6 +62,25 @@ describe("TimerForm", () => {
     expect(clear).toBeTruthy();
     clear!.click();
     expect(onClear).toHaveBeenCalledTimes(1);
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("sets the end from the days, hours and minutes wells", async () => {
+    const { root, onSet } = mountTimerForm();
+    const days = root.querySelector<HTMLInputElement>("input[aria-label='Days']")!;
+    days.value = "1";
+    days.dispatchEvent(new Event("input", { bubbles: true }));
+    await vi.waitFor(() => expect(days.value).toBe("1"));
+
+    root
+      .querySelector("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(onSet).toHaveBeenCalledTimes(1));
+    const endAt = onSet.mock.calls[0]![0] as number;
+    expect(endAt).toBeGreaterThan(Date.now() + 23 * 60 * 60_000);
+    expect(endAt).toBeLessThan(Date.now() + 25 * 60 * 60_000);
 
     render(null, root);
     root.remove();

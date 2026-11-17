@@ -30,8 +30,8 @@ export async function openCustomTimerPopup(tabId: number): Promise<void> {
     const popupWindow = await browser.windows.create({
       url: `${browser.runtime.getURL("/timer-popup.html")}?tabId=${tabId}`,
       type: "popup",
-      width: 480,
-      height: 460,
+      width: 920,
+      height: 720,
       focused: true,
     });
     const popupWindowId = popupWindow?.id;

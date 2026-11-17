@@ -134,6 +134,71 @@ export function formatTimerEndTime(endAt: number, _now = Date.now()): string {
   }).format(new Date(endAt));
 }
 
+export interface TimerDurationParts {
+  days: number;
+  hours: number;
+  minutes: number;
+}
+
+const DURATION_PART_MAX = { days: 31, hours: 23, minutes: 59 } as const;
+
+/** Remaining time as whole days, hours and minutes. Seconds are dropped. */
+export function durationParts(endAt: number, now = Date.now()): TimerDurationParts {
+  const totalMinutes = Math.max(0, Math.floor((endAt - now) / 60_000));
+  return {
+    days: Math.floor(totalMinutes / (24 * 60)),
+    hours: Math.floor((totalMinutes % (24 * 60)) / 60),
+    minutes: totalMinutes % 60,
+  };
+}
+
+function clampDurationPart(part: keyof TimerDurationParts, value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.min(DURATION_PART_MAX[part], Math.max(0, Math.trunc(value)));
+}
+
+/** An end time `parts` away from `now`. Each part is clamped to its field. */
+export function endAtFromDuration(parts: TimerDurationParts, now = Date.now()): number {
+  const days = clampDurationPart("days", parts.days);
+  const hours = clampDurationPart("hours", parts.hours);
+  const minutes = clampDurationPart("minutes", parts.minutes);
+  return now + (days * 24 * 60 + hours * 60 + minutes) * 60_000;
+}
+
+/** "Tue 9:00 AM" — the short end time beside the tab name. */
+export function formatTimerEndShort(
+  endAt: number,
+  locales: Intl.LocalesArgument = undefined,
+): string {
+  const date = new Date(endAt);
+  const weekday = new Intl.DateTimeFormat(locales, { weekday: "short" }).format(date);
+  const time = new Intl.DateTimeFormat(locales, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+  return `${weekday} ${time}`;
+}
+
+/** "Ends Tuesday, Nov 17 at 9:00 AM". */
+export function formatTimerEndSentence(
+  endAt: number,
+  locales: Intl.LocalesArgument = undefined,
+): string {
+  const date = new Date(endAt);
+  const day = new Intl.DateTimeFormat(locales, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+  const time = new Intl.DateTimeFormat(locales, {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+  return `Ends ${day} at ${time}`;
+}
+
 export function formatTimerCountdown(endAt: number, now = Date.now()): string {
   const remaining = Math.max(0, endAt - now);
   return `in ${formatHumanDuration(remaining)} · ${formatTimerEndTime(endAt, now)}`;
