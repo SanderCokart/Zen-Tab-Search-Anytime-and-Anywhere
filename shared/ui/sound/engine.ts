@@ -22,6 +22,7 @@ export const SOUND_VOICES = [
   "type-big",
   "type-up",
   "open",
+  "mark",
   "success",
   "warning",
   "error",
@@ -81,7 +82,7 @@ export const VOICE_TABLE: Record<SoundVoice, VoiceSpec> = {
       { filter: "bandpass", freq: 2000, q: 0.8, level: 0.18, decay: ms(18) },
       { filter: "bandpass", freq: 1150, q: 14, level: 0.035, decay: ms(50), at: ms(4) },
     ],
-    tones: [{ wave: "sine", freq: 160, to: 110, level: 0.2, decay: ms(45) }],
+    tones: [{ wave: "sine", freq: 180, to: 125, level: 0.2, decay: ms(45) }],
   },
   "latch-up": {
     bursts: [
@@ -120,6 +121,14 @@ export const VOICE_TABLE: Record<SoundVoice, VoiceSpec> = {
   open: {
     bursts: [{ filter: "bandpass", freq: 2600, q: 1, level: 0.2, decay: ms(14) }],
     tones: [{ wave: "sine", freq: 520, to: 820, level: 0.12, decay: ms(70), attack: ms(3) }],
+  },
+  // Marking a todo. Two notes long enough to survive a dropped audio buffer.
+  mark: {
+    bursts: [],
+    tones: [
+      { wave: "sine", freq: 523, level: 0.14, decay: ms(120), attack: ms(4) },
+      { wave: "sine", freq: 784, level: 0.14, decay: ms(180), attack: ms(4), at: ms(90) },
+    ],
   },
   success: {
     bursts: [],

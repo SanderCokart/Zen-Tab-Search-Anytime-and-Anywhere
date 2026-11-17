@@ -283,7 +283,7 @@ export function SearchApp({
   const onToggleTodo = useCallback(
     (tabId: number) => {
       const wasTodo = todos.has(tabId);
-      sound.play(wasTodo ? "success" : "latch-down");
+      sound.play(wasTodo ? "success" : "mark");
       todoActions.setTodo(tabId, wasTodo ? "none" : "todo");
     },
     [sound, todoActions, todos],
@@ -737,7 +737,7 @@ export function SearchApp({
             const tabId = tabBrowserId(contextMenu.tab);
             setContextMenu(null);
             if (tabId !== undefined) {
-              sound.play(status === "none" ? "success" : "latch-down");
+              sound.play(status === "none" ? "success" : "mark");
               todoActions.setTodo(tabId, status);
             }
           }}

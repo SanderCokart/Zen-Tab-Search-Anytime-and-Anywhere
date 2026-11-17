@@ -2326,6 +2326,9 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     pointer(root.querySelector("[data-testid='zen-todo-button']")!, "pointerdown");
     pointer(root.querySelector("[data-testid='zen-status-button']")!, "pointerdown");
     expect(play).not.toHaveBeenCalled();
+
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-button']")!.click();
+    expect(play).toHaveBeenCalledWith("mark");
     unmount();
   });
 
