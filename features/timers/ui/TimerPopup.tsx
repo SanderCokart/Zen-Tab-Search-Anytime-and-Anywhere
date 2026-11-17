@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "preact/hooks";
-import { DEBUG, debugError } from "@/shared/debug";
+import { debugError } from "@/shared/debug";
 import {
   DEFAULT_DISPLAY_SETTINGS,
   readDisplaySettings,
@@ -17,29 +17,6 @@ import { TabSummary } from "@/shared/ui/TabSummary";
 import { useResolvedTheme } from "@/shared/ui/theme";
 import { cn } from "@/shared/ui/cn";
 
-const TIMER_LAYOUTS = [
-  { id: "full", label: "Full width", maxWidth: undefined, capWells: false },
-  { id: "1440", label: "1440", maxWidth: 1440, capWells: false },
-  { id: "1600", label: "1600", maxWidth: 1600, capWells: false },
-  { id: "1440-h", label: "1440 + 320 tall", maxWidth: 1440, capWells: true },
-] as const;
-
-type TimerLayoutId = (typeof TIMER_LAYOUTS)[number]["id"];
-
-const TIMER_LAYOUT_KEY = "zen-timer-layout-debug";
-
-function readTimerLayout(): TimerLayoutId {
-  try {
-    const stored = sessionStorage.getItem(TIMER_LAYOUT_KEY);
-    if (TIMER_LAYOUTS.some((layout) => layout.id === stored)) {
-      return stored as TimerLayoutId;
-    }
-  } catch {
-    // sessionStorage can be blocked; the button still cycles for this view.
-  }
-  return "full";
-}
-
 export interface TimerPopupProps {
   tabId: number;
   onClose: () => void;
@@ -53,20 +30,7 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
   const [now, setNow] = useState(Date.now());
   const [error, setError] = useState<string>();
   const [previewEnd, setPreviewEnd] = useState<number>();
-  const [layoutId, setLayoutId] = useState<TimerLayoutId>(readTimerLayout);
-  const layout = TIMER_LAYOUTS.find((item) => item.id === layoutId) ?? TIMER_LAYOUTS[0];
   const onPreview = useCallback((endAt: number) => setPreviewEnd(endAt), []);
-
-  const cycleLayout = () => {
-    const index = TIMER_LAYOUTS.findIndex((item) => item.id === layoutId);
-    const next = TIMER_LAYOUTS[(index + 1) % TIMER_LAYOUTS.length] ?? TIMER_LAYOUTS[0];
-    setLayoutId(next.id);
-    try {
-      sessionStorage.setItem(TIMER_LAYOUT_KEY, next.id);
-    } catch {
-      // Keep the choice for this view when storage is blocked.
-    }
-  };
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
   const theme = useResolvedTheme(displaySettings.theme);
 
@@ -173,22 +137,7 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
             }
       }
     >
-      {DEBUG && (
-        <div class="flex justify-end">
-          <button
-            type="button"
-            class="zs-key px-[var(--zen-space-3)] py-[var(--zen-space-1)] font-[inherit] text-[length:var(--zen-text-sm)]"
-            data-testid="zen-timer-layout-debug"
-            onClick={cycleLayout}
-          >
-            Layout: {layout.label}
-          </button>
-        </div>
-      )}
-      <div
-        class="mx-auto flex min-h-0 w-full flex-1 flex-col gap-[var(--zen-space-4)] self-center"
-        style={layout.maxWidth === undefined ? undefined : { maxWidth: layout.maxWidth }}
-      >
+      <div class="mx-auto flex w-full max-w-[1440px] flex-col gap-[var(--zen-space-4)] self-center">
         <div class="flex items-start justify-between gap-[var(--zen-space-4)]">
           <TabSummary
             plain
@@ -214,7 +163,6 @@ export function TimerPopup({ tabId, onClose, embedded = false }: TimerPopupProps
           now={now}
           disabled={!tab}
           error={error}
-          capWells={layout.capWells}
           onPreview={onPreview}
           onSet={(endAt) => {
             void sendExtensionMessage({ type: "setTimer", tabId, endAt })
