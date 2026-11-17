@@ -1,5 +1,5 @@
 import { useState } from "preact/hooks";
-import { ESSENTIAL_TAB_NAMES_KEY } from "@/features/search/ui/hooks/useEssentialTabNames";
+import { ESSENTIAL_TAB_NAMES_KEY } from "@/features/search/model/essential-tab-names";
 import { debugError } from "@/shared/debug";
 import { sendExtensionMessage } from "@/shared/messaging/client";
 import { isEssentialTab, tabBrowserId, type TabInfo } from "@/shared/types";
