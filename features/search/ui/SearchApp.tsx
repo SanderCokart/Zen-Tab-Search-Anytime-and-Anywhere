@@ -502,6 +502,7 @@ export function SearchApp({
           onToggleTodo={onToggleTodo}
           onOpenTimer={openTimer}
           onOpenStatusMenu={toggleStatusMenu}
+          onClose={onClose}
         />
       )}
 

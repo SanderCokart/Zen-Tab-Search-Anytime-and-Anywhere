@@ -17,8 +17,9 @@ import { cn } from "@/shared/ui/cn";
 
 /**
  * The tab the search was opened over, in a full-width strip under the search
- * bar. It is not in the arrow-key order and not an option; its action keys are
- * plain buttons for the mouse and Tab.
+ * bar. It is not in the arrow-key order and not an option. Clicking the strip
+ * closes the search, since that tab is already showing. Its action keys are
+ * plain buttons for the mouse and Tab, and they keep the search open.
  */
 export function CurrentTabStrip({
   tab,
@@ -33,6 +34,7 @@ export function CurrentTabStrip({
   onToggleTodo,
   onOpenTimer,
   onOpenStatusMenu,
+  onClose,
 }: {
   tab: TabInfo;
   /** The tab's issue or request, shown in place of its plain title. */
@@ -49,6 +51,8 @@ export function CurrentTabStrip({
   /** Opens the timer for this tab, in the overlay view or the popup window. */
   onOpenTimer: (tabId: number) => void;
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
+  /** Closes the search. The strip's tab is already the one on screen. */
+  onClose: () => void;
 }) {
   const parts = forgeEntry
     ? forgeRowParts(forgeEntry.ref, forgeEntryDisplayTitle(forgeEntry))
@@ -64,10 +68,11 @@ export function CurrentTabStrip({
         // Sized to its content and left-aligned, never wider than the row.
         "zs-card flex max-w-full shrink-0 items-center self-start",
         compact ? "w-full gap-[var(--zen-space-3)]" : "w-fit gap-[var(--zen-space-4)]",
-        "mb-[var(--zen-space-5)] min-h-[var(--zen-row-height)] rounded-[var(--zen-radius-lg)]",
+        "mb-[var(--zen-space-5)] min-h-[var(--zen-row-height)] cursor-pointer rounded-[var(--zen-radius-lg)]",
         "py-[var(--zen-space-2)] pr-[var(--zen-space-3)] pl-[var(--zen-space-4)]",
       )}
       data-testid="zen-current-tab"
+      onClick={onClose}
       onContextMenu={(event) => onContextMenu(tab, event)}
     >
       {!compact && (

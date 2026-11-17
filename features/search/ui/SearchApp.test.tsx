@@ -2408,6 +2408,24 @@ describe("SearchApp current-tab strip and toolbar toggles", () => {
     finish(root);
   });
 
+  it("closes the search when the current-tab strip is clicked", async () => {
+    const onClose = vi.fn();
+    const { root, sendMessage } = mountSearchApp(onClose, tabs);
+    await vi.waitFor(() => expect(strip(root)?.textContent).toContain("First tab"));
+
+    strip(root)!.querySelector("span.zs-row-title")!.dispatchEvent(
+      new MouseEvent("click", { bubbles: true }),
+    );
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "switchTab" }));
+
+    onClose.mockClear();
+    strip(root)!.querySelector<HTMLButtonElement>("[data-testid='zen-todo-button']")!.click();
+    expect(onClose).not.toHaveBeenCalled();
+
+    finish(root);
+  });
+
   it("keeps the strip out of the arrow-key order", async () => {
     const { root } = mountSearchApp(vi.fn(), tabs);
     await vi.waitFor(() => expect(strip(root)?.textContent).toContain("First tab"));
