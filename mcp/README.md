@@ -3,8 +3,8 @@
 Lets Claude, Cursor and other MCP clients read and organise Zen Browser: list spaces, folders
 and tabs, create and rename spaces, create nested folders, apply a PATCH-style layout tree,
 move tabs and folders, mark tabs essential, close tabs, delete empty folders and spaces, set
-tab timers, mark tabs as todo and tick them off, and set tab colors. Most write tools take
-id arrays.
+tab timers, mark tabs as todo and tick them off, set tab colors, rename essential tabs, and
+edit the stored URL of a pinned tab. Most write tools take id arrays.
 
 ```
 MCP client ──stdio──▶ zen-tab-search-mcp ◀──WebSocket (127.0.0.1:47652)── Zen Tab Search extension ──▶ Zen
@@ -264,7 +264,10 @@ port and must still have the token to drive Zen. Only use the tunnel on a server
 | `zen_create_space`            | Create a space without switching to it, or reuse the one with that name                   |
 | `zen_rename_space`            | Rename a space                                                                            |
 | `zen_delete_space`            | Delete spaces and the tabs in them (essentials kept); cannot delete the last space        |
-| `zen_rename_tab`              | Set a tab's custom name; an empty name clears it                                          |
+| `zen_rename_tab`              | Set a tab's custom name (including essential tabs); an empty name clears it               |
+| `zen_get_pinned_url`          | Stored restore URL of a pinned or essential tab, plus the page currently open there       |
+| `zen_set_pinned_url`          | Set that stored URL (`tabId` + http(s) `url`); does not navigate the tab                  |
+| `zen_replace_pinned_url`      | Store the page currently open as the pinned URL                                           |
 | `zen_create_folder`           | Create a folder (nested with `parentId` or `parentPath`); reuse returns `reused: true`    |
 | `zen_rename_folder`           | Rename a folder                                                                           |
 | `zen_move_folder`             | Move a folder to another space and/or parent; omit `parentId` for the space root          |
@@ -331,7 +334,12 @@ list. There is no paging: one call always includes every matching tab.
 
 Essential tabs are shared by every space, so they never appear under a space. They are listed
 under `essentials`, marked `"global": true`, and in `full` mode have `"spaceId": null`. A tab
-with a traffic-light color includes `"color": "red"` (or `orange` / `green`).
+with a traffic-light color includes `"color": "red"` (or `orange` / `green`). A pinned tab that
+is not an essential includes `"pinned": true`. `zen_rename_tab` also names essential tabs.
+
+**Edit a pinned tab's restore URL.** `zen_get_pinned_url` with `{ "tabId": 118 }` returns `url`
+(what the tab restores to) and `currentUrl` (the page open now). `zen_set_pinned_url` changes
+the stored URL without navigating. `zen_replace_pinned_url` stores the current page.
 
 **Color tabs red, orange or green.** `zen_set_color` with `{ "tabIds": [118, 119], "color": "green" }`.
 `zen_clear_color` removes it. `zen_list_colors` lists only the tabs that have a color.
