@@ -39,9 +39,7 @@ export function forgeTreeKeys(providers: readonly ForgeIssueProviderGroup[]): st
         keys.push(forgeIssuesKey(provider.platform, project.projectLabel));
       }
       for (const branch of project.branches) {
-        keys.push(
-          forgeBranchKey(provider.platform, project.projectLabel, branch.targetBranch),
-        );
+        keys.push(forgeBranchKey(provider.platform, project.projectLabel, branch.targetBranch));
       }
     }
   }

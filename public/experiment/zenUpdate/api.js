@@ -13,8 +13,7 @@
 // Every experiment script of an add-on shares one global; keep everything local.
 (() => {
   // Must match RELEASE_DOWNLOAD_PREFIX in features/updates/model/release.ts.
-  const RELEASE_DOWNLOAD_PREFIX =
-    "https://github.com/SanderCokart/Zen-Deck/releases/download/";
+  const RELEASE_DOWNLOAD_PREFIX = "https://github.com/SanderCokart/Zen-Deck/releases/download/";
 
   function getExtensionError() {
     try {

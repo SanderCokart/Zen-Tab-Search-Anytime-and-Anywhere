@@ -128,9 +128,7 @@ export function installBrowserMock(
       case "getFolders":
         return DEMO_FOLDERS;
       case "getPinnedUrl":
-        return (
-          snapshot.tabs.find((tab) => tab.id === message.tabId)?.url ?? "https://example.com/"
-        );
+        return snapshot.tabs.find((tab) => tab.id === message.tabId)?.url ?? "https://example.com/";
       default: {
         const exhaustive: never = message;
         throw new Error(`Unhandled harness message: ${JSON.stringify(exhaustive)}`);

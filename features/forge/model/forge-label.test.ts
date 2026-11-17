@@ -10,9 +10,9 @@ import {
 
 describe("detectForgePlatform", () => {
   it("detects GitLab from the hostname", () => {
-    expect(
-      detectForgePlatform("https://gitlab.com/SanderCokart/zen-deck/-/issues/999991"),
-    ).toBe("gitlab");
+    expect(detectForgePlatform("https://gitlab.com/SanderCokart/zen-deck/-/issues/999991")).toBe(
+      "gitlab",
+    );
   });
 
   it("detects GitHub from the hostname", () => {
@@ -24,16 +24,14 @@ describe("detectForgePlatform", () => {
 
 describe("parseForgeUrl", () => {
   it("parses GitLab issues", () => {
-    expect(parseForgeUrl("https://gitlab.com/SanderCokart/zen-deck/-/issues/999991")).toEqual(
-      {
-        platform: "gitlab",
-        kind: "issue",
-        id: "999991",
-        host: "gitlab.com",
-        projectPath: "SanderCokart/zen-deck",
-        url: "https://gitlab.com/SanderCokart/zen-deck/-/issues/999991",
-      },
-    );
+    expect(parseForgeUrl("https://gitlab.com/SanderCokart/zen-deck/-/issues/999991")).toEqual({
+      platform: "gitlab",
+      kind: "issue",
+      id: "999991",
+      host: "gitlab.com",
+      projectPath: "SanderCokart/zen-deck",
+      url: "https://gitlab.com/SanderCokart/zen-deck/-/issues/999991",
+    });
   });
 
   it("parses GitLab merge requests", () => {

@@ -2413,9 +2413,9 @@ describe("SearchApp current-tab strip and toolbar toggles", () => {
     const { root, sendMessage } = mountSearchApp(onClose, tabs);
     await vi.waitFor(() => expect(strip(root)?.textContent).toContain("First tab"));
 
-    strip(root)!.querySelector("span.zs-row-title")!.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
-    );
+    strip(root)!
+      .querySelector("span.zs-row-title")!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "switchTab" }));
 

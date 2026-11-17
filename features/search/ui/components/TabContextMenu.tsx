@@ -273,7 +273,12 @@ export function TabContextMenu({
       {tabId !== undefined && (
         <>
           <div class="bg-zen-line-soft my-1 h-px" role="separator" />
-          <button type="button" class={itemClass} role="menuitem" onClick={() => onOpenTimer(tabId)}>
+          <button
+            type="button"
+            class={itemClass}
+            role="menuitem"
+            onClick={() => onOpenTimer(tabId)}
+          >
             <TimerIcon class="size-[var(--zen-icon-md)]" />
             Timer
           </button>
