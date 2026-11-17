@@ -242,7 +242,7 @@ export function DisplaySettingsApp() {
                   disabled={!loaded}
                   onChange={(next) => updateSettings({ theme: next })}
                 />
-                <div class="flex flex-wrap gap-[var(--zen-space-3)]">
+                <div class="flex flex-wrap gap-[var(--zen-space-3)]" data-testid="zen-theme-colors">
                   {COLOR_SETTINGS.map(([key, label, short]) => {
                     const isDefault = settings[key] === AUTO_COLOR;
                     return (

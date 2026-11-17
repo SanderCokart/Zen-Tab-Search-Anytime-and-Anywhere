@@ -67,6 +67,16 @@ const SCENES: Record<string, HarnessScene> = {
       panelColor: "#221c19",
     },
   },
+  "custom-colors-settings": {
+    id: "custom-colors-settings",
+    surface: "settings",
+    displaySettings: {
+      theme: "dark",
+      accentColor: "#e0943a",
+      chassisColor: "#161311",
+      panelColor: "#221c19",
+    },
+  },
   "folder-groups": { id: "folder-groups", surface: "search", layout: "overlay" },
   // Forge tabs stay in the list here, so the current PR sits in its collapsed folder.
   "collapsed-folders": {

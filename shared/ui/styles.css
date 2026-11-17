@@ -681,6 +681,18 @@
     transition: none;
   }
 
+  /* The keys float over the right edge, so the timer and host give way to them
+     while they are showing. Hidden, not removed, so the row does not relayout. */
+  .zs-row:hover .zs-meta,
+  .zs-row:focus-within .zs-meta,
+  .zs-row[data-selected="true"] .zs-meta,
+  .zs-row[data-issue-selected="true"] .zs-meta,
+  .zs-row[data-keep] .zs-meta,
+  .zs-row:has(.zs-acts[data-always]) .zs-meta {
+    visibility: hidden;
+    transition: visibility 0s linear 60ms;
+  }
+
   /* A recessed tray, the floor a collapsible panel's content sits on. */
   .zs-tray {
     background-color: var(--zs-pressed);

@@ -252,6 +252,25 @@ const captures: Capture[] = [
   },
   {
     scene: "display-settings",
+    file: "theme-colors.png",
+    ready: async (page) => {
+      await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+      await expect(page.getByTestId("zen-theme-colors")).toBeVisible();
+    },
+    around: "[data-testid='zen-theme-colors']",
+  },
+  {
+    scene: "custom-colors-settings",
+    file: "custom-colors-settings.png",
+    ready: async (page) => {
+      await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+      await expect(page.getByTestId("zen-theme-colors")).toBeVisible();
+      await expect(page.getByTestId("zen-theme-colors")).toContainText("#E0943A");
+    },
+    around: "[data-testid='zen-theme-colors']",
+  },
+  {
+    scene: "display-settings",
     file: "sound-settings.png",
     ready: async (page) => {
       await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();

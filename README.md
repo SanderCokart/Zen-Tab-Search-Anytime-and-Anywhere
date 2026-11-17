@@ -60,7 +60,7 @@ npm install
 npm run zip
 ```
 
-The zip will be produced by WXT, with a sources archive beside it. `npm run zip:no-sources` writes only the Firefox zip. Install it using the same `about:addons` → gear → **Install Add-on From File…** flow above.
+The zip is produced by WXT, with a sources archive beside it. `npm run zip:no-sources` writes only the Firefox zip, with debug off. Install it using the same `about:addons` → gear → **Install Add-on From File…** flow above.
 
 ## Features
 
@@ -85,7 +85,8 @@ Every option in this guide lives in **Display options**. Open it from the ⚙ ge
 
 - **Search** titles, URLs, and custom labels across every Zen space.
 - **Spaces and essential tabs** sit in grids above the list. Zen folders become their own sections.
-- **NOW strip** under the search field shows the tab you are on, with its status, timer, and todo controls.
+- **NOW strip** under the search field shows the tab you are on, with its status, timer, and todo controls. Click the strip to close the search: that tab is already on screen. The keys on the strip keep the search open.
+- **Tab keys** for close, rename, todo, timer, and host sit on the right of each row. They appear when you point at the row, and the timer and host readout steps aside for them.
 - **Issues** from GitHub and GitLab open in a navigator beside the tabs, grouped by project, with each request's target branch shown.
 - **Todos** sit in a third column as tinted blocks, each with a **Mark as done** button and a **Clear…** dropdown for the whole column.
 - **Keyboard:** `Up` and `Down` move one result, `Left` and `Right` jump several, `Enter` activates, `Escape` closes, and `Tab` moves between the tab list and the issue navigator.
@@ -182,7 +183,7 @@ A pinned tab and an essential tab each keep a stored address in Zen. Their conte
 
 ### Timers
 
-`Alt+T` sets a timer on the current tab. The clock on a result and **Timer** in the tab menu open the same controls. Running timers show a countdown on the row. The timers dock sits at the bottom of the omnibar. It shows the soonest running timer as a large LCD readout, with up to two upcoming timers listed beneath it, each with **Edit** and **Clear** buttons. The to-dos column above it takes the remaining height and scrolls when it runs long.
+`Alt+T` sets a timer on the current tab. The clock on a result and **Timer** in the tab menu open the same controls. Running timers show a countdown on the row. The timers dock sits at the bottom of the omnibar. It shows the soonest running timer as a large LCD readout, with quiet **Edit** and **Clear** on that readout, and up to two upcoming timers listed beneath it, each with **Edit** and **Clear** buttons. Countdowns that run longer than an hour read as days, hours and minutes. The to-dos column above it takes the remaining height and scrolls when it runs long.
 
 The ⏱ button beside the search field, with a badge counting the running timers, opens the **Active timers** list with all of them. From there you can jump to a tab, edit a timer, or clear them all. While the list is open the button becomes ✕.
 
@@ -236,7 +237,16 @@ The interface uses IBM Plex Mono and Inter, bundled with the extension, so the o
   </picture>
 </p>
 
-Hide the spaces grid, the essential-tabs grid, or both; hidden ones still turn up as soon as you search. **Truncate** shortens long tab and issue titles by default. Switch it off to wrap the full title onto several lines. Font size, density, and the gap sliders reshape the omnibar. Accent, frame, panels, and text each have their own reset.
+Hide the spaces grid, the essential-tabs grid, or both; hidden ones still turn up as soon as you search. **Truncate** shortens long tab and issue titles by default. Switch it off to wrap the full title onto several lines. Font size, density, and the gap sliders reshape the omnibar. On the omnibar, **Ctrl + mouse wheel** changes the font size one pixel per notch, the same as the Font size slider. Accent, frame, panels, and text each have their own reset.
+
+The four colour keys start on AUTO. Light and dark each keep their own palette until you pick a colour:
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/theme-colors.png">
+    <img src="docs/screenshots/theme-colors.png" alt="Accent, frame, panels and text colour keys on AUTO" width="560" />
+  </picture>
+</p>
 
 | Hidden grids | Wrapping titles |
 | :----------: | :-------------: |
@@ -244,9 +254,16 @@ Hide the spaces grid, the essential-tabs grid, or both; hidden ones still turn u
 
 **Custom colors** tint the hardware tokens: the red accent, the chassis frame, the cards, and the ink. Pick a colour for each and the omnibar uses it in both light and dark. Each colour has a reset that returns it to AUTO. The example is a warm dark palette, bronze on brown, with the text left on AUTO.
 
-| Larger type and density | Custom colors |
-| :---------------------: | :-----------: |
-| ![Omnibar with a larger font size and density](docs/screenshots/spacing-size-and-zoom.png) | ![Omnibar with themed panel colors](docs/screenshots/display-colors.png) |
+| Color keys | On the omnibar |
+| :--------: | :------------: |
+| ![Accent, frame and panels set to a kiln palette](docs/screenshots/custom-colors-settings.png) | ![Omnibar with themed panel colors](docs/screenshots/display-colors.png) |
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/spacing-size-and-zoom.png">
+    <img src="docs/screenshots/spacing-size-and-zoom.png" alt="Omnibar with a larger font size and density" width="720" />
+  </picture>
+</p>
 
 ### Sound
 
@@ -372,7 +389,7 @@ Pre-commit hooks run through Husky and lint-staged. They format staged JSON, Mar
 ```
 entrypoints/          WXT entry points (background, content script, options)
 app/                  Background wiring that spans features
-features/             search, timers, forge, settings, zen, bridge
+features/             search, timers, todos, status, forge, settings, zen, bridge, hosts, intercept, updates
 shared/               Wire protocol, types, logging, styles
 mcp/                  MCP server that lets AI agents drive Zen through the extension
 public/experiment/    Privileged Experiment API (zenTabs) — required for cross-space Zen support
