@@ -16,9 +16,13 @@ function printUsage() {
       "  npm run zip -- <name>",
       "  npm run zip -- --name <name>",
       "  npm run zip -- --tag <tag>",
+      "  npm run zip:no-sources",
+      "  npm run zip -- --no-sources <name>",
       "",
-      "By default the Firefox zip is named zen-tab-search-demo-firefox.zip.",
+      "By default the Firefox zip is named zen-tab-search-demo-firefox.zip,",
+      "and a sources zip is written beside it.",
       "Provide a name to replace the demo label, or --tag to use a release tag.",
+      "--no-sources skips the sources zip. npm run zip:no-sources does the same.",
     ].join("\n"),
   );
 }
@@ -45,6 +49,7 @@ function parseArgs(args) {
   const parsed = {
     name: undefined,
     tag: undefined,
+    noSources: false,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -66,6 +71,8 @@ function parseArgs(args) {
       index += 1;
     } else if (arg.startsWith("--tag=")) {
       parsed.tag = arg.slice("--tag=".length);
+    } else if (arg === "--no-sources") {
+      parsed.noSources = true;
     } else if (arg.startsWith("-")) {
       fail(`Unknown option: ${arg}`);
     } else if (!parsed.name) {
@@ -117,10 +124,14 @@ function main() {
 
   run("Creating extension zip", "npx", ["wxt", "zip", "-b", "firefox"], {
     ZIP_ARTIFACT_LABEL: zipLabel,
+    ...(parsed.noSources ? { ZIP_SOURCES: "false" } : {}),
   });
 
   console.log("");
   console.log(`Created .output/zen-tab-search-${zipLabel}-firefox.zip`);
+  if (parsed.noSources) {
+    console.log("Skipped the sources zip.");
+  }
 }
 
 main();

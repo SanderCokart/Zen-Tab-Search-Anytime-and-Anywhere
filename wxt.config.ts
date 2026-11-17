@@ -16,6 +16,7 @@ const FONT_WEIGHTS = [400, 500, 600];
 const FONT_FILES = ["ibm-plex-mono", "inter"];
 
 const zipLabel = process.env.ZIP_ARTIFACT_LABEL?.trim() || "demo";
+const zipSources = process.env.ZIP_SOURCES === "false" ? false : undefined;
 
 export default defineConfig({
   srcDir: ".",
@@ -24,6 +25,7 @@ export default defineConfig({
   zip: {
     artifactTemplate: `{{name}}-${zipLabel}-{{browser}}.zip`,
     sourcesTemplate: `{{name}}-${zipLabel}-sources.zip`,
+    ...(zipSources === false ? { zipSources } : {}),
   },
   manifest: {
     name: "Zen Tab Search",

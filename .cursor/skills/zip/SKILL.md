@@ -17,6 +17,12 @@ By default this creates a demo zip:
 - `.output/zen-tab-search-demo-firefox.zip`
 - `.output/zen-tab-search-demo-sources.zip`
 
+To build the Firefox zip without the sources archive:
+
+```bash
+npm run zip:no-sources
+```
+
 Optional naming:
 
 ```bash

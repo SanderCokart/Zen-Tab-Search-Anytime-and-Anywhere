@@ -60,7 +60,7 @@ npm install
 npm run zip
 ```
 
-The zip will be produced by WXT. Install it using the same `about:addons` → gear → **Install Add-on From File…** flow above.
+The zip will be produced by WXT, with a sources archive beside it. `npm run zip:no-sources` writes only the Firefox zip. Install it using the same `about:addons` → gear → **Install Add-on From File…** flow above.
 
 ## Features
 
