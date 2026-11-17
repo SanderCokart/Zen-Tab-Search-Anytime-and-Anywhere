@@ -565,8 +565,13 @@
 
   /*
    * The one row. Tabs, essentials, issues and the NOW strip share it: icon, title,
-   * meta pushed right, then the todo, timer and status keys. The keys stay
-   * visible, so a hover only changes the row wash.
+   * meta pushed right, and the three keys only while the row is selected, hovered
+   * or holds focus. The keys stay in the DOM, so Tab still reaches them and
+   * `:focus-within` brings them back.
+   *
+   * On a result row the keys are taken out of flow. A moving pointer only
+   * changes the row wash. The keys wait a moment, so a fast pass does not
+   * paint them on every row, and they still show at once when the pointer rests.
    */
   .zs-row {
     position: relative;
@@ -618,18 +623,62 @@
     gap: calc(var(--zen-font-size) * 0.43);
   }
 
-  /* The current-tab strip keeps a gap before its keys. Result rows already gap the line. */
+  /* The current-tab strip keeps its keys in flow. */
   .zs-acts[data-always] {
     margin-left: var(--zen-space-2);
-  }
-
-  .zs-row .zs-acts[data-always] {
-    margin-left: 0;
   }
 
   /* Issue rows pad the line; the keys sit inside that inset. */
   .zs-row > .zs-row-line {
     padding-right: var(--zen-row-pad);
+  }
+
+  .zs-row .zs-acts {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    right: var(--zen-row-pad);
+    height: var(--zen-row-height);
+    margin-left: 0;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: none;
+  }
+
+  .zs-row:hover .zs-acts {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition:
+      opacity 0s linear 60ms,
+      visibility 0s linear 60ms;
+  }
+
+  .zs-row:focus-within .zs-acts,
+  .zs-row[data-selected="true"] .zs-acts,
+  .zs-row[data-issue-selected="true"] .zs-acts,
+  .zs-row[data-keep] .zs-acts,
+  .zs-row .zs-acts[data-always] {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: none;
+  }
+
+  /* A small lamp after the title of a todo, while its keys are put away. */
+  .zs-row:hover .zs-todo-dot {
+    visibility: hidden;
+    transition: visibility 0s linear 60ms;
+  }
+
+  .zs-row:focus-within .zs-todo-dot,
+  .zs-row[data-selected="true"] .zs-todo-dot,
+  .zs-row[data-issue-selected="true"] .zs-todo-dot,
+  .zs-row[data-keep] .zs-todo-dot,
+  .zs-row:has(.zs-acts[data-always]) .zs-todo-dot {
+    visibility: hidden;
+    transition: none;
   }
 
   /* A recessed tray, the floor a collapsible panel's content sits on. */

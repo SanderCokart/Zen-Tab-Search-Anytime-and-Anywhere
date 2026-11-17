@@ -8,6 +8,7 @@ import { TabActions } from "@/features/search/ui/components/TabActions";
 import type { TabInfo, TabTimer, TrafficLight } from "@/shared/types";
 import { formatTabDisplayTitle, isEssentialTab, tabBrowserId } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
+import { Led } from "@/shared/ui/primitives/Led";
 
 export const TabSearchRow = memo(function TabSearchRow({
   tab,
@@ -56,6 +57,7 @@ export const TabSearchRow = memo(function TabSearchRow({
               customLabel: stripTimerPrefix(tab.customLabel || ""),
             })}
         </span>
+        {isTodo && <Led on class="zs-todo-dot" />}
         <span class="zs-meta">
           {timer && !isEssentialTab(tab) && (
             <span class="zs-meta-timer zs-digits">
@@ -66,19 +68,19 @@ export const TabSearchRow = memo(function TabSearchRow({
             {tab.workspaceName || hostname(tab.url)}
           </span>
         </span>
-        <TabActions
-          tab={tab}
-          timer={timer}
-          timerOpen={timerOpen}
-          isTodo={isTodo}
-          light={light}
-          statusMenuOpen={statusMenuOpen}
-          onToggleTodo={onToggleTodo}
-          onOpenStatusMenu={onOpenStatusMenu}
-          onToggleTimer={onToggleTimer}
-          onOpenTimerPopup={onOpenTimerPopup}
-        />
       </div>
+      <TabActions
+        tab={tab}
+        timer={timer}
+        timerOpen={timerOpen}
+        isTodo={isTodo}
+        light={light}
+        statusMenuOpen={statusMenuOpen}
+        onToggleTodo={onToggleTodo}
+        onOpenStatusMenu={onOpenStatusMenu}
+        onToggleTimer={onToggleTimer}
+        onOpenTimerPopup={onOpenTimerPopup}
+      />
       {timerOpen && tabId !== undefined && (
         <div class="pb-[var(--zen-space-2)]">
           <TimerForm
