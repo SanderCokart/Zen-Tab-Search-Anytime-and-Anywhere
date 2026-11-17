@@ -30,6 +30,8 @@ export interface TimerFormProps {
   now?: number;
   /** Fires with the end time the wells and footer are showing. */
   onPreview?: (endAt: number) => void;
+  /** Hold each well at 320px instead of letting it fill the panel. */
+  capWells?: boolean;
   onSet: (endAt: number) => void;
   onClear?: () => void;
 }
@@ -40,6 +42,7 @@ export function TimerForm({
   error,
   now = Date.now(),
   onPreview,
+  capWells = false,
   onSet,
   onClear,
 }: TimerFormProps) {
@@ -107,11 +110,23 @@ export function TimerForm({
         }
       }}
     >
-      <div class="grid min-h-0 flex-1 grid-cols-3 gap-[var(--zen-space-3)]">
+      <div
+        class={cn(
+          "grid min-h-0 grid-cols-3 gap-[var(--zen-space-3)]",
+          capWells ? "flex-none" : "flex-1",
+        )}
+      >
         {DURATION_FIELDS.map(({ part, label }) => (
           <label key={part} class="flex min-h-0 flex-col gap-[var(--zen-space-2)]">
             <span class="zs-label">{label}</span>
-            <span class="zs-well [container-type:size] flex min-h-[calc(var(--zen-font-size)*4.5*var(--zen-scale))] flex-1 items-center rounded-[var(--zs-r-lcd)] px-[var(--zen-space-2)]">
+            <span
+              class={cn(
+                "zs-well [container-type:size] flex items-center rounded-[var(--zs-r-lcd)] px-[var(--zen-space-2)]",
+                capWells
+                  ? "h-[320px] flex-none"
+                  : "min-h-[calc(var(--zen-font-size)*4.5*var(--zen-scale))] flex-1",
+              )}
+            >
               <input
                 class="h-full w-full bg-transparent text-center font-[inherit] text-[length:min(62cqh,calc(var(--zen-font-size)*6))] leading-none text-inherit outline-none"
                 inputMode="numeric"
