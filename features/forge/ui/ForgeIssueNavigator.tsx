@@ -160,14 +160,12 @@ export function ForgeIssueNavigator({
                 onFocus={() => onSelect(entryIndex)}
                 title={entry.ref.url}
               >
-                <span class="zs-row-main">
-                  <span class={cn(TAG_BASE_CLASS, TAG_CLASS[parts.tag])}>{parts.tag}</span>
-                  <span class="text-zen-muted shrink-0 font-mono text-[length:var(--zen-text-sm)]">
-                    {parts.ref}
-                  </span>
-                  <span class={cn("zs-row-title", entryTextClass(truncate))}>{parts.title}</span>
-                  {isTodo && <Led on class="zs-todo-dot" />}
+                <span class={cn(TAG_BASE_CLASS, TAG_CLASS[parts.tag])}>{parts.tag}</span>
+                <span class="text-zen-muted shrink-0 font-mono text-[length:var(--zen-text-sm)]">
+                  {parts.ref}
                 </span>
+                <span class={cn("zs-row-title", entryTextClass(truncate))}>{parts.title}</span>
+                {isTodo && <Led on class="zs-todo-dot" />}
                 <span class="zs-meta">
                   {timer && (
                     <span class="zs-meta-timer zs-digits">

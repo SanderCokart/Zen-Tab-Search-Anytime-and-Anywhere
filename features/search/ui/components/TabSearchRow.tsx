@@ -47,19 +47,17 @@ export const TabSearchRow = memo(function TabSearchRow({
   return (
     <div class="flex min-w-0 flex-1 flex-col">
       <div class="zs-row-line flex min-h-[var(--zen-row-height)] min-w-0 items-center gap-[var(--zen-space-3)]">
-        <span class="zs-row-main">
-          {tab.favIconUrl && (
-            <img src={tab.favIconUrl} alt="" class="size-[var(--zen-icon-lg)] shrink-0 rounded-md" />
-          )}
-          <span class={cn("zs-row-title", entryTextClass(truncate))}>
-            {displayTitle ??
-              formatTabDisplayTitle({
-                ...tab,
-                customLabel: stripTimerPrefix(tab.customLabel || ""),
-              })}
-          </span>
-          {isTodo && <Led on class="zs-todo-dot" />}
+        {tab.favIconUrl && (
+          <img src={tab.favIconUrl} alt="" class="size-[var(--zen-icon-lg)] shrink-0 rounded-md" />
+        )}
+        <span class={cn("zs-row-title", entryTextClass(truncate))}>
+          {displayTitle ??
+            formatTabDisplayTitle({
+              ...tab,
+              customLabel: stripTimerPrefix(tab.customLabel || ""),
+            })}
         </span>
+        {isTodo && <Led on class="zs-todo-dot" />}
         <span class="zs-meta">
           {timer && !isEssentialTab(tab) && (
             <span class="zs-meta-timer zs-digits">

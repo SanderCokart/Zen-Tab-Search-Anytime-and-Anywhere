@@ -223,7 +223,6 @@ function renderItem(props: SearchResultsListProps, item: SearchItem, interactive
       }}
       data-testid="zen-search-item"
       data-selected={selected ? "true" : undefined}
-      data-essential={item.kind === "tab" && isEssentialTab(item.data) ? "true" : undefined}
       data-status-light={light}
       class={cn(
         "zen-search-row zs-row flex min-w-0 cursor-pointer items-center",
