@@ -12,11 +12,14 @@ Zen Tab Search is a fast fuzzy search overlay and popup for tabs, spaces, and cu
 - [Features](#features)
   - [Settings](#settings)
   - [Omnibar](#omnibar)
+  - [Folders](#folders)
   - [Toolbar popup](#toolbar-popup)
   - [Status, rename, and the tab menu](#status-rename-and-the-tab-menu)
+  - [Pinned URLs](#pinned-urls)
   - [Timers](#timers)
   - [Host overrides](#host-overrides)
   - [Layout and theme](#layout-and-theme)
+  - [Sound](#sound)
   - [Reuse an open tab for external links](#reuse-an-open-tab-for-external-links)
   - [AI agents (MCP)](#ai-agents-mcp)
 - [Important notices](#important-notices)
@@ -77,13 +80,42 @@ Every option in this guide lives in **Display options**. Open it from the ⚙ ge
 
 ### Omnibar
 
-`Alt+F` opens the omnibar. On a page the extension can attach to it draws over that tab; otherwise it hosts the same UI in the browser chrome, so search still works with no content tab and no page DOM. It searches titles, URLs, and custom labels across every Zen space. Spaces and essential tabs sit in grids above the list; Zen folders become their own sections. GitHub and GitLab issues open in a navigator beside the tabs, and tabs you marked as todo sit in a third column. `Up` / `Down` move one result, `Left` / `Right` jump several, `Enter` activates, `Escape` closes. `Tab` moves between the tab list and the issue navigator; a query that starts with `#` or `!` jumps straight to issues and `@` to jump to todos.
+`Alt+F` opens the omnibar. On a page the extension can attach to it draws over that tab; otherwise it hosts the same UI in the browser chrome, so search still works with no content tab and no page DOM. It searches titles, URLs, and custom labels across every Zen space. Spaces and essential tabs sit in grids above the list; Zen folders become their own sections. A **NOW** strip under the search field shows the tab you are on, with its status, timer, and todo controls. GitHub and GitLab issues open in a navigator beside the tabs, grouped by project, then by issues and merge or pull requests, with each request's target branch shown. Tabs you marked as todo sit in a third column as tinted blocks, with a **Mark as done** button on each and a **Clear…** dropdown for the whole column. `Up` / `Down` move one result, `Left` / `Right` jump several, `Enter` activates, `Escape` closes. `Tab` moves between the tab list and the issue navigator. A query that starts with `#` lists issues, `!` lists merge and pull requests, and `@` jumps to todos.
 
 ![Omnibar with spaces, folders, GitHub/GitLab issues, and todos](docs/screenshots/search-omnibar.png)
 
 Type to filter. **Show issues only in the Issue Navigator** and **Show merge requests or pull requests only in the Issue Navigator** keep those tabs in the middle column and drop them out of the tab list, independently.
 
 ![Filtering the omnibar to GitLab issues and merge requests](docs/screenshots/search-query.png)
+
+### Folders
+
+Click a folder's header to fold it. The Tabs and Issues and requests headers each have a **Collapse all** button in the middle of the rule. It turns into **Expand all** once every group in that column is folded. Folders ease open and shut instead of jumping.
+
+A folded folder still shows its current tab, in the folder where that tab lives, so you always see where you are. Its other tabs stay hidden until you open the folder again. While you type a query, every match shows, even inside folded folders.
+
+**Move to folder** in a tab's menu lists every folder as `Space · Parent / Folder`, parents first, and highlights the folder the tab is in. **Remove from folder** takes the tab out of its folder.
+
+<table>
+  <tr>
+    <th width="50%">Collapse all, with the current tab still showing</th>
+    <th width="50%">Move to folder</th>
+  </tr>
+  <tr>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/collapse-all.png">
+        <img src="docs/screenshots/collapse-all.png" alt="Tabs and issues collapsed, with the current PR still showing in its folder" width="100%" />
+      </picture>
+    </td>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/tab-move-to-folder.png">
+        <img src="docs/screenshots/tab-move-to-folder.png" alt="Move to folder menu listing spaces and nested folders" width="100%" />
+      </picture>
+    </td>
+  </tr>
+</table>
 
 ### Toolbar popup
 
@@ -95,9 +127,9 @@ The toolbar popup is a compact legacy surface. `Alt+F` no longer opens it; the w
 
 ### Status, rename, and the tab menu
 
-Right-click a result for rename, timer, host overrides, todo, and a status. `Alt+R` auto-labels GitLab and GitHub issues and MRs/PRs, or opens Zen's Change Label editor on other pages.
+Right-click a result for its tab menu: **Close tab**, **Rename**, **Move to folder**, the pinned URL actions for pinned and essential tabs, a status row, **Mark as todo**, **Timer**, and **Host overrides**. The right-click opens this menu and nothing else, so Zen's own menu does not appear underneath it. `Alt+R` auto-labels GitLab and GitHub issues and MRs/PRs, or opens Zen's Change Label editor on other pages.
 
-The status is a traffic light you set per tab. It tints the tab's row in every column, and the meaning is up to you, for example:
+The status is a traffic light you set per tab, shown as a row of red, orange, and green dots with a forbidden sign for no status. It tints the tab's row in every column, and the meaning is up to you, for example:
 
 - 🔴 **Red**: blocked, or needs attention first
 - 🟠 **Orange**: in progress, or waiting on someone
@@ -115,9 +147,23 @@ Zen gives essential tabs no label you can change, so they always show the page t
 
 ![Renaming the Mail essential tab to Inbox](docs/screenshots/rename-essential.png)
 
+### Pinned URLs
+
+A pinned tab and an essential tab each keep a stored address in Zen. Their tab menu has two actions:
+
+- **Edit pinned URL** opens a dialog with the address. Enter an `http` or `https` address and press **Save**. Anything else is refused with a message.
+- **Replace pinned URL with current** stores the address the tab is showing now.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/pinned-url.png">
+    <img src="docs/screenshots/pinned-url.png" alt="Edit pinned URL dialog over the omnibar" width="720" />
+  </picture>
+</p>
+
 ### Timers
 
-`Alt+T` sets a timer on the current tab. The clock on a result and **Timer** in the tab menu open the same controls. Running timers show a countdown on the row.
+`Alt+T` sets a timer on the current tab. The clock on a result and **Timer** in the tab menu open the same controls. Running timers show a countdown on the row. The timers dock in the omnibar shows the soonest one as a large LCD readout, with every running timer listed beneath it, each with **Edit** and **Clear** buttons.
 
 The ⏱ button beside the search field, with a badge counting the running timers, opens the **Active timers** list. From there you can jump to a tab, edit a timer, or clear them all. While the list is open the button becomes ✕.
 
@@ -158,6 +204,21 @@ Pin a tab’s hostnames to a fixed IP, like a per-tab hosts file. Open the edito
 
 ### Layout and theme
 
+The **Theme** module picks **System**, **Light**, or **Dark**. System follows the browser's colour scheme. Text, issue, folder, and space colors start on **AUTO**, which takes the colour from the theme, so each theme keeps a fitting palette until you pick your own.
+
+**Background opacity** is a dial from 0% to 100%, in 5% steps, and it starts at 75%. It fades the panels so the page behind the omnibar shows through. Text, keys, and the timer readout stay solid. The options page and the toolbar popup are not affected.
+
+The interface uses IBM Plex Mono and Inter, bundled with the extension, so the overlay looks the same on every machine.
+
+**Follow the page zoom level** is off by default. Turn it on to let the overlay grow and shrink with browser zoom. Off keeps the overlay the same size on screen at every zoom level.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/background-opacity-settings.png">
+    <img src="docs/screenshots/background-opacity-settings.png" alt="Theme module with System, Light and Dark, the auto colours and the background opacity dial" width="720" />
+  </picture>
+</p>
+
 Hide the spaces grid, the essential-tabs grid, or both, independently on the omnibar and the toolbar popup; hidden ones still turn up as soon as you search. Turn wrapping on when you want the full title. Font size, density, and the gap sliders reshape the omnibar; the popup stays a compact fixed size. Text, issue, folder, and space colors each have their own reset.
 
 | Hidden grids | Wrapping titles |
@@ -167,6 +228,17 @@ Hide the spaces grid, the essential-tabs grid, or both, independently on the omn
 | Larger type and density | Custom colors |
 | :---------------------: | :-----------: |
 | ![Omnibar with a larger font size and density](docs/screenshots/spacing-size-and-zoom.png) | ![Omnibar with themed panel colors](docs/screenshots/display-colors.png) |
+
+### Sound
+
+**Interface sounds** are on by default. Key clicks, latches, and chimes play while you search, rename a tab, edit a pinned URL, set todos, and set timers. The **Volume** dial sets the level. The **Click**, **Tick**, and **Chime** buttons play each voice so you can hear it before you use it. The switch turns every sound off.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/sound-settings.png">
+    <img src="docs/screenshots/sound-settings.png" alt="Sound module with the volume dial, the interface sounds switch and test buttons" width="560" />
+  </picture>
+</p>
 
 ### Reuse an open tab for external links
 
@@ -244,7 +316,7 @@ README stills come from a mocked UI harness, not from Zen itself. Generate them 
 npm run screenshots
 ```
 
-That writes PNGs to `docs/screenshots/`. `npm run screenshots:dev` serves the harness at `http://127.0.0.1:4177/screenshots/index.html?scene=search-omnibar` so you can inspect a scene before capturing it.
+That writes PNGs to `docs/screenshots/`, and the dark-theme captures to `docs/screenshots/dark/`. The README shows the dark captures to readers who use a dark colour scheme. `npm run screenshots:dev` serves the harness at `http://127.0.0.1:4177/screenshots/index.html?scene=search-omnibar` so you can inspect a scene before capturing it.
 
 Load in Zen Browser:
 
