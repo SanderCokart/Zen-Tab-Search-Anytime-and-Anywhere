@@ -195,6 +195,7 @@ export function ForgeIssueNavigator({
             {timerOpen && tabId !== undefined && (
               <div class="px-[var(--zen-row-pad)] pb-[var(--zen-space-2)]">
                 <TimerForm
+                  compact
                   timer={timer}
                   onSet={(endAt) => onSetTimer(tabId, endAt)}
                   onClear={() => onClearTimer(tabId)}

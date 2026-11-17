@@ -30,6 +30,8 @@ export interface TimerFormProps {
   now?: number;
   /** Fires with the end time the wells and footer are showing. */
   onPreview?: (endAt: number) => void;
+  /** Smaller wells for the form opened under a tab row. */
+  compact?: boolean;
   onSet: (endAt: number) => void;
   onClear?: () => void;
 }
@@ -40,6 +42,7 @@ export function TimerForm({
   error,
   now = Date.now(),
   onPreview,
+  compact = false,
   onSet,
   onClear,
 }: TimerFormProps) {
@@ -97,7 +100,10 @@ export function TimerForm({
 
   return (
     <form
-      class="flex min-h-0 flex-1 flex-col gap-[var(--zen-space-4)]"
+      class={cn(
+        "[container-type:inline-size] flex min-h-0 flex-col",
+        compact ? "gap-[var(--zen-space-2)]" : "flex-1 gap-[var(--zen-space-4)]",
+      )}
       onClick={(event) => event.stopPropagation()}
       onSubmit={(event) => {
         event.preventDefault();
@@ -111,7 +117,14 @@ export function TimerForm({
         {DURATION_FIELDS.map(({ part, label }) => (
           <label key={part} class="flex flex-col gap-[var(--zen-space-2)]">
             <span class="zs-label">{label}</span>
-            <span class="zs-well [container-type:size] flex h-[320px] flex-none items-center rounded-[var(--zs-r-lcd)] px-[var(--zen-space-2)]">
+            <span
+              class={cn(
+                "zs-well [container-type:size] flex flex-none items-center rounded-[var(--zs-r-lcd)] px-[var(--zen-space-2)]",
+                compact
+                  ? "h-[calc(var(--zen-font-size)*5.5*var(--zen-scale))]"
+                  : "h-[min(320px,24svh,28cqi)]",
+              )}
+            >
               <input
                 class="h-full w-full bg-transparent text-center font-[inherit] text-[length:min(62cqh,calc(var(--zen-font-size)*6))] leading-none text-inherit outline-none"
                 inputMode="numeric"
@@ -146,14 +159,14 @@ export function TimerForm({
           </label>
         ))}
       </div>
-      <div class="grid grid-cols-6 gap-[var(--zen-space-2)]">
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(22ch,1fr))] gap-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]">
         {TIMER_PRESETS.map((preset) => (
           <button
             key={preset.id}
             type="button"
             class={cn(
               presetButtonClass,
-              "h-[calc(var(--zen-font-size)*2.6*var(--zen-scale))] px-[var(--zen-space-2)] text-[length:var(--zen-text-base)]",
+              "h-[calc(var(--zen-font-size)*2.6*var(--zen-scale))] px-[var(--zen-space-2)] whitespace-nowrap",
               preset.id === selectedPresetId &&
                 "outline-zen-accent outline outline-2 outline-offset-2",
             )}

@@ -84,6 +84,7 @@ export const TabSearchRow = memo(function TabSearchRow({
       {timerOpen && tabId !== undefined && (
         <div class="pb-[var(--zen-space-2)]">
           <TimerForm
+            compact
             timer={timer}
             onSet={(endAt) => onSetTimer(tabId, endAt)}
             onClear={() => onClearTimer(tabId)}
