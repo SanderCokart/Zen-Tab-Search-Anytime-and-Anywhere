@@ -78,6 +78,19 @@ const SCENES: Record<string, HarnessScene> = {
     },
   },
   "folder-groups": { id: "folder-groups", surface: "search", layout: "overlay" },
+  // Wide gaps so the ratio's split between gap and padding is easy to see.
+  "gap-ratio-gap": {
+    id: "gap-ratio-gap",
+    surface: "search",
+    layout: "overlay",
+    displaySettings: { gapPaddingRatio: 0, tabGap: 12, issueGap: 12, todoGap: 12 },
+  },
+  "gap-ratio-padding": {
+    id: "gap-ratio-padding",
+    surface: "search",
+    layout: "overlay",
+    displaySettings: { gapPaddingRatio: 4, tabGap: 12, issueGap: 12, todoGap: 12 },
+  },
   // Forge tabs stay in the list here, so the current PR sits in its collapsed folder.
   "collapsed-folders": {
     id: "collapsed-folders",

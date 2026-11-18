@@ -13,12 +13,14 @@ Zen Deck is a control surface for [Zen Browser](https://zen-browser.app/): searc
   - [Settings](#settings)
   - [Omnibar](#omnibar)
   - [Folders](#folders)
-  - [Toolbar popup (removed)](#toolbar-popup-removed)
+  - [Web search](#web-search)
+  - [Toolbar button](#toolbar-button)
   - [Status, rename, and the tab menu](#status-rename-and-the-tab-menu)
   - [Pinned URLs](#pinned-urls)
   - [Timers](#timers)
   - [Host overrides](#host-overrides)
   - [Layout and theme](#layout-and-theme)
+  - [Gaps](#gaps)
   - [Sound](#sound)
   - [Reuse an open tab for external links](#reuse-an-open-tab-for-external-links)
   - [AI agents (MCP)](#ai-agents-mcp)
@@ -85,11 +87,14 @@ Every option in this guide lives in **Display options**. Open it from the ⚙ ge
 - **Search** titles, URLs, and custom labels across every Zen space.
 - **Spaces and essential tabs** sit in grids above the list. Zen folders become their own sections.
 - **NOW strip** under the search field shows the tab you are on, with its status, timer, and todo controls. Click the strip to close the search: that tab is already on screen. The keys on the strip keep the search open.
-- **Tab keys** for close, rename, todo, timer, and host sit on the right of each row. They appear when you point at the row, and the timer and host readout steps aside for them.
+- **The current tab** is ringed and tagged **NOW** wherever it appears, in the tab list and in the issue navigator. When its folder or project is folded, it still peeks out.
+- **Tab keys** for close, rename, todo, copy link, timer, and host sit on the right of each row. They appear when you point at the row, and the timer and host readout steps aside for them.
+- **Tooltips** print each key's legend on a small LCD when the pointer rests on it. A cut-off title shows in full the same way.
 - **Issues** from GitHub and GitLab open in a navigator beside the tabs, grouped by project, with each request's target branch shown.
 - **Todos** sit in a third column as tinted blocks, each with a **Mark as done** button and a **Clear…** dropdown for the whole column.
 - **Keyboard:** `Up` and `Down` move one result, `Left` and `Right` jump several, `Enter` activates, `Escape` closes, and `Tab` moves between the tab list and the issue navigator.
 - **Prefixes:** `#` lists issues, `!` lists merge and pull requests, and `@` jumps to todos.
+- **Web:** `Shift+Enter` opens what you typed as a site, or searches the web for it. See [Web search](#web-search).
 
 > **Note:** the browser chrome is the browser's own interface around the page, such as the toolbars, sidebar and tab strip. It is not Google Chrome. Zen is built on Firefox, so this is the Firefox-style chrome you already know.
 
@@ -137,15 +142,31 @@ In a tab's context menu, **Move to folder** lists every folder as `Space · Pare
   </tr>
 </table>
 
-### Toolbar popup (removed)
+### Web search
 
-The toolbar popup has been removed. Its code remains in the repository but is inactive and can no longer be reached. Use the omnibar instead: `Alt+F` opens it, and on pages with no attachable DOM it is hosted in the browser chrome, so search still works there.
+The engine sits at the left end of the search field. Click it to pick Google, DuckDuckGo, Bing, Brave, Kagi, Startpage, or Ecosia; the choice is remembered.
+
+`Shift+Enter` takes whatever is in the field to the web, in a new tab:
+
+- **A site** opens directly: `github.com/zen-browser`, `localhost:3000`, or an IP address.
+- **Anything else** is searched with your engine. Start the query with `?` to search for something that looks like a site.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/web-search.png">
+    <img src="docs/screenshots/web-search.png" alt="The search engine menu at the left of the search field" width="720" />
+  </picture>
+</p>
+
+### Toolbar button
+
+Clicking Zen Deck's toolbar button opens the omnibar, the same as `Alt+F`. The old toolbar popup, and the settings that only applied to it, are gone.
 
 ### Status, rename, and the tab menu
 
 Right-click a tab to open its context menu. All of the extension's extra features are gathered there, and some of Zen's own browser features are built into it too:
 
-- **Close tab**, **Rename**, and **Move to folder** or **Remove from folder**
+- **Close tab**, **Rename**, **Copy link**, and **Move to folder** or **Remove from folder**
 - The pinned URL actions for pinned and essential tabs
 - A status row
 - **Mark as todo**, **Timer**, and **Host overrides**
@@ -236,7 +257,7 @@ The interface uses IBM Plex Mono and Inter, bundled with the extension, so the o
   </picture>
 </p>
 
-Hide the spaces grid, the essential-tabs grid, or both; hidden ones still turn up as soon as you search. **Truncate** shortens long tab and issue titles by default. Switch it off to wrap the full title onto several lines. Font size, density, and the gap sliders reshape the omnibar. On the omnibar, **Ctrl + mouse wheel** changes the font size one pixel per notch, the same as the Font size slider. Accent, frame, panels, and text each have their own reset.
+Hide the spaces grid, the essential-tabs grid, or both; hidden ones still turn up as soon as you search. **Truncate** shortens long tab and issue titles by default. Switch it off to wrap the full title onto several lines. Font size, density, and the gap sliders reshape the omnibar, and the omnibar keeps its size whatever the page zoom. On the omnibar, **Ctrl + mouse wheel** changes the font size one pixel per notch, the same as the Font size slider. Accent, frame, panels, and text each have their own reset.
 
 The four colour keys start on AUTO. Light and dark each keep their own palette until you pick a colour:
 
@@ -263,6 +284,21 @@ The four colour keys start on AUTO. Light and dark each keep their own palette u
     <img src="docs/screenshots/spacing-size-and-zoom.png" alt="Omnibar with a larger font size and density" width="720" />
   </picture>
 </p>
+
+### Gaps
+
+The **Gaps** module has a slider for each kind of neighbour: spaces, essentials, tabs, sections, folders, issues and requests, and todos. The **Padding to gap ratio** dial decides how each of those amounts is spent. At 1 it is split evenly; turn it down and the space becomes gap between the elements, turn it up and it becomes padding inside them, so rows get roomier without drifting apart.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dark/gap-settings.png">
+    <img src="docs/screenshots/gap-settings.png" alt="The Gaps module with a slider per neighbour and the ratio dial" width="720" />
+  </picture>
+</p>
+
+| Ratio 0: all gap | Ratio 4: mostly padding |
+| :---: | :---: |
+| ![Rows separated by gaps](docs/screenshots/gap-ratio-gap.png) | ![Rows with taller padding](docs/screenshots/gap-ratio-padding.png) |
 
 ### Sound
 

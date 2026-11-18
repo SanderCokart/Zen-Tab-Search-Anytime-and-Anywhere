@@ -243,6 +243,53 @@ const captures: Capture[] = [
     clip: "omnibar",
   },
   {
+    scene: "search-omnibar",
+    file: "web-search.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      await page.locator("[data-testid='zen-search-input']").fill("firefox keyboard shortcuts");
+      await page.locator("[data-testid='zen-search-engine']").click();
+      await expect(page.locator("[data-testid='zen-search-engine-menu']")).toBeVisible();
+    },
+    around:
+      "[data-testid='zen-search-engine-picker'], [data-testid='zen-search-engine-menu'], [data-testid='zen-search-input']",
+  },
+  {
+    scene: "search-omnibar",
+    file: "tooltip.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      const row = await tabRow(page);
+      await row.hover();
+      const copy = row.getByRole("button", { name: "Copy link" });
+      await copy.hover();
+      await expect(page.locator("[role='tooltip']")).toBeVisible();
+      // Let the legend finish printing its letters.
+      await page.waitForTimeout(1200);
+    },
+    around: "[role='tooltip'], [data-testid='zen-search-item']:has(button[aria-label='Copy link']:hover)",
+  },
+  {
+    scene: "gap-ratio-gap",
+    file: "gap-ratio-gap.png",
+    ready: (page) => waitForSearch(page, true),
+    around: "[data-testid='zen-essential-section'], [data-testid='zen-tab-list']",
+  },
+  {
+    scene: "gap-ratio-padding",
+    file: "gap-ratio-padding.png",
+    ready: (page) => waitForSearch(page, true),
+    around: "[data-testid='zen-essential-section'], [data-testid='zen-tab-list']",
+  },
+  {
+    scene: "display-settings",
+    file: "gap-settings.png",
+    ready: async (page) => {
+      await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+    },
+    locator: "section:has([data-testid='zen-gapPaddingRatio'])",
+  },
+  {
     scene: "display-settings",
     file: "background-opacity-settings.png",
     ready: async (page) => {
