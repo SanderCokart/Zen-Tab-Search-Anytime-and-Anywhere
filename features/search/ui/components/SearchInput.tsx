@@ -1,5 +1,7 @@
 import type { JSX, Ref } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
+import type { SearchEngineId } from "@/features/search/model/web-search";
+import { SearchEnginePicker } from "@/features/search/ui/components/SearchEnginePicker";
 import { cn } from "@/shared/ui/cn";
 import { Lcd } from "@/shared/ui/primitives/Lcd";
 import { useTypingSound } from "@/shared/ui/sound/useTypingSound";
@@ -10,6 +12,8 @@ export interface SearchInputProps {
   initialValue?: string;
   /** Takes the input out of focus and input while a panel such as the timer form has the keyboard. */
   inert?: boolean;
+  searchEngine: SearchEngineId;
+  onSearchEngineChange: (engineId: SearchEngineId) => void;
   onQueryChange: (query: string) => void;
   onKeyDown: (event: JSX.TargetedKeyboardEvent<HTMLInputElement>) => void;
 }
@@ -24,6 +28,8 @@ export function SearchInput({
   compact,
   initialValue = "",
   inert = false,
+  searchEngine,
+  onSearchEngineChange,
   onQueryChange,
   onKeyDown,
 }: SearchInputProps) {
@@ -59,6 +65,15 @@ export function SearchInput({
         inert && "opacity-50",
       )}
     >
+      <SearchEnginePicker
+        engineId={searchEngine}
+        onChange={onSearchEngineChange}
+        disabled={inert}
+      />
+      <span
+        aria-hidden="true"
+        class="h-[var(--zen-text-lg)] w-px shrink-0 bg-[var(--zs-lcd-dim)] opacity-40"
+      />
       {!compact && (
         <span aria-hidden="true" class="zs-label zs-label-red shrink-0 select-none">
           Search

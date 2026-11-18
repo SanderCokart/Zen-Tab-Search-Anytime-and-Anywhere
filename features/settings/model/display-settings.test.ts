@@ -133,6 +133,23 @@ describe("display settings", () => {
     });
   });
 
+  it("shows spaces and essential tabs unless hiding was stored on", async () => {
+    const get = vi.fn(async () => ({ displaySettings: {} }));
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: { get, set: vi.fn(async () => undefined) },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+
+    await expect(readDisplaySettings()).resolves.toMatchObject({
+      hideSpacesInOverlay: false,
+      hideEssentialsInOverlay: false,
+    });
+  });
+
   it("leaves external tab reuse off unless it was stored on", async () => {
     const get = vi.fn(async () => ({ displaySettings: {} }));
     Object.assign(globalThis, {
@@ -255,6 +272,13 @@ describe("display settings", () => {
       await expect(readDisplaySettings()).resolves.toMatchObject({ theme: "dark" });
       store({ theme: "sepia" });
       await expect(readDisplaySettings()).resolves.toMatchObject({ theme: "system" });
+    });
+
+    it("keeps a stored search engine and falls back from an unknown one", async () => {
+      store({ searchEngine: "duckduckgo" });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ searchEngine: "duckduckgo" });
+      store({ searchEngine: "askjeeves" });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ searchEngine: "google" });
     });
 
     it("migrates the old dark default text colour back to auto and drops region fills", async () => {

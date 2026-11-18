@@ -124,6 +124,7 @@ export function installBrowserMock(
       case "removeTabFromFolder":
       case "setPinnedUrl":
       case "replacePinnedUrlWithCurrent":
+      case "openUrl":
         return undefined;
       case "getFolders":
         return DEMO_FOLDERS;

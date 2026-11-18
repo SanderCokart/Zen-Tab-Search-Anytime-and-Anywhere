@@ -22,6 +22,16 @@ describe("parseExtensionRequest", () => {
   it("rejects a missing space id", () => {
     expect(() => parseExtensionRequest({ type: "switchSpace" })).toThrow();
   });
+
+  it("accepts an http(s) openUrl and rejects other schemes", () => {
+    expect(
+      parseExtensionRequest({ type: "openUrl", url: "https://duckduckgo.com/?q=tabs" }),
+    ).toEqual({
+      type: "openUrl",
+      url: "https://duckduckgo.com/?q=tabs",
+    });
+    expect(() => parseExtensionRequest({ type: "openUrl", url: "javascript:alert(1)" })).toThrow();
+  });
 });
 
 describe("parseExtensionSuccess", () => {

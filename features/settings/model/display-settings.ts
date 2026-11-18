@@ -1,4 +1,5 @@
 import * as v from "valibot";
+import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINE_IDS } from "@/features/search/model/web-search";
 import { clampFontSize, clampGap, clampUiScale } from "@/features/settings/model/ui-scale";
 import { clampVolume, DEFAULT_SOUND_VOLUME } from "@/shared/ui/sound/engine";
 import { THEME_PREFERENCES } from "@/shared/ui/theme";
@@ -47,6 +48,8 @@ const DEFAULTS = {
   backgroundOpacity: 0.75,
   /** Focus an already-open tab when another app opens the same address. */
   reuseExternalTabs: false,
+  /** Engine Shift+Enter uses from the omnibar. */
+  searchEngine: DEFAULT_SEARCH_ENGINE,
   /** Light, dark, or whichever the system asks for. */
   theme: "system" as (typeof THEME_PREFERENCES)[number],
   /** "auto" takes the colour from the theme; a hex value overrides it. */
@@ -195,6 +198,7 @@ const displaySettingsSchema = v.pipe(
       soundVolume: scalar(DEFAULTS.soundVolume, clampVolume),
       backgroundOpacity: scalar(DEFAULTS.backgroundOpacity, clampBackgroundOpacity),
       reuseExternalTabs: boolean(DEFAULTS.reuseExternalTabs),
+      searchEngine: v.fallback(v.picklist(SEARCH_ENGINE_IDS), DEFAULTS.searchEngine),
       theme: v.fallback(v.picklist(THEME_PREFERENCES), DEFAULTS.theme),
       accentColor: color("accentColor"),
       chassisColor: color("chassisColor"),

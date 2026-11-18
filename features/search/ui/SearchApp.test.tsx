@@ -102,6 +102,67 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("opens a web search tab on Shift+Enter", async () => {
+    const { root, onClose, sendMessage } = mountSearchApp();
+    await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.value = "zen tabs";
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true }),
+    );
+
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "openUrl",
+        url: "https://www.google.com/search?q=zen%20tabs",
+      }),
+    );
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "switchTab" }));
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("searches with the engine chosen from the search bar", async () => {
+    const { root, sendMessage } = mountSearchApp(vi.fn(), tabs, "overlay", {
+      searchEngine: "duckduckgo",
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-search-engine']")?.textContent).toContain("DDG"),
+    );
+
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-search-engine']")!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-search-engine-menu']")).not.toBeNull(),
+    );
+    const brave = [...root.querySelectorAll<HTMLButtonElement>("[role='menuitemradio']")].find(
+      (button) => button.textContent?.includes("Brave"),
+    );
+    brave!.click();
+    await vi.waitFor(() =>
+      expect(browser.storage.local.set).toHaveBeenCalledWith({
+        displaySettings: expect.objectContaining({ searchEngine: "brave" }),
+      }),
+    );
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.value = "gitlab";
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true }),
+    );
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "openUrl",
+        url: "https://search.brave.com/search?q=gitlab",
+      }),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
   it("selects an exact whole-word match when the query changes", async () => {
     const { root } = mountSearchApp(vi.fn(), [
       { ...tabs[0], title: "Epic browser tab" },

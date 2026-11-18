@@ -27,6 +27,8 @@ export interface UseSearchNavigationOptions {
   onActivateItem: (item: SearchItem) => void;
   onActivateForgeEntry: (entry: ForgeIssueEntry) => void;
   onActivateTodoTab: (tab: TabInfo) => void;
+  /** Shift+Enter: look the query up in the chosen search engine. */
+  onWebSearch?: () => void;
   /**
    * Alt+Left / Alt+Right in the issue navigator: collapse the group of the
    * selected entry, or expand the collapsed group nearest to it. Plain Left and
@@ -72,6 +74,7 @@ export function useSearchNavigation({
   onActivateItem,
   onActivateForgeEntry,
   onActivateTodoTab,
+  onWebSearch,
   onForgeGroupKey,
 }: UseSearchNavigationOptions) {
   const [paneOverride, setPaneOverride] = useState<{ query: string; pane: SearchPane } | null>(
@@ -242,6 +245,9 @@ export function useSearchNavigation({
       // keyed to the query without the prefix and take the keyboard back to
       // this pane after the prefix is deleted again.
       setPaneOverride(null);
+    } else if (event.key === "Enter" && event.shiftKey && onWebSearch) {
+      onWebSearch();
+      event.preventDefault();
     } else if (event.key === "Enter") {
       if (activePane === "forge") {
         const selectedForge = navigatorEntries[selectedForgeIndex];

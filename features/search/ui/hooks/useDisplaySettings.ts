@@ -11,6 +11,8 @@ export interface DisplaySettingsState {
   displaySettings: DisplaySettings;
   /** True after the first storage read, even if it fell back to defaults. */
   loaded: boolean;
+  /** Apply a change before storage echoes it back. */
+  setDisplaySettings: (settings: DisplaySettings) => void;
 }
 
 /** Current display settings, kept in sync with the options page. */
@@ -31,5 +33,5 @@ export function useDisplaySettings(): DisplaySettingsState {
     return subscribeToDisplaySettingsChanged(setDisplaySettings);
   }, []);
 
-  return { displaySettings, loaded };
+  return { displaySettings, loaded, setDisplaySettings };
 }

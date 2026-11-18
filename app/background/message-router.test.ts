@@ -61,6 +61,7 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
     getPinnedUrl: vi.fn(async () => "https://example.com"),
     setPinnedUrl: vi.fn(async () => undefined),
     replacePinnedUrlWithCurrent: vi.fn(async () => undefined),
+    openUrl: vi.fn(async () => undefined),
     isAllowedTimerEnd: vi.fn(() => true),
     ...overrides,
   };
@@ -334,6 +335,19 @@ describe("dispatchExtensionMessage", () => {
         enabled: true,
       },
     ]);
+  });
+
+  it("dispatches openUrl", async () => {
+    const api = handlers();
+    const result = dispatchExtensionMessage(api, {
+      type: "openUrl",
+      url: "https://www.google.com/search?q=tabs",
+    });
+    if (!result.handled || !result.async) {
+      throw new Error("expected async dispatch");
+    }
+    await expect(result.promise).resolves.toBeUndefined();
+    expect(api.openUrl).toHaveBeenCalledWith("https://www.google.com/search?q=tabs");
   });
 
   it("rejects a host override with an invalid IP", () => {

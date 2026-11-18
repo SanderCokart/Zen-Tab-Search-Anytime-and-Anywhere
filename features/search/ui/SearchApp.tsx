@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "preact/hooks";
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   forgeTreeKeys,
   nearestCollapsedGroup,
@@ -30,6 +30,7 @@ import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersP
 import { OmnibarViewPanel } from "@/features/search/ui/components/OmnibarViewPanel";
 import { StatusBar } from "@/features/search/ui/components/StatusBar";
 import { parsePinnedUrl } from "@/features/search/model/pinned-url";
+import { webSearchUrl, type SearchEngineId } from "@/features/search/model/web-search";
 import { EditPinnedUrlDialog } from "@/features/search/ui/components/EditPinnedUrlDialog";
 import { RenameTabDialog } from "@/features/search/ui/components/RenameTabDialog";
 import { SearchInput } from "@/features/search/ui/components/SearchInput";
@@ -39,6 +40,7 @@ import { TabContextMenu } from "@/features/search/ui/components/TabContextMenu";
 import { TimerIcon } from "@/features/search/ui/components/TimerIcon";
 import { useCloseOnOutsideClick } from "@/features/search/ui/hooks/useCloseOnOutsideClick";
 import { useDisplaySettings } from "@/features/search/ui/hooks/useDisplaySettings";
+import { saveDisplaySettings } from "@/features/settings/model/display-settings";
 import { useOverlayEntrance } from "@/features/search/ui/hooks/useOverlayEntrance";
 import { useEssentialTabNames } from "@/features/search/ui/hooks/useEssentialTabNames";
 import { useSearchNavigation } from "@/features/search/ui/hooks/useSearchNavigation";
@@ -128,7 +130,7 @@ export function SearchApp({
     setTodos,
     setStatuses,
   } = useSearchSnapshot();
-  const { displaySettings, loaded: settingsLoaded } = useDisplaySettings();
+  const { displaySettings, loaded: settingsLoaded, setDisplaySettings } = useDisplaySettings();
   const { essentialNames, setEssentialNames } = useEssentialTabNames();
   const sound = useSoundEngine({
     enabled: displaySettings.soundEnabled,
@@ -307,6 +309,7 @@ export function SearchApp({
   const overlayAspect = overlayColumns === 3 ? "2/1" : overlayColumns === 2 ? "3/2" : "1/1";
   const overlayOpen = useOverlayEntrance(layout === "overlay", snapshotLoaded && settingsLoaded);
 
+  const searchWebRef = useRef(() => undefined as void);
   const navigation = useSearchNavigation({
     layout,
     query,
@@ -323,6 +326,7 @@ export function SearchApp({
     onActivateItem: activateItem,
     onActivateForgeEntry: activateForgeEntry,
     onActivateTodoTab: activateTodoTab,
+    onWebSearch: () => searchWebRef.current(),
     onForgeGroupKey: (action, entry, index) => {
       const { collapsed, setCollapsed } = forgeCollapse;
       const providers = groupForgeIssueEntries(results.listedForgeIssueEntries, forgeSortMode);
@@ -342,6 +346,23 @@ export function SearchApp({
         .length;
     },
   });
+
+  searchWebRef.current = () => {
+    const typed = navigation.inputRef.current?.value ?? query;
+    const url = webSearchUrl(displaySettings.searchEngine, typed);
+    if (!url) return;
+    void sendExtensionMessage({ type: "openUrl", url })
+      .then(onClose)
+      .catch((error) => debugError("Could not open web search:", error));
+  };
+
+  const onSearchEngineChange = (engineId: SearchEngineId) => {
+    const next = { ...displaySettings, searchEngine: engineId };
+    setDisplaySettings(next);
+    void saveDisplaySettings(next).catch((error) =>
+      debugError("Could not save search engine:", error),
+    );
+  };
 
   const closeView = useCallback(() => {
     setView(undefined);
@@ -421,6 +442,8 @@ export function SearchApp({
           compact={compact}
           initialValue={initialQuery}
           inert={view?.kind === "timer" || view?.kind === "hosts"}
+          searchEngine={displaySettings.searchEngine}
+          onSearchEngineChange={onSearchEngineChange}
           onQueryChange={(next) => {
             setQuery(next);
             // Typing goes back to the search the input is for.

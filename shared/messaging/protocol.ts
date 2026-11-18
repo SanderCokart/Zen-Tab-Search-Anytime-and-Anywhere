@@ -327,6 +327,20 @@ export const extensionRequestSchema = v.variant("type", [
     type: v.literal("replacePinnedUrlWithCurrent"),
     tabId: tabIdSchema,
   }),
+  v.object({
+    type: v.literal("openUrl"),
+    url: v.pipe(
+      v.string(),
+      v.check((value) => {
+        try {
+          const url = new URL(value);
+          return url.protocol === "http:" || url.protocol === "https:";
+        } catch {
+          return false;
+        }
+      }, "URL must be http(s)."),
+    ),
+  }),
 ]);
 
 export const contentCommandSchema = v.variant("type", [
@@ -417,6 +431,7 @@ export const EXTENSION_REQUEST_TYPES = [
   "getPinnedUrl",
   "setPinnedUrl",
   "replacePinnedUrlWithCurrent",
+  "openUrl",
 ] as const;
 
 /**
@@ -489,6 +504,7 @@ export type ExtensionSuccessMap = {
   getPinnedUrl: string;
   setPinnedUrl: void;
   replacePinnedUrlWithCurrent: void;
+  openUrl: void;
 };
 
 const clearTimerResponseSchema = v.object({
@@ -614,6 +630,7 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
     case "removeTabFromFolder":
     case "setPinnedUrl":
     case "replacePinnedUrlWithCurrent":
+    case "openUrl":
       return undefined as ExtensionSuccessMap[T];
     case "getFolders":
       return v.parse(v.array(overlayFolderInfoSchema), value) as ExtensionSuccessMap[T];
@@ -641,6 +658,8 @@ export function invalidRequestMessage(type: ExtensionRequestType): string {
     case "setHostOverrides":
     case "setGlobalHostOverrides":
       return "Invalid host override.";
+    case "openUrl":
+      return "Invalid URL.";
     default:
       return "Invalid message.";
   }

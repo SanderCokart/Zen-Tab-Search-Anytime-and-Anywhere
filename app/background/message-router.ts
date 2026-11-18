@@ -51,6 +51,7 @@ export interface MessageRouterHandlers {
   getPinnedUrl(tabId: number): Promise<string>;
   setPinnedUrl(tabId: number, url: string): Promise<void>;
   replacePinnedUrlWithCurrent(tabId: number): Promise<void>;
+  openUrl(url: string): Promise<void>;
   /** Anchor for a sender that is not a tab, such as the window-hosted omnibar. */
   anchorTabIdForSender?(sender: MessageSender): number | undefined;
   isAllowedTimerEnd(endAt: number): boolean;
@@ -195,6 +196,8 @@ function handleParsedRequest(
       return handlers.setPinnedUrl(message.tabId, message.url);
     case "replacePinnedUrlWithCurrent":
       return handlers.replacePinnedUrlWithCurrent(message.tabId);
+    case "openUrl":
+      return handlers.openUrl(message.url);
   }
 }
 

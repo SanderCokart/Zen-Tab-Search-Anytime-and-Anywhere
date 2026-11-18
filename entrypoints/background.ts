@@ -320,6 +320,9 @@ export default defineBackground(() => {
       await workspace.replacePinnedUrlWithCurrent(tabId);
       notify();
     },
+    openUrl: async (url) => {
+      await browser.tabs.create({ url, active: true });
+    },
     anchorTabIdForSender: (sender) =>
       sender.tab === undefined && sender.url?.startsWith(browser.runtime.getURL(OMNIBAR_PAGE))
         ? getOmnibarAnchorTabId()

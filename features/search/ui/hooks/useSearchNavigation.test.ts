@@ -1,7 +1,7 @@
 import type { JSX } from "preact";
 import { h, render } from "preact";
 import { act } from "preact/test-utils";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parseForgeNavigatorQuery, parseTodoNavigatorQuery } from "@/features/search/model/ranking";
 import { useSearchNavigation } from "@/features/search/ui/hooks/useSearchNavigation";
 import type { SearchItem, TabInfo } from "@/shared/types";
@@ -22,7 +22,17 @@ const todoTabs = [tab(2)];
 
 type Navigation = ReturnType<typeof useSearchNavigation>;
 
-function Harness({ query, onRender }: { query: string; onRender: (nav: Navigation) => void }) {
+function Harness({
+  query,
+  onRender,
+  onWebSearch,
+  onActivateItem,
+}: {
+  query: string;
+  onRender: (nav: Navigation) => void;
+  onWebSearch?: () => void;
+  onActivateItem?: () => void;
+}) {
   const navigation = useSearchNavigation({
     layout: "overlay",
     query,
@@ -36,15 +46,16 @@ function Harness({ query, onRender }: { query: string; onRender: (nav: Navigatio
     bestTabWordCount: 0,
     bestForgeWordCount: 0,
     onClose: () => undefined,
-    onActivateItem: () => undefined,
+    onActivateItem: onActivateItem ?? (() => undefined),
     onActivateForgeEntry: () => undefined,
     onActivateTodoTab: () => undefined,
+    onWebSearch,
   });
   onRender(navigation);
   return null;
 }
 
-function mount() {
+function mount(options: { onWebSearch?: () => void; onActivateItem?: () => void } = {}) {
   let latest: Navigation | undefined;
   const root = document.createElement("div");
   const onRender = (nav: Navigation) => {
@@ -52,7 +63,7 @@ function mount() {
   };
   const show = (query: string) =>
     act(() => {
-      render(h(Harness, { query, onRender }), root);
+      render(h(Harness, { query, onRender, ...options }), root);
     });
   return {
     show,
@@ -64,14 +75,14 @@ function mount() {
   };
 }
 
-function press(nav: Navigation, key: string) {
+function press(nav: Navigation, key: string, init: { shiftKey?: boolean } = {}) {
   act(() => {
     nav.onKeyDown({
       key,
       ctrlKey: false,
       metaKey: false,
       altKey: false,
-      shiftKey: false,
+      shiftKey: init.shiftKey === true,
       preventDefault: () => undefined,
     } as unknown as JSX.TargetedKeyboardEvent<HTMLInputElement>);
   });
@@ -89,6 +100,17 @@ describe("useSearchNavigation", () => {
 
     show("");
     expect(nav().activePane).toBe("tabs");
+    unmount();
+  });
+
+  it("searches the web on Shift+Enter instead of activating a tab", () => {
+    const onWebSearch = vi.fn();
+    const onActivateItem = vi.fn();
+    const { show, nav, unmount } = mount({ onWebSearch, onActivateItem });
+    show("zen tabs");
+    press(nav(), "Enter", { shiftKey: true });
+    expect(onWebSearch).toHaveBeenCalledOnce();
+    expect(onActivateItem).not.toHaveBeenCalled();
     unmount();
   });
 });
