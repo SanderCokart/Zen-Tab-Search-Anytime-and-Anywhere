@@ -18,6 +18,7 @@ import {
 } from "@/features/search/model/ranking";
 import { pluralize } from "@/features/search/model/stats";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
+import { TimersDock } from "@/features/timers/ui/TimersDock";
 import {
   TRAFFIC_LIGHT_MENU_SELECTOR,
   TRAFFIC_LIGHT_TRIGGER_SELECTOR,
@@ -71,7 +72,10 @@ import { debugError } from "@/shared/debug";
 import { sendExtensionMessage } from "@/shared/messaging/client";
 import type { OmnibarView } from "@/shared/messaging/protocol";
 import { isActivatableTab, tabBrowserId, type SearchItem, type TabInfo } from "@/shared/types";
-import { type ForgeIssueEntry } from "@/features/forge/model/forge-label";
+import {
+  tabMatchesForgeProjectHome,
+  type ForgeIssueEntry,
+} from "@/features/forge/model/forge-label";
 import { cn } from "@/shared/ui/cn";
 import { CollapseAllButton } from "@/shared/ui/primitives/CollapseAllButton";
 import { Led } from "@/shared/ui/primitives/Led";
@@ -337,7 +341,15 @@ export function SearchApp({
   // detection flag here reserved a second column before any issues existed,
   // so the panel jumped the moment the snapshot arrived.
   const showForgeColumn = displaySettings.forgeTree && results.forgeIssueEntries.length > 0;
-  const showRightColumn = displaySettings.todos && results.allTodoTabs.length > 0;
+  const showTodoColumn = displaySettings.todos && results.allTodoTabs.length > 0;
+  // Fullscreen has room for the soonest LCD and the next two. Spotlight keeps
+  // timers behind the header key so the card does not grow a third pane.
+  const showTimersDock =
+    layout === "overlay" &&
+    displaySettings.fullscreen &&
+    displaySettings.timers &&
+    timers.size > 0;
+  const showRightColumn = showTodoColumn || showTimersDock;
   const overlayColumns = 1 + (showForgeColumn ? 1 : 0) + (showRightColumn ? 1 : 0);
   const overlayAspect = overlayColumns === 3 ? "2/1" : overlayColumns === 2 ? "3/2" : "1/1";
   const overlayOpen = useOverlayEntrance(
@@ -621,8 +633,9 @@ export function SearchApp({
           <div
             class={cn(
               "flex min-h-0 min-w-0 flex-1",
-              layout === "overlay" ? "gap-[var(--zen-space-6)] overflow-hidden" : "flex-col",
+              layout === "overlay" ? "gap-[var(--zen-space-6)]" : "flex-col",
             )}
+            data-omnibar-columns
             // Kept mounted under a view so the lists keep their scroll and selection.
             style={view ? { display: "none" } : undefined}
           >
@@ -631,7 +644,7 @@ export function SearchApp({
               <div
                 class={cn(
                   "flex min-h-0 min-w-0 flex-1 flex-col",
-                  nestedPanes && "zs-card overflow-hidden p-[var(--zen-space-5)]",
+                  nestedPanes && "zs-card p-[var(--zen-space-5)]",
                 )}
                 data-testid="zen-tab-pane"
               >
@@ -728,6 +741,16 @@ export function SearchApp({
                   navigation.activePane === "forge" ? navigation.selectedForgeIndex : -1
                 }
                 onActivate={activateForgeEntry}
+                onOpenProject={(url) => {
+                  const tab = tabs.find((item) => tabMatchesForgeProjectHome(item.url, url));
+                  if (tab && isActivatableTab(tab)) {
+                    activateTab(tabBrowserId(tab), tab.domId, "project tab");
+                    return;
+                  }
+                  void sendExtensionMessage({ type: "openUrl", url })
+                    .then(onClose)
+                    .catch((error) => debugError("Could not open project:", error));
+                }}
                 onSelect={navigation.setSelectedForgeIndex}
                 onToggleSort={() => {
                   sound.play("tick");
@@ -751,7 +774,7 @@ export function SearchApp({
             )}
             {layout === "overlay" && showRightColumn && (
               <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-[var(--zen-space-6)]">
-                {results.allTodoTabs.length > 0 && (
+                {showTodoColumn && (
                   <TodoNavigator
                     tabs={todoTabs}
                     allTabs={results.allTodoTabs}
@@ -776,6 +799,18 @@ export function SearchApp({
                     }}
                     onOpenStatusMenu={toggleStatusMenu}
                     onContextMenu={openContextMenu}
+                  />
+                )}
+                {showTimersDock && (
+                  <TimersDock
+                    timers={timers}
+                    onClearAll={timerActions.clearAllTimers}
+                    onClearTimer={timerActions.clearTimer}
+                    onActivateTimer={(tabId) => {
+                      const tab = tabs.find((item) => tabBrowserId(item) === tabId);
+                      activateTab(tabId, tab?.domId, "timer tab");
+                    }}
+                    onEditTimer={openTimer}
                   />
                 )}
               </div>

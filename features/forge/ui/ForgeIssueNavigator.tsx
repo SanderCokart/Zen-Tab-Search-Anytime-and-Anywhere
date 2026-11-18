@@ -21,7 +21,7 @@ import { tabActionFlags } from "@/features/settings/model/complexity";
 import { formatForgeEntryDate, formatShortAge } from "@/features/search/ui/lib/format";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
-import { formatForgePlatform } from "@/features/forge/model/forge-label";
+import { forgeProjectHomeUrl, formatForgePlatform } from "@/features/forge/model/forge-label";
 import { TimerCountdown } from "@/features/timers/ui/TimerCountdown";
 import { TimerForm } from "@/features/timers/ui/TimerForm";
 import { statusRowClass } from "@/features/status/ui/traffic-light";
@@ -98,6 +98,7 @@ export function ForgeIssueNavigator({
   onToggleAll,
   selectedIndex,
   onActivate,
+  onOpenProject,
   onSelect,
   onToggleSort,
   onContextMenu,
@@ -134,6 +135,8 @@ export function ForgeIssueNavigator({
   onToggleAll?: () => void;
   selectedIndex: number;
   onActivate: (entry: ForgeIssueEntry) => void;
+  /** Opens the repository homepage for this project. */
+  onOpenProject?: (url: string) => void;
   onSelect: (index: number) => void;
   onToggleSort: () => void;
   /** Right-click on an entry opens the context menu for its tab. */
@@ -260,7 +263,7 @@ export function ForgeIssueNavigator({
 
   return (
     <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-      <aside class="zs-card flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-[var(--zen-space-5)]">
+      <aside class="zs-card flex min-h-0 min-w-0 flex-1 flex-col p-[var(--zen-space-5)]">
         <div class="zs-head">
           <PrefixHint prefixes={FORGE_NAVIGATOR_PREFIXES} column="issues and requests" />
           <strong class="min-w-0 truncate font-[inherit] font-medium">Issues and requests</strong>
@@ -335,6 +338,9 @@ export function ForgeIssueNavigator({
                         ];
                         const projectKey = forgeProjectKey(platform, project.projectLabel);
                         const projectOpen = !collapsed.has(projectKey);
+                        const homeRef =
+                          project.issues[0]?.ref ?? project.branches[0]?.requests[0]?.ref;
+                        const homeUrl = homeRef ? forgeProjectHomeUrl(homeRef) : undefined;
                         // Closed, the project still shows the current entry, and only
                         // it, under its folder's header, as a closed tab folder does.
                         const peekFolders = projectOpen
@@ -370,6 +376,10 @@ export function ForgeIssueNavigator({
                             label={project.projectLabel}
                             open={projectOpen}
                             onToggle={() => onToggleGroup(projectKey)}
+                            onOpen={
+                              onOpenProject && homeUrl ? () => onOpenProject(homeUrl) : undefined
+                            }
+                            openLabel={homeUrl ? `Open ${project.projectLabel}` : undefined}
                             count={folders.reduce(
                               (total, folder) => total + folder.entries.length,
                               0,

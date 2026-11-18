@@ -206,6 +206,26 @@ export function formatForgePlatform(platform: ForgePlatform): string {
   return platform === "github" ? "GitHub" : "GitLab";
 }
 
+/** The repository homepage for this issue, MR or PR. */
+export function forgeProjectHomeUrl(ref: Pick<ForgeRef, "host" | "projectPath">): string {
+  return `https://${ref.host}/${ref.projectPath}`;
+}
+
+/** True when `tabUrl` is that homepage, ignoring trailing slashes, query and hash. */
+export function tabMatchesForgeProjectHome(tabUrl: string, homeUrl: string): boolean {
+  try {
+    const tab = new URL(tabUrl);
+    const home = new URL(homeUrl);
+    const path = (value: string) => value.replace(/\/+$/, "") || "/";
+    return (
+      tab.hostname.toLowerCase() === home.hostname.toLowerCase() &&
+      path(tab.pathname) === path(home.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export type ForgeRowTag = "ISSUE" | "MR" | "PR" | "EPIC";
 
 export interface ForgeRowParts {

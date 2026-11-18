@@ -655,6 +655,14 @@ describe("SearchApp", () => {
       expect(root.textContent).not.toContain("Improve filters");
     });
 
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-forge-open-project']")?.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "openUrl",
+        url: "https://github.com/acme/project",
+      }),
+    );
+
     root.querySelector<HTMLButtonElement>("[data-testid='zen-issue-activate']")?.click();
     await vi.waitFor(() =>
       expect(sendMessage).toHaveBeenCalledWith({
@@ -665,6 +673,45 @@ describe("SearchApp", () => {
     );
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
 
+    render(null, root);
+    root.remove();
+  });
+
+  it("switches to an open repository homepage from the project name", async () => {
+    const forgeTabs = [
+      {
+        id: 1,
+        title: "Zen-Deck",
+        url: "https://github.com/acme/project",
+        favIconUrl: "",
+        windowId: 1,
+        active: false,
+      },
+      {
+        id: 2,
+        title: "Fix search",
+        url: "https://github.com/acme/project/issues/42",
+        favIconUrl: "",
+        windowId: 1,
+        active: false,
+      },
+    ];
+    const { root, sendMessage, onClose } = mountSearchApp(vi.fn(), forgeTabs, "overlay");
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-forge-open-project']")).not.toBeNull(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-forge-open-project']")!.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "switchTab",
+        tabId: 1,
+        domId: undefined,
+      }),
+    );
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(sendMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "openUrl" }),
+    );
     render(null, root);
     root.remove();
   });
@@ -759,6 +806,7 @@ describe("SearchApp", () => {
     expect(full.root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-layout")).toBe(
       "fullscreen",
     );
+    expect(full.root.querySelector("[data-omnibar]")?.className).not.toContain("rounded");
     expect(
       full.root.querySelector("[data-testid='zen-tab-pane']")?.classList.contains("zs-card"),
     ).toBe(true);
@@ -2431,7 +2479,7 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     await vi.waitFor(() =>
       expect(root.querySelector(".zs-tree-trigger")?.getAttribute("aria-expanded")).toBe("false"),
     );
-    expect(root.querySelector(".zs-tree-trigger .zs-acc-count")?.textContent).toBe("5");
+    expect(root.querySelector(".zs-tree-bar .zs-acc-count")?.textContent).toBe("5");
     unmount();
   });
 
@@ -2462,7 +2510,7 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     unmount();
   });
 
-  it("does not mount a timers dock; the header button swaps in the timer list", async () => {
+  it("docks soonest and upcoming timers on fullscreen, and the header still swaps the full list", async () => {
     const many = Array.from({ length: 30 }, (_, index) => ({
       id: 100 + index,
       title: `Todo tab ${index}`,
@@ -2496,7 +2544,10 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-todo-column']")).not.toBeNull(),
     );
-    expect(root.querySelector("[data-testid='zen-timers-dock']")).toBeNull();
+    const dock = root.querySelector("[data-testid='zen-timers-dock']");
+    expect(dock).not.toBeNull();
+    expect(dock?.textContent).toContain("Soonest timer");
+    expect(dock?.textContent).toContain("Later timer");
     expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("3/2");
     root.querySelector<HTMLButtonElement>("button[aria-label='Show active timers']")!.click();
     await vi.waitFor(() => expect(root.textContent).toContain("Active timers"));
@@ -2522,7 +2573,7 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     await vi.waitFor(() =>
       expect(root.querySelector("button[aria-label='Show active timers']")).not.toBeNull(),
     );
-    expect(root.querySelector("[data-testid='zen-timers-dock']")).toBeNull();
+    expect(root.querySelector("[data-testid='zen-timers-dock']")).not.toBeNull();
     root.querySelector<HTMLButtonElement>("button[aria-label='Show active timers']")!.click();
     await vi.waitFor(() => expect(root.textContent).toContain("Echo"));
     expect(root.textContent).toContain("Alpha");
@@ -2577,7 +2628,7 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     unmount();
   });
 
-  it("does not add a column for timers alone, and lets todos fill the column without a dock", async () => {
+  it("gives fullscreen timers their own column when there are no todos", async () => {
     const { root, unmount } = mountOverlay({
       snapshotTabs: tabs,
       timers: [
@@ -2592,10 +2643,12 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
       ],
     });
     await vi.waitFor(() =>
-      expect(root.querySelector("[data-testid='zen-search-input']")).not.toBeNull(),
+      expect(root.querySelector("[data-testid='zen-timers-dock']")).not.toBeNull(),
     );
-    expect(root.querySelector("[data-testid='zen-timers-dock']")).toBeNull();
     expect(root.querySelector("[data-testid='zen-todo-column']")).toBeNull();
+    expect(root.querySelector("[data-testid='zen-timers-dock']")?.textContent).toContain(
+      "Only timer",
+    );
     unmount();
 
     const withTodo = mountOverlay({ snapshotTabs: tabs, todos: [{ tabId: 2, status: "todo" }] });
@@ -2607,6 +2660,31 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
       "max-h-[50%]",
     );
     withTodo.unmount();
+  });
+
+  it("keeps the timers dock off Spotlight", async () => {
+    const { root, unmount } = mountOverlay({
+      snapshotTabs: tabs,
+      displaySettings: applyPreset("enhanced"),
+      timers: [
+        {
+          timerId: "t",
+          tabId: 1,
+          endAt: Date.now() + 60 * 60 * 1000,
+          title: "Only timer",
+          originalLabel: "",
+          url: "",
+        },
+      ],
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector("button[aria-label='Show active timers']")).not.toBeNull(),
+    );
+    expect(root.querySelector("[data-testid='zen-timers-dock']")).toBeNull();
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-layout")).toBe(
+      "spotlight",
+    );
+    unmount();
   });
 
   it("ticks when Ctrl+wheel steps the overlay font size, like the font size slider", async () => {

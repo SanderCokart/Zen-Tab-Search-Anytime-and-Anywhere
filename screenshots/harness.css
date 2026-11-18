@@ -13,10 +13,7 @@ body {
 
 /* Drop extra overlay columns, not just their asides — a `display:none` aside
    still leaves a `flex-1` wrapper and keeps the tab list skinny. */
-html[data-harness-layout="spotlight"]
-  [data-omnibar]
-  > .flex.flex-1.overflow-hidden
-  > :not(:first-child),
+html[data-harness-layout="spotlight"] [data-omnibar] > [data-omnibar-columns] > :not(:first-child),
 html[data-harness-layout="spotlight"] button[aria-label="Host overrides for this tab"] {
   display: none !important;
 }

@@ -86,7 +86,7 @@ export function TodoNavigator({
     pendingClear === null ? [] : todoTabIdsToClear(allTabs, statuses, pendingClear);
   return (
     <aside
-      class="zs-card flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-[var(--zen-space-5)]"
+      class="zs-card flex min-h-0 min-w-0 flex-1 flex-col p-[var(--zen-space-5)]"
       data-testid="zen-todo-column"
     >
       <div class="zs-head">

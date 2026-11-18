@@ -29,7 +29,7 @@ export function TimersDock({
 
   return (
     <aside
-      class="zs-card flex min-w-0 shrink-0 flex-col overflow-hidden p-[var(--zen-space-5)]"
+      class="zs-card flex min-w-0 shrink-0 flex-col p-[var(--zen-space-5)]"
       data-testid="zen-timers-dock"
     >
       <div class="zs-head">

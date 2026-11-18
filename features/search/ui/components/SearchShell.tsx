@@ -104,7 +104,7 @@ export function SearchShell({
       }}
     >
       <div
-        class="zs-chassis flex min-h-0 shrink-0 flex-col overflow-hidden rounded-[var(--zs-r-card)] p-[var(--zen-space-6)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+        class="zs-chassis flex min-h-0 shrink-0 flex-col overflow-hidden p-[var(--zen-space-6)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
         onClick={(event) => event.stopPropagation()}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}

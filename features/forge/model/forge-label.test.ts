@@ -4,8 +4,10 @@ import {
   buildForgeLabel,
   detectForgePlatform,
   extractRelatedIssueId,
+  forgeProjectHomeUrl,
   forgeTitleIncludesRefId,
   parseForgeUrl,
+  tabMatchesForgeProjectHome,
 } from "@/features/forge/model/forge-label";
 
 describe("detectForgePlatform", () => {
@@ -64,6 +66,35 @@ describe("parseForgeUrl", () => {
       projectPath: "SanderCokart/zen-deck",
       url: "https://github.com/SanderCokart/zen-deck/pull/999994",
     });
+  });
+});
+
+describe("forgeProjectHomeUrl", () => {
+  it("builds the repository homepage from an issue or pull request", () => {
+    expect(
+      forgeProjectHomeUrl(parseForgeUrl("https://github.com/SanderCokart/Zen-Deck/pull/1")!),
+    ).toBe("https://github.com/SanderCokart/Zen-Deck");
+    expect(
+      forgeProjectHomeUrl(
+        parseForgeUrl("https://gitlab.com/gitlab-org/quality/app/-/issues/12")!,
+      ),
+    ).toBe("https://gitlab.com/gitlab-org/quality/app");
+  });
+});
+
+describe("tabMatchesForgeProjectHome", () => {
+  it("matches the homepage even with a trailing slash or query", () => {
+    const home = "https://github.com/SanderCokart/Zen-Deck";
+    expect(tabMatchesForgeProjectHome("https://github.com/SanderCokart/Zen-Deck", home)).toBe(true);
+    expect(tabMatchesForgeProjectHome("https://github.com/SanderCokart/Zen-Deck/", home)).toBe(
+      true,
+    );
+    expect(
+      tabMatchesForgeProjectHome("https://github.com/SanderCokart/Zen-Deck?tab=readme-ov-file", home),
+    ).toBe(true);
+    expect(
+      tabMatchesForgeProjectHome("https://github.com/SanderCokart/Zen-Deck/pull/1", home),
+    ).toBe(false);
   });
 });
 
