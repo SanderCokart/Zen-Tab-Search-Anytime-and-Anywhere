@@ -3,7 +3,6 @@ import { useId } from "preact/hooks";
 import { cn } from "@/shared/ui/cn";
 import { Led } from "@/shared/ui/primitives/Led";
 import { useSound } from "@/shared/ui/sound/SoundContext";
-import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 export interface TreeNodeProps {
   /** The uppercase label. */
@@ -12,11 +11,14 @@ export interface TreeNodeProps {
   prefix?: ComponentChildren;
   /** A black LCD chip after the label, such as "→ develop". */
   chip?: ComponentChildren;
-  /** Tooltip for a label that may be cut off. */
-  title?: string;
   open: boolean;
   onToggle: () => void;
   count?: number;
+  /**
+   * Shown under the header while closed, outside the folded panel: the current
+   * tab's entry, which a closed group keeps showing.
+   */
+  peek?: ComponentChildren;
   /** Shows a lamp at the end of the header, lit while open. */
   led?: boolean;
   class?: string;
@@ -35,32 +37,25 @@ export function TreeNode({
   label,
   prefix,
   chip,
-  title,
   open,
   onToggle,
   count,
+  peek,
   led,
   class: className,
   "data-testid": testId,
   children,
 }: TreeNodeProps) {
   const { play } = useSound();
-  const tooltip = useTooltip();
   const panelId = useId();
 
   return (
     <div class={cn("zs-acc min-w-0", className)} data-open={open || undefined} data-testid={testId}>
       <button
         class="zs-tree-trigger"
-        aria-label={typeof title === "string" ? title : undefined}
         aria-expanded={open}
         aria-controls={panelId}
-        onMouseEnter={(event) => title && tooltip.showAfterPause(event.currentTarget)}
-        onMouseLeave={tooltip.hide}
-        onFocus={(event) => title && tooltip.show(event.currentTarget)}
-        onBlur={tooltip.hide}
         onClick={() => {
-          tooltip.hide();
           play("tick");
           onToggle();
         }}
@@ -80,7 +75,7 @@ export function TreeNode({
         {count !== undefined && <span class="zs-tree-count zs-digits zs-acc-count">{count}</span>}
         {led && <Led on={open} />}
       </button>
-      {tooltip.anchor && title && <TooltipLegend content={title} anchor={tooltip.anchor} />}
+      {!open && peek && <div class="zs-tree-kids">{peek}</div>}
       <div id={panelId} class="zs-acc-panel" role="region" aria-hidden={!open}>
         <div class="zs-acc-clip" inert={!open}>
           <div class="zs-tree-kids">{children}</div>

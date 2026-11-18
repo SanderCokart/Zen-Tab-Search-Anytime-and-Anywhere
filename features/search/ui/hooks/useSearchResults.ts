@@ -24,7 +24,6 @@ import {
   parseTodoNavigatorQuery,
   pinnedFirst,
   rankForgeIssueEntries,
-  splitCurrentForgeEntry,
   type ForgeIssueSortMode,
 } from "@/features/search/model/ranking";
 import {
@@ -152,19 +151,9 @@ export function useSearchResults({
     [forgeIssueEntries, forgeNavigatorQuery.filterQuery, rankedForgeIssueEntries],
   );
 
-  // The current tab's issue is shown by the strip under the search bar, so with
-  // issue tabs kept out of the tab list it stays out of the navigator too until
-  // a query re-ranks.
-  const { rest: restBeforeKind } = useMemo(() => {
-    if (layout !== "overlay" || forgeNavigatorQuery.filterQuery.trim()) {
-      return { current: undefined, rest: filteredForgeIssueEntries };
-    }
-    const current = filteredForgeIssueEntries.find((entry) => entry.tab.active === true);
-    if (!current || !hidesForgeEntryInOverlay(current, displaySettings)) {
-      return { current: undefined, rest: filteredForgeIssueEntries };
-    }
-    return splitCurrentForgeEntry(filteredForgeIssueEntries);
-  }, [displaySettings, filteredForgeIssueEntries, forgeNavigatorQuery.filterQuery, layout]);
+  // The current tab's issue stays in the navigator as well as in the strip under
+  // the search bar, as a normal current tab stays in its folder.
+  const restBeforeKind = filteredForgeIssueEntries;
 
   // The kind tabs count what the query left, before the kind filter narrows it.
   const forgeKindCounts = useMemo(() => countForgeEntriesByKind(restBeforeKind), [restBeforeKind]);

@@ -17,9 +17,9 @@ import {
   pinnedFirst,
   rankForgeIssueEntries,
   sortForgeIssueEntries,
-  splitCurrentForgeEntry,
 } from "@/features/search/model/ranking";
 import type { SearchItem, TabInfo } from "@/shared/types";
+import { forgeGroupKeys } from "@/features/forge/model/forge-collapse";
 
 function tab(id: number, active = false): TabInfo {
   return {
@@ -592,24 +592,25 @@ describe("filterTodoTabs", () => {
   });
 });
 
-describe("splitCurrentForgeEntry", () => {
+describe("flattenForgeNavigatorEntries with collapsed groups", () => {
   const entries = buildForgeIssueEntries([
     { ...tab(1), url: "https://github.com/acme/project/issues/42", lastOpenedAt: 500 },
     { ...tab(2, true), url: "https://github.com/acme/project/issues/7", lastOpenedAt: 100 },
+    { ...tab(3), url: "https://github.com/acme/project/pull/9", lastOpenedAt: 300 },
   ]);
+  const current = entries.find((entry) => entry.ref.id === "7")!;
+  const keys = forgeGroupKeys(current);
+  const ids = (collapsed: string[]) =>
+    flattenForgeNavigatorEntries(entries, "recent", new Set(collapsed)).map(
+      (entry) => entry.ref.id,
+    );
 
-  it("splits off the active tab's entry", () => {
-    const { current, rest } = splitCurrentForgeEntry(entries);
-
-    expect(current?.ref.id).toBe("7");
-    expect(rest.map((entry) => entry.ref.id)).toEqual(["42"]);
-    expect(flattenForgeNavigatorEntries(rest, "recent").map((entry) => entry.ref.id)).toEqual([
-      "42",
-    ]);
+  it("keeps the current entry in view when its folder is collapsed", () => {
+    expect(ids([keys.folder])).toEqual(["7", "9"]);
   });
 
-  it("returns no current entry when the active tab is not an issue", () => {
-    const [first] = entries;
-    expect(splitCurrentForgeEntry(first ? [first] : [])).toEqual({ rest: entries.slice(0, 1) });
+  it("keeps only the current entry when its whole project is collapsed", () => {
+    expect(ids([keys.project])).toEqual(["7"]);
+    expect(ids([keys.project, keys.folder])).toEqual(["7"]);
   });
 });

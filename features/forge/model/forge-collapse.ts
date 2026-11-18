@@ -69,25 +69,41 @@ export function forgeGroupKeys(entry: ForgeIssueEntry): {
   };
 }
 
+/** The tab the overlay was opened over; a collapsed group still shows its entry. */
+export function isCurrentForgeEntry(entry: ForgeIssueEntry): boolean {
+  return entry.tab.active === true;
+}
+
+/** A closed group's entries: only the current one, which stays in view. */
+export function collapsedForgeEntries(
+  entries: readonly ForgeIssueEntry[],
+  closed: boolean,
+): readonly ForgeIssueEntry[] {
+  return closed ? entries.filter(isCurrentForgeEntry) : entries;
+}
+
 function projectEntries(
   platform: ForgeIssueProviderGroup["platform"],
   project: ForgeIssueProjectGroup,
   collapsed: ForgeCollapsedSet,
 ): ForgeIssueEntry[] {
-  if (collapsed.has(forgeProjectKey(platform, project.projectLabel))) return [];
-  return [
-    ...(collapsed.has(forgeIssuesKey(platform, project.projectLabel)) ? [] : project.issues),
-    ...project.branches.flatMap((branch) =>
-      collapsed.has(forgeBranchKey(platform, project.projectLabel, branch.targetBranch))
-        ? []
-        : branch.requests,
-    ),
+  const projectClosed = collapsed.has(forgeProjectKey(platform, project.projectLabel));
+  const folders = [
+    { key: forgeIssuesKey(platform, project.projectLabel), entries: project.issues },
+    ...project.branches.map((branch) => ({
+      key: forgeBranchKey(platform, project.projectLabel, branch.targetBranch),
+      entries: branch.requests,
+    })),
   ];
+  // Closed at either level, a group still shows the current entry, and only it.
+  return folders.flatMap((folder) =>
+    collapsedForgeEntries(folder.entries, projectClosed || collapsed.has(folder.key)),
+  );
 }
 
 /**
  * The entries a user can see, in the navigator's order: collapsed projects,
- * Issues folders and branch folders contribute nothing. Takes the grouped
+ * Issues folders and branch folders contribute only the current entry. Takes the grouped
  * entries so this file needs only the types of `ranking.ts`, which calls it.
  */
 /**

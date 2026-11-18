@@ -175,3 +175,40 @@ export function TipText({
     </>
   );
 }
+
+/** True when `element`'s text runs past its box, so an ellipsis hides part of it. */
+export function isTextTruncated(element: HTMLElement): boolean {
+  return element.scrollWidth > element.clientWidth;
+}
+
+/**
+ * A row's title that shows the full string on the LCD after a pause, but only
+ * while it is cut off. With truncation off the text wraps, so there is no tip.
+ */
+export function TruncatedTip({
+  text,
+  truncate,
+  class: className,
+}: {
+  text: string;
+  truncate: boolean;
+  class?: string;
+}) {
+  const tooltip = useTooltip();
+  if (!truncate) return <span class={className}>{text}</span>;
+  return (
+    <>
+      <span
+        class={className}
+        onMouseEnter={(event) => {
+          if (isTextTruncated(event.currentTarget)) tooltip.showAfterPause(event.currentTarget);
+        }}
+        onMouseLeave={tooltip.hide}
+        onMouseDown={tooltip.hide}
+      >
+        {text}
+      </span>
+      {tooltip.anchor && <TooltipLegend content={text} anchor={tooltip.anchor} />}
+    </>
+  );
+}

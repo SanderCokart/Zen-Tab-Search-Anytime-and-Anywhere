@@ -220,10 +220,17 @@ function renderItem(props: SearchResultsListProps, item: SearchItem, interactive
       }}
       data-testid="zen-search-item"
       data-selected={selected ? "true" : undefined}
+      data-current={item.kind === "tab" && item.data.active === true ? "true" : undefined}
       data-essential={item.kind === "tab" && isEssentialTab(item.data) ? "true" : undefined}
       data-status-light={light}
+      data-gap-pad=""
       class={cn(
         "zen-search-row zs-row flex min-w-0 cursor-pointer items-center",
+        item.kind === "space"
+          ? "[--zen-row-pad-y:var(--zen-space-pad)]"
+          : isEssentialTab(item.data)
+            ? "[--zen-row-pad-y:var(--zen-essential-pad)]"
+            : "[--zen-row-pad-y:var(--zen-tab-pad)]",
         "rounded-[var(--zen-radius)] px-[var(--zen-row-pad)]",
         item.kind === "space" &&
           "min-h-[calc(var(--zen-row-height)*1.1)] justify-center gap-[var(--zen-space-2)] text-center",

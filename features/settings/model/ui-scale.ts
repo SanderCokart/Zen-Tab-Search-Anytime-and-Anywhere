@@ -10,6 +10,10 @@ export const MAX_UI_SCALE = 1.5;
 export const MIN_GAP = 0;
 export const MAX_GAP = 64;
 export const GAP_STEP = 4;
+/** Padding to gap: 0 is all gap, 1 splits each gap evenly, 4 is four parts padding to one gap. */
+export const MIN_GAP_PADDING_RATIO = 0;
+export const MAX_GAP_PADDING_RATIO = 4;
+export const GAP_PADDING_RATIO_STEP = 0.25;
 
 /**
  * Gaps are chosen in pixels, but stored as a ratio of this reference size — which
@@ -20,23 +24,22 @@ export const GAP_STEP = 4;
 const GAP_REFERENCE_PX = 14;
 
 /**
- * Every gap in the search UI, paired with the custom property it feeds. Each one
- * maps to exactly one `gap` (or one margin) in one place, so moving a slider has a
- * single visible effect. This list is the only place the setting keys and the CSS
- * properties are tied together — `shared/ui/styles.css` consumes the properties,
- * the options page renders a slider per entry, and `uiScaleStyle` emits them.
- *
- * Padding is deliberately not here: it stays on the density knob, which keeps the
- * two kinds of control from fighting over the same pixels.
+ * Every gap in the search UI, in the order the omnibar lays them out, paired with
+ * the name of the custom properties it feeds. Each slider sets the space between
+ * two neighbours; `gapPaddingRatio` splits it into a real gap
+ * (`--zen-<name>-gap-ratio`) and padding on the neighbours themselves
+ * (`--zen-<name>-pad-ratio`, per side), so the elements grow into part of it.
+ * `shared/ui/styles.css` consumes the properties, the options page renders a
+ * slider per entry, and `uiScaleStyle` emits them.
  */
 export const GAP_SETTINGS = [
-  ["sectionGap", "--zen-section-gap-ratio"],
-  ["tabGap", "--zen-tab-gap-ratio"],
-  ["folderGap", "--zen-folder-gap-ratio"],
-  ["essentialGap", "--zen-essential-gap-ratio"],
-  ["spaceGap", "--zen-space-gap-ratio"],
-  ["issueGap", "--zen-issue-gap-ratio"],
-  ["todoGap", "--zen-todo-gap-ratio"],
+  ["spaceGap", "space"],
+  ["essentialGap", "essential"],
+  ["tabGap", "tab"],
+  ["sectionGap", "section"],
+  ["folderGap", "folder"],
+  ["issueGap", "issue"],
+  ["todoGap", "todo"],
 ] as const;
 
 export type GapSettingKey = (typeof GAP_SETTINGS)[number][0];
@@ -67,6 +70,25 @@ export function clampGap(value: number, fallback = 0): number {
   }
   const snapped = Math.round(value / GAP_STEP) * GAP_STEP;
   return Math.min(MAX_GAP, Math.max(MIN_GAP, snapped));
+}
+
+/** Snaps the padding-to-gap ratio to its step and holds it within range. */
+export function clampGapPaddingRatio(value: number, fallback = 1): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  const snapped = Math.round(value / GAP_PADDING_RATIO_STEP) * GAP_PADDING_RATIO_STEP;
+  return Math.min(MAX_GAP_PADDING_RATIO, Math.max(MIN_GAP_PADDING_RATIO, snapped));
+}
+
+/**
+ * Splits a gap of `total` px by `ratio` (padding : gap) into the gap left between
+ * two elements and the padding each element gets on the facing side. The gap plus
+ * both paddings is always `total`, so the distance between their contents holds.
+ */
+export function splitGap(total: number, ratio: number): { gap: number; padding: number } {
+  const padShare = ratio / (1 + ratio);
+  return { gap: total * (1 - padShare), padding: (total * padShare) / 2 };
 }
 
 function clamp(value: number, min: number, max: number, fallback = min): number {
@@ -142,8 +164,11 @@ export function uiScaleStyle(
     "--zen-font-size": resolveBaseFontSize(settings, surface, zoom),
     "--zen-scale": css(clampUiScale(settings.uiScale)),
   };
-  for (const [key, property] of GAP_SETTINGS) {
-    style[property] = css(clampGap(settings[key]) / GAP_REFERENCE_PX);
+  const ratio = clampGapPaddingRatio(settings.gapPaddingRatio);
+  for (const [key, name] of GAP_SETTINGS) {
+    const { gap, padding } = splitGap(clampGap(settings[key]), ratio);
+    style[`--zen-${name}-gap-ratio`] = css(gap / GAP_REFERENCE_PX);
+    style[`--zen-${name}-pad-ratio`] = css(padding / GAP_REFERENCE_PX);
   }
   return style;
 }

@@ -10,6 +10,7 @@ import {
   forgeBranchKey,
   forgeIssuesKey,
   forgeProjectKey,
+  isCurrentForgeEntry,
 } from "@/features/forge/model/forge-collapse";
 import type { ForgeKindCounts, ForgeKindFilter } from "@/features/forge/model/forge-filter";
 import { forgeRowParts, type ForgeRowTag } from "@/features/forge/model/forge-label";
@@ -31,11 +32,12 @@ import {
 } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 import { Led } from "@/shared/ui/primitives/Led";
+import { NowTag } from "@/features/search/ui/components/NowTag";
 import { CollapseAllButton } from "@/shared/ui/primitives/CollapseAllButton";
 import { TreeNode } from "@/shared/ui/primitives/TreeNode";
 import { Segmented } from "@/shared/ui/primitives/Segmented";
 import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
-import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
+import { TooltipLegend, TruncatedTip, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 /** The outlined ISSUE / MR / PR tag; `TAG_CLASS` adds its colour. */
 export const TAG_BASE_CLASS =
@@ -155,7 +157,7 @@ export function ForgeIssueNavigator({
   );
   const count = entries.length;
 
-  const renderEntries = (groupEntries: ForgeIssueEntry[]) => (
+  const renderEntries = (groupEntries: readonly ForgeIssueEntry[]) => (
     <div class="flex min-w-0 flex-col gap-[var(--zen-issue-gap)]">
       {groupEntries.map((entry) => {
         const entryIndex = entryIndices.get(entry) ?? -1;
@@ -174,12 +176,15 @@ export function ForgeIssueNavigator({
             key={`${entry.ref.url}:${entry.tab.id ?? entry.tab.domId ?? entry.title}`}
             class={cn(
               "zs-row flex w-full max-w-full min-w-0 flex-col rounded-[var(--zen-radius)]",
+              "[--zen-row-pad-y:var(--zen-issue-pad)]",
               statusRowClass(light, selected),
             )}
             data-testid="zen-issue-entry"
             data-issue-url={entry.ref.url}
             data-status-light={light}
             data-issue-selected={selected ? "true" : undefined}
+            data-current={isCurrentForgeEntry(entry) ? "true" : undefined}
+            data-gap-pad=""
             ref={(element) => {
               if (selected) {
                 element?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -199,7 +204,12 @@ export function ForgeIssueNavigator({
                 <span class="text-zen-muted shrink-0 font-mono text-[length:var(--zen-text-sm)]">
                   {parts.ref}
                 </span>
-                <span class={cn("zs-row-title", entryTextClass(truncate))}>{parts.title}</span>
+                <TruncatedTip
+                  class={cn("zs-row-title", entryTextClass(truncate))}
+                  truncate={truncate}
+                  text={parts.title}
+                />
+                {isCurrentForgeEntry(entry) && <NowTag />}
                 {isTodo && <Led on class="zs-todo-dot" />}
                 <span class="zs-meta">
                   {timer && (
@@ -301,7 +311,6 @@ export function ForgeIssueNavigator({
                                   key: forgeIssuesKey(platform, project.projectLabel),
                                   label: "Issues",
                                   chip: undefined,
-                                  title: "Issues",
                                   entries: project.issues,
                                 },
                               ]
@@ -316,41 +325,60 @@ export function ForgeIssueNavigator({
                             chip: branch.targetBranch
                               ? `→ ${branch.targetBranch}`
                               : "target unknown",
-                            title: branch.targetBranch
-                              ? `${folderPrefix} → ${branch.targetBranch}`
-                              : `${folderPrefix} · target unknown`,
                             entries: branch.requests,
                           })),
                         ];
                         const projectKey = forgeProjectKey(platform, project.projectLabel);
+                        const projectOpen = !collapsed.has(projectKey);
+                        // Closed, the project still shows the current entry, and only
+                        // it, under its folder's header, as a closed tab folder does.
+                        const peekFolders = projectOpen
+                          ? []
+                          : folders.filter((folder) => folder.entries.some(isCurrentForgeEntry));
+                        const renderFolder = (folder: (typeof folders)[number], inPeek = false) => {
+                          const open = !inPeek && !collapsed.has(folder.key);
+                          const current = open ? [] : folder.entries.filter(isCurrentForgeEntry);
+                          return (
+                            <TreeNode
+                              key={folder.key}
+                              data-testid="zen-issue-folder"
+                              label={folder.label}
+                              chip={folder.chip}
+                              open={open}
+                              // Drawn closed inside a closed project: opening it opens the project.
+                              onToggle={() => onToggleGroup(inPeek ? projectKey : folder.key)}
+                              count={folder.entries.length}
+                              peek={current.length > 0 ? renderEntries(current) : undefined}
+                            >
+                              {renderEntries(
+                                current.length > 0
+                                  ? folder.entries.filter((entry) => !isCurrentForgeEntry(entry))
+                                  : folder.entries,
+                              )}
+                            </TreeNode>
+                          );
+                        };
                         return (
                           <TreeNode
                             key={project.projectLabel}
                             prefix={`${formatForgePlatform(platform)} · `}
                             label={project.projectLabel}
-                            title={project.projectLabel}
-                            open={!collapsed.has(projectKey)}
+                            open={projectOpen}
                             onToggle={() => onToggleGroup(projectKey)}
                             count={folders.reduce(
                               (total, folder) => total + folder.entries.length,
                               0,
                             )}
+                            peek={
+                              peekFolders.length > 0
+                                ? peekFolders.map((folder) => renderFolder(folder, true))
+                                : undefined
+                            }
                             led
                           >
-                            {folders.map((folder) => (
-                              <TreeNode
-                                key={folder.key}
-                                data-testid="zen-issue-folder"
-                                label={folder.label}
-                                chip={folder.chip}
-                                title={folder.title}
-                                open={!collapsed.has(folder.key)}
-                                onToggle={() => onToggleGroup(folder.key)}
-                                count={folder.entries.length}
-                              >
-                                {renderEntries(folder.entries)}
-                              </TreeNode>
-                            ))}
+                            {folders
+                              .filter((folder) => !peekFolders.includes(folder))
+                              .map((folder) => renderFolder(folder))}
                           </TreeNode>
                         );
                       })}

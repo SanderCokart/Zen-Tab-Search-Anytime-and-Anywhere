@@ -5,10 +5,12 @@ import { TimerForm } from "@/features/timers/ui/TimerForm";
 import { hostname } from "@/features/search/ui/lib/format";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { TabActions } from "@/features/search/ui/components/TabActions";
+import { NowTag } from "@/features/search/ui/components/NowTag";
 import type { TabInfo, TabTimer, TrafficLight } from "@/shared/types";
 import { formatTabDisplayTitle, isEssentialTab, tabBrowserId } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
 import { Led } from "@/shared/ui/primitives/Led";
+import { TruncatedTip } from "@/shared/ui/primitives/Tooltip";
 
 export const TabSearchRow = memo(function TabSearchRow({
   tab,
@@ -50,13 +52,18 @@ export const TabSearchRow = memo(function TabSearchRow({
         {tab.favIconUrl && (
           <img src={tab.favIconUrl} alt="" class="size-[var(--zen-icon-lg)] shrink-0 rounded-md" />
         )}
-        <span class={cn("zs-row-title", entryTextClass(truncate))}>
-          {displayTitle ??
+        <TruncatedTip
+          class={cn("zs-row-title", entryTextClass(truncate))}
+          truncate={truncate}
+          text={
+            displayTitle ??
             formatTabDisplayTitle({
               ...tab,
               customLabel: stripTimerPrefix(tab.customLabel || ""),
-            })}
-        </span>
+            })
+          }
+        />
+        {tab.active === true && <NowTag />}
         {isTodo && <Led on class="zs-todo-dot" />}
         {!isEssentialTab(tab) && (
           <span class="zs-meta">

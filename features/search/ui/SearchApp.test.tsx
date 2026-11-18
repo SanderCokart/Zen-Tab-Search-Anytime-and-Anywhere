@@ -645,6 +645,21 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("marks the current tab in the tab list, and no other row", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
+    await vi.waitFor(() => expect(root.textContent).toContain("Second tab"));
+
+    const current = [...root.querySelectorAll("[data-testid='zen-search-item'][data-current]")];
+    expect(current.map((row) => row.textContent)).toEqual([expect.stringContaining("First tab")]);
+    expect(current[0]?.querySelector("[data-testid='zen-now-tag']")).not.toBeNull();
+    expect(
+      root.querySelectorAll("[data-testid='zen-search-item'] [data-testid='zen-now-tag']"),
+    ).toHaveLength(1);
+
+    render(null, root);
+    root.remove();
+  });
+
   it("lets the page show through the overlay at the chosen background opacity", async () => {
     const { root } = mountSearchApp(vi.fn(), tabs, "overlay", { backgroundOpacity: 0.5 });
 
@@ -1757,7 +1772,7 @@ describe("SearchApp", () => {
     root.remove();
   });
 
-  it("keeps the current issue tab out of the navigator while issues are kept out of the tab list", async () => {
+  it("keeps the current issue tab in the navigator as well as the strip", async () => {
     const issueTabs = [
       { ...tabs[1], active: false },
       {
@@ -1788,11 +1803,18 @@ describe("SearchApp", () => {
         "Older issue",
       ),
     );
-    // The current issue lives in the strip, not among the navigator entries.
+    // Like a normal current tab, the current issue stays in its list too.
     const entries = [...root.querySelectorAll("[data-testid='zen-issue-entry']")];
     expect(entries.map((entry) => entry.textContent)).toEqual([
       expect.stringContaining("Newer issue"),
+      expect.stringContaining("Older issue"),
     ]);
+    // And it is marked there, so it can be found with every folder open.
+    const current = [...root.querySelectorAll("[data-testid='zen-issue-entry'][data-current]")];
+    expect(current.map((entry) => entry.textContent)).toEqual([
+      expect.stringContaining("Older issue"),
+    ]);
+    expect(current[0]?.querySelector("[data-testid='zen-now-tag']")).not.toBeNull();
     expect(
       [...root.querySelectorAll("[data-testid='zen-prefix-hint']")].map((hint) => hint.textContent),
     ).toContain("! / # - ");
@@ -2146,7 +2168,13 @@ const radios = (root: HTMLElement) => [
 
 function folder(root: HTMLElement, label: string) {
   const match = [...root.querySelectorAll<HTMLElement>("[data-testid='zen-issue-folder']")].find(
-    (element) => element.querySelector(".zs-tree-trigger")?.getAttribute("aria-label") === label,
+    (element) => {
+      const trigger = element.querySelector(".zs-tree-trigger");
+      const text = `${trigger?.querySelector(".zs-tree-label")?.textContent ?? ""}${
+        trigger?.querySelector(".zs-tree-chip")?.textContent ?? ""
+      }`;
+      return text.trim() === label;
+    },
   );
   if (!match) throw new Error(`No folder ${label}`);
   return {
@@ -2245,6 +2273,37 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
       ),
     ).toBe(true);
     unmount();
+  });
+
+  it("keeps the current request in view, and only it, when its groups are collapsed", async () => {
+    const snapshotTabs = forgeSnapshotTabs().map((tab) =>
+      tab.id === 7 ? { ...tab, active: true } : tab,
+    );
+    // Entries outside a folded panel; a closed panel keeps its rows mounted but inert.
+    const shownUrls = (root: HTMLElement) =>
+      [...root.querySelectorAll<HTMLElement>("[data-testid='zen-issue-entry']")]
+        .filter((element) => !element.closest("[inert]"))
+        .map((element) => element.getAttribute("data-issue-url") ?? "");
+
+    const branch = mountOverlay({
+      snapshotTabs,
+      stored: { forgeCollapsedGroups: [`branch:gitlab:${GITLAB}:main`] },
+    });
+    await vi.waitFor(() => expect(shownUrls(branch.root)).toHaveLength(4));
+    expect(shownUrls(branch.root).filter((url) => url.includes("/merge_requests/"))).toEqual([
+      expect.stringContaining("/merge_requests/7"),
+      expect.stringContaining("/merge_requests/8"),
+    ]);
+    branch.unmount();
+
+    const project = mountOverlay({
+      snapshotTabs,
+      stored: { forgeCollapsedGroups: [`project:gitlab:${GITLAB}`] },
+    });
+    await vi.waitFor(() =>
+      expect(shownUrls(project.root)).toEqual([expect.stringContaining("/merge_requests/7")]),
+    );
+    project.unmount();
   });
 
   it("collapses a branch, shows its count, and walks the keyboard past it", async () => {

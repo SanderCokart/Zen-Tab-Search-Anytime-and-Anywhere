@@ -151,8 +151,7 @@ export function SearchApp({
     setTodos,
     setStatuses,
   } = useSearchSnapshot(cache);
-  const { displaySettings, loaded: settingsLoaded, setDisplaySettings } =
-    useDisplaySettings(cache);
+  const { displaySettings, loaded: settingsLoaded, setDisplaySettings } = useDisplaySettings(cache);
   const { essentialNames, setEssentialNames } = useEssentialTabNames();
   const sound = useSoundEngine({
     enabled: displaySettings.soundEnabled,
@@ -615,6 +614,8 @@ export function SearchApp({
               class={cn(
                 "zen-scroll zs-counter m-0 flex min-h-0 list-none flex-col overflow-y-auto",
                 "gap-[var(--zen-section-gap)]",
+                // Each section takes its share of the section gap as padding.
+                "[&>li]:py-[var(--zen-section-pad)] [&>section>li]:py-[var(--zen-section-pad)]",
                 "flex-1",
                 layout !== "overlay" && "zs-card p-[var(--zen-space-5)]",
                 compact && "min-h-[60px]",

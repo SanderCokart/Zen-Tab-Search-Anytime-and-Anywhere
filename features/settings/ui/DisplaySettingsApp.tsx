@@ -14,12 +14,15 @@ import {
 } from "@/features/settings/model/display-settings";
 import { themeColorStyle } from "@/features/settings/model/theme-colors";
 import {
+  GAP_PADDING_RATIO_STEP,
   GAP_STEP,
   MAX_FONT_SIZE,
   MAX_GAP,
+  MAX_GAP_PADDING_RATIO,
   MAX_UI_SCALE,
   MIN_FONT_SIZE,
   MIN_GAP,
+  MIN_GAP_PADDING_RATIO,
   MIN_UI_SCALE,
   type GapSettingKey,
 } from "@/features/settings/model/ui-scale";
@@ -98,13 +101,29 @@ function Hint({ text, children }: { text: string; children: ComponentChildren })
   );
 }
 
-/** Setting key, full label (the accessible name), the short label on the module, hint. */
+/**
+ * Setting key, full label (the accessible name), the short label on the module,
+ * hint. In the order the omnibar lays them out, top to bottom, then the columns.
+ */
 const GAP_CONTROLS: readonly (readonly [GapSettingKey, string, string, string])[] = [
+  ["spaceGap", "Between spaces", "Spaces", "Separates the tiles in the spaces grid."],
+  [
+    "essentialGap",
+    "Between essential tabs",
+    "Essentials",
+    "Separates the tiles in the essential-tabs grid.",
+  ],
   [
     "tabGap",
     "Between tabs",
     "Tabs",
     "Separates one tab row from the next, inside folders as well.",
+  ],
+  [
+    "sectionGap",
+    "Between sections",
+    "Sections",
+    "Separates the spaces block, the essential-tabs block and the tab list from each other.",
   ],
   [
     "folderGap",
@@ -113,21 +132,18 @@ const GAP_CONTROLS: readonly (readonly [GapSettingKey, string, string, string])[
     "Separates each folder section from what comes before it.",
   ],
   [
-    "essentialGap",
-    "Between essential tabs",
-    "Essentials",
-    "Separates the tiles in the essential-tabs grid.",
+    "issueGap",
+    "Between issues and requests",
+    "Issues and requests",
+    "Separates one entry in the issues and requests column from the next.",
   ],
-  ["spaceGap", "Between spaces", "Spaces", "Separates the tiles in the spaces grid."],
-  [
-    "sectionGap",
-    "Between sections",
-    "Sections",
-    "Separates the spaces block, the essential-tabs block and the tab list from each other.",
-  ],
-  ["issueGap", "Between issues", "Issues", "Separates one issue-navigator entry from the next."],
   ["todoGap", "Between todos", "Todos", "Separates one todo-column entry from the next."],
 ];
+
+/** The ratio as the readout shows it: "1", "0.5", "2.25". */
+function formatGapPaddingRatio(ratio: number): string {
+  return String(Math.round(ratio * 100) / 100);
+}
 
 const monoLabelClass = "zs-label !font-normal !text-[var(--zs-ink-3)]";
 
@@ -219,9 +235,9 @@ export function DisplaySettingsApp() {
   };
 
   const soundOff = !loaded || !settings.soundEnabled;
-  const gapsAreDefault = GAP_CONTROLS.every(
-    ([key]) => settings[key] === DEFAULT_DISPLAY_SETTINGS[key],
-  );
+  const gapsAreDefault =
+    settings.gapPaddingRatio === DEFAULT_DISPLAY_SETTINGS.gapPaddingRatio &&
+    GAP_CONTROLS.every(([key]) => settings[key] === DEFAULT_DISPLAY_SETTINGS[key]);
   const sizesAreDefault =
     settings.fontSize === DEFAULT_DISPLAY_SETTINGS.fontSize &&
     settings.uiScale === DEFAULT_DISPLAY_SETTINGS.uiScale;
@@ -409,48 +425,73 @@ export function DisplaySettingsApp() {
 
             <Module title="Gaps" wide>
               <p class="m-0 font-[family-name:var(--font-title)] text-[length:var(--zen-text-sm)] text-[var(--zs-ink-3)]">
-                Each one moves a single gap and nothing else; padding inside rows and tiles follows
-                Density.
+                Each one sets the space between one kind of neighbour. The ratio splits that space
+                into padding on the elements and the gap left between them.
               </p>
-              <div class="zs-mod-two">
-                {GAP_CONTROLS.map(([key, label, short, hint]) => (
-                  <Hint key={key} text={hint}>
-                    <div class="flex items-center gap-[var(--zen-space-3)]" key={key}>
-                      <span class={cn(monoLabelClass, "w-[calc(var(--zen-font-size)*7)] shrink-0")}>
-                        {short}
-                      </span>
-                      <Slider
-                        class="[--zs-slider-width:calc(var(--zen-font-size)*9.2)]"
-                        label={label}
-                        data-testid={`zen-${key}`}
-                        min={MIN_GAP}
-                        max={MAX_GAP}
-                        step={GAP_STEP}
-                        disabled={!loaded}
-                        value={settings[key]}
-                        unit="px"
-                        onChange={(value) => updateSettings({ [key]: value })}
-                      />
-                    </div>
-                  </Hint>
-                ))}
-                <div class="flex items-center justify-self-end">
-                  <button
-                    type="button"
-                    class={settingsKeyClass}
-                    disabled={!loaded || gapsAreDefault}
-                    onClick={() =>
-                      updateSettings(
-                        Object.fromEntries(
-                          GAP_CONTROLS.map(([key]) => [key, DEFAULT_DISPLAY_SETTINGS[key]]),
-                        ),
-                      )
-                    }
-                  >
-                    <ResetIcon class="size-[var(--zen-icon-sm)]" />
-                    Reset gaps
-                  </button>
+              <div class="flex flex-wrap items-start gap-[var(--zen-space-5)]">
+                <div class="zs-mod-two min-w-0 flex-1">
+                  {GAP_CONTROLS.map(([key, label, short, hint]) => (
+                    <Hint key={key} text={hint}>
+                      <div class="flex items-center gap-[var(--zen-space-3)]" key={key}>
+                        <span
+                          class={cn(monoLabelClass, "w-[calc(var(--zen-font-size)*7)] shrink-0")}
+                        >
+                          {short}
+                        </span>
+                        <Slider
+                          class="[--zs-slider-width:calc(var(--zen-font-size)*9.2)]"
+                          label={label}
+                          data-testid={`zen-${key}`}
+                          min={MIN_GAP}
+                          max={MAX_GAP}
+                          step={GAP_STEP}
+                          disabled={!loaded}
+                          value={settings[key]}
+                          unit="px"
+                          onChange={(value) => updateSettings({ [key]: value })}
+                        />
+                      </div>
+                    </Hint>
+                  ))}
+                  <div class="flex items-center justify-self-end">
+                    <button
+                      type="button"
+                      class={settingsKeyClass}
+                      disabled={!loaded || gapsAreDefault}
+                      onClick={() =>
+                        updateSettings({
+                          ...Object.fromEntries(
+                            GAP_CONTROLS.map(([key]) => [key, DEFAULT_DISPLAY_SETTINGS[key]]),
+                          ),
+                          gapPaddingRatio: DEFAULT_DISPLAY_SETTINGS.gapPaddingRatio,
+                        })
+                      }
+                    >
+                      <ResetIcon class="size-[var(--zen-icon-sm)]" />
+                      Reset gaps
+                    </button>
+                  </div>
                 </div>
+                <Hint text="Padding to gap. Turn it down for more gap, up for more padding; at 1 each gap is split evenly.">
+                  <div class="flex w-fit flex-col items-center gap-[var(--zen-space-2)] text-center">
+                    <Dial
+                      label="Padding to gap ratio"
+                      data-testid="zen-gapPaddingRatio"
+                      min={MIN_GAP_PADDING_RATIO}
+                      max={MAX_GAP_PADDING_RATIO}
+                      step={GAP_PADDING_RATIO_STEP}
+                      disabled={!loaded}
+                      value={settings.gapPaddingRatio}
+                      valueText={`${formatGapPaddingRatio(settings.gapPaddingRatio)} to 1`}
+                      onChange={(gapPaddingRatio) => updateSettings({ gapPaddingRatio })}
+                    />
+                    <Lcd class="zs-readout zs-digits">
+                      {formatGapPaddingRatio(settings.gapPaddingRatio)}
+                      <u>:1</u>
+                    </Lcd>
+                    <span class={monoLabelClass}>Ratio</span>
+                  </div>
+                </Hint>
               </div>
             </Module>
 

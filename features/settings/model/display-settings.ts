@@ -1,6 +1,11 @@
 import * as v from "valibot";
 import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINE_IDS } from "@/features/search/model/web-search";
-import { clampFontSize, clampGap, clampUiScale } from "@/features/settings/model/ui-scale";
+import {
+  clampFontSize,
+  clampGap,
+  clampGapPaddingRatio,
+  clampUiScale,
+} from "@/features/settings/model/ui-scale";
 import { clampVolume, DEFAULT_SOUND_VOLUME } from "@/shared/ui/sound/engine";
 import { THEME_PREFERENCES } from "@/shared/ui/theme";
 
@@ -37,6 +42,8 @@ const DEFAULTS = {
   spaceGap: 8,
   issueGap: 4,
   todoGap: 4,
+  /** How each gap splits into padding on the elements and gap between them; 1 is even. */
+  gapPaddingRatio: 1,
   /** Interface sounds: key clicks, latches and chimes. */
   soundEnabled: true,
   /** 0..1, the level the sounds are scaled to. */
@@ -194,6 +201,9 @@ const displaySettingsSchema = v.pipe(
       spaceGap: gap(DEFAULTS.spaceGap),
       issueGap: gap(DEFAULTS.issueGap),
       todoGap: gap(DEFAULTS.todoGap),
+      gapPaddingRatio: scalar(DEFAULTS.gapPaddingRatio, (value) =>
+        clampGapPaddingRatio(value, DEFAULTS.gapPaddingRatio),
+      ),
       soundEnabled: boolean(DEFAULTS.soundEnabled),
       soundVolume: scalar(DEFAULTS.soundVolume, clampVolume),
       backgroundOpacity: scalar(DEFAULTS.backgroundOpacity, clampBackgroundOpacity),

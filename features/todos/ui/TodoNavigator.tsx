@@ -176,7 +176,7 @@ export function TodoNavigator({
               key={tab.id ?? tab.domId ?? tab.url}
               class={cn(
                 "zs-row flex w-full max-w-full min-w-0 shrink-0 flex-col gap-[calc(var(--zen-font-size)*0.43)] rounded-[var(--zen-radius-lg)]",
-                "px-[var(--zen-space-3)] py-[var(--zen-space-3)]",
+                "px-[var(--zen-space-3)] py-[calc(var(--zen-space-3)+var(--zen-todo-pad))]",
                 statusRowClass(light, selected),
               )}
               data-status-light={light}

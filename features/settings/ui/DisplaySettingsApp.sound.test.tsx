@@ -89,6 +89,27 @@ describe("switches", () => {
   });
 });
 
+describe("gap settings", () => {
+  it("lists the gaps in the order the omnibar lays them out, beside the ratio dial", async () => {
+    await mount();
+    const order = [...root.querySelectorAll<HTMLElement>("[data-testid$='Gap']")].map(
+      (slider) => slider.getAttribute("data-testid"),
+    );
+    expect(order).toEqual([
+      "zen-spaceGap",
+      "zen-essentialGap",
+      "zen-tabGap",
+      "zen-sectionGap",
+      "zen-folderGap",
+      "zen-issueGap",
+      "zen-todoGap",
+    ]);
+    expect(root.textContent).toContain("Issues and requests");
+    expect(byId("zen-gapPaddingRatio")).not.toBeNull();
+    expect(root.textContent).toContain("1:1");
+  });
+});
+
 describe("sound on the settings page", () => {
   it("ticks once for each step a slider moves, not for a move inside a step", async () => {
     await mount({ soundEnabled: true });

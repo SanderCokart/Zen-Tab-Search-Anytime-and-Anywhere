@@ -6,6 +6,8 @@ import {
   MAX_FONT_SIZE,
   MAX_GAP,
   clampGap,
+  clampGapPaddingRatio,
+  splitGap,
   MAX_UI_SCALE,
   MIN_FONT_SIZE,
   MIN_UI_SCALE,
@@ -84,16 +86,43 @@ describe("ui scale", () => {
 
   it("stores gaps as a ratio of the 14px reference, so the slider reads as pixels", () => {
     const style = uiScaleStyle(
-      settings({ fontSize: 14, uiScale: 1.25, tabGap: 0, folderGap: 28 }),
+      settings({ fontSize: 14, uiScale: 1.25, tabGap: 0, folderGap: 28, gapPaddingRatio: 0 }),
       "overlay",
     );
 
     expect(style["--zen-font-size"]).toBe("14px");
     expect(style["--zen-scale"]).toBe("1.25");
     expect(style["--zen-tab-gap-ratio"]).toBe("0");
-    // 28px at the 14px reference is exactly two base font sizes.
+    // 28px at the 14px reference is exactly two base font sizes, all of it gap at ratio 0.
     expect(style["--zen-folder-gap-ratio"]).toBe("2");
-    expect(Object.keys(style)).toHaveLength(2 + GAP_SETTINGS.length);
+    expect(style["--zen-folder-pad-ratio"]).toBe("0");
+    expect(Object.keys(style)).toHaveLength(2 + GAP_SETTINGS.length * 2);
+  });
+
+  it("splits each gap evenly into gap and padding at the default ratio", () => {
+    const style = uiScaleStyle(settings({ fontSize: 14, folderGap: 28 }), "overlay");
+
+    // 14px gap, and 7px of padding on each of the two neighbours.
+    expect(style["--zen-folder-gap-ratio"]).toBe("1");
+    expect(style["--zen-folder-pad-ratio"]).toBe("0.5");
+  });
+
+  it("gives more padding as the ratio turns up and more gap as it turns down", () => {
+    expect(splitGap(20, 0)).toEqual({ gap: 20, padding: 0 });
+    expect(splitGap(20, 1)).toEqual({ gap: 10, padding: 5 });
+    expect(splitGap(20, 3)).toEqual({ gap: 5, padding: 7.5 });
+    // The gap and both paddings always add back up to the space the slider set.
+    for (const ratio of [0, 0.25, 1, 2.5, 4]) {
+      const { gap, padding } = splitGap(24, ratio);
+      expect(gap + padding * 2).toBeCloseTo(24);
+    }
+  });
+
+  it("snaps the padding ratio to its step and holds it in range", () => {
+    expect(clampGapPaddingRatio(1.1)).toBe(1);
+    expect(clampGapPaddingRatio(-2)).toBe(0);
+    expect(clampGapPaddingRatio(9)).toBe(4);
+    expect(clampGapPaddingRatio(Number.NaN)).toBe(1);
   });
 
   it("gives every gap setting a distinct custom property", () => {

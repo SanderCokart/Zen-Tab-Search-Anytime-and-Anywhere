@@ -662,20 +662,6 @@ export function flattenForgeNavigatorEntries(
 }
 
 /**
- * Splits off the entry for the tab the overlay was opened over, which the
- * current-tab strip shows instead of the navigator.
- */
-export function splitCurrentForgeEntry(entries: ForgeIssueEntry[]): {
-  current?: ForgeIssueEntry;
-  rest: ForgeIssueEntry[];
-} {
-  const current = entries.find((entry) => entry.tab.active === true);
-  return current
-    ? { current, rest: entries.filter((entry) => entry !== current) }
-    : { rest: entries };
-}
-
-/**
  * Spaces, then essential tabs, then everything else in its own order. The
  * current tab gets no special place here: it ranks like any other tab, and the
  * strip under the search bar shows it.

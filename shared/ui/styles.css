@@ -132,17 +132,25 @@
     /*
      * The configurable gaps. Each is picked in pixels and stored as a ratio of a
      * 14px reference, so at the default font size the number the user chose is the
-     * gap in pixels, and it scales with the UI from there. Each one drives exactly
-     * one `gap` or margin in one place; the fallbacks are the defaults, for a
-     * surface that has not set them.
+     * space in pixels, and it scales with the UI from there. The padding-to-gap
+     * ratio splits that space: `-gap` is what is left between two elements, and
+     * `-pad` is the padding each of them gets on that side. The fallbacks are the
+     * defaults (an even split), for a surface that has not set them.
      */
-    --zen-section-gap: calc(var(--zen-font-size) * var(--zen-section-gap-ratio, 1.429));
-    --zen-tab-gap: calc(var(--zen-font-size) * var(--zen-tab-gap-ratio, 0.286));
-    --zen-folder-gap: calc(var(--zen-font-size) * var(--zen-folder-gap-ratio, 0.857));
-    --zen-essential-gap: calc(var(--zen-font-size) * var(--zen-essential-gap-ratio, 0.571));
-    --zen-space-gap: calc(var(--zen-font-size) * var(--zen-space-gap-ratio, 0.571));
-    --zen-issue-gap: calc(var(--zen-font-size) * var(--zen-issue-gap-ratio, 0.286));
-    --zen-todo-gap: calc(var(--zen-font-size) * var(--zen-todo-gap-ratio, 0.286));
+    --zen-space-gap: calc(var(--zen-font-size) * var(--zen-space-gap-ratio, 0.286));
+    --zen-space-pad: calc(var(--zen-font-size) * var(--zen-space-pad-ratio, 0.143));
+    --zen-essential-gap: calc(var(--zen-font-size) * var(--zen-essential-gap-ratio, 0.286));
+    --zen-essential-pad: calc(var(--zen-font-size) * var(--zen-essential-pad-ratio, 0.143));
+    --zen-tab-gap: calc(var(--zen-font-size) * var(--zen-tab-gap-ratio, 0.143));
+    --zen-tab-pad: calc(var(--zen-font-size) * var(--zen-tab-pad-ratio, 0.071));
+    --zen-section-gap: calc(var(--zen-font-size) * var(--zen-section-gap-ratio, 0.714));
+    --zen-section-pad: calc(var(--zen-font-size) * var(--zen-section-pad-ratio, 0.357));
+    --zen-folder-gap: calc(var(--zen-font-size) * var(--zen-folder-gap-ratio, 0.429));
+    --zen-folder-pad: calc(var(--zen-font-size) * var(--zen-folder-pad-ratio, 0.214));
+    --zen-issue-gap: calc(var(--zen-font-size) * var(--zen-issue-gap-ratio, 0.143));
+    --zen-issue-pad: calc(var(--zen-font-size) * var(--zen-issue-pad-ratio, 0.071));
+    --zen-todo-gap: calc(var(--zen-font-size) * var(--zen-todo-gap-ratio, 0.143));
+    --zen-todo-pad: calc(var(--zen-font-size) * var(--zen-todo-pad-ratio, 0.071));
   }
 
   /*
@@ -192,6 +200,14 @@
     --zen-space-gap: 8px;
     --zen-issue-gap: 4px;
     --zen-todo-gap: 4px;
+    /* The popup keeps its fixed rhythm: all gap, no padding from the split. */
+    --zen-space-pad: 0px;
+    --zen-essential-pad: 0px;
+    --zen-tab-pad: 0px;
+    --zen-section-pad: 0px;
+    --zen-folder-pad: 0px;
+    --zen-issue-pad: 0px;
+    --zen-todo-pad: 0px;
   }
 
   /*
@@ -448,6 +464,17 @@
     box-shadow: var(--zs-well);
   }
 
+  /*
+   * A sunk key has moved 2px out from under a press near its top edge, so the
+   * release landed outside it and no click fired while the key still looked
+   * pressed. This strip covers where the key was until it springs back.
+   */
+  .zs-key:active:not(:disabled)::before {
+    content: "";
+    position: absolute;
+    inset: -3px -1px 0;
+  }
+
   .zs-key:disabled {
     cursor: not-allowed;
     opacity: 0.5;
@@ -649,7 +676,7 @@
   .zs-subfolder {
     border: 1px solid var(--zs-line-medium);
     border-radius: var(--zen-radius);
-    padding: var(--zen-space-2);
+    padding: calc(var(--zen-space-2) + var(--zen-folder-pad)) var(--zen-space-2);
   }
 
   /* Sub-folders and tree children hang off a left hairline. */
@@ -687,6 +714,39 @@
     width: calc(var(--zen-font-size) * 0.214);
     border-radius: 2px;
     background-color: var(--zs-red);
+  }
+
+  /*
+   * The tab the overlay was opened over, wherever it is listed: a ring and a NOW
+   * tag, so it stands out with every folder open. An outline, not a shadow, so
+   * it sits over an essential tile's hairline and any status tint.
+   */
+  .zs-row[data-current="true"] {
+    outline: 1px solid color-mix(in srgb, var(--zs-red) 55%, transparent);
+    outline-offset: -1px;
+  }
+
+  .zs-now-tag {
+    flex: none;
+    font-family: var(--font-mono);
+    font-size: var(--zen-text-xs);
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    color: var(--zs-red-ink);
+  }
+
+  /*
+   * A row that takes its share of a gap as padding, above and below. Its keys
+   * are positioned from the top, so they move down by the same amount and stay
+   * centred on the line.
+   */
+  .zs-row[data-gap-pad] {
+    padding-top: var(--zen-row-pad-y);
+    padding-bottom: var(--zen-row-pad-y);
+  }
+
+  .zs-row[data-gap-pad] .zs-acts {
+    top: var(--zen-row-pad-y);
   }
 
   .zs-row-title {
