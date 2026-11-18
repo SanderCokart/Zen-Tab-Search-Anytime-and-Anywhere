@@ -15,10 +15,24 @@ export interface DisplaySettingsState {
   setDisplaySettings: (settings: DisplaySettings) => void;
 }
 
-/** Current display settings, kept in sync with the options page. */
-export function useDisplaySettings(): DisplaySettingsState {
-  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
-  const [loaded, setLoaded] = useState(false);
+/** Holds the last read settings across remounts, so a reopened search skips the wait. */
+export interface DisplaySettingsCache {
+  displaySettings?: DisplaySettings;
+}
+
+/**
+ * Current display settings, kept in sync with the options page. With a cache
+ * holding earlier settings, it starts from those, already loaded, and re-reads.
+ */
+export function useDisplaySettings(cache?: DisplaySettingsCache): DisplaySettingsState {
+  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(
+    () => cache?.displaySettings ?? DEFAULT_DISPLAY_SETTINGS,
+  );
+  const [loaded, setLoaded] = useState(cache?.displaySettings !== undefined);
+
+  useEffect(() => {
+    if (cache && loaded) cache.displaySettings = displaySettings;
+  }, [cache, loaded, displaySettings]);
 
   useEffect(() => {
     void readDisplaySettings()

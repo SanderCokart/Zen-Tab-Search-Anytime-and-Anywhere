@@ -84,10 +84,15 @@ async function showReadyOverlay(
  * Toggles the overlay the experiment hosts in the browser window. Returns false
  * when the experiment cannot, so the caller falls back to the in-page overlay.
  */
-async function toggleWindowOmnibar(): Promise<boolean> {
+async function toggleWindowOmnibar(warmSnapshot?: (anchorTabId: number) => void): Promise<boolean> {
   const result = await toggleOverlay();
   if (!result) return false;
-  if (result.state === "ready") await showReadyOverlay(result);
+  if (result.state === "ready") {
+    // The page asks for this snapshot once it remounts; start it now so the
+    // read overlaps the remount instead of following it.
+    if (isUsableTabId(result.anchorTabId)) warmSnapshot?.(result.anchorTabId);
+    await showReadyOverlay(result);
+  }
   return true;
 }
 
@@ -132,7 +137,7 @@ export async function toggleOmnibar(
   preferredTabId?: number,
   options: ToggleOmnibarOptions = {},
 ): Promise<void> {
-  if (await toggleWindowOmnibar()) return;
+  if (await toggleWindowOmnibar(options.warmSnapshot)) return;
 
   const tabId = await resolveAnchorTabId(preferredTabId);
   if (!isUsableTabId(tabId)) return;

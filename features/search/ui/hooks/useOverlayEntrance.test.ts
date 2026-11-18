@@ -39,6 +39,12 @@ describe("useOverlayEntrance", () => {
     unmount();
   });
 
+  it("opens the overlay on its first render when it mounts with cached data", () => {
+    const { values, unmount } = mount(true, true);
+    expect(values[0]).toBe(true);
+    unmount();
+  });
+
   it("keeps the overlay closed until data is ready, then opens after layout", async () => {
     const { values, rerender, unmount } = mount(true, false);
     expect(values.at(-1)).toBe(false);

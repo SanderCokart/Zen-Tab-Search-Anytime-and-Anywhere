@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
-import { SearchApp } from "@/features/search/ui/SearchApp";
+import { createSearchSessionCache, SearchApp } from "@/features/search/ui/SearchApp";
 import { sendExtensionMessage, subscribeToOmnibarShown } from "@/shared/messaging/client";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { parseOmnibarView, type OmnibarView } from "@/shared/messaging/protocol";
@@ -13,6 +13,9 @@ const overlayId = params.get("overlay") ?? "";
 // Alt+F, it mounts straight away and the background shows it without a remount.
 const initialSession = params.get("shown") === "1" ? 1 : 0;
 const initialView = readViewParam(params.get("view"));
+// Each show remounts the search, but paints from the last session's data while
+// it refreshes, so the first frame does not wait on a snapshot read.
+const sessionCache = createSearchSessionCache();
 
 function readViewParam(value: string | null): OmnibarView | undefined {
   if (!value) return undefined;
@@ -30,7 +33,7 @@ function hide() {
 }
 
 function OmnibarPage() {
-  // Each show remounts the search from scratch: empty query, fresh snapshot.
+  // Each show remounts the search: empty query, last data, then a fresh snapshot.
   const [session, setSession] = useState({ id: initialSession, view: initialView });
 
   useEffect(
@@ -51,6 +54,7 @@ function OmnibarPage() {
       pageJump={5}
       layout="overlay"
       initialView={session.view}
+      cache={sessionCache}
     />
   );
 }

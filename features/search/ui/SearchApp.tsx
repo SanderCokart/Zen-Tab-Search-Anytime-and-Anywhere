@@ -39,13 +39,19 @@ import { SearchShell } from "@/features/search/ui/components/SearchShell";
 import { TabContextMenu } from "@/features/search/ui/components/TabContextMenu";
 import { TimerIcon } from "@/features/search/ui/components/TimerIcon";
 import { useCloseOnOutsideClick } from "@/features/search/ui/hooks/useCloseOnOutsideClick";
-import { useDisplaySettings } from "@/features/search/ui/hooks/useDisplaySettings";
+import {
+  useDisplaySettings,
+  type DisplaySettingsCache,
+} from "@/features/search/ui/hooks/useDisplaySettings";
 import { saveDisplaySettings } from "@/features/settings/model/display-settings";
 import { useOverlayEntrance } from "@/features/search/ui/hooks/useOverlayEntrance";
 import { useEssentialTabNames } from "@/features/search/ui/hooks/useEssentialTabNames";
 import { useSearchNavigation } from "@/features/search/ui/hooks/useSearchNavigation";
 import { useSearchResults } from "@/features/search/ui/hooks/useSearchResults";
-import { useSearchSnapshot } from "@/features/search/ui/hooks/useSearchSnapshot";
+import {
+  useSearchSnapshot,
+  type SearchSnapshotCache,
+} from "@/features/search/ui/hooks/useSearchSnapshot";
 import { useTabRename } from "@/features/search/ui/hooks/useTabRename";
 import { useTimerActions } from "@/features/search/ui/hooks/useTimerActions";
 import { useStatusActions } from "@/features/search/ui/hooks/useStatusActions";
@@ -76,6 +82,17 @@ export interface SearchAppProps {
   layout?: SearchLayout;
   /** The overlay view to open on instead of the tab, issue and todo columns. */
   initialView?: OmnibarView;
+  /**
+   * Outlives this component, so the next mount paints the last snapshot and
+   * display settings at once instead of waiting for fresh ones.
+   */
+  cache?: SearchSessionCache;
+}
+
+export type SearchSessionCache = SearchSnapshotCache & DisplaySettingsCache;
+
+export function createSearchSessionCache(): SearchSessionCache {
+  return {};
 }
 
 /**
@@ -88,6 +105,7 @@ export function SearchApp({
   pageJump = 5,
   layout = "popup",
   initialView,
+  cache,
 }: SearchAppProps) {
   const compact = layout === "popup";
   // The overlay has room to swap its columns for the timer and host override
@@ -132,8 +150,9 @@ export function SearchApp({
     setTimers,
     setTodos,
     setStatuses,
-  } = useSearchSnapshot();
-  const { displaySettings, loaded: settingsLoaded, setDisplaySettings } = useDisplaySettings();
+  } = useSearchSnapshot(cache);
+  const { displaySettings, loaded: settingsLoaded, setDisplaySettings } =
+    useDisplaySettings(cache);
   const { essentialNames, setEssentialNames } = useEssentialTabNames();
   const sound = useSoundEngine({
     enabled: displaySettings.soundEnabled,

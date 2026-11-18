@@ -5,9 +5,12 @@ import { useEffect, useState } from "preact/hooks";
  * settings have landed, then waits two animation frames so the real size is
  * committed before it is shown. That hides the layout shift from empty
  * defaults jumping to the loaded columns and scale.
+ *
+ * Ready on the first render means it mounted from cached data, which already
+ * has its real size, so it opens straight away.
  */
 export function useOverlayEntrance(enabled: boolean, ready: boolean): boolean {
-  const [open, setOpen] = useState(!enabled);
+  const [open, setOpen] = useState(!enabled || ready);
 
   useEffect(() => {
     if (!enabled) {

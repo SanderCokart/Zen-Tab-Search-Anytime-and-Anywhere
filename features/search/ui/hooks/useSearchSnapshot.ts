@@ -12,6 +12,22 @@ import {
 import { statusesByTabId } from "@/features/status/model/status";
 import { todosByTabId } from "@/features/todos/model/todo";
 
+export interface SearchSnapshotData {
+  tabs: TabInfo[];
+  spaces: SpaceInfo[];
+  timers: Map<number, TabTimer>;
+  todos: Map<number, TabTodo>;
+  statuses: Map<number, TrafficLight>;
+}
+
+/**
+ * Holds the last loaded snapshot across remounts, so a reopened search paints
+ * from it at once and refreshes in the background.
+ */
+export interface SearchSnapshotCache {
+  snapshot?: SearchSnapshotData;
+}
+
 export interface SearchSnapshotState {
   tabs: TabInfo[];
   spaces: SpaceInfo[];
@@ -80,16 +96,27 @@ function sameSpaces(first: SpaceInfo[], second: SpaceInfo[]): boolean {
 
 /**
  * Loads tabs, spaces and timers from the background script and keeps them in
- * sync with the `snapshotChanged` broadcast.
+ * sync with the `snapshotChanged` broadcast. With a cache holding an earlier
+ * snapshot, it starts from that one, already loaded, and refreshes it.
  */
-export function useSearchSnapshot(): SearchSnapshotState {
-  const [tabs, setTabs] = useState<TabInfo[]>([]);
-  const [spaces, setSpaces] = useState<SpaceInfo[]>([]);
-  const [timers, setTimers] = useState<Map<number, TabTimer>>(new Map());
-  const [todos, setTodos] = useState<Map<number, TabTodo>>(new Map());
-  const [statuses, setStatuses] = useState<Map<number, TrafficLight>>(new Map());
+export function useSearchSnapshot(cache?: SearchSnapshotCache): SearchSnapshotState {
+  const cached = cache?.snapshot;
+  const [tabs, setTabs] = useState<TabInfo[]>(() => cached?.tabs ?? []);
+  const [spaces, setSpaces] = useState<SpaceInfo[]>(() => cached?.spaces ?? []);
+  const [timers, setTimers] = useState<Map<number, TabTimer>>(() => cached?.timers ?? new Map());
+  const [todos, setTodos] = useState<Map<number, TabTodo>>(() => cached?.todos ?? new Map());
+  const [statuses, setStatuses] = useState<Map<number, TrafficLight>>(
+    () => cached?.statuses ?? new Map(),
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(cached !== undefined);
+
+  // Local edits (a timer set, a todo marked) count too, so the next open shows them.
+  useEffect(() => {
+    if (cache && loaded && loadError === null) {
+      cache.snapshot = { tabs, spaces, timers, todos, statuses };
+    }
+  }, [cache, loaded, loadError, tabs, spaces, timers, todos, statuses]);
 
   useEffect(() => {
     let cancelled = false;

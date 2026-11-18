@@ -1,6 +1,6 @@
 import { render } from "preact";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { SearchApp } from "@/features/search/ui/SearchApp";
+import { createSearchSessionCache, SearchApp } from "@/features/search/ui/SearchApp";
 import type { OmnibarView } from "@/shared/messaging/protocol";
 import type { SpaceInfo, TabInfo, TabStatus, TabTimer, TabTodo } from "@/shared/types";
 
@@ -689,6 +689,31 @@ describe("SearchApp", () => {
         "open",
       ),
     );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("reopens from its session cache on the first frame, before the snapshot returns", async () => {
+    const { root, sendMessage } = mountSearchApp(vi.fn(), tabs, "overlay");
+    const cache = createSearchSessionCache();
+    render(<SearchApp onClose={vi.fn()} layout="overlay" cache={cache} />, root);
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-omnibar-stage]")?.getAttribute("data-omnibar-stage")).toBe(
+        "open",
+      ),
+    );
+    render(null, root);
+
+    // The reopened search's own snapshot read never finishes.
+    sendMessage.mockImplementation(() => new Promise(() => undefined));
+    render(<SearchApp onClose={vi.fn()} layout="overlay" cache={cache} />, root);
+
+    expect(root.textContent).toContain("First tab");
+    expect(root.querySelector("[data-omnibar-stage]")?.getAttribute("data-omnibar-stage")).toBe(
+      "open",
+    );
+    expect(sendMessage).toHaveBeenCalledWith({ type: "getSnapshot" });
 
     render(null, root);
     root.remove();
