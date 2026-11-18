@@ -85,10 +85,7 @@ function renderGroups(
           {essentialTabs.length > 0 && (
             <li class="min-w-0" data-testid="zen-essential-section">
               <div class={sectionHeaderClass}>Essential tabs</div>
-              <ul
-                class="m-0 grid list-none grid-cols-2 gap-[var(--zen-essential-gap)] p-0"
-                data-testid="zen-essential-grid"
-              >
+              <ul class="zs-essential-grid" data-testid="zen-essential-grid">
                 {essentialTabs.map((item) => renderItem(props, item))}
               </ul>
             </li>
@@ -223,6 +220,7 @@ function renderItem(props: SearchResultsListProps, item: SearchItem, interactive
       }}
       data-testid="zen-search-item"
       data-selected={selected ? "true" : undefined}
+      data-essential={item.kind === "tab" && isEssentialTab(item.data) ? "true" : undefined}
       data-status-light={light}
       class={cn(
         "zen-search-row zs-row flex min-w-0 cursor-pointer items-center",

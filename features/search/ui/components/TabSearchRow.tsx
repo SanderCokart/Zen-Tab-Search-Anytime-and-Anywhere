@@ -58,16 +58,18 @@ export const TabSearchRow = memo(function TabSearchRow({
             })}
         </span>
         {isTodo && <Led on class="zs-todo-dot" />}
-        <span class="zs-meta">
-          {timer && !isEssentialTab(tab) && (
-            <span class="zs-meta-timer zs-digits">
-              <TimerCountdown endAt={timer.endAt} format="short" />
+        {!isEssentialTab(tab) && (
+          <span class="zs-meta">
+            {timer && (
+              <span class="zs-meta-timer zs-digits">
+                <TimerCountdown endAt={timer.endAt} format="short" />
+              </span>
+            )}
+            <span class="max-w-[calc(var(--zen-font-size)*9)] truncate">
+              {tab.workspaceName || hostname(tab.url)}
             </span>
-          )}
-          <span class="max-w-[calc(var(--zen-font-size)*9)] truncate">
-            {tab.workspaceName || hostname(tab.url)}
           </span>
-        </span>
+        )}
       </div>
       <TabActions
         tab={tab}

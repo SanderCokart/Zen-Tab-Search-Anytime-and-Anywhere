@@ -599,6 +599,27 @@
     font-weight: 500;
   }
 
+  /*
+   * Essential tiles share a row with overlay keys. One tab should fill the
+   * section; two sit side by side when the pane is wide enough for a readable
+   * title. auto-fit collapses to a single column in the toolbar popup.
+   */
+  .zs-essential-grid {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, calc(var(--zen-font-size) * 16)), 1fr)
+    );
+    gap: var(--zen-essential-gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .zs-row[data-essential] .zs-row-title {
+    flex: 1 1 auto;
+  }
+
   .zs-meta {
     display: inline-flex;
     flex: none;
@@ -681,16 +702,15 @@
     transition: none;
   }
 
-  /* The keys float over the right edge, so the timer and host give way to them
-     while they are showing. Hidden, not removed, so the row does not relayout. */
+  /* The keys float over the right edge. Drop the timer and host from the flow
+     so the title truncates at the keys instead of at host + keys together. */
   .zs-row:hover .zs-meta,
   .zs-row:focus-within .zs-meta,
   .zs-row[data-selected="true"] .zs-meta,
   .zs-row[data-issue-selected="true"] .zs-meta,
   .zs-row[data-keep] .zs-meta,
   .zs-row:has(.zs-acts[data-always]) .zs-meta {
-    visibility: hidden;
-    transition: visibility 0s linear 60ms;
+    display: none;
   }
 
   /* A recessed tray, the floor a collapsible panel's content sits on. */

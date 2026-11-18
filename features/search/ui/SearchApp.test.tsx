@@ -451,6 +451,37 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("keeps the host off essential tiles so the title can use the row", async () => {
+    const mixedTabs = [
+      {
+        ...tabs[0],
+        title: "Regular tab",
+        active: true,
+        workspaceName: "Work",
+      },
+      {
+        ...tabs[1],
+        essential: true,
+        title: "Substack",
+        url: "https://substack.com/inbox",
+        workspaceName: "Work",
+      },
+    ];
+    const { root } = mountSearchApp(vi.fn(), mixedTabs, "overlay");
+
+    await vi.waitFor(() => expect(root.textContent).toContain("Substack"));
+    const grid = root.querySelector("[data-testid='zen-essential-grid']");
+    expect(grid?.classList.contains("zs-essential-grid")).toBe(true);
+    const tile = grid?.querySelector("[data-testid='zen-search-item']");
+    expect(tile?.getAttribute("data-essential")).toBe("true");
+    expect(tile?.textContent).toContain("Substack");
+    expect(tile?.textContent).not.toContain("Work");
+    expect(tile?.textContent).not.toContain("substack.com");
+
+    render(null, root);
+    root.remove();
+  });
+
   it("groups tabs under their Zen folder headings", async () => {
     const folderTabs = [
       { ...tabs[0], folderId: "folder-a", folderName: "Projects" },
