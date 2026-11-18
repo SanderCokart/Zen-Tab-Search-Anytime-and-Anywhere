@@ -199,8 +199,7 @@ export function DisplaySettingsApp() {
   );
   const sizesAreDefault =
     settings.fontSize === DEFAULT_DISPLAY_SETTINGS.fontSize &&
-    settings.uiScale === DEFAULT_DISPLAY_SETTINGS.uiScale &&
-    settings.respectZoom === DEFAULT_DISPLAY_SETTINGS.respectZoom;
+    settings.uiScale === DEFAULT_DISPLAY_SETTINGS.uiScale;
 
   return (
     <SoundProvider sound={sound}>
@@ -326,19 +325,6 @@ export function DisplaySettingsApp() {
                   onChange={(uiScale) => updateSettings({ uiScale })}
                 />
               </div>
-              <Switch
-                data-testid="zen-respect-zoom"
-                checked={settings.respectZoom}
-                disabled={!loaded}
-                onChange={(respectZoom) => updateSettings({ respectZoom })}
-              >
-                <span title="Lets the overlay grow and shrink with the browser's zoom, like the page underneath it. Off, the overlay keeps the same size on screen at every zoom level.">
-                  <FieldText
-                    label="Follow the page zoom level"
-                    hint="The overlay grows and shrinks with the browser zoom. Off, it keeps one size on screen."
-                  />
-                </span>
-              </Switch>
               <button
                 type="button"
                 class={cn(settingsKeyClass, "self-start")}
@@ -347,7 +333,6 @@ export function DisplaySettingsApp() {
                   updateSettings({
                     fontSize: DEFAULT_DISPLAY_SETTINGS.fontSize,
                     uiScale: DEFAULT_DISPLAY_SETTINGS.uiScale,
-                    respectZoom: DEFAULT_DISPLAY_SETTINGS.respectZoom,
                   })
                 }
               >

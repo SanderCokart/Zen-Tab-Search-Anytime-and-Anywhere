@@ -42,14 +42,6 @@ describe("ui scale", () => {
     expect(clampUiScale(Number.POSITIVE_INFINITY)).toBe(MIN_UI_SCALE);
   });
 
-  it("uses a plain px length when the overlay should follow the page zoom", () => {
-    // CSS pixels in the overlay already scale with page zoom, so following the zoom
-    // means doing nothing to them.
-    expect(resolveBaseFontSize(settings({ fontSize: 14, respectZoom: true }), "overlay")).toBe(
-      "14px",
-    );
-  });
-
   it("renders the configured size on screen by dividing out the tab zoom", () => {
     // A CSS px is `zoom` screen px, so 14px at 150% has to be 9.333 CSS px.
     expect(resolveBaseFontSize(settings({ fontSize: 14 }), "overlay", 1.5)).toBe("9.333px");
@@ -73,18 +65,10 @@ describe("ui scale", () => {
     expect(cancelZoom(12, 2)).toBe(6);
   });
 
-  it("leaves the plain px length alone when following the page zoom", () => {
-    expect(resolveBaseFontSize(settings({ fontSize: 14, respectZoom: true }), "overlay", 1.5)).toBe(
-      "14px",
-    );
-  });
-
-  it("keeps the popup windows on the plain px font size, in both modes", () => {
+  it("keeps the popup windows on the plain px font size, whatever the zoom", () => {
     // Their own window zoom scales a px length, so no viewport maths is needed.
     expect(resolveBaseFontSize(settings({ fontSize: 20 }), "popup")).toBe("20px");
-    expect(resolveBaseFontSize(settings({ fontSize: 20, respectZoom: true }), "popup")).toBe(
-      "20px",
-    );
+    expect(resolveBaseFontSize(settings({ fontSize: 20 }), "popup", 1.5)).toBe("20px");
   });
 
   it("snaps gaps to the step and holds them in range", () => {
@@ -100,7 +84,7 @@ describe("ui scale", () => {
 
   it("stores gaps as a ratio of the 14px reference, so the slider reads as pixels", () => {
     const style = uiScaleStyle(
-      settings({ fontSize: 14, uiScale: 1.25, respectZoom: true, tabGap: 0, folderGap: 28 }),
+      settings({ fontSize: 14, uiScale: 1.25, tabGap: 0, folderGap: 28 }),
       "overlay",
     );
 

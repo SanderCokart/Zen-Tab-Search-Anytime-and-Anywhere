@@ -45,8 +45,8 @@ export function SearchShell({
   const theme = useResolvedTheme(displaySettings.theme);
   const colors = themeColorStyle(theme, displaySettings);
   const backgroundPercent = Math.round(displaySettings.backgroundOpacity * 100);
-  // Only the overlay, and only when it should hold its size on screen, needs the zoom.
-  const zoom = usePageZoom(layout === "overlay" && !displaySettings.respectZoom);
+  // Only the overlay needs the zoom: it holds its size on screen.
+  const zoom = usePageZoom(layout === "overlay");
   const overlayRef = useRef<HTMLDivElement>(null);
   // Ctrl + wheel changes the font size on the overlay; the popup's size is fixed.
   useCtrlWheelFontSize(overlayRef, displaySettings, layout === "overlay");

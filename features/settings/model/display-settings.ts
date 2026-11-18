@@ -26,8 +26,6 @@ const DEFAULTS = {
   fontSize: 14,
   /** Density multiplier for padding, gaps, icons and tiles. */
   uiScale: 1,
-  /** Overlay only: follow the page zoom level instead of holding a constant size. */
-  respectZoom: false,
   truncateTabTitles: true,
   truncateIssueTitles: true,
   /** Gaps, in pixels at the default font size, snapped to 4. */
@@ -184,7 +182,6 @@ const displaySettingsSchema = v.pipe(
       hideEssentialsInOverlay: boolean(DEFAULTS.hideEssentialsInOverlay),
       fontSize: scalar(DEFAULTS.fontSize, clampFontSize),
       uiScale: scalar(DEFAULTS.uiScale, clampUiScale),
-      respectZoom: boolean(DEFAULTS.respectZoom),
       truncateTabTitles: boolean(DEFAULTS.truncateTabTitles),
       truncateIssueTitles: boolean(DEFAULTS.truncateIssueTitles),
       sectionGap: gap(DEFAULTS.sectionGap),

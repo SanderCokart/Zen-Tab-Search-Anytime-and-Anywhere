@@ -105,20 +105,15 @@ export function cancelZoom(screenPx: number, zoom: number | undefined): number {
  * The base font size for a surface, as a CSS length.
  *
  * The overlay is laid out inside the page, so its CSS pixels scale with the page
- * zoom level. That single fact decides both modes:
- *
- * - `respectZoom` on: a plain px length. Page zoom scales it along with the rest
- *   of the page, which is what "follow the browser's zoom" means.
- * - `respectZoom` off: the configured size divided by the tab's zoom factor, so
- *   the font lands on screen at exactly the configured pixels whatever the zoom
- *   and whatever the window size. The factor comes from the background
- *   (`tabs.getZoom`), see `usePageZoom`; until it arrives, or for a surface that
- *   is not inside a zoomed page, it is 1.
+ * zoom level. It holds the configured size on screen instead: the size is divided
+ * by the tab's zoom factor, so the font lands on screen at exactly the configured
+ * pixels whatever the zoom and whatever the window size. The factor comes from the
+ * background (`tabs.getZoom`), see `usePageZoom`; until it arrives, or for a
+ * surface that is not inside a zoomed page, it is 1.
  *
  * The timer and host override windows (`"popup"`) are extension pages in their
  * own resizable windows: they take the plain px length at the full font size,
- * and the window's own zoom scales it like any page. The toolbar search popup
- * does not come through here; it pins fixed tokens under `[data-zen-ui="popup"]`.
+ * and the window's own zoom scales it like any page.
  */
 export function resolveBaseFontSize(
   settings: DisplaySettings,
@@ -127,7 +122,7 @@ export function resolveBaseFontSize(
 ): string {
   const fontSize = clampFontSize(settings.fontSize);
 
-  if (settings.respectZoom || surface === "popup") {
+  if (surface === "popup") {
     return `${css(fontSize)}px`;
   }
 
