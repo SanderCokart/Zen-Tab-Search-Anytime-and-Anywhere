@@ -360,16 +360,15 @@
   }
 
   /*
-   * Firefox paints <input> glyphs low unless height and line-height match.
-   * Caps then look centred in the LCD; x-height still sits low in the same
-   * 1em box. A hair of lift puts mixed-case ink on the same optical line
-   * as GOOGLE / SEARCH without moving the caret off the text.
+   * Keep a little extra leading for descenders. A strict 1em box clips
+   * lowercase glyphs such as "g" in Firefox. The slight lift keeps the
+   * mixed-case ink optically aligned with GOOGLE / SEARCH.
    */
   .zs-search-query {
-    height: 1em;
-    line-height: 1;
+    height: 1.2em;
+    line-height: 1.2;
     margin: 0;
-    translate: 0 -0.08em;
+    translate: 0 -0.04em;
   }
 
   /*
