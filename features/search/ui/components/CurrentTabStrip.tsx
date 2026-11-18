@@ -2,6 +2,8 @@ import { forgeRowParts, type ForgeIssueEntry } from "@/features/forge/model/forg
 import { TAG_BASE_CLASS, TAG_CLASS } from "@/features/forge/ui/ForgeIssueNavigator";
 import { forgeEntryDisplayTitle } from "@/features/search/model/ranking";
 import { TabActions } from "@/features/search/ui/components/TabActions";
+import type { DisplaySettings } from "@/features/settings/model/display-settings";
+import { tabActionFlags } from "@/features/settings/model/complexity";
 import { hostname } from "@/features/search/ui/lib/format";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { stripTimerPrefix } from "@/features/timers/model/timer";
@@ -35,6 +37,7 @@ export function CurrentTabStrip({
   onOpenTimer,
   onOpenStatusMenu,
   onClose,
+  displaySettings,
 }: {
   tab: TabInfo;
   /** The tab's issue or request, shown in place of its plain title. */
@@ -53,6 +56,7 @@ export function CurrentTabStrip({
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
   /** Closes the search. The strip's tab is already the one on screen. */
   onClose: () => void;
+  displaySettings?: DisplaySettings;
 }) {
   const parts = forgeEntry
     ? forgeRowParts(forgeEntry.ref, forgeEntryDisplayTitle(forgeEntry))
@@ -96,7 +100,7 @@ export function CurrentTabStrip({
       <span class={cn("zs-row-title min-w-0 flex-1", entryTextClass(truncate))}>
         {parts ? parts.title : title}
       </span>
-      {!compact && timer && !isEssentialTab(tab) && (
+      {!compact && timer && displaySettings?.timers !== false && !isEssentialTab(tab) && (
         <span class="text-zen-timer zs-digits shrink-0 font-mono text-[length:var(--zen-text-xs)]">
           <TimerCountdown endAt={timer.endAt} format="short" />
         </span>
@@ -123,6 +127,7 @@ export function CurrentTabStrip({
         onOpenStatusMenu={onOpenStatusMenu}
         onToggleTimer={onOpenTimer}
         onOpenTimerPopup={onOpenTimer}
+        actions={displaySettings ? tabActionFlags(displaySettings) : undefined}
       />
     </div>
   );

@@ -290,6 +290,12 @@ export const extensionRequestSchema = v.variant("type", [
     force: v.optional(v.boolean()),
   }),
   v.object({
+    type: v.literal("getBridgeStatus"),
+  }),
+  v.object({
+    type: v.literal("resetExtensionData"),
+  }),
+  v.object({
     type: v.literal("openUpdate"),
     /** The release zip, which Firefox downloads, or the release page with its notes. */
     page: v.picklist(["download", "releaseNotes"]),
@@ -362,7 +368,18 @@ export const snapshotChangedSchema = v.object({
   type: v.literal(SNAPSHOT_CHANGED_TYPE),
 });
 
-/** Broadcast when a tab's zoom level changes, so an open overlay can re-read its own. */
+/** Broadcast when the MCP WebSocket connects or drops. */
+export const BRIDGE_STATUS_CHANGED_TYPE = "bridgeStatusChanged" as const;
+
+export const bridgeStatusSchema = v.object({
+  connected: v.boolean(),
+});
+
+export const bridgeStatusChangedSchema = v.object({
+  type: v.literal(BRIDGE_STATUS_CHANGED_TYPE),
+  connected: v.boolean(),
+});
+
 export const TAB_ZOOM_CHANGED_TYPE = "tabZoomChanged" as const;
 
 export const tabZoomChangedSchema = v.object({
@@ -422,6 +439,8 @@ export const EXTENSION_REQUEST_TYPES = [
   "hideOmnibar",
   "getTabZoom",
   "getUpdateStatus",
+  "getBridgeStatus",
+  "resetExtensionData",
   "openUpdate",
   "installUpdate",
   "closeTab",
@@ -455,6 +474,7 @@ export type HostProxyStatus = v.InferOutput<typeof hostProxyStatusSchema>;
 export type HostProxyReport = v.InferOutput<typeof hostProxyReportSchema>;
 export type LatestRelease = v.InferOutput<typeof latestReleaseSchema>;
 export type UpdateStatus = v.InferOutput<typeof updateStatusSchema>;
+export type BridgeStatus = v.InferOutput<typeof bridgeStatusSchema>;
 
 export type ExtensionRequestType = (typeof EXTENSION_REQUEST_TYPES)[number];
 export type ExtensionRequest = v.InferOutput<typeof extensionRequestSchema>;
@@ -495,6 +515,8 @@ export type ExtensionSuccessMap = {
   /** The zoom factor of the sender tab (1 is 100%); 1 for a sender that is not a tab. */
   getTabZoom: number;
   getUpdateStatus: UpdateStatus;
+  getBridgeStatus: BridgeStatus;
+  resetExtensionData: void;
   openUpdate: void;
   installUpdate: void;
   closeTab: void;
@@ -542,6 +564,15 @@ export function isSnapshotChangedMessage(value: unknown): boolean {
 
 export function isTabZoomChangedMessage(value: unknown): boolean {
   return v.is(tabZoomChangedSchema, value);
+}
+
+export function isBridgeStatusChangedMessage(value: unknown): boolean {
+  return v.is(bridgeStatusChangedSchema, value);
+}
+
+export function parseBridgeStatusChangedMessage(value: unknown): boolean | undefined {
+  const parsed = v.safeParse(bridgeStatusChangedSchema, value);
+  return parsed.success ? parsed.output.connected : undefined;
 }
 
 export function parseOmnibarShownMessage(value: unknown): OmnibarShown | undefined {
@@ -623,6 +654,10 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
       return v.parse(v.pipe(v.number(), v.finite()), value) as ExtensionSuccessMap[T];
     case "getUpdateStatus":
       return v.parse(updateStatusSchema, value) as ExtensionSuccessMap[T];
+    case "getBridgeStatus":
+      return v.parse(bridgeStatusSchema, value) as ExtensionSuccessMap[T];
+    case "resetExtensionData":
+      return undefined as ExtensionSuccessMap[T];
     case "openUpdate":
     case "installUpdate":
     case "closeTab":

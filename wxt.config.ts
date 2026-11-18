@@ -65,7 +65,7 @@ export default defineConfig({
       },
     },
     // No default_popup: a click on the toolbar button fires browserAction.onClicked,
-    // which opens the omnibar (app/background/commands.ts).
+    // which opens the same overlay as Alt+F (app/background/commands.ts).
     browser_action: {
       default_title: "Zen Deck: open the omnibar",
       default_icon: {

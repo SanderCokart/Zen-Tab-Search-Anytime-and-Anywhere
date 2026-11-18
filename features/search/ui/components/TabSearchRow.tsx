@@ -5,6 +5,8 @@ import { TimerForm } from "@/features/timers/ui/TimerForm";
 import { hostname } from "@/features/search/ui/lib/format";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { TabActions } from "@/features/search/ui/components/TabActions";
+import type { DisplaySettings } from "@/features/settings/model/display-settings";
+import { tabActionFlags } from "@/features/settings/model/complexity";
 import { NowTag } from "@/features/search/ui/components/NowTag";
 import type { TabInfo, TabTimer, TrafficLight } from "@/shared/types";
 import { formatTabDisplayTitle, isEssentialTab, tabBrowserId } from "@/shared/types";
@@ -27,6 +29,7 @@ export const TabSearchRow = memo(function TabSearchRow({
   onClearTimer,
   onToggleTodo,
   onOpenStatusMenu,
+  displaySettings,
 }: {
   tab: TabInfo;
   timer?: TabTimer;
@@ -43,6 +46,7 @@ export const TabSearchRow = memo(function TabSearchRow({
   /** Marks the tab as todo, or as done (which removes the todo). */
   onToggleTodo: (tabId: number) => void;
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
+  displaySettings?: DisplaySettings;
 }) {
   const tabId = tabBrowserId(tab);
 
@@ -67,7 +71,7 @@ export const TabSearchRow = memo(function TabSearchRow({
         {isTodo && <Led on class="zs-todo-dot" />}
         {!isEssentialTab(tab) && (
           <span class="zs-meta">
-            {timer && (
+            {timer && displaySettings?.timers !== false && (
               <span class="zs-meta-timer zs-digits">
                 <TimerCountdown endAt={timer.endAt} format="short" />
               </span>
@@ -89,8 +93,9 @@ export const TabSearchRow = memo(function TabSearchRow({
         onOpenStatusMenu={onOpenStatusMenu}
         onToggleTimer={onToggleTimer}
         onOpenTimerPopup={onOpenTimerPopup}
+        actions={displaySettings ? tabActionFlags(displaySettings) : undefined}
       />
-      {timerOpen && tabId !== undefined && (
+      {timerOpen && displaySettings?.timers !== false && tabId !== undefined && (
         <div class="pb-[var(--zen-space-2)]">
           <TimerForm
             compact

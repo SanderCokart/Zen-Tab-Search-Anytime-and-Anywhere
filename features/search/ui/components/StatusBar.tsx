@@ -1,76 +1,28 @@
-import type { ComponentChildren } from "preact";
-import { pluralize, type SearchStats } from "@/features/search/model/stats";
+import { useEffect, useState } from "preact/hooks";
+import { debugError } from "@/shared/debug";
+import { sendExtensionMessage, subscribeToBridgeStatusChanged } from "@/shared/messaging/client";
 import { cn } from "@/shared/ui/cn";
 import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
-
-interface Stat {
-  key: string;
-  text: string;
-  title: string;
-}
-
-/** The stats worth a slot: tabs and spaces always, the rest once there are any. */
-function visibleStats(stats: SearchStats, showForge: boolean): Stat[] {
-  const all: Array<Stat & { show: boolean }> = [
-    {
-      key: "tabs",
-      text: pluralize(stats.tabs, "tab"),
-      title: "Open tabs in every space",
-      show: true,
-    },
-    {
-      key: "essentials",
-      text: pluralize(stats.essentials, "essential"),
-      title: "Essential tabs, included in the tab count",
-      show: stats.essentials > 0,
-    },
-    {
-      key: "spaces",
-      text: pluralize(stats.spaces, "space"),
-      title: "Zen spaces",
-      show: true,
-    },
-    {
-      key: "github",
-      text: `${stats.github} GitHub`,
-      title: "GitHub issue and pull request tabs",
-      show: showForge && stats.github > 0,
-    },
-    {
-      key: "gitlab",
-      text: `${stats.gitlab} GitLab`,
-      title: "GitLab issue and merge request tabs",
-      show: showForge && stats.gitlab > 0,
-    },
-    {
-      key: "todos",
-      text: pluralize(stats.todos, "todo"),
-      title: "Tabs marked as todo",
-      show: stats.todos > 0,
-    },
-    {
-      key: "timers",
-      text: pluralize(stats.timers, "timer"),
-      title: "Running tab timers",
-      show: stats.timers > 0,
-    },
-  ];
-  return all.filter((stat) => stat.show);
-}
+import { UpdateNotice } from "@/features/updates/ui/UpdateNotice";
+import { useUpdateStatus } from "@/features/updates/ui/hooks/useUpdateStatus";
 
 export interface StatusBarProps {
-  stats: SearchStats;
-  /** Whether GitHub and GitLab tabs are detected at all (the display setting). */
-  showForge: boolean;
-  /** The right-hand end, such as the update status. */
-  children?: ComponentChildren;
+  /** Persistent bar: MCP link and idle version. Off, it appears only for an update. */
+  always: boolean;
 }
 
 /**
- * The line along the bottom of the search, like an editor's status bar: tab,
- * space and issue counts on the left, the version and updates on the right.
+ * The line along the bottom of the search. With the Status bar setting it
+ * shows the MCP link on the left and the version on the right. Without it,
+ * only an available update occupies the row.
  */
-export function StatusBar({ stats, showForge, children }: StatusBarProps) {
+export function StatusBar({ always }: StatusBarProps) {
+  const { status } = useUpdateStatus();
+  const updateAvailable = status?.updateAvailable === true;
+  if (!always && !updateAvailable) {
+    return null;
+  }
+
   return (
     <footer
       class={cn(
@@ -79,32 +31,60 @@ export function StatusBar({ stats, showForge, children }: StatusBarProps) {
       )}
       data-testid="zen-status-bar"
     >
-      <ul class="m-0 flex min-w-0 list-none flex-nowrap items-center gap-x-[var(--zen-status-gap)] overflow-hidden p-0 whitespace-nowrap">
-        {visibleStats(stats, showForge).map((stat) => (
-          <StatusStat key={stat.key} stat={stat} />
-        ))}
-      </ul>
-      {children}
+      {always ? <McpStatusIcon /> : <span />}
+      <UpdateNotice showIdle={always} />
     </footer>
   );
 }
 
-function StatusStat({ stat }: { stat: Stat }) {
+function McpStatusIcon() {
+  const connected = useBridgeConnected();
   const tooltip = useTooltip();
+  const label = connected ? "MCP connected" : "MCP connection not established";
+
   return (
     <>
-      <li
-        data-stat={stat.key}
+      <span
+        data-testid="zen-mcp-status"
+        data-connected={connected || undefined}
         tabIndex={0}
+        aria-label={label}
+        class={cn(
+          "inline-flex shrink-0 items-center",
+          connected ? "text-zen-muted" : "text-zen-subtle",
+        )}
         onMouseEnter={(event) => tooltip.showAfterPause(event.currentTarget)}
         onMouseLeave={tooltip.hide}
         onFocus={(event) => tooltip.show(event.currentTarget)}
         onBlur={tooltip.hide}
-        onClick={tooltip.hide}
       >
-        {stat.text}
-      </li>
-      {tooltip.anchor && <TooltipLegend content={stat.title} anchor={tooltip.anchor} />}
+        <svg class="zen-icon size-[var(--zen-icon-sm)]" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M10 13a5 5 0 0 0 7.54.54l2-2a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-2 2a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          {!connected && <path d="M4 4l16 16" />}
+        </svg>
+      </span>
+      {tooltip.anchor && <TooltipLegend content={label} anchor={tooltip.anchor} />}
     </>
   );
+}
+
+function useBridgeConnected(): boolean {
+  const [connected, setConnected] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void sendExtensionMessage({ type: "getBridgeStatus" })
+      .then((status) => {
+        if (!cancelled) setConnected(status.connected);
+      })
+      .catch((error) => debugError("Could not read MCP bridge status:", error));
+    const unsubscribe = subscribeToBridgeStatusChanged(setConnected);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  return connected;
 }

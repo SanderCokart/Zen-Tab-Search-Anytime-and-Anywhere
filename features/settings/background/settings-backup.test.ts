@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { startSettingsBackup } from "@/features/settings/background/settings-backup";
+import {
+  startSettingsBackup,
+  wipeExtensionData,
+} from "@/features/settings/background/settings-backup";
 import { serializeSettingsBackup } from "@/features/settings/model/settings-backup";
 
 function setup(stored: Record<string, unknown>, backup: string | null) {
@@ -9,6 +12,9 @@ function setup(stored: Record<string, unknown>, backup: string | null) {
     readSettingsBackup: vi.fn(async () => backup),
     writeSettingsBackup: vi.fn(async (text: string) => {
       backup = text;
+    }),
+    clearSettingsBackup: vi.fn(async () => {
+      backup = null;
     }),
   };
   const onRestored = vi.fn();
@@ -62,5 +68,25 @@ describe("startSettingsBackup", () => {
     for (const listener of listeners) listener({ tabTimers: {} }, "local");
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(api.writeSettingsBackup).not.toHaveBeenCalled();
+  });
+});
+
+describe("wipeExtensionData", () => {
+  it("clears storage and the profile backup, then reloads", async () => {
+    const clearStorage = vi.fn(async () => undefined);
+    const clearSettingsBackup = vi.fn(async () => undefined);
+    const reload = vi.fn();
+    await wipeExtensionData({
+      api: {
+        readSettingsBackup: vi.fn(async () => null),
+        writeSettingsBackup: vi.fn(async () => undefined),
+        clearSettingsBackup,
+      },
+      clearStorage,
+      reload,
+    });
+    expect(clearStorage).toHaveBeenCalledOnce();
+    expect(clearSettingsBackup).toHaveBeenCalledOnce();
+    expect(reload).toHaveBeenCalledOnce();
   });
 });

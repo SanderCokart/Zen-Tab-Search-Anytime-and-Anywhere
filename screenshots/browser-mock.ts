@@ -87,6 +87,10 @@ export function installBrowserMock(
         };
       case "getTabZoom":
         return 1;
+      case "getBridgeStatus":
+        return { connected: false };
+      case "resetExtensionData":
+        return undefined;
       case "getUpdateStatus":
         return {
           currentVersion: packageJson.version,

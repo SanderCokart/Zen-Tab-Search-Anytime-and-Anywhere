@@ -63,6 +63,77 @@ const captures: Capture[] = [
     clip: "omnibar",
   },
   {
+    scene: "concept-simple",
+    file: "concept-simple.png",
+    ready: async (page) => {
+      await waitForSearch(page, true);
+      await expect(page.locator("[data-testid='zen-space-section']")).toHaveCount(0);
+      await expect(page.locator("[data-testid='zen-essential-section']")).toHaveCount(0);
+    },
+    clip: "omnibar",
+  },
+  {
+    scene: "concept-simple-forge",
+    file: "concept-simple-forge.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      const input = page.locator("[data-testid='zen-search-input']");
+      await input.fill("!");
+      await expect(page.getByText("Host override proxy").first()).toBeVisible();
+      // Prefix filtering of the tab list lands later; hide non-request rows so
+      // this concept shot matches the intended Simple + ! list.
+      await page.evaluate(() => {
+        for (const item of document.querySelectorAll("[data-testid='zen-search-item']")) {
+          const text = item.textContent ?? "";
+          if (!/PR:|MR:/.test(text)) {
+            (item as HTMLElement).style.display = "none";
+          }
+        }
+      });
+    },
+    clip: "omnibar",
+  },
+  {
+    scene: "concept-enhanced",
+    file: "concept-enhanced.png",
+    ready: async (page) => {
+      await waitForSearch(page, true);
+      await expect(page.locator("[data-testid='zen-space-section']").first()).toBeVisible();
+      await expect(page.locator("[data-testid='zen-essential-section']").first()).toBeVisible();
+    },
+    clip: "omnibar",
+  },
+  {
+    scene: "concept-enhanced-timers",
+    file: "concept-enhanced-timers.png",
+    ready: async (page) => {
+      await page.locator("[data-testid='zen-search-input']").waitFor();
+      await page.locator("[data-omnibar-stage='open']").waitFor();
+      await expect(page.getByText("Active timers")).toBeVisible();
+    },
+    clip: "omnibar",
+  },
+  {
+    scene: "concept-pro",
+    file: "concept-pro.png",
+    ready: async (page) => {
+      await waitForSearch(page, true);
+      await expect(page.locator("[data-testid='zen-todo-column']")).toBeVisible();
+      await expect(page.locator("[data-testid='zen-issue-entry']")).toHaveCount(0);
+    },
+    clip: "omnibar",
+  },
+  {
+    scene: "concept-dev",
+    file: "concept-dev.png",
+    ready: async (page) => {
+      await waitForSearch(page, true);
+      await expect(page.locator("[data-testid='zen-issue-entry']").first()).toBeVisible();
+      await expect(page.locator("[data-testid='zen-todo-column']")).toBeVisible();
+    },
+    clip: "omnibar",
+  },
+  {
     scene: "search-popup",
     file: "search-popup.png",
     ready: (page) => waitForSearch(page, false),
@@ -267,7 +338,8 @@ const captures: Capture[] = [
       // Let the legend finish printing its letters.
       await page.waitForTimeout(1200);
     },
-    around: "[role='tooltip'], [data-testid='zen-search-item']:has(button[aria-label='Copy link']:hover)",
+    around:
+      "[role='tooltip'], [data-testid='zen-search-item']:has(button[aria-label='Copy link']:hover)",
   },
   {
     scene: "gap-ratio-gap",

@@ -34,6 +34,7 @@ export function TabActions({
   onOpenTimerPopup,
   onOpenStatusMenu,
   always = false,
+  actions = {},
 }: {
   tab: TabInfo;
   timer?: TabTimer;
@@ -49,11 +50,22 @@ export function TabActions({
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
   /** Keep the keys showing, as on the current-tab strip, instead of only on the active row. */
   always?: boolean;
+  /** Missing keys stay on, so isolated rows still show every action. */
+  actions?: {
+    todos?: boolean;
+    copyLink?: boolean;
+    timers?: boolean;
+    statusColors?: boolean;
+  };
 }) {
   const tabId = tabBrowserId(tab);
   if (tabId === undefined) {
     return null;
   }
+  const showTodos = actions.todos !== false;
+  const showCopy = actions.copyLink !== false;
+  const showTimers = actions.timers !== false;
+  const showStatus = actions.statusColors !== false;
 
   const essential = isEssentialTab(tab);
   const todoLabel = isTodo ? "Mark as done" : "Mark as todo";
@@ -66,23 +78,23 @@ export function TabActions({
       // An open timer form or status menu keeps its keys up after the pointer leaves.
       data-always={always || timerOpen || statusMenuOpen || undefined}
     >
-      {!essential && (
+      {showTodos && !essential && (
         <TooltipButton
           label={todoLabel}
           aria-pressed={isTodo}
           data-testid="zen-todo-button"
           data-own-sound=""
-          class={miniKeyClass}
+          class={cn(miniKeyClass, "overflow-hidden")}
           onClick={(event) => {
             event.stopPropagation();
             onToggleTodo(tabId);
           }}
         >
-          <TodoIcon checked={isTodo} class="size-[var(--zen-icon-sm)]" />
+          <TodoIcon checked={isTodo} class="size-[var(--zen-mini-key)]" />
           <Led on={isTodo} />
         </TooltipButton>
       )}
-      {tab.url !== "" && (
+      {showCopy && tab.url !== "" && (
         <TooltipButton
           label="Copy link"
           data-testid="zen-copy-link-button"
@@ -98,46 +110,50 @@ export function TabActions({
           </svg>
         </TooltipButton>
       )}
-      <TooltipButton
-        label={timerLabel}
-        data-testid="zen-timer-button"
-        class={miniKeyClass}
-        tooltip={
-          timer ? (
-            <>
-              Timer: <TimerCountdown endAt={timer.endAt} prefix="" />
-            </>
-          ) : essential ? (
-            "Open timer popup"
-          ) : timerOpen ? (
-            "Close timer controls"
-          ) : (
-            "Open timer controls"
-          )
-        }
-        onClick={(event) => {
-          event.stopPropagation();
-          if (essential) {
-            onOpenTimerPopup(tabId);
-          } else {
-            onToggleTimer(tabId);
+      {showTimers && (
+        <TooltipButton
+          label={timerLabel}
+          data-testid="zen-timer-button"
+          class={miniKeyClass}
+          tooltip={
+            timer ? (
+              <>
+                Timer: <TimerCountdown endAt={timer.endAt} prefix="" />
+              </>
+            ) : essential ? (
+              "Open timer popup"
+            ) : timerOpen ? (
+              "Close timer controls"
+            ) : (
+              "Open timer controls"
+            )
           }
-        }}
-      >
-        <TimerIcon
-          close={timerOpen}
-          class={cn(timer && "text-zen-timer", "size-[var(--zen-icon-sm)]")}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (essential) {
+              onOpenTimerPopup(tabId);
+            } else {
+              onToggleTimer(tabId);
+            }
+          }}
+        >
+          <TimerIcon
+            close={timerOpen}
+            class={cn(timer && "text-zen-timer", "size-[var(--zen-icon-sm)]")}
+          />
+          <Led on={timer !== undefined} />
+        </TooltipButton>
+      )}
+      {showStatus && (
+        <StatusButton
+          tab={tab}
+          light={light}
+          open={statusMenuOpen}
+          onOpenMenu={onOpenStatusMenu}
+          class={miniKeyClass}
+          iconClass="size-[var(--zen-icon-md)]"
         />
-        <Led on={timer !== undefined} />
-      </TooltipButton>
-      <StatusButton
-        tab={tab}
-        light={light}
-        open={statusMenuOpen}
-        onOpenMenu={onOpenStatusMenu}
-        class={miniKeyClass}
-        iconClass="size-[var(--zen-icon-md)]"
-      />
+      )}
     </span>
   );
 }

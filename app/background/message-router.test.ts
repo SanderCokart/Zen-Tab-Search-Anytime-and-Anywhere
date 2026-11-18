@@ -52,6 +52,8 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
       canInstall: false,
       checkedAt: null,
     })),
+    getBridgeStatus: vi.fn(async () => ({ connected: false })),
+    resetExtensionData: vi.fn(async () => undefined),
     openUpdate: vi.fn(async () => undefined),
     installUpdate: vi.fn(async () => undefined),
     closeTab: vi.fn(async () => undefined),
@@ -235,6 +237,25 @@ describe("dispatchExtensionMessage", () => {
     await Promise.all([cached.promise, forced.promise]);
     expect(api.getUpdateStatus).toHaveBeenNthCalledWith(1, false);
     expect(api.getUpdateStatus).toHaveBeenNthCalledWith(2, true);
+  });
+
+  it("dispatches getBridgeStatus", async () => {
+    const api = handlers({ getBridgeStatus: vi.fn(async () => ({ connected: true })) });
+    const result = dispatchExtensionMessage(api, { type: "getBridgeStatus" });
+    if (!result.handled || !result.async) {
+      throw new Error("expected async dispatch");
+    }
+    await expect(result.promise).resolves.toEqual({ connected: true });
+  });
+
+  it("dispatches resetExtensionData", async () => {
+    const api = handlers();
+    const result = dispatchExtensionMessage(api, { type: "resetExtensionData" });
+    if (!result.handled || !result.async) {
+      throw new Error("expected async dispatch");
+    }
+    await result.promise;
+    expect(api.resetExtensionData).toHaveBeenCalledOnce();
   });
 
   it("dispatches closeTab, folder moves and pinned URL updates", async () => {

@@ -46,35 +46,12 @@ describe("DisplaySettingsApp", () => {
     await vi.waitFor(() => expect(subfolders.disabled).toBe(true));
     expect(set).toHaveBeenCalledWith({
       displaySettings: {
+        ...DEFAULT_DISPLAY_SETTINGS,
         detectForgeIssues: true,
         filterIssuesInOverlay: true,
         filterRequestsInOverlay: true,
         groupFolders: false,
         groupSubfolders: false,
-        hideSpacesInOverlay: false,
-        hideEssentialsInOverlay: false,
-        fontSize: 14,
-        uiScale: 1,
-        truncateTabTitles: true,
-        truncateIssueTitles: true,
-        sectionGap: 20,
-        tabGap: 4,
-        folderGap: 12,
-        essentialGap: 8,
-        spaceGap: 8,
-        issueGap: 4,
-        todoGap: 4,
-        gapPaddingRatio: 1,
-        reuseExternalTabs: false,
-        searchEngine: "google",
-        soundEnabled: true,
-        soundVolume: 0.4,
-        backgroundOpacity: 0.75,
-        theme: "system",
-        accentColor: "auto",
-        chassisColor: "auto",
-        panelColor: "auto",
-        textColor: "auto",
       },
     });
 
@@ -123,35 +100,12 @@ describe("DisplaySettingsApp", () => {
     expect(requestsOnly.disabled).toBe(true);
     expect(set).toHaveBeenCalledWith({
       displaySettings: {
+        ...DEFAULT_DISPLAY_SETTINGS,
         detectForgeIssues: false,
         filterIssuesInOverlay: false,
         filterRequestsInOverlay: false,
         groupFolders: true,
         groupSubfolders: true,
-        hideSpacesInOverlay: false,
-        hideEssentialsInOverlay: false,
-        fontSize: 14,
-        uiScale: 1,
-        truncateTabTitles: true,
-        truncateIssueTitles: true,
-        sectionGap: 20,
-        tabGap: 4,
-        folderGap: 12,
-        essentialGap: 8,
-        spaceGap: 8,
-        issueGap: 4,
-        todoGap: 4,
-        gapPaddingRatio: 1,
-        reuseExternalTabs: false,
-        searchEngine: "google",
-        soundEnabled: true,
-        soundVolume: 0.4,
-        backgroundOpacity: 0.75,
-        theme: "system",
-        accentColor: "auto",
-        chassisColor: "auto",
-        panelColor: "auto",
-        textColor: "auto",
       },
     });
 
@@ -194,34 +148,12 @@ describe("DisplaySettingsApp", () => {
     await vi.waitFor(() =>
       expect(set).toHaveBeenCalledWith({
         displaySettings: {
+          ...DEFAULT_DISPLAY_SETTINGS,
           detectForgeIssues: true,
           filterIssuesInOverlay: true,
           filterRequestsInOverlay: true,
           groupFolders: true,
           groupSubfolders: true,
-          hideSpacesInOverlay: false,
-          hideEssentialsInOverlay: false,
-          fontSize: 14,
-          uiScale: 1,
-          truncateTabTitles: true,
-          truncateIssueTitles: true,
-          sectionGap: 20,
-          tabGap: 4,
-          folderGap: 12,
-          essentialGap: 8,
-          spaceGap: 8,
-          issueGap: 4,
-          todoGap: 4,
-          gapPaddingRatio: 1,
-          reuseExternalTabs: false,
-          searchEngine: "google",
-          soundEnabled: true,
-          soundVolume: 0.4,
-          backgroundOpacity: 0.75,
-          theme: "system",
-          accentColor: "auto",
-          chassisColor: "auto",
-          panelColor: "auto",
           textColor: "auto",
         },
       }),
@@ -378,6 +310,42 @@ describe("DisplaySettingsApp", () => {
       expect(set).toHaveBeenCalledWith({
         displaySettings: { ...DEFAULT_DISPLAY_SETTINGS, backgroundOpacity: 0.7 },
       }),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("asks once, then wipes extension data", async () => {
+    const sendMessage = vi.fn(async () => undefined);
+    Object.assign(globalThis, {
+      browser: {
+        runtime: { sendMessage },
+        storage: {
+          local: {
+            get: vi.fn(async () => ({ displaySettings: {} })),
+            set: vi.fn(async () => undefined),
+          },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    render(<DisplaySettingsApp />, root);
+
+    const button = await vi.waitFor(() => {
+      const element = root.querySelector<HTMLButtonElement>("[data-testid='zen-wipe-data']");
+      expect(element).not.toBeNull();
+      return element!;
+    });
+    expect(button.textContent).toBe("Wipe extension data");
+    button.click();
+    expect(sendMessage).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(button.textContent).toContain("cannot be undone"));
+    button.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "resetExtensionData" }),
     );
 
     render(null, root);

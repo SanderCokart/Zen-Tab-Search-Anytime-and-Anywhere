@@ -72,7 +72,7 @@ describe("startBridgeClient", () => {
       }
       return [{ id: "s1" }];
     });
-    const { sockets } = setup(["secret"], handle);
+    const { sockets, client } = setup(["secret"], handle);
     await vi.advanceTimersByTimeAsync(0);
     const socket = sockets[0]!;
     socket.open();
@@ -83,6 +83,7 @@ describe("startBridgeClient", () => {
     });
 
     socket.receive({ type: "welcome" });
+    expect(client.connected()).toBe(true);
     socket.receive({ id: "a", command: { type: "listSpaces" } });
     socket.receive({ id: "b", command: { type: "switchSpace", spaceId: "nope" } });
     socket.receive({ id: "c", command: { type: "deleteEverything" } });

@@ -46,7 +46,7 @@ export function SearchEnginePicker({
         aria-expanded={open}
         disabled={disabled}
         class={cn(
-          "zs-label zs-label-red inline-flex shrink-0 cursor-pointer items-center gap-[var(--zen-space-1)]",
+          "zs-label zs-label-red inline-flex shrink-0 cursor-pointer items-center gap-[var(--zen-space-1)] leading-none",
           "border-0 bg-transparent p-0 font-[inherit] outline-none",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--zs-red)]",
           disabled && "cursor-not-allowed opacity-50",
@@ -55,7 +55,7 @@ export function SearchEnginePicker({
       >
         <span class="select-none">{engine.shortLabel}</span>
         <svg
-          class="size-[var(--zen-icon-sm)] shrink-0"
+          class="size-[1em] shrink-0"
           viewBox="0 0 24 24"
           aria-hidden="true"
           fill="none"

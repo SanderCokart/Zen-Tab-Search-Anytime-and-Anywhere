@@ -39,9 +39,12 @@ import { keyPressVoice } from "@/shared/ui/sound/key-press-voice";
 import { SoundProvider, useSoundEngine } from "@/shared/ui/sound/SoundContext";
 import { useResolvedTheme, type ThemePreference } from "@/shared/ui/theme";
 import { ColorPickerField } from "@/features/settings/ui/ColorPickerField";
+import { ComplexitySettings } from "@/features/settings/ui/ComplexitySettings";
 import { BridgeSettings } from "@/features/bridge/ui/BridgeSettings";
 import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
 import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
+import { debugError } from "@/shared/debug";
+import { sendExtensionMessage } from "@/shared/messaging/client";
 
 const COLOR_SETTINGS: readonly [ThemeColorKey, string, string][] = [
   ["accentColor", "Accent color", "Accent"],
@@ -262,6 +265,11 @@ export function DisplaySettingsApp() {
             </p>
           </header>
           <div class="zs-mod-grid">
+            <ComplexitySettings
+              settings={settings}
+              disabled={!loaded}
+              onChange={(flags) => updateSettings(flags)}
+            />
             <Module title="Theme" wide>
               <div class="flex flex-wrap items-end justify-between gap-[var(--zen-space-4)]">
                 <Segmented
@@ -612,7 +620,15 @@ export function DisplaySettingsApp() {
               </div>
             </Module>
 
-            <BridgeSettings />
+            {settings.mcp && <BridgeSettings />}
+
+            <Module title="Data" wide>
+              <FieldText
+                label="Wipe extension data"
+                hint="Clears storage and the profile backup. Uninstalling the add-on does not, so onboarding would not run again."
+              />
+              <WipeExtensionDataButton />
+            </Module>
 
             <Module title="Credits" wide>
               <p class="m-0 text-[length:var(--zen-text-base)] leading-relaxed text-[var(--zs-ink-2)]">
@@ -643,5 +659,27 @@ export function DisplaySettingsApp() {
         </div>
       </main>
     </SoundProvider>
+  );
+}
+
+function WipeExtensionDataButton() {
+  const [armed, setArmed] = useState(false);
+  return (
+    <button
+      type="button"
+      class="zs-key zs-key-red self-start px-[calc(var(--zen-font-size)*1.4)] py-[var(--zen-space-2)] font-[inherit]"
+      data-testid="zen-wipe-data"
+      onClick={() => {
+        if (!armed) {
+          setArmed(true);
+          return;
+        }
+        void sendExtensionMessage({ type: "resetExtensionData" }).catch((error) =>
+          debugError("Could not wipe extension data:", error),
+        );
+      }}
+    >
+      {armed ? "Wipe now — cannot be undone" : "Wipe extension data"}
+    </button>
   );
 }

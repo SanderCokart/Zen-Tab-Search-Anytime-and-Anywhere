@@ -10,6 +10,7 @@ export const BACKED_UP_STORAGE_KEYS = [
   "globalHostOverrides",
   "essentialTabNames",
   "mcpBridgeToken",
+  "complexitySetupDone",
 ] as const;
 
 const BACKUP_VERSION = 1;

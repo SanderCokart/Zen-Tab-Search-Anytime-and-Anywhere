@@ -16,6 +16,8 @@ import type { ForgeKindCounts, ForgeKindFilter } from "@/features/forge/model/fo
 import { forgeRowParts, type ForgeRowTag } from "@/features/forge/model/forge-label";
 import { PrefixHint } from "@/features/search/ui/components/PrefixHint";
 import { TabActions } from "@/features/search/ui/components/TabActions";
+import type { DisplaySettings } from "@/features/settings/model/display-settings";
+import { tabActionFlags } from "@/features/settings/model/complexity";
 import { formatForgeEntryDate, formatShortAge } from "@/features/search/ui/lib/format";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
@@ -110,6 +112,7 @@ export function ForgeIssueNavigator({
   statuses,
   statusMenuTabId,
   onOpenStatusMenu,
+  displaySettings,
 }: {
   entries: ForgeIssueEntry[];
   truncate: boolean;
@@ -148,6 +151,7 @@ export function ForgeIssueNavigator({
   /** The tab whose status menu is open, if any. */
   statusMenuTabId: number | null;
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
+  displaySettings?: DisplaySettings;
 }) {
   const providers = useMemo(() => groupForgeIssueEntries(entries, sortMode), [entries, sortMode]);
   // Index once instead of an indexOf scan per rendered row.
@@ -212,7 +216,7 @@ export function ForgeIssueNavigator({
                 {isCurrentForgeEntry(entry) && <NowTag />}
                 {isTodo && <Led on class="zs-todo-dot" />}
                 <span class="zs-meta">
-                  {timer && (
+                  {timer && displaySettings?.timers !== false && (
                     <span class="zs-meta-timer zs-digits">
                       <TimerCountdown endAt={timer.endAt} format="short" />
                     </span>
@@ -236,8 +240,9 @@ export function ForgeIssueNavigator({
               onToggleTodo={onToggleTodo}
               onToggleTimer={onToggleTimerForm}
               onOpenTimerPopup={onOpenTimerPopup}
+              actions={displaySettings ? tabActionFlags(displaySettings) : undefined}
             />
-            {timerOpen && tabId !== undefined && (
+            {timerOpen && displaySettings?.timers !== false && tabId !== undefined && (
               <div class="px-[var(--zen-row-pad)] pb-[var(--zen-space-2)]">
                 <TimerForm
                   compact

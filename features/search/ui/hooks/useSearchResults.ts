@@ -92,7 +92,7 @@ export function useSearchResults({
   );
 
   const visibleTabs = useMemo(() => {
-    if (layout !== "overlay") {
+    if (layout !== "overlay" || !displaySettings.forgeTree) {
       return labeledTabs;
     }
     const hiddenTabs = new Set(
@@ -198,12 +198,23 @@ export function useSearchResults({
       : query;
 
   const searchable = useMemo(() => {
-    return excludePinnedSearchSources(visibleTabs, spaces, {
+    const forgeTabs =
+      forgeNavigatorQuery.active && !displaySettings.forgeTree
+        ? visibleTabs.filter((tab) => listedForgeIssueEntries.some((entry) => entry.tab === tab))
+        : visibleTabs;
+    return excludePinnedSearchSources(forgeTabs, spaces, {
       excludeSpaces: displaySettings.hideSpacesInOverlay,
       excludeEssentials: displaySettings.hideEssentialsInOverlay,
       query: effectiveQuery,
     });
-  }, [displaySettings, effectiveQuery, spaces, visibleTabs]);
+  }, [
+    displaySettings,
+    effectiveQuery,
+    forgeNavigatorQuery.active,
+    listedForgeIssueEntries,
+    spaces,
+    visibleTabs,
+  ]);
 
   const searchDocuments = useMemo(
     () => buildSearchDocuments(buildSearchItems(searchable.tabs, searchable.spaces)),

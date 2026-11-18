@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { hostname } from "@/features/search/ui/lib/format";
+import { NowTag } from "@/features/search/ui/components/NowTag";
 import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
 import { PrefixHint } from "@/features/search/ui/components/PrefixHint";
 import { TODO_NAVIGATOR_PREFIXES } from "@/features/search/model/ranking";
@@ -181,6 +182,7 @@ export function TodoNavigator({
               )}
               data-status-light={light}
               data-todo-selected={selected ? "true" : undefined}
+              data-current={tab.active === true ? "true" : undefined}
               ref={(element) => {
                 if (selected) {
                   element?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -191,13 +193,14 @@ export function TodoNavigator({
               <button
                 type="button"
                 // Stretched over the whole block, so the space line below clicks through too.
-                class="zs-row-title block w-full cursor-pointer border-0 bg-transparent p-0 text-left text-inherit after:absolute after:inset-0 after:rounded-[inherit] after:content-['']"
+                class="zs-row-title flex w-full cursor-pointer items-center gap-[var(--zen-space-2)] border-0 bg-transparent p-0 text-left text-inherit after:absolute after:inset-0 after:rounded-[inherit] after:content-['']"
                 onClick={() => onActivate(tab)}
                 onFocus={() => onSelect(index)}
               >
-                <span class={cn("block w-full min-w-0", entryTextClass(truncate))}>
+                <span class={cn("min-w-0 flex-1", entryTextClass(truncate))}>
                   {formatTabDisplayTitle(tab)}
                 </span>
+                {tab.active === true && <NowTag />}
               </button>
               <div class="text-zen-muted relative z-10 flex min-w-0 items-center justify-between gap-[var(--zen-space-2)] font-mono text-[length:var(--zen-text-xs)] tracking-[0.04em]">
                 <span class={cn("min-w-0", entryTextClass(truncate))}>

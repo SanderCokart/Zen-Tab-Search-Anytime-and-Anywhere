@@ -54,6 +54,13 @@
     }
   }
 
+  function clearBackup() {
+    const file = getBackupFile();
+    if (file.exists()) {
+      file.remove(false);
+    }
+  }
+
   function writeBackup(text) {
     if (typeof text !== "string") {
       throw new Error("Settings backup must be a string.");
@@ -119,6 +126,9 @@
           },
           async writeSettingsBackup(text) {
             writeBackup(text);
+          },
+          async clearSettingsBackup() {
+            clearBackup();
           },
         }),
       };

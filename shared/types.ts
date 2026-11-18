@@ -20,6 +20,7 @@ export type {
   TodoStatus,
   TrafficLight,
   UpdateStatus,
+  BridgeStatus,
 } from "@/shared/messaging/protocol";
 
 export type SearchItem = { kind: "tab"; data: TabInfo } | { kind: "space"; data: SpaceInfo };

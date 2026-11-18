@@ -28,7 +28,9 @@ export function registerCommands(
   workspace: WorkspaceAdapter,
   options: OmnibarOptions = {},
 ): void {
-  // The toolbar button has no popup, so clicking it opens the omnibar.
+  // A leftover setPopup (or an old build's default_popup) swallows the click.
+  void browser.browserAction.setPopup({ popup: "" });
+  // The toolbar button has no popup, so clicking it opens the same overlay as Alt+F.
   browser.browserAction.onClicked.addListener((tab) => {
     debugLog(`${LOG_PREFIX} toolbar button clicked`, { tabId: tab.id, url: tab.url });
     toggleOmnibarFromTab(tab, options);

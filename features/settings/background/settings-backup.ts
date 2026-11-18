@@ -11,6 +11,7 @@ import {
 export interface ZenBackupApi {
   readSettingsBackup(): Promise<string | null>;
   writeSettingsBackup(text: string): Promise<void>;
+  clearSettingsBackup(): Promise<void>;
 }
 
 type StoredValues = Record<string, unknown>;
@@ -78,4 +79,22 @@ export async function startSettingsBackup({
 
   // Covers settings saved before this version, which had no backup.
   await save();
+}
+
+/**
+ * Empties storage.local and the profile backup, then reloads. Uninstalling
+ * the add-on is not enough: the backup file outlives that and is restored.
+ */
+export async function wipeExtensionData({
+  api = getZenBackupApi(),
+  clearStorage = () => browser.storage.local.clear(),
+  reload = () => browser.runtime.reload(),
+}: {
+  api?: ZenBackupApi;
+  clearStorage?: () => Promise<void>;
+  reload?: () => void;
+} = {}): Promise<void> {
+  await clearStorage();
+  await api?.clearSettingsBackup();
+  reload();
 }

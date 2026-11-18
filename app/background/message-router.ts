@@ -6,6 +6,7 @@ import {
   type TodoStatus,
   type TrafficLight,
   type UpdateStatus,
+  type BridgeStatus,
 } from "@/shared/types";
 import {
   type ExtensionRequest,
@@ -42,6 +43,8 @@ export interface MessageRouterHandlers {
   /** Zoom factor of a tab; 1 when there is no tab to ask. */
   getTabZoom(tabId?: number): Promise<number>;
   getUpdateStatus(force: boolean): Promise<UpdateStatus>;
+  getBridgeStatus(): Promise<BridgeStatus>;
+  resetExtensionData(): Promise<void>;
   openUpdate(page: "download" | "releaseNotes"): Promise<void>;
   installUpdate(): Promise<void>;
   closeTab(tabId: number): Promise<void>;
@@ -178,6 +181,10 @@ function handleParsedRequest(
       return handlers.getTabZoom(isUsableSenderTab(sender.tab) ? sender.tab?.id : undefined);
     case "getUpdateStatus":
       return handlers.getUpdateStatus(message.force === true);
+    case "getBridgeStatus":
+      return handlers.getBridgeStatus();
+    case "resetExtensionData":
+      return handlers.resetExtensionData();
     case "openUpdate":
       return handlers.openUpdate(message.page);
     case "installUpdate":

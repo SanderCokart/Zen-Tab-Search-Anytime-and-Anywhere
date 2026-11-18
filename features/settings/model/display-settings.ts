@@ -55,6 +55,26 @@ const DEFAULTS = {
   backgroundOpacity: 0.75,
   /** Focus an already-open tab when another app opens the same address. */
   reuseExternalTabs: false,
+  /** Overlay fills the window. Off, it is a centered Spotlight card. */
+  fullscreen: false,
+  /** Timer row actions, ⏱ labels, header list-swap, Alt+T, browser timer menu. */
+  timers: false,
+  /** Copy-link row action. */
+  copyLink: false,
+  /** Right-click menu inside the omnibar. */
+  contextMenu: false,
+  /** Todo column, row actions, and `@` prefix. Requires fullscreen. */
+  todos: false,
+  /** Traffic-light status colours on rows. */
+  statusColors: false,
+  /** MCP / Bridge module on the settings page. */
+  mcp: false,
+  /** Dedicated GitHub/GitLab tree column. Requires fullscreen. */
+  forgeTree: false,
+  /** Host-override header, menus, and proxy UI. */
+  hosts: false,
+  /** Persistent status bar (MCP link and version). Off, it appears only for an update. */
+  statusBar: false,
   /** Engine Shift+Enter uses from the omnibar. */
   searchEngine: DEFAULT_SEARCH_ENGINE,
   /** Light, dark, or whichever the system asks for. */
@@ -208,6 +228,16 @@ const displaySettingsSchema = v.pipe(
       soundVolume: scalar(DEFAULTS.soundVolume, clampVolume),
       backgroundOpacity: scalar(DEFAULTS.backgroundOpacity, clampBackgroundOpacity),
       reuseExternalTabs: boolean(DEFAULTS.reuseExternalTabs),
+      fullscreen: boolean(DEFAULTS.fullscreen),
+      timers: boolean(DEFAULTS.timers),
+      copyLink: boolean(DEFAULTS.copyLink),
+      contextMenu: boolean(DEFAULTS.contextMenu),
+      todos: boolean(DEFAULTS.todos),
+      statusColors: boolean(DEFAULTS.statusColors),
+      mcp: boolean(DEFAULTS.mcp),
+      forgeTree: boolean(DEFAULTS.forgeTree),
+      hosts: boolean(DEFAULTS.hosts),
+      statusBar: boolean(DEFAULTS.statusBar),
       searchEngine: v.fallback(v.picklist(SEARCH_ENGINE_IDS), DEFAULTS.searchEngine),
       theme: v.fallback(v.picklist(THEME_PREFERENCES), DEFAULTS.theme),
       accentColor: color("accentColor"),

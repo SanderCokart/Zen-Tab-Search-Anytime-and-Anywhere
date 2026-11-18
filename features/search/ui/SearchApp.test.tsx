@@ -1,6 +1,8 @@
 import { render } from "preact";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createSearchSessionCache, SearchApp } from "@/features/search/ui/SearchApp";
+import { DEFAULT_DISPLAY_SETTINGS } from "@/features/settings/model/display-settings";
+import { applyPreset } from "@/features/settings/model/complexity";
 import type { OmnibarView } from "@/shared/messaging/protocol";
 import type { SpaceInfo, TabInfo, TabStatus, TabTimer, TabTodo } from "@/shared/types";
 
@@ -42,6 +44,7 @@ function mountSearchApp(
   snapshotStatuses: TabStatus[] = [],
   initialView?: OmnibarView,
   snapshotTimers: Partial<TabTimer>[] = [],
+  updateAvailable = false,
 ) {
   const sendMessage = vi.fn(async (message: { type: string; tabId?: number }) => {
     if (message.type === "getSnapshot") {
@@ -62,6 +65,25 @@ function mountSearchApp(
     if (message.type === "getPinnedUrl") {
       return snapshotTabs.find((tab) => tab.id === message.tabId)?.url ?? "https://example.com/";
     }
+    if (message.type === "getUpdateStatus") {
+      return {
+        currentVersion: "4.0.0",
+        latest: updateAvailable
+          ? {
+              version: "4.1.0",
+              zipUrl: "https://example.com/zen-deck-firefox.zip",
+              releaseUrl: "https://example.com/releases/tag/v4.1.0",
+            }
+          : null,
+        updateAvailable,
+        demo: false,
+        canInstall: true,
+        checkedAt: null,
+      };
+    }
+    if (message.type === "getBridgeStatus") {
+      return { connected: false };
+    }
     return undefined;
   });
   const writeText = vi.fn(async () => undefined);
@@ -77,7 +99,14 @@ function mountSearchApp(
       },
       storage: {
         local: {
-          get: vi.fn(async () => (displaySettings ? { displaySettings } : {})),
+          get: vi.fn(async () => ({
+            displaySettings: {
+              ...DEFAULT_DISPLAY_SETTINGS,
+              ...applyPreset("dev"),
+              ...displaySettings,
+            },
+            complexitySetupDone: true,
+          })),
           set: vi.fn(async () => undefined),
         },
         onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
@@ -267,22 +296,17 @@ describe("SearchApp", () => {
     root.remove();
   });
 
-  it("counts tabs, spaces and GitHub tabs in the status bar", async () => {
-    const { root } = mountSearchApp(
-      vi.fn(),
-      [...tabs, { ...tabs[1], id: 3, url: "https://github.com/acme/app/pull/7" }],
-      "overlay",
-      undefined,
-      [{ id: "space-a", name: "Work", isActive: true }],
-    );
+  it("shows the MCP link and version in the status bar on Pro", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", applyPreset("pro"));
 
     await vi.waitFor(() => {
       const bar = root.querySelector("[data-testid='zen-status-bar']");
-      expect(bar?.textContent).toContain("3 tabs");
-      expect(bar?.textContent).toContain("1 space");
-      expect(bar?.textContent).toContain("1 GitHub");
+      expect(bar).not.toBeNull();
+      expect(bar?.querySelector("[data-testid='zen-mcp-status']")).not.toBeNull();
+      expect(bar?.textContent).toContain("v4.0.0");
+      expect(bar?.textContent).toContain("Check for updates");
     });
-    expect(root.querySelector("[data-stat='gitlab']")).toBeNull();
+    expect(root.querySelector("[data-stat='tabs']")).toBeNull();
 
     render(null, root);
     root.remove();
@@ -655,6 +679,15 @@ describe("SearchApp", () => {
     expect(
       root.querySelectorAll("[data-testid='zen-search-item'] [data-testid='zen-now-tag']"),
     ).toHaveLength(1);
+    expect(current[0]?.getAttribute("data-selected")).toBe("true");
+    expect(
+      current[0]?.querySelector("[data-testid='zen-tab-actions']")?.hasAttribute("data-always"),
+    ).toBe(false);
+    expect(
+      root
+        .querySelector("[data-testid='zen-current-tab'] [data-testid='zen-tab-actions']")
+        ?.hasAttribute("data-always"),
+    ).toBe(true);
 
     render(null, root);
     root.remove();
@@ -707,6 +740,30 @@ describe("SearchApp", () => {
 
     render(null, root);
     root.remove();
+  });
+
+  it("uses a Spotlight chassis unless fullscreen is on", async () => {
+    const spotlight = mountSearchApp(vi.fn(), tabs, "overlay", { fullscreen: false });
+    await vi.waitFor(() => expect(spotlight.root.textContent).toContain("First tab"));
+    expect(
+      spotlight.root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-layout"),
+    ).toBe("spotlight");
+    expect(
+      spotlight.root.querySelector("[data-testid='zen-tab-pane']")?.classList.contains("zs-card"),
+    ).toBe(false);
+    render(null, spotlight.root);
+    spotlight.root.remove();
+
+    const full = mountSearchApp(vi.fn(), tabs, "overlay", { fullscreen: true });
+    await vi.waitFor(() => expect(full.root.textContent).toContain("First tab"));
+    expect(full.root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-layout")).toBe(
+      "fullscreen",
+    );
+    expect(
+      full.root.querySelector("[data-testid='zen-tab-pane']")?.classList.contains("zs-card"),
+    ).toBe(true);
+    render(null, full.root);
+    full.root.remove();
   });
 
   it("reopens from its session cache on the first frame, before the snapshot returns", async () => {
@@ -890,7 +947,10 @@ describe("SearchApp", () => {
     );
     expect(todoRows()[0]?.textContent).toContain("First tab");
     expect(todoRows()[0]?.textContent).not.toContain("Current tab");
+    expect(todoRows()[0]?.getAttribute("data-current")).toBe("true");
+    expect(todoRows()[0]?.querySelector("[data-testid='zen-now-tag']")).not.toBeNull();
     expect(todoRows()[1]?.textContent).toContain("Second tab");
+    expect(todoRows()[1]?.querySelector("[data-testid='zen-now-tag']")).toBeNull();
     // The todo column has the keyboard, so nothing in the tab list is selected.
     expect(root.querySelector("[data-selected='true']")).toBeNull();
 
@@ -2105,13 +2165,15 @@ function mountOverlay({
       },
       storage: {
         local: {
-          get: vi.fn(async (key: string) => {
-            const all: Record<string, unknown> = {
-              ...(displaySettings ? { displaySettings } : {}),
-              ...stored,
-            };
-            return key in all ? { [key]: all[key] } : {};
-          }),
+          get: vi.fn(async () => ({
+            displaySettings: {
+              ...DEFAULT_DISPLAY_SETTINGS,
+              ...applyPreset("dev"),
+              ...displaySettings,
+            },
+            complexitySetupDone: true,
+            ...stored,
+          })),
           set,
         },
         onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
@@ -2400,7 +2462,7 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     unmount();
   });
 
-  it("docks the timers under the todos and keeps them there with 30 todos", async () => {
+  it("does not mount a timers dock; the header button swaps in the timer list", async () => {
     const many = Array.from({ length: 30 }, (_, index) => ({
       id: 100 + index,
       title: `Todo tab ${index}`,
@@ -2432,31 +2494,18 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     });
 
     await vi.waitFor(() =>
-      expect(root.querySelector("[data-testid='zen-timers-dock']")).not.toBeNull(),
+      expect(root.querySelector("[data-testid='zen-todo-column']")).not.toBeNull(),
     );
-    const dock = root.querySelector("[data-testid='zen-timers-dock']")!;
-    const column = root.querySelector("[data-testid='zen-todo-column']")!;
-    expect(dock.textContent).toContain("Timers");
-    expect(dock.querySelector("[data-testid='zen-timers-dock-soonest']")?.textContent).toContain(
-      "Soonest timer",
-    );
-    // The soonest timer is the readout, so the rows only list the other one.
-    expect(dock.querySelectorAll("li")).toHaveLength(1);
-    expect(dock.querySelector("li")?.textContent).toContain("Later timer");
-    // The todos take the rest of the column and scroll inside their own list.
-    expect(column.className).toContain("flex-1");
-    expect(column.className).not.toContain("max-h-[50%]");
-    expect(dock.className).toContain("shrink-0");
-    expect(column.querySelector(".zen-scroll")?.className).toContain("overflow-y-auto");
-    expect(column.querySelector(".zen-scroll")?.children.length).toBe(30);
-    expect(column.parentElement).toBe(dock.parentElement);
-    expect(column.compareDocumentPosition(dock) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // One right column, not a fourth.
+    expect(root.querySelector("[data-testid='zen-timers-dock']")).toBeNull();
     expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-aspect")).toBe("3/2");
+    root.querySelector<HTMLButtonElement>("button[aria-label='Show active timers']")!.click();
+    await vi.waitFor(() => expect(root.textContent).toContain("Active timers"));
+    expect(root.textContent).toContain("Soonest timer");
+    expect(root.textContent).toContain("Later timer");
     unmount();
   });
 
-  it("lists only the soonest three timers in the dock and leaves the rest to the drawer", async () => {
+  it("lists every timer in the swapped timer view", async () => {
     const minutes = [5, 50, 20, 90, 120];
     const names = ["Alpha", "Bravo", "Charlie", "Delta", "Echo"];
     const { root, unmount } = mountOverlay({
@@ -2471,29 +2520,17 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
       })),
     });
     await vi.waitFor(() =>
-      expect(root.querySelector("[data-testid='zen-timers-dock']")).not.toBeNull(),
+      expect(root.querySelector("button[aria-label='Show active timers']")).not.toBeNull(),
     );
-    const dock = root.querySelector("[data-testid='zen-timers-dock']")!;
-    expect(dock.querySelector("[data-testid='zen-timers-dock-soonest']")?.textContent).toContain(
-      "Alpha",
-    );
-    const rows = [...dock.querySelectorAll("li")].map((row) => row.textContent ?? "");
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toContain("Charlie");
-    expect(rows[1]).toContain("Bravo");
-    expect(dock.textContent).not.toContain("Delta");
-    expect(dock.textContent).not.toContain("Echo");
-    // Each shown row keeps its Edit and Clear keys.
-    expect(dock.querySelectorAll("li button").length).toBe(rows.length * 3);
-
-    // The ⏱ button lists all five.
+    expect(root.querySelector("[data-testid='zen-timers-dock']")).toBeNull();
     root.querySelector<HTMLButtonElement>("button[aria-label='Show active timers']")!.click();
     await vi.waitFor(() => expect(root.textContent).toContain("Echo"));
+    expect(root.textContent).toContain("Alpha");
     expect(root.textContent).toContain("Delta");
     unmount();
   });
 
-  it("switches to a timer's tab from the dock readout below the todos", async () => {
+  it("switches to a timer's tab from the swapped timer list", async () => {
     const { root, sendMessage, onClose, unmount } = mountOverlay({
       snapshotTabs: tabs,
       todos: [{ tabId: 1, status: "todo" }],
@@ -2517,8 +2554,10 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
       ],
     });
     await vi.waitFor(() =>
-      expect(root.querySelector("[data-testid='zen-timers-dock']")).not.toBeNull(),
+      expect(root.querySelector("button[aria-label='Show active timers']")).not.toBeNull(),
     );
+    root.querySelector<HTMLButtonElement>("button[aria-label='Show active timers']")!.click();
+    await vi.waitFor(() => expect(root.textContent).toContain("Active timers"));
 
     const soonest = root.querySelector<HTMLElement>("[data-testid='zen-timers-dock-soonest']")!;
     soonest.dispatchEvent(new MouseEvent("mouseenter"));
@@ -2538,7 +2577,7 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     unmount();
   });
 
-  it("shows the dock without todos, and lets the todos fill the column without timers", async () => {
+  it("does not add a column for timers alone, and lets todos fill the column without a dock", async () => {
     const { root, unmount } = mountOverlay({
       snapshotTabs: tabs,
       timers: [
@@ -2553,8 +2592,9 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
       ],
     });
     await vi.waitFor(() =>
-      expect(root.querySelector("[data-testid='zen-timers-dock']")).not.toBeNull(),
+      expect(root.querySelector("[data-testid='zen-search-input']")).not.toBeNull(),
     );
+    expect(root.querySelector("[data-testid='zen-timers-dock']")).toBeNull();
     expect(root.querySelector("[data-testid='zen-todo-column']")).toBeNull();
     unmount();
 
@@ -3003,5 +3043,161 @@ describe("SearchApp tab folders", () => {
       expect(root.querySelector("[data-selected='true']")?.textContent).toContain("Delta loose"),
     );
     unmount();
+  });
+});
+
+describe("complexity flags", () => {
+  it("Simple hides timer and copy chrome and uses Spotlight", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", applyPreset("simple"));
+    await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
+    expect(root.querySelector("button[aria-label='Show active timers']")).toBeNull();
+    expect(root.querySelector("[data-testid='zen-copy-link-button']")).toBeNull();
+    expect(root.querySelector("[data-testid='zen-current-tab']")).toBeNull();
+    expect(root.querySelector("[data-testid='zen-status-bar']")).toBeNull();
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-layout")).toBe(
+      "spotlight",
+    );
+    expect(root.querySelector("[data-testid='zen-tab-pane']")?.classList.contains("zs-card")).toBe(
+      false,
+    );
+    render(null, root);
+    root.remove();
+  });
+
+  it("Simple shows the status bar only when an update is available", async () => {
+    const { root } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      applyPreset("simple"),
+      [],
+      [],
+      [],
+      undefined,
+      [],
+      true,
+    );
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-status-bar']")?.textContent).toContain(
+        "There is a new version available",
+      ),
+    );
+    expect(root.querySelector("[data-testid='zen-mcp-status']")).toBeNull();
+    expect(root.querySelector("[data-testid='zen-update-check']")).toBeNull();
+    render(null, root);
+    root.remove();
+  });
+
+  it("filters the tab list with ! when the forge tree is off", async () => {
+    const forgeTabs: Partial<TabInfo>[] = [
+      {
+        id: 1,
+        title: "Improve search",
+        url: "https://github.com/example/zen-deck/pull/45",
+        favIconUrl: "",
+        windowId: 1,
+        active: true,
+      },
+      {
+        id: 2,
+        title: "Fix results",
+        url: "https://github.com/example/zen-deck/issues/123",
+        favIconUrl: "",
+        windowId: 1,
+      },
+      {
+        id: 3,
+        title: "Architecture guide",
+        url: "https://docs.example.com/architecture",
+        favIconUrl: "",
+        windowId: 1,
+      },
+    ];
+    const { root } = mountSearchApp(vi.fn(), forgeTabs, "overlay", applyPreset("simple"));
+    const input = await vi.waitFor(() => {
+      const field = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']");
+      expect(field).not.toBeNull();
+      return field!;
+    });
+    input.value = "!";
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    await vi.waitFor(() => {
+      expect(root.textContent).toContain("Improve search");
+      expect(root.textContent).not.toContain("Architecture guide");
+      expect(root.textContent).not.toContain("Fix results");
+    });
+    render(null, root);
+    root.remove();
+  });
+
+  it("Pro shows the todo column", async () => {
+    const { root } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      applyPreset("pro"),
+      [],
+      [{ tabId: 2, status: "todo" }],
+    );
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-column']")).not.toBeNull(),
+    );
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-layout")).toBe(
+      "fullscreen",
+    );
+    render(null, root);
+    root.remove();
+  });
+
+  it("shows a detached first-run card on Simple until Continue", async () => {
+    const set = vi.fn(async () => undefined);
+    Object.assign(globalThis, {
+      browser: {
+        runtime: {
+          sendMessage: vi.fn(async () => ({
+            tabs,
+            spaces: [],
+            timers: [],
+            todos: [],
+            statuses: [],
+          })),
+          onMessage: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+        storage: {
+          local: {
+            get: vi.fn(async () => ({})),
+            set,
+          },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    render(<SearchApp onClose={vi.fn()} layout="overlay" />, root);
+    await vi.waitFor(() => expect(root.textContent).toContain("Pick a preset"));
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-layout")).toBe("setup");
+    expect(root.querySelector("[data-testid='zen-search-input']")).toBeNull();
+    expect(
+      root.querySelector("[data-testid='zen-complexity-continue']")?.closest(".overflow-y-auto"),
+    ).toBeNull();
+    const slider = root.querySelector<HTMLInputElement>("[data-testid='zen-complexity-preset']")!;
+    expect(slider.value).toBe("0");
+    expect(slider.max).toBe("3");
+
+    slider.value = "3";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    await vi.waitFor(() => expect(slider.value).toBe("3"));
+    expect(root.querySelector(".zs-mod-meta")?.textContent).toBe("Dev");
+    expect(root.querySelector("[data-testid='zen-search-input']")).toBeNull();
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-layout")).toBe("setup");
+
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-complexity-continue']")!.click();
+    await vi.waitFor(() => expect(set).toHaveBeenCalledWith({ complexitySetupDone: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-search-input']")).not.toBeNull(),
+    );
+    render(null, root);
+    root.remove();
   });
 });

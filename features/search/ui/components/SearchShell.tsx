@@ -23,12 +23,14 @@ import { useResolvedTheme } from "@/shared/ui/theme";
  * todos) is 3:2, and three (tabs, issues and todos) is 2:1.
  */
 export type OmnibarAspect = "1/1" | "3/2" | "2/1";
+export type OmnibarChassis = "spotlight" | "fullscreen" | "setup";
 
 export function SearchShell({
   layout,
   onClose,
   displaySettings,
   aspect = "1/1",
+  chassis,
   open = true,
   sound,
   children,
@@ -37,6 +39,8 @@ export function SearchShell({
   onClose: () => void;
   displaySettings: DisplaySettings;
   aspect?: OmnibarAspect;
+  /** Override Spotlight/fullscreen. Setup is a detached first-run card. */
+  chassis?: OmnibarChassis;
   open?: boolean;
   /** The sound player for everything inside; silent when left out. */
   sound?: SoundApi;
@@ -105,6 +109,7 @@ export function SearchShell({
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         data-omnibar
+        data-omnibar-layout={chassis ?? (displaySettings.fullscreen ? "fullscreen" : "spotlight")}
         data-omnibar-aspect={aspect}
       >
         {children}

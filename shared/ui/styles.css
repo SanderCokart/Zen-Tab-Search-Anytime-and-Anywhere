@@ -360,6 +360,19 @@
   }
 
   /*
+   * Firefox paints <input> glyphs low unless height and line-height match.
+   * Caps then look centred in the LCD; x-height still sits low in the same
+   * 1em box. A hair of lift puts mixed-case ink on the same optical line
+   * as GOOGLE / SEARCH without moving the caret off the text.
+   */
+  .zs-search-query {
+    height: 1em;
+    line-height: 1;
+    margin: 0;
+    translate: 0 -0.08em;
+  }
+
+  /*
    * Spec-01 hardware tooltip: a small LCD above the control. Characters sit as
    * ghosts until it opens, then print in one after another.
    */
@@ -821,11 +834,15 @@
    * While the keys are showing they cover the right of the title. Inset the
    * line so the title truncates (or wraps) short of them, instead of running
    * underneath. Meta is already hidden in these states.
+   *
+   * A current-tab duplicate (NOW + ring) is often the default selection. Its
+   * keys stay put away until hover, like any other unselected row — they belong
+   * on the current-tab strip, not on every copy of that tab.
    */
   .zs-row:hover .zs-row-line,
   .zs-row:focus-within .zs-row-line,
-  .zs-row[data-selected="true"] .zs-row-line,
-  .zs-row[data-issue-selected="true"] .zs-row-line,
+  .zs-row[data-selected="true"]:not([data-current="true"]) .zs-row-line,
+  .zs-row[data-issue-selected="true"]:not([data-current="true"]) .zs-row-line,
   .zs-row[data-keep] .zs-row-line,
   .zs-row:has(.zs-acts[data-always]) .zs-row-line {
     padding-right: calc(var(--zen-row-line-end, 0px) + var(--zen-row-actions));
@@ -854,8 +871,8 @@
   }
 
   .zs-row:focus-within .zs-acts,
-  .zs-row[data-selected="true"] .zs-acts,
-  .zs-row[data-issue-selected="true"] .zs-acts,
+  .zs-row[data-selected="true"]:not([data-current="true"]) .zs-acts,
+  .zs-row[data-issue-selected="true"]:not([data-current="true"]) .zs-acts,
   .zs-row[data-keep] .zs-acts,
   .zs-row .zs-acts[data-always] {
     opacity: 1;
@@ -871,8 +888,8 @@
   }
 
   .zs-row:focus-within .zs-todo-dot,
-  .zs-row[data-selected="true"] .zs-todo-dot,
-  .zs-row[data-issue-selected="true"] .zs-todo-dot,
+  .zs-row[data-selected="true"]:not([data-current="true"]) .zs-todo-dot,
+  .zs-row[data-issue-selected="true"]:not([data-current="true"]) .zs-todo-dot,
   .zs-row[data-keep] .zs-todo-dot,
   .zs-row:has(.zs-acts[data-always]) .zs-todo-dot {
     visibility: hidden;
@@ -883,8 +900,8 @@
      so the title truncates at the keys instead of at host + keys together. */
   .zs-row:hover .zs-meta,
   .zs-row:focus-within .zs-meta,
-  .zs-row[data-selected="true"] .zs-meta,
-  .zs-row[data-issue-selected="true"] .zs-meta,
+  .zs-row[data-selected="true"]:not([data-current="true"]) .zs-meta,
+  .zs-row[data-issue-selected="true"]:not([data-current="true"]) .zs-meta,
   .zs-row[data-keep] .zs-meta,
   .zs-row:has(.zs-acts[data-always]) .zs-meta {
     display: none;
@@ -1454,12 +1471,28 @@
     background: var(--zs-ink-2);
   }
 
-  /* Fill the overlay stage edge to edge; the column count no longer sets a shape. */
+  /* Fullscreen fills the overlay stage; Spotlight is a centered card. */
   [data-omnibar] {
     width: 100%;
     height: 100%;
     min-height: 0;
     border-radius: 0;
+  }
+
+  [data-omnibar][data-omnibar-layout="spotlight"] {
+    width: min(calc(var(--zen-font-size) * 44), 72%);
+    height: min(calc(var(--zen-font-size) * 36), 78%);
+    max-height: 78%;
+    border-radius: var(--zs-r-card);
+  }
+
+  /* First-run complexity card: large enough for every flag, independent of Spotlight. */
+  [data-omnibar][data-omnibar-layout="setup"] {
+    --zen-scale: 1.15;
+    width: min(calc(var(--zen-font-size) * 56), 90%);
+    height: min(calc(var(--zen-font-size) * 48), 92%);
+    max-height: 92%;
+    border-radius: var(--zs-r-card);
   }
 
   /*

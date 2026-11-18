@@ -5,7 +5,10 @@ import { registerContextMenus } from "@/app/background/context-menus";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { registerPopupWindowTracking } from "@/app/background/popup-tracking";
 import { openSettingsPopup } from "@/features/settings/background/popup";
-import { startSettingsBackup } from "@/features/settings/background/settings-backup";
+import {
+  startSettingsBackup,
+  wipeExtensionData,
+} from "@/features/settings/background/settings-backup";
 import { openCustomTimerPopup } from "@/features/timers/background/popup";
 import { openHostOverridesPopup } from "@/features/hosts/background/popup";
 import {
@@ -21,7 +24,11 @@ import {
   notifySnapshotChanged,
   registerSnapshotChangeNotifications,
 } from "@/features/search/background/snapshot";
-import { searchSnapshotSchema, TAB_ZOOM_CHANGED_TYPE } from "@/shared/messaging/protocol";
+import {
+  BRIDGE_STATUS_CHANGED_TYPE,
+  searchSnapshotSchema,
+  TAB_ZOOM_CHANGED_TYPE,
+} from "@/shared/messaging/protocol";
 import * as v from "valibot";
 import { createTabQuery } from "@/features/zen/tabs-query";
 import { createTabSwitcher } from "@/features/zen/tabs-switch";
@@ -219,6 +226,8 @@ export default defineBackground(() => {
     void timerService.handleTabRemoved(tabId, removeInfo.isWindowClosing);
   });
 
+  let bridgeConnected = false;
+
   registerMessageRouter({
     queryTabs,
     getSpaces,
@@ -287,6 +296,8 @@ export default defineBackground(() => {
       }
     },
     getUpdateStatus: updateService.getStatus,
+    getBridgeStatus: async () => ({ connected: bridgeConnected }),
+    resetExtensionData: wipeExtensionData,
     openUpdate: async (page) => {
       await updateService.open(page);
       await hideOmnibar();
@@ -331,6 +342,12 @@ export default defineBackground(() => {
   });
 
   const bridge = startBridgeClient({
+    onConnectedChange: (connected) => {
+      bridgeConnected = connected;
+      void browser.runtime
+        .sendMessage({ type: BRIDGE_STATUS_CHANGED_TYPE, connected })
+        .catch(() => undefined);
+    },
     handle: createBridgeCommandHandler(workspace, {
       timers: {
         setTabTimer: timerService.setTabTimer,

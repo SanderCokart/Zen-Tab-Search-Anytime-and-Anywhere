@@ -5,13 +5,20 @@ import { DisplaySettingsApp } from "@/features/settings/ui/DisplaySettingsApp";
 import { TimerPopup } from "@/features/timers/ui/TimerPopup";
 import { HostOverridesPopup } from "@/features/hosts/ui/HostOverridesPopup";
 import { installBrowserMock } from "@/screenshots/browser-mock";
-import { displaySettingsFor, sceneFromSearch } from "@/screenshots/scenes";
+import {
+  displaySettingsFor,
+  sceneFromSearch,
+  SPOTLIGHT_CONCEPT_SCENES,
+} from "@/screenshots/scenes";
 import "@/shared/ui/styles.css";
 import "@/screenshots/harness.css";
 
 const scene = sceneFromSearch(window.location.search);
 installBrowserMock(displaySettingsFor(scene), { updateAvailable: scene.updateAvailable });
 document.documentElement.dataset.harnessScene = scene.id;
+if ((SPOTLIGHT_CONCEPT_SCENES as readonly string[]).includes(scene.id)) {
+  document.documentElement.dataset.harnessLayout = "spotlight";
+}
 
 function FakeZenChrome({
   children,

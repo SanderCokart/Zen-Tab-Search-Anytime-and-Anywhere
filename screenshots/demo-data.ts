@@ -2,6 +2,7 @@ import { DEFAULT_DISPLAY_SETTINGS } from "@/features/settings/model/display-sett
 import type { DisplaySettings } from "@/features/settings/model/display-settings";
 import { ESSENTIAL_TAB_NAMES_KEY } from "@/features/search/ui/hooks/useEssentialTabNames";
 import { DISPLAY_SETTINGS_STORAGE_KEY } from "@/features/settings/model/display-settings";
+import { COMPLEXITY_SETUP_DONE_KEY } from "@/features/settings/model/complexity";
 import type { SearchSnapshot } from "@/shared/messaging/protocol";
 import type { HostOverrideGroup, HostProxyReport, SpaceInfo, TabInfo } from "@/shared/types";
 
@@ -265,5 +266,6 @@ export function demoStorage(displaySettings: DisplaySettings = DEFAULT_DISPLAY_S
   return {
     [DISPLAY_SETTINGS_STORAGE_KEY]: displaySettings,
     [ESSENTIAL_TAB_NAMES_KEY]: DEMO_ESSENTIAL_NAMES,
+    [COMPLEXITY_SETUP_DONE_KEY]: true,
   };
 }

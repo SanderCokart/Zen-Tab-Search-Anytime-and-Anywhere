@@ -2,6 +2,7 @@ import {
   DEFAULT_DISPLAY_SETTINGS,
   type DisplaySettings,
 } from "@/features/settings/model/display-settings";
+import { applyPreset } from "@/features/settings/model/complexity";
 import type { OmnibarView } from "@/shared/messaging/protocol";
 import type { SearchLayout } from "@/features/search/ui/types";
 
@@ -16,6 +17,20 @@ export interface HarnessScene {
   /** Answer the update check with a newer release than the installed one. */
   updateAvailable?: boolean;
 }
+
+/**
+ * Spotlight-shaped concept comps. The overlay is still edge-to-edge in product
+ * CSS; the harness constrains `[data-omnibar]` for these ids only.
+ */
+export const SPOTLIGHT_CONCEPT_SCENES = [
+  "concept-simple",
+  "concept-simple-forge",
+  "concept-enhanced",
+  "concept-enhanced-timers",
+] as const;
+
+const CONCEPT_SIMPLE = applyPreset("simple");
+const CONCEPT_ENHANCED = applyPreset("enhanced");
 
 const SCENES: Record<string, HarnessScene> = {
   "search-omnibar": { id: "search-omnibar", surface: "search", layout: "overlay" },
@@ -122,6 +137,38 @@ const SCENES: Record<string, HarnessScene> = {
   "display-settings": { id: "display-settings", surface: "settings" },
   "timer-popup": { id: "timer-popup", surface: "timer" },
   "host-popup": { id: "host-popup", surface: "hosts" },
+  "concept-simple": {
+    id: "concept-simple",
+    surface: "search",
+    layout: "overlay",
+    displaySettings: CONCEPT_SIMPLE,
+  },
+  "concept-simple-forge": {
+    id: "concept-simple-forge",
+    surface: "search",
+    layout: "overlay",
+    displaySettings: CONCEPT_SIMPLE,
+  },
+  "concept-enhanced": {
+    id: "concept-enhanced",
+    surface: "search",
+    layout: "overlay",
+    displaySettings: CONCEPT_ENHANCED,
+  },
+  "concept-enhanced-timers": {
+    id: "concept-enhanced-timers",
+    surface: "search",
+    layout: "overlay",
+    displaySettings: CONCEPT_ENHANCED,
+    initialView: { kind: "timers" },
+  },
+  "concept-pro": {
+    id: "concept-pro",
+    surface: "search",
+    layout: "overlay",
+    displaySettings: applyPreset("pro"),
+  },
+  "concept-dev": { id: "concept-dev", surface: "search", layout: "overlay" },
 };
 
 export function sceneFromSearch(search: string): HarnessScene {
@@ -130,5 +177,10 @@ export function sceneFromSearch(search: string): HarnessScene {
 }
 
 export function displaySettingsFor(scene: HarnessScene): DisplaySettings {
-  return { ...DEFAULT_DISPLAY_SETTINGS, ...scene.displaySettings };
+  const spotlight = (SPOTLIGHT_CONCEPT_SCENES as readonly string[]).includes(scene.id);
+  return {
+    ...DEFAULT_DISPLAY_SETTINGS,
+    ...(spotlight ? applyPreset("simple") : applyPreset("dev")),
+    ...scene.displaySettings,
+  };
 }

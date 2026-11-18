@@ -22,6 +22,7 @@ export interface BridgeClientOptions {
   createSocket?: (url: string) => WebSocket;
   minReconnectDelayMs?: number;
   maxReconnectDelayMs?: number;
+  onConnectedChange?(connected: boolean): void;
 }
 
 function defaultReadToken(): Promise<string | undefined> {
@@ -42,6 +43,7 @@ function errorMessage(error: unknown): string {
 export function startBridgeClient(options: BridgeClientOptions): {
   reconnect(): void;
   stop(): void;
+  connected(): boolean;
 } {
   const url = options.url ?? BRIDGE_URL;
   const readToken = options.readToken ?? defaultReadToken;
@@ -56,6 +58,15 @@ export function startBridgeClient(options: BridgeClientOptions): {
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let delay = minDelay;
   let stopped = false;
+  let connected = false;
+
+  function setConnected(next: boolean): void {
+    if (connected === next) {
+      return;
+    }
+    connected = next;
+    options.onConnectedChange?.(next);
+  }
 
   // Back off while the MCP server is not running: every failed attempt logs a
   // connection error in Zen's console, so retrying every few seconds is noisy.
@@ -87,8 +98,10 @@ export function startBridgeClient(options: BridgeClientOptions): {
     if (typeof message === "object" && message !== null && "type" in message) {
       if (message.type === "welcome") {
         delay = minDelay;
+        setConnected(true);
         debugLog(`${LOG_PREFIX} MCP bridge connected`);
       } else if (message.type === "rejected") {
+        setConnected(false);
         const protocol = "reason" in message && message.reason === "protocol";
         debugWarn(
           `${LOG_PREFIX} MCP bridge rejected the connection:`,
@@ -149,6 +162,7 @@ export function startBridgeClient(options: BridgeClientOptions): {
         // A socket replaced by reconnect() must not schedule another attempt.
         if (socket === ws) {
           socket = undefined;
+          setConnected(false);
           scheduleReconnect();
         }
       };
@@ -175,6 +189,7 @@ export function startBridgeClient(options: BridgeClientOptions): {
     generation++;
     const current = socket;
     socket = undefined;
+    setConnected(false);
     current?.close();
     void connect();
   }
@@ -185,9 +200,10 @@ export function startBridgeClient(options: BridgeClientOptions): {
     reconnectTimer = undefined;
     const current = socket;
     socket = undefined;
+    setConnected(false);
     current?.close();
   }
 
   void connect();
-  return { reconnect, stop };
+  return { reconnect, stop, connected: () => connected };
 }

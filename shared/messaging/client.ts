@@ -9,6 +9,7 @@ import {
   isErrorResponse,
   isSnapshotChangedMessage,
   isTabZoomChangedMessage,
+  parseBridgeStatusChangedMessage,
   parseOmnibarShownMessage,
   parseExtensionSuccess,
 } from "@/shared/messaging/protocol";
@@ -53,6 +54,22 @@ export function subscribeToSnapshotChanged(onChanged: () => void): () => void {
   const listener = (message: unknown) => {
     if (isSnapshotChangedMessage(message)) {
       onChanged();
+    }
+  };
+  browser.runtime.onMessage.addListener(listener);
+  return () => {
+    browser.runtime.onMessage.removeListener(listener);
+  };
+}
+
+/** Calls `onChanged` when the MCP WebSocket connects or drops. */
+export function subscribeToBridgeStatusChanged(
+  onChanged: (connected: boolean) => void,
+): () => void {
+  const listener = (message: unknown) => {
+    const connected = parseBridgeStatusChangedMessage(message);
+    if (connected !== undefined) {
+      onChanged(connected);
     }
   };
   browser.runtime.onMessage.addListener(listener);

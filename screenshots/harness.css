@@ -8,3 +8,33 @@ body,
 body {
   background: #0f0f0f;
 }
+
+/* Extra overlay columns stay hidden in Spotlight concept comps until gating. */
+
+/* Drop extra overlay columns, not just their asides — a `display:none` aside
+   still leaves a `flex-1` wrapper and keeps the tab list skinny. */
+html[data-harness-layout="spotlight"]
+  [data-omnibar]
+  > .flex.flex-1.overflow-hidden
+  > :not(:first-child),
+html[data-harness-layout="spotlight"] button[aria-label="Host overrides for this tab"] {
+  display: none !important;
+}
+
+html[data-harness-scene="concept-simple"] button[aria-label="Show active timers"],
+html[data-harness-scene="concept-simple-forge"] button[aria-label="Show active timers"],
+html[data-harness-scene="concept-simple"] [data-testid="zen-tab-actions"],
+html[data-harness-scene="concept-simple-forge"] [data-testid="zen-tab-actions"] {
+  display: none !important;
+}
+
+html[data-harness-scene="concept-enhanced"] [data-testid="zen-todo-button"],
+html[data-harness-scene="concept-enhanced-timers"] [data-testid="zen-todo-button"],
+html[data-harness-scene="concept-enhanced"] [data-testid="zen-status-button"],
+html[data-harness-scene="concept-enhanced-timers"] [data-testid="zen-status-button"] {
+  display: none !important;
+}
+
+html[data-harness-scene="concept-pro"] button[aria-label="Host overrides for this tab"] {
+  display: none !important;
+}

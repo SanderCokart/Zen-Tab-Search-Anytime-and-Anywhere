@@ -61,7 +61,7 @@ export function SearchInput({
   return (
     <Lcd
       class={cn(
-        "flex min-w-0 flex-1 items-center gap-[var(--zen-space-3)] px-[var(--zen-space-3)]",
+        "zs-search-lcd flex min-w-0 flex-1 items-center gap-[var(--zen-space-3)] px-[var(--zen-space-3)] py-[var(--zen-space-3)]",
         inert && "opacity-50",
       )}
     >
@@ -72,10 +72,10 @@ export function SearchInput({
       />
       <span
         aria-hidden="true"
-        class="h-[var(--zen-text-lg)] w-px shrink-0 bg-[var(--zs-lcd-dim)] opacity-40"
+        class="h-[1em] w-px shrink-0 self-center bg-[var(--zs-lcd-dim)] opacity-40"
       />
       {!compact && (
-        <span aria-hidden="true" class="zs-label zs-label-red shrink-0 select-none">
+        <span aria-hidden="true" class="zs-label zs-label-red shrink-0 leading-none select-none">
           Search
         </span>
       )}
@@ -86,8 +86,8 @@ export function SearchInput({
         placeholder={compact ? "Search…" : "Search tabs and spaces..."}
         inert={inert}
         class={cn(
-          "min-w-0 flex-1 border-0 bg-transparent text-inherit caret-[var(--zs-red)] outline-none placeholder:text-[var(--zs-lcd-dim)]",
-          "py-[var(--zen-space-3)] font-[inherit] text-[length:var(--zen-text-lg)]",
+          "zs-search-query min-w-0 flex-1 border-0 bg-transparent text-inherit caret-[var(--zs-red)] outline-none placeholder:text-[var(--zs-lcd-dim)]",
+          "p-0 font-[inherit] text-[length:var(--zen-text-lg)] leading-none",
           compact && "w-full",
         )}
         value={value}

@@ -50,7 +50,7 @@ function checkResultText(state: UpdateCheckState): string | undefined {
  * choices above the bar: install it in place, download the zip, or read the
  * release notes.
  */
-export function UpdateNotice() {
+export function UpdateNotice({ showIdle = true }: { showIdle?: boolean }) {
   const { status, checkState, check } = useUpdateStatus();
   const [open, setOpen] = useState(false);
   const [install, setInstall] = useState<InstallState>({ kind: "idle" });
@@ -60,6 +60,9 @@ export function UpdateNotice() {
   }
 
   if (!status.updateAvailable || !status.latest) {
+    if (!showIdle) {
+      return null;
+    }
     const result = checkResultText(checkState);
     return (
       <span

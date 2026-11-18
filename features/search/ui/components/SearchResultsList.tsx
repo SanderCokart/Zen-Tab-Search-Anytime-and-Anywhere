@@ -264,6 +264,7 @@ function renderItem(props: SearchResultsListProps, item: SearchItem, interactive
           tab={item.data}
           timer={timers.get(tabId ?? -1)}
           isTodo={tabId !== undefined && todos.has(tabId)}
+          displaySettings={props.displaySettings}
           light={light}
           statusMenuOpen={tabId !== undefined && statusMenuTabId === tabId}
           onOpenStatusMenu={onOpenStatusMenu}
