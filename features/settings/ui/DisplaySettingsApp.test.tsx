@@ -51,9 +51,7 @@ describe("DisplaySettingsApp", () => {
         filterRequestsInOverlay: true,
         groupFolders: false,
         groupSubfolders: false,
-        hideSpacesInPopup: false,
         hideSpacesInOverlay: false,
-        hideEssentialsInPopup: false,
         hideEssentialsInOverlay: false,
         fontSize: 14,
         uiScale: 1,
@@ -129,9 +127,7 @@ describe("DisplaySettingsApp", () => {
         filterRequestsInOverlay: false,
         groupFolders: true,
         groupSubfolders: true,
-        hideSpacesInPopup: false,
         hideSpacesInOverlay: false,
-        hideEssentialsInPopup: false,
         hideEssentialsInOverlay: false,
         fontSize: 14,
         uiScale: 1,
@@ -201,9 +197,7 @@ describe("DisplaySettingsApp", () => {
           filterRequestsInOverlay: true,
           groupFolders: true,
           groupSubfolders: true,
-          hideSpacesInPopup: false,
           hideSpacesInOverlay: false,
-          hideEssentialsInPopup: false,
           hideEssentialsInOverlay: false,
           fontSize: 14,
           uiScale: 1,
@@ -252,7 +246,7 @@ describe("DisplaySettingsApp", () => {
     render(<DisplaySettingsApp />, root);
 
     const checkbox = await vi.waitFor(() => {
-      const input = root.querySelector<HTMLInputElement>("[data-testid='zen-hideSpacesInPopup']");
+      const input = root.querySelector<HTMLInputElement>("[data-testid='zen-hideSpacesInOverlay']");
       expect(input?.disabled).toBe(false);
       return input!;
     });
@@ -262,7 +256,7 @@ describe("DisplaySettingsApp", () => {
       expect(set).toHaveBeenCalledWith({
         displaySettings: {
           ...DEFAULT_DISPLAY_SETTINGS,
-          hideSpacesInPopup: true,
+          hideSpacesInOverlay: true,
         },
       }),
     );

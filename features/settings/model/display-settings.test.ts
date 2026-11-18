@@ -90,10 +90,10 @@ describe("display settings", () => {
     });
   });
 
-  it("keeps space and essential visibility independent per surface", async () => {
+  it("reads omnibar space and essential visibility independently", async () => {
     const get = vi.fn(async () => ({
       displaySettings: {
-        hideSpacesInPopup: true,
+        hideSpacesInOverlay: true,
         hideEssentialsInOverlay: true,
       },
     }));
@@ -108,7 +108,7 @@ describe("display settings", () => {
 
     await expect(readDisplaySettings()).resolves.toEqual({
       ...DEFAULT_DISPLAY_SETTINGS,
-      hideSpacesInPopup: true,
+      hideSpacesInOverlay: true,
       hideEssentialsInOverlay: true,
     });
   });

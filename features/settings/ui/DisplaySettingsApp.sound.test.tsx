@@ -71,11 +71,11 @@ describe("switches", () => {
 
   it("toggle from their label", async () => {
     await mount({});
-    const label = byId("zen-hideSpacesInPopup").closest("label")!;
+    const label = byId("zen-hideSpacesInOverlay").closest("label")!;
     label.click();
     await vi.waitFor(() =>
       expect(set).toHaveBeenCalledWith({
-        displaySettings: { ...DEFAULT_DISPLAY_SETTINGS, hideSpacesInPopup: true },
+        displaySettings: { ...DEFAULT_DISPLAY_SETTINGS, hideSpacesInOverlay: true },
       }),
     );
   });
@@ -120,11 +120,11 @@ describe("sound on the settings page", () => {
     await vi.waitFor(() => expect(set).toHaveBeenCalledTimes(1));
     input(byId<HTMLInputElement>("zen-tabGap"), "12");
     await vi.waitFor(() => expect(set).toHaveBeenCalledTimes(2));
-    byId("zen-hideSpacesInPopup").click();
+    byId("zen-hideSpacesInOverlay").click();
     await vi.waitFor(() => expect(set).toHaveBeenCalledTimes(3));
     expect(set).toHaveBeenLastCalledWith({
       displaySettings: expect.objectContaining({
-        hideSpacesInPopup: true,
+        hideSpacesInOverlay: true,
         tabGap: 12,
         reuseExternalTabs: true,
       }),

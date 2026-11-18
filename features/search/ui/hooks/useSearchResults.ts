@@ -209,17 +209,12 @@ export function useSearchResults({
       : query;
 
   const searchable = useMemo(() => {
-    const popup = layout === "popup";
     return excludePinnedSearchSources(visibleTabs, spaces, {
-      excludeSpaces: popup
-        ? displaySettings.hideSpacesInPopup
-        : displaySettings.hideSpacesInOverlay,
-      excludeEssentials: popup
-        ? displaySettings.hideEssentialsInPopup
-        : displaySettings.hideEssentialsInOverlay,
+      excludeSpaces: displaySettings.hideSpacesInOverlay,
+      excludeEssentials: displaySettings.hideEssentialsInOverlay,
       query: effectiveQuery,
     });
-  }, [displaySettings, effectiveQuery, layout, spaces, visibleTabs]);
+  }, [displaySettings, effectiveQuery, spaces, visibleTabs]);
 
   const searchDocuments = useMemo(
     () => buildSearchDocuments(buildSearchItems(searchable.tabs, searchable.spaces)),

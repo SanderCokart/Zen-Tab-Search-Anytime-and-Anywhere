@@ -18,11 +18,9 @@ const DEFAULTS = {
   filterRequestsInOverlay: true,
   groupFolders: true,
   groupSubfolders: true,
-  /** Leave the spaces grid out of that surface. The other surface is unaffected. */
-  hideSpacesInPopup: false,
+  /** Leave the spaces grid out of the omnibar, including while searching. */
   hideSpacesInOverlay: false,
-  /** Leave essential tabs out of that surface, including while searching. */
-  hideEssentialsInPopup: false,
+  /** Leave essential tabs out of the omnibar, including while searching. */
   hideEssentialsInOverlay: false,
   /** Base font size in px, before the surface and relative-mode adjustments. */
   fontSize: 14,
@@ -182,9 +180,7 @@ const displaySettingsSchema = v.pipe(
       filterRequestsInOverlay: boolean(DEFAULTS.filterRequestsInOverlay),
       groupFolders: boolean(DEFAULTS.groupFolders),
       groupSubfolders: boolean(DEFAULTS.groupSubfolders),
-      hideSpacesInPopup: boolean(DEFAULTS.hideSpacesInPopup),
       hideSpacesInOverlay: boolean(DEFAULTS.hideSpacesInOverlay),
-      hideEssentialsInPopup: boolean(DEFAULTS.hideEssentialsInPopup),
       hideEssentialsInOverlay: boolean(DEFAULTS.hideEssentialsInOverlay),
       fontSize: scalar(DEFAULTS.fontSize, clampFontSize),
       uiScale: scalar(DEFAULTS.uiScale, clampUiScale),
