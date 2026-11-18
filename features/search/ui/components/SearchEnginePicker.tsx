@@ -68,7 +68,7 @@ export function SearchEnginePicker({
       {open && (
         <div
           class={cn(
-            "zs-card absolute top-full left-0 z-50 mt-[var(--zen-space-2)]",
+            "zs-menu absolute top-full left-0 z-50 mt-[var(--zen-space-2)]",
             "flex min-w-[calc(var(--zen-font-size)*10)] flex-col p-[var(--zen-space-1)]",
           )}
           data-testid="zen-search-engine-menu"
