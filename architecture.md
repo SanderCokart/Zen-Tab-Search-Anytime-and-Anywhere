@@ -104,16 +104,12 @@ room.
 | Entry point | What it is |
 | --- | --- |
 | [background.ts](entrypoints/background.ts) | The long-lived script. The only place with Zen access. |
-| [popup/](entrypoints/popup) | The toolbar popup. Renders `SearchApp` in `layout="popup"`. |
 | [options/](entrypoints/options) | The settings page. Renders `DisplaySettingsApp`. |
 | [timer-popup/](entrypoints/timer-popup) | A small window for setting a timer on one tab. |
 | [zen-deck.content/](entrypoints/zen-deck.content) | Content script on `<all_urls>`. Renders `SearchApp` in `layout="overlay"`. |
 
-Three of them are three lines of wiring:
-
-```tsx
-render(<SearchApp onClose={() => window.close()} layout="popup" />, root);
-```
+The toolbar button has no entry point of its own: it is a `browser_action` without a
+`default_popup`, so a click arrives in `browserAction.onClicked` and opens the omnibar.
 
 The interesting two are the background script and the content script.
 
@@ -164,13 +160,13 @@ Follow `Alt+F` — "open the omnibar" — all the way through. This single path
 touches most of the architecture.
 
 **1. The manifest.** [wxt.config.ts](wxt.config.ts) declares four commands
-(`show-omnibar`, `toggle-popup`, `change-tab-label`, `set-tab-timer`); Firefox allows
-at most four with suggested keys. Three have one (Alt+F, Alt+R, Alt+T) and
-`toggle-popup` ships unmapped. WXT's own dev-reload shortcut is disabled with
+(`show-omnibar`, `change-tab-label`, `set-tab-timer`); Firefox allows
+at most four with suggested keys. All three have one (Alt+F, Alt+R, Alt+T). WXT's own dev-reload shortcut is disabled with
 `dev.reloadCommand: false` because it is Alt+R too.
 
 **2. The command listener.** [app/background/commands.ts](app/background/commands.ts)
-receives `"show-omnibar"` and calls `toggleOmnibar()`. This file is in `app/` rather
+receives `"show-omnibar"` and calls `toggleOmnibar()`. A click on the toolbar button goes
+through the same function. This file is in `app/` rather
 than a feature because it dispatches to four different features.
 
 **3. Choosing a surface.** [features/search/background/omnibar.ts](features/search/background/omnibar.ts)
@@ -178,19 +174,13 @@ finds the active tab and asks: can a content script live here? `about:`,
 `moz-extension:` and friends are excluded by
 [shared/urls.ts](shared/urls.ts). If the page is injectable, it sends a
 `toggleOmnibar` command to the tab. If that throws — no content script, page still
-loading — it **falls back to the toolbar popup**.
+loading — it does nothing. A page the content script cannot reach is the
+one case where the omnibar does not open.
 
-**4. Opening the popup, if it came to that.**
-[features/search/background/popup.ts](features/search/background/popup.ts) tries
-`browserAction.openPopup()`, and if that is unavailable creates a real 400×480 popup
-window instead, remembering its id so a second keypress can close it. This
-"try the nice thing, fall back to the blunt thing, remember what you did" pattern
-recurs throughout the background code.
-
-**5. The overlay mounts.** The content script builds the shadow root and renders
+**4. The overlay mounts.** The content script builds the shadow root and renders
 `SearchApp`.
 
-**6. The UI asks for data.** `SearchApp` calls `useSearchSnapshot()`, which sends
+**5. The UI asks for data.** `SearchApp` calls `useSearchSnapshot()`, which sends
 `{ type: "getSnapshot" }`.
 
 **7. The router validates.** [app/background/message-router.ts](app/background/message-router.ts)
@@ -331,9 +321,9 @@ Because it is pure, [ranking.test.ts](features/search/model/ranking.test.ts) cov
 21 cases with no DOM and no mocks. **This is the payoff of the `model/` convention:
 put logic here and testing it is free.**
 
-The UI is one component rendered two ways. `layout="popup"` is the compact toolbar
-version; `layout="overlay"` is the full-page version that also shows the issue
-navigator. [SearchApp.tsx](features/search/ui/SearchApp.tsx) is an orchestrator that
+The UI is one component, `layout="overlay"`: the full-page omnibar that also shows the
+issue navigator. A compact `layout="popup"` branch remains in `SearchApp` but nothing
+renders it any more. [SearchApp.tsx](features/search/ui/SearchApp.tsx) is an orchestrator that
 holds only view state (query, sort mode, which menus are open) and delegates:
 
 | Hook | Owns |
@@ -400,11 +390,9 @@ durations at 31 days.
 
 ### `settings/` — display preferences
 
-[display-settings.ts](features/settings/model/display-settings.ts) holds twenty-three
-preferences: four booleans for grouping and issue detection, four that hide the spaces
-grid or the essential-tab grid on the toolbar popup or the omnibar, four hex colours,
-three that size the UI, two that decide whether tab and issue text is cut to one line,
-and six gap sizes. `DisplaySettingsApp` writes them, every surface subscribes
+[display-settings.ts](features/settings/model/display-settings.ts) holds the display preferences: booleans for grouping and issue detection, two that hide
+the spaces grid and the essential-tab grid in the omnibar, four hex colours, the sizes of
+the UI, two that decide whether tab and issue text is cut to one line, and the gap sizes. `DisplaySettingsApp` writes them, every surface subscribes
 via `storage.onChanged`, so changing a colour or a size updates an open overlay live.
 
 The four colours are accent, frame, panels, and text. They write the hardware
@@ -458,23 +446,15 @@ of each surface. Two details are worth knowing before you change it:
   property holding an `em` value resolves against the font size of the element that
   *uses* it, so a token read inside a smaller-text row would silently come out
   smaller. Multiplying a px-valued variable resolves identically everywhere.
-- **The unit decides the zoom behaviour; nothing ever queries the zoom factor.** The
-  overlay is laid out inside the page, so its CSS pixels scale with page zoom. That
-  one fact gives both modes for free: `respectZoom` on emits a plain `px` length and
-  the zoom scales it like everything else on the page, while `respectZoom` off emits
-  a `min(80vw, 90dvh)`-derived length, and because zoom shrinks the viewport in CSS
-  px by exactly the factor it magnifies them, that comes out identical on screen at
-  every zoom level.
-- **The zoom-independent expression must stay free of any `px` term.** A `px`
-  minimum, maximum or offset would scale with zoom and reintroduce the dependence the
-  mode exists to remove — an earlier version clamped it between two px bounds and was
-  zoom-dependent at the extremes. A test asserts the expression contains no `px`.
+- **The overlay holds its size on screen.** Its CSS pixels scale with page zoom, so
+  `resolveBaseFontSize` divides the configured font size by the tab's zoom factor. The
+  factor comes from `tabs.getZoom()` through `usePageZoom`; until it arrives it is 1.
 - **Neither mode waits on the background.** An earlier version asked for
   `tabs.getZoom()` and divided by it, which meant the overlay painted once at the
   wrong size and visibly snapped when the message resolved. Both sizes are now known
   synchronously and are correct on the first paint.
-- **The toolbar popup and options page are browser UI, not page content**, so page
-  zoom never touches them and they always take the plain px length.
+- **The timer and host windows and the options page are browser UI, not page content**,
+  so page zoom never touches them and they always take the plain px length.
 
 Like the wire protocol, these are a valibot schema and the type is inferred from it.
 The schema differs from the protocol ones in two ways, both because it is reading
