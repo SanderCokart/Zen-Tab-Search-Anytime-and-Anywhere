@@ -50,9 +50,9 @@ function printUsage() {
   const output = [
     "Usage:",
     '  npm run release -- patch --message "Release notes"',
-    "  npm run release -- minor --notes-file ./RELEASE.md",
+    "  npm run release -- minor --title \"Dial in the deck\" --notes-file ./RELEASE.md",
     "  npm run release -- patch --generate-notes",
-    "  npm run release -- major --canary --notes-file ./RELEASE.md",
+    "  npm run release -- major --title \"A new feel for Zen\" --canary --notes-file ./RELEASE.md",
     "  npm run release -- patch --dry-run",
     "",
     "Bump:",
@@ -63,6 +63,10 @@ function printUsage() {
     "  --notes-file <path>",
     "  --generate-notes",
     "  --notes-since <tag>",
+    "",
+    "Title:",
+    "  --title <text>  Required for minor and major (x.y.0). GitHub title becomes",
+    "                  Zen Deck x.y.0 — <text>. Patch releases stay vX.Y.Z.",
     "",
     "Options:",
     "  --canary       GitHub prerelease; not marked Latest",
@@ -84,6 +88,7 @@ function parseArgs(args) {
     notesFile: undefined,
     generateNotes: false,
     notesSince: undefined,
+    title: undefined,
     canary: false,
     dryRun: false,
   };
@@ -117,6 +122,14 @@ function parseArgs(args) {
       index += 1;
     } else if (arg.startsWith("--notes-since=")) {
       parsed.notesSince = arg.slice("--notes-since=".length);
+    } else if (arg === "--title") {
+      parsed.title = args[index + 1];
+      if (!parsed.title || parsed.title.startsWith("-")) {
+        fail("--title requires a release title string.");
+      }
+      index += 1;
+    } else if (arg.startsWith("--title=")) {
+      parsed.title = arg.slice("--title=".length);
     } else if (arg === "--canary") {
       parsed.canary = true;
     } else if (arg === "--dry-run") {
@@ -297,16 +310,26 @@ function findZipArtifact(label) {
     .sort((left, right) => right.mtimeMs - left.mtimeMs)[0]?.file;
 }
 
-function releaseTitle(tagName, canary) {
+/** Minor and major land on x.y.0. Those get a named GitHub title. Patches do not. */
+function needsNamedTitle(version) {
+  return version.endsWith(".0");
+}
+
+function releaseTitle(newVersion, canary, title) {
+  const tagName = `v${newVersion}`;
+  if (title) {
+    const named = `Zen Deck ${newVersion} — ${title}`;
+    return canary ? `${named} (canary)` : named;
+  }
   return canary ? `${tagName} (canary)` : tagName;
 }
 
-function printDryRun({ oldVersion, newVersion, tagName, canary, notes }) {
+function printDryRun({ oldVersion, newVersion, tagName, canary, title, notes }) {
   console.log("");
   console.log("Dry run only. No files, commits, tags, pushes, or releases were created.");
   console.log(`Version: ${oldVersion} -> ${newVersion}`);
   console.log(`Tag: ${tagName}`);
-  console.log(`Title: ${releaseTitle(tagName, canary)}`);
+  console.log(`Title: ${releaseTitle(newVersion, canary, title)}`);
   console.log(`GitHub prerelease: ${canary ? "yes" : "no"}`);
   console.log(`Assets: zen-deck-${tagName}-firefox.zip, zen-deck-mcp.mjs`);
   if (notes.sinceTag) {
@@ -348,11 +371,26 @@ function main() {
   const tagName = `v${newVersion}`;
   currentTagName = tagName;
   const notes = resolveReleaseNotes(args, tagName);
+  if (needsNamedTitle(newVersion) && !args.title) {
+    fail(
+      `Minor and major releases need --title (for example --title "Dial in the deck").`,
+    );
+  }
+  if (args.title && !needsNamedTitle(newVersion)) {
+    fail("--title is only for minor and major releases (x.y.0).");
+  }
 
   console.log(`Release: v${oldVersion} -> ${tagName}`);
 
   if (args.dryRun) {
-    printDryRun({ oldVersion, newVersion, tagName, canary: args.canary, notes });
+    printDryRun({
+      oldVersion,
+      newVersion,
+      tagName,
+      canary: args.canary,
+      title: args.title,
+      notes,
+    });
     return;
   }
 
@@ -410,7 +448,7 @@ function main() {
     zipArtifact,
     mcpArtifact,
     "--title",
-    releaseTitle(tagName, args.canary),
+    releaseTitle(newVersion, args.canary, args.title),
     "--verify-tag",
   ];
   if (args.canary) {

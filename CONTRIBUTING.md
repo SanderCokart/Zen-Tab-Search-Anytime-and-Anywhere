@@ -91,7 +91,7 @@ Use the release helper from a clean working tree with an authenticated GitHub CL
 
 ```bash
 npm run release -- patch --message "Maintenance release"
-npm run release -- minor --notes-file ./RELEASE.md
+npm run release -- minor --title "Dial in the deck" --notes-file ./RELEASE.md
 ```
 
 The script bumps `package.json` and `package-lock.json`, commits the version change, creates an annotated tag, builds the WXT zip, creates a GitHub Release, and attaches the zip. Pass `--canary` to publish that release as a prerelease.

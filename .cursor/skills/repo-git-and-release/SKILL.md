@@ -13,7 +13,7 @@ If `format:check` fails on many files, inspect bytes on one small file. Do not `
 
 ## Release notes
 
-Do not invent flags. Read `scripts/release.mjs` usage. Default: `npm run release -- <bump> --generate-notes`. Use `--message` or `--notes-file` only when the user provided notes. Pass `--canary` when the user asked for a canary or prerelease; that marks the GitHub release as a prerelease and leaves Latest unchanged. Do not create a throwaway `RELEASE.md`.
+Do not invent flags. Read `scripts/release.mjs` usage. Default: `npm run release -- <bump> --generate-notes`. Use `--message` or `--notes-file` only when the user provided notes. Minor and major (`x.y.0`) require `--title "…"`. That becomes the GitHub title `Zen Deck x.y.0 — …`. Patches stay `vX.Y.Z`. Pass `--canary` when the user asked for a canary or prerelease; that marks the GitHub release as a prerelease and leaves Latest unchanged. Do not create a throwaway `RELEASE.md`.
 
 ## Merge and branch cleanup
 

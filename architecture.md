@@ -559,7 +559,7 @@ npm run check    # typecheck + eslint + tests — run this before committing
 npm run format   # prettier
 npm run lint     # builds, then runs the Firefox add-on linter
 npm run zip      # packaged artifact
-npm run release -- major --notes-file ./RELEASE.md
+npm run release -- major --title "A new feel for Zen" --notes-file ./RELEASE.md
 ```
 
 `npm run check` is the gate. The repo is type-clean and lint-clean, so any failure
