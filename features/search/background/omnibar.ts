@@ -2,10 +2,6 @@ import { debugLog } from "@/shared/debug";
 import { sendTabMessage } from "@/shared/messaging/client";
 import { isUsableTabId } from "@/shared/types";
 import { formatError, LOG_PREFIX } from "@/shared/log";
-import {
-  SEARCH_POPUP_FALLBACK_ENABLED,
-  toggleSearchPopup,
-} from "@/features/search/background/popup";
 import { isContentScriptInjectableUrl } from "@/shared/urls";
 import { resolveAnchorTabId } from "@/features/zen/anchor";
 import {
@@ -139,10 +135,7 @@ export async function toggleOmnibar(
   if (await toggleWindowOmnibar()) return;
 
   const tabId = await resolveAnchorTabId(preferredTabId);
-  if (!isUsableTabId(tabId)) {
-    if (SEARCH_POPUP_FALLBACK_ENABLED) await toggleSearchPopup();
-    return;
-  }
+  if (!isUsableTabId(tabId)) return;
 
   let url: string | undefined;
   if (tabId === preferredTabId && options.preferredUrl !== undefined) {
@@ -162,11 +155,9 @@ export async function toggleOmnibar(
       return;
     } catch (error) {
       debugLog(
-        `${LOG_PREFIX} In-page omnibar unavailable, falling back to popup:`,
+        `${LOG_PREFIX} In-page omnibar unavailable:`,
         formatError(error),
       );
     }
   }
-
-  if (SEARCH_POPUP_FALLBACK_ENABLED) await toggleSearchPopup();
 }

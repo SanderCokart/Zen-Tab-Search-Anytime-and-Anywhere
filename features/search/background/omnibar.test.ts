@@ -1,20 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { toggleOmnibar } from "@/features/search/background/omnibar";
-import { toggleSearchPopup } from "@/features/search/background/popup";
 import { sendTabMessage } from "@/shared/messaging/client";
 import { resolveAnchorTabId } from "@/features/zen/anchor";
 
 vi.mock("@/shared/messaging/client", () => ({
   sendTabMessage: vi.fn(async () => undefined),
 }));
-
-vi.mock("@/features/search/background/popup", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/search/background/popup")>();
-  return {
-    ...actual,
-    toggleSearchPopup: vi.fn(async () => undefined),
-  };
-});
 
 vi.mock("@/features/zen/anchor", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/zen/anchor")>();
@@ -25,13 +16,11 @@ vi.mock("@/features/zen/anchor", async (importOriginal) => {
 });
 
 const sendTabMessageMock = vi.mocked(sendTabMessage);
-const toggleSearchPopupMock = vi.mocked(toggleSearchPopup);
 const resolveAnchorTabIdMock = vi.mocked(resolveAnchorTabId);
 
 describe("toggleOmnibar", () => {
   afterEach(() => {
     sendTabMessageMock.mockReset();
-    toggleSearchPopupMock.mockReset();
     resolveAnchorTabIdMock.mockReset();
     vi.unstubAllGlobals();
   });
@@ -53,7 +42,6 @@ describe("toggleOmnibar", () => {
       type: "toggleOmnibar",
       anchorTabId: 20,
     });
-    expect(toggleSearchPopupMock).not.toHaveBeenCalled();
   });
 
   it("uses the command tab when Firefox provides one", async () => {
@@ -99,6 +87,5 @@ describe("toggleOmnibar", () => {
     await toggleOmnibar(20, { preferredUrl: "about:config", warmSnapshot });
 
     expect(warmSnapshot).not.toHaveBeenCalled();
-    expect(toggleSearchPopupMock).not.toHaveBeenCalled();
   });
 });

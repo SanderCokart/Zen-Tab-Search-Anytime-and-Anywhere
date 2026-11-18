@@ -49,12 +49,6 @@ export default defineConfig({
         },
         description: "Open the Zen Deck omnibar",
       },
-      // Custom command so the background script can toggle the popup closed when pressed again.
-      // (_execute_browser_action is handled by the browser and cannot be intercepted.)
-      // Unmapped by default; assign a key in about:addons → Manage Extension Shortcuts.
-      "toggle-popup": {
-        description: "Open Zen Deck popup",
-      },
       "change-tab-label": {
         suggested_key: {
           default: "Alt+R",
@@ -66,6 +60,15 @@ export default defineConfig({
           default: "Alt+T",
         },
         description: "Set a timer on the current tab",
+      },
+    },
+    // No default_popup: a click on the toolbar button fires browserAction.onClicked,
+    // which opens the omnibar (app/background/commands.ts).
+    browser_action: {
+      default_title: "Zen Deck: open the omnibar",
+      default_icon: {
+        48: "icon/48.png",
+        96: "icon/96.png",
       },
     },
     // IBM Plex Mono and Inter for the overlay: the content script declares them in the page's
