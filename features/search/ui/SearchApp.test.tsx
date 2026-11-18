@@ -64,6 +64,11 @@ function mountSearchApp(
     }
     return undefined;
   });
+  const writeText = vi.fn(async () => undefined);
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: { writeText },
+  });
   Object.assign(globalThis, {
     browser: {
       runtime: {
@@ -82,7 +87,7 @@ function mountSearchApp(
   const root = document.createElement("div");
   document.body.appendChild(root);
   render(<SearchApp onClose={onClose} layout={layout} initialView={initialView} />, root);
-  return { root, onClose, sendMessage };
+  return { root, onClose, sendMessage, writeText };
 }
 
 describe("SearchApp", () => {
@@ -357,11 +362,11 @@ describe("SearchApp", () => {
     const { root, sendMessage } = mountSearchApp();
     await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
 
-    const timer = root.querySelector("button[title='Show active timers']")!;
+    const timer = root.querySelector("button[aria-label='Show active timers']")!;
     const hosts = root.querySelector<HTMLButtonElement>(
-      "button[title='Host overrides for this tab']",
+      "button[aria-label='Host overrides for this tab']",
     )!;
-    const settings = root.querySelector("button[title='Open display settings']")!;
+    const settings = root.querySelector("button[aria-label='Open display settings']")!;
     expect(timer.nextElementSibling).toBe(hosts);
     expect(hosts.nextElementSibling).toBe(settings);
 
@@ -403,7 +408,7 @@ describe("SearchApp", () => {
 
     // The tab is the current one, so the toolbar toggle shows it open and closes it.
     const toggle = root.querySelector<HTMLButtonElement>(
-      "button[title='Host overrides for this tab']",
+      "button[aria-label='Host overrides for this tab']",
     )!;
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
     toggle.click();
@@ -417,7 +422,7 @@ describe("SearchApp", () => {
     const { root, sendMessage } = mountSearchApp();
     await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
 
-    root.querySelector<HTMLButtonElement>("button[title='Open display settings']")?.click();
+    root.querySelector<HTMLButtonElement>("button[aria-label='Open display settings']")?.click();
     await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledWith({ type: "openSettings" }));
 
     render(null, root);
@@ -612,9 +617,9 @@ describe("SearchApp", () => {
     expect(root.textContent).not.toContain("Merge request #7");
     expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(0);
     await vi.waitFor(() => expect(root.textContent).toContain("Recent"));
-    expect(root.querySelector("span[title^='Last opened:']")).not.toBeNull();
+    expect(root.querySelector("span[aria-label^='Last opened:']")).not.toBeNull();
     play.mockClear();
-    root.querySelector<HTMLButtonElement>("button[title='Change issue sorting']")?.click();
+    root.querySelector<HTMLButtonElement>("button[aria-label='Change issue sorting']")?.click();
     await vi.waitFor(() => expect(root.textContent).toContain("Old"));
     expect(play).toHaveBeenCalledWith("tick");
 
@@ -626,7 +631,7 @@ describe("SearchApp", () => {
       expect(root.textContent).not.toContain("Improve filters");
     });
 
-    root.querySelector<HTMLButtonElement>("button[title^='https://github.com']")?.click();
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-issue-activate']")?.click();
     await vi.waitFor(() =>
       expect(sendMessage).toHaveBeenCalledWith({
         type: "switchTab",
@@ -899,11 +904,42 @@ describe("SearchApp", () => {
     );
     const button = () => root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-button']")!;
 
-    // The empty checkbox has no cut-out tick; the checked one does.
-    expect(button().querySelector("mask")).toBeNull();
+    // The empty hardware key has a dot indicator; the checked one has a tick.
+    expect(button().querySelector("[data-checkbox-indicator]")).not.toBeNull();
+    expect(button().querySelector("[data-checkbox-tick]")).toBeNull();
     button().click();
     await vi.waitFor(() => expect(button().getAttribute("aria-pressed")).toBe("true"));
-    expect(button().querySelector("mask")).not.toBeNull();
+    expect(button().querySelector("[data-checkbox-indicator]")).toBeNull();
+    expect(button().querySelector("[data-checkbox-tick]")).not.toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("copies a tab's URL from its row action and from the context menu", async () => {
+    const { root, writeText } = mountSearchApp(vi.fn(), tabs, "overlay");
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-copy-link-button']")).not.toBeNull(),
+    );
+
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-copy-link-button']")!.click();
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith("https://example.com"));
+
+    writeText.mockClear();
+    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-copy-link-menu']")).not.toBeNull(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-copy-link-menu']")!.click();
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledWith("https://example.com"));
+    expect(root.querySelector("[data-testid='zen-tab-context-menu']")).toBeNull();
 
     render(null, root);
     root.remove();
@@ -921,6 +957,7 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(root.querySelector("[role='tooltip']")?.textContent).toBe("Mark as todo"),
     );
+    await vi.waitFor(() => expect(play).toHaveBeenCalledWith("print-8"));
     root
       .querySelector("[data-testid='zen-todo-button']")!
       .dispatchEvent(new MouseEvent("mouseleave"));
@@ -1098,6 +1135,7 @@ describe("SearchApp", () => {
     ).toEqual([
       "Close tab",
       "Rename",
+      "Copy link",
       "Move to folder",
       "Edit pinned URL",
       "Replace pinned URL with current",
@@ -1485,9 +1523,9 @@ describe("SearchApp", () => {
     const { root, sendMessage } = mountSearchApp(vi.fn(), forgeTabs, "overlay");
 
     await vi.waitFor(() =>
-      expect(root.querySelector("button[title^='https://github.com']")).not.toBeNull(),
+      expect(root.querySelector("[data-testid='zen-issue-activate']")).not.toBeNull(),
     );
-    root.querySelector("button[title^='https://github.com']")!.dispatchEvent(
+    root.querySelector("[data-testid='zen-issue-activate']")!.dispatchEvent(
       new MouseEvent("contextmenu", {
         bubbles: true,
         cancelable: true,
@@ -2035,7 +2073,8 @@ function mountOverlay({
   });
   const root = document.createElement("div");
   document.body.appendChild(root);
-  render(<SearchApp onClose={vi.fn()} layout="overlay" />, root);
+  const onClose = vi.fn();
+  render(<SearchApp onClose={onClose} layout="overlay" />, root);
   const input = () => root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
   const press = (key: string, init: KeyboardEventInit = {}) =>
     input().dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...init }));
@@ -2043,7 +2082,7 @@ function mountOverlay({
     render(null, root);
     root.remove();
   };
-  return { root, set, sendMessage, input, press, unmount };
+  return { root, set, sendMessage, input, press, unmount, onClose };
 }
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -2070,11 +2109,11 @@ function forgeSnapshotTabs(): Partial<TabInfo>[] {
 
 const entryUrls = (root: HTMLElement) =>
   [...root.querySelectorAll<HTMLElement>("[data-testid='zen-issue-entry']")].map(
-    (element) => element.querySelector("button")?.getAttribute("title") ?? "",
+    (element) => element.getAttribute("data-issue-url") ?? "",
   );
 
 const selectedUrl = (root: HTMLElement) =>
-  root.querySelector("[data-issue-selected='true'] button")?.getAttribute("title") ?? "";
+  root.querySelector("[data-issue-selected='true']")?.getAttribute("data-issue-url") ?? "";
 
 const radios = (root: HTMLElement) => [
   ...root.querySelectorAll<HTMLButtonElement>("[role='radio']"),
@@ -2082,7 +2121,7 @@ const radios = (root: HTMLElement) => [
 
 function folder(root: HTMLElement, label: string) {
   const match = [...root.querySelectorAll<HTMLElement>("[data-testid='zen-issue-folder']")].find(
-    (element) => element.querySelector(".zs-tree-trigger")?.getAttribute("title") === label,
+    (element) => element.querySelector(".zs-tree-trigger")?.getAttribute("aria-label") === label,
   );
   if (!match) throw new Error(`No folder ${label}`);
   return {
@@ -2364,9 +2403,54 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     expect(dock.querySelectorAll("li button").length).toBe(rows.length * 3);
 
     // The ⏱ button lists all five.
-    root.querySelector<HTMLButtonElement>("button[title='Show active timers']")!.click();
+    root.querySelector<HTMLButtonElement>("button[aria-label='Show active timers']")!.click();
     await vi.waitFor(() => expect(root.textContent).toContain("Echo"));
     expect(root.textContent).toContain("Delta");
+    unmount();
+  });
+
+  it("switches to a timer's tab from the dock readout below the todos", async () => {
+    const { root, sendMessage, onClose, unmount } = mountOverlay({
+      snapshotTabs: tabs,
+      todos: [{ tabId: 1, status: "todo" }],
+      timers: [
+        {
+          timerId: "soon",
+          tabId: 2,
+          endAt: Date.now() + 5 * 60 * 1000,
+          title: "Soonest timer",
+          originalLabel: "",
+          url: "",
+        },
+        {
+          timerId: "later",
+          tabId: 1,
+          endAt: Date.now() + 60 * 60 * 1000,
+          title: "Later timer",
+          originalLabel: "",
+          url: "",
+        },
+      ],
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-timers-dock']")).not.toBeNull(),
+    );
+
+    const soonest = root.querySelector<HTMLElement>("[data-testid='zen-timers-dock-soonest']")!;
+    soonest.dispatchEvent(new MouseEvent("mouseenter"));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[role='tooltip']")?.textContent).toBe("Go to this tab"),
+    );
+
+    soonest.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "switchTab",
+        tabId: 2,
+        domId: undefined,
+      }),
+    );
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
     unmount();
   });
 
@@ -2399,6 +2483,39 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
       "max-h-[50%]",
     );
     withTodo.unmount();
+  });
+
+  it("ticks when Ctrl+wheel steps the overlay font size, like the font size slider", async () => {
+    const { root, set, unmount } = mountOverlay({
+      snapshotTabs: tabs,
+      displaySettings: { soundEnabled: true, fontSize: 14 },
+    });
+    await vi.waitFor(() => expect(root.querySelector("[data-zen-ui]")).not.toBeNull());
+
+    const overlay = root.querySelector<HTMLElement>("[data-zen-ui]")!;
+    const wheel = (deltaY: number) => {
+      const event = new WheelEvent("wheel", { deltaY, bubbles: true, cancelable: true });
+      // happy-dom's WheelEvent ignores ctrlKey in the init dict.
+      Object.defineProperty(event, "ctrlKey", { configurable: true, value: true });
+      overlay.dispatchEvent(event);
+    };
+    await vi.waitFor(() => {
+      wheel(-100);
+      expect(play).toHaveBeenCalledWith("tick");
+    });
+    await vi.waitFor(() =>
+      expect(set).toHaveBeenCalledWith({
+        displaySettings: expect.objectContaining({ fontSize: 15 }),
+      }),
+    );
+
+    play.mockClear();
+    overlay.dispatchEvent(
+      new WheelEvent("wheel", { ctrlKey: true, deltaY: 0, bubbles: true, cancelable: true }),
+    );
+    expect(play).not.toHaveBeenCalled();
+
+    unmount();
   });
 
   it("plays key sounds from event handlers when sound is on", async () => {
@@ -2556,7 +2673,7 @@ describe("SearchApp current-tab strip and toolbar toggles", () => {
     const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
     await vi.waitFor(() => expect(strip(root)).not.toBeNull());
     const toggle = () =>
-      root.querySelector<HTMLButtonElement>("button[title='Host overrides for this tab']")!;
+      root.querySelector<HTMLButtonElement>("button[aria-label='Host overrides for this tab']")!;
     expect(toggle().getAttribute("aria-pressed")).toBe("false");
 
     toggle().click();
@@ -2576,7 +2693,7 @@ describe("SearchApp current-tab strip and toolbar toggles", () => {
     const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
     await vi.waitFor(() => expect(strip(root)).not.toBeNull());
     const button = () =>
-      root.querySelector<HTMLButtonElement>("button[aria-pressed][title*='timers']")!;
+      root.querySelector<HTMLButtonElement>("button[aria-pressed][aria-label*='timers']")!;
     const icon = () => button().querySelector("svg")!.innerHTML;
     const before = icon();
     expect(button().getAttribute("aria-pressed")).toBe("false");

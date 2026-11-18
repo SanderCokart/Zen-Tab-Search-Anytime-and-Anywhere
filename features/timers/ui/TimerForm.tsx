@@ -11,6 +11,7 @@ import {
 import type { TabTimer } from "@/shared/types";
 import { clearButtonClass } from "@/shared/ui/button-styles";
 import { cn } from "@/shared/ui/cn";
+import { TextField } from "@/shared/ui/primitives/TextField";
 import { useSound } from "@/shared/ui/sound/SoundContext";
 
 const presetButtonClass = "zs-key font-[inherit]";
@@ -115,8 +116,10 @@ export function TimerForm({
     >
       <div class="grid flex-none grid-cols-3 gap-[var(--zen-space-3)]">
         {DURATION_FIELDS.map(({ part, label }) => (
-          <label key={part} class="flex flex-col gap-[var(--zen-space-2)]">
-            <span class="zs-label">{label}</span>
+          <label key={part} data-kit="field" class="flex flex-col gap-[var(--zen-space-2)]">
+            <span data-kit="label" class="zs-label">
+              {label}
+            </span>
             <span
               class={cn(
                 "zs-well [container-type:size] flex flex-none items-center rounded-[var(--zs-r-lcd)] px-[var(--zen-space-2)]",
@@ -126,6 +129,7 @@ export function TimerForm({
               )}
             >
               <input
+                data-kit="input"
                 class="h-full w-full bg-transparent text-center font-[inherit] text-[length:min(62cqh,calc(var(--zen-font-size)*6))] leading-none text-inherit outline-none"
                 inputMode="numeric"
                 autoComplete="off"
@@ -182,30 +186,25 @@ export function TimerForm({
           </button>
         ))}
       </div>
-      <label class="text-zen-subtle flex flex-col gap-[var(--zen-space-2)] text-[length:var(--zen-text-base)]">
-        <span class="zs-label">When</span>
-        <input
-          ref={whenInputRef}
-          class={cn(
-            "zs-well border-zen-line-soft placeholder:text-zen-muted focus:border-zen-accent w-full rounded-[var(--zs-r-lcd)] border font-[inherit] text-inherit outline-none",
-            "h-[calc(var(--zen-font-size)*3.25*var(--zen-scale))] px-[var(--zen-space-3)] text-[length:var(--zen-text-lg)]",
-          )}
-          type="text"
-          placeholder="tomorrow at 9am or 1d 30m"
-          disabled={disabled}
-          value={naturalInput}
-          onInput={(event) => {
-            const value = event.currentTarget.value;
-            setLocalError(undefined);
-            setDraft(null);
-            setNaturalInput(value);
-            const parsed = parseTimerInput(value, new Date(now));
-            if (parsed !== null) {
-              setEndAt(parsed);
-            }
-          }}
-        />
-      </label>
+      <TextField
+        label="When"
+        ref={whenInputRef}
+        inputClass="h-[calc(var(--zen-font-size)*3.25*var(--zen-scale))] px-[var(--zen-space-3)] text-[length:var(--zen-text-lg)]"
+        type="text"
+        placeholder="tomorrow at 9am or 1d 30m"
+        disabled={disabled}
+        value={naturalInput}
+        onInput={(event) => {
+          const value = event.currentTarget.value;
+          setLocalError(undefined);
+          setDraft(null);
+          setNaturalInput(value);
+          const parsed = parseTimerInput(value, new Date(now));
+          if (parsed !== null) {
+            setEndAt(parsed);
+          }
+        }}
+      />
       {naturalInput.trim() && parsedNaturalInput === null && (
         <p class="text-zen-danger m-0 text-[length:var(--zen-text-sm)]">
           Use a time like “tomorrow at 9am” or “1d 30m”.

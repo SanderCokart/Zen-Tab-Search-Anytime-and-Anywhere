@@ -4,6 +4,7 @@ import type { TabTimer } from "@/shared/types";
 import { clearButtonClass } from "@/shared/ui/button-styles";
 import { cn } from "@/shared/ui/cn";
 import { Lcd } from "@/shared/ui/primitives/Lcd";
+import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 export interface ActiveTimersListProps {
   /** Already sorted by the caller (soonest `endAt` first). */
@@ -29,45 +30,120 @@ const keyClass = cn(
 const lcdActionClass =
   "cursor-pointer border-0 bg-transparent p-0 font-mono text-[length:var(--zen-text-xs)] tracking-[0.12em] text-[var(--zs-lcd-dim)] uppercase hover:text-[var(--zs-lcd-ink)]";
 
+const GO_TO_TAB = "Go to this tab";
+
+function GoToTabButton({ name, onActivate }: { name: string; onActivate: () => void }) {
+  const { anchor, show, hide, showAfterPause } = useTooltip();
+  return (
+    <>
+      <button
+        type="button"
+        class="zs-row-title flex-1 cursor-pointer truncate border-0 bg-transparent p-0 text-left text-inherit"
+        aria-label={`${name}. ${GO_TO_TAB}`}
+        onClick={() => {
+          hide();
+          onActivate();
+        }}
+        onMouseEnter={(event) => showAfterPause(event.currentTarget)}
+        onMouseLeave={hide}
+        onFocus={(event) => show(event.currentTarget)}
+        onBlur={hide}
+      >
+        {name}
+      </button>
+      {anchor && <TooltipLegend content={GO_TO_TAB} anchor={anchor} />}
+    </>
+  );
+}
+
 /** One large LCD readout for a timer: its name, the big countdown and its end time. */
 export function SoonestTimerLcd({
   timer,
   onEdit,
   onClear,
+  onActivate,
 }: {
   timer: TabTimer;
   onEdit?: (tabId: number) => void;
   onClear?: (tabId: number) => void;
+  /** Opens the timer's tab. Edit and Clear keep the dock open. */
+  onActivate?: (tabId: number) => void;
 }) {
+  const activate = onActivate ? () => onActivate(timer.tabId) : undefined;
+  const { anchor, show, hide, showAfterPause } = useTooltip();
+  const name = timerName(timer);
   return (
-    <Lcd
-      class="flex min-w-0 flex-col gap-[var(--zen-space-2)] px-[var(--zen-space-4)] py-[var(--zen-space-4)]"
+    <div
+      class={activate ? "cursor-pointer" : undefined}
       data-testid="zen-timers-dock-soonest"
+      role={activate ? "button" : undefined}
+      tabIndex={activate ? 0 : undefined}
+      aria-label={activate ? `${name}. ${GO_TO_TAB}` : undefined}
+      onClick={() => {
+        hide();
+        activate?.();
+      }}
+      onKeyDown={
+        activate
+          ? (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                hide();
+                activate();
+              }
+            }
+          : undefined
+      }
+      onMouseEnter={(event) => {
+        if (activate) showAfterPause(event.currentTarget);
+      }}
+      onMouseLeave={hide}
+      onFocus={(event) => {
+        if (activate) show(event.currentTarget);
+      }}
+      onBlur={hide}
     >
-      <span class="truncate text-[length:var(--zen-text-xs)] tracking-[0.06em] text-[var(--zs-lcd-dim)] uppercase">
-        Next · {timerName(timer)}
-      </span>
-      <span class="zs-digits text-[length:var(--zen-text-display)] leading-none font-medium whitespace-nowrap">
-        <TimerCountdown endAt={timer.endAt} prefix="" format="lcd" />
-      </span>
-      <div class="flex min-w-0 items-center justify-between gap-[var(--zen-space-3)]">
+      {anchor && <TooltipLegend content={GO_TO_TAB} anchor={anchor} />}
+      <Lcd class="flex min-w-0 flex-col gap-[var(--zen-space-2)] px-[var(--zen-space-4)] py-[var(--zen-space-4)]">
         <span class="truncate text-[length:var(--zen-text-xs)] tracking-[0.06em] text-[var(--zs-lcd-dim)] uppercase">
-          {formatTimerEndTime(timer.endAt)}
+          Next · {name}
         </span>
-        <span class="flex shrink-0 items-center gap-[var(--zen-space-3)]">
-          {onEdit && (
-            <button type="button" class={lcdActionClass} onClick={() => onEdit(timer.tabId)}>
-              Edit
-            </button>
-          )}
-          {onClear && (
-            <button type="button" class={lcdActionClass} onClick={() => onClear(timer.tabId)}>
-              Clear
-            </button>
-          )}
+        <span class="zs-digits text-[length:var(--zen-text-display)] leading-none font-medium whitespace-nowrap">
+          <TimerCountdown endAt={timer.endAt} prefix="" format="lcd" />
         </span>
-      </div>
-    </Lcd>
+        <div class="flex min-w-0 items-center justify-between gap-[var(--zen-space-3)]">
+          <span class="truncate text-[length:var(--zen-text-xs)] tracking-[0.06em] text-[var(--zs-lcd-dim)] uppercase">
+            {formatTimerEndTime(timer.endAt)}
+          </span>
+          <span class="flex shrink-0 items-center gap-[var(--zen-space-3)]">
+            {onEdit && (
+              <button
+                type="button"
+                class={lcdActionClass}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEdit(timer.tabId);
+                }}
+              >
+                Edit
+              </button>
+            )}
+            {onClear && (
+              <button
+                type="button"
+                class={lcdActionClass}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onClear(timer.tabId);
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </span>
+        </div>
+      </Lcd>
+    </div>
   );
 }
 
@@ -86,20 +162,14 @@ export function ActiveTimersList({
 
   return (
     <div class="flex min-w-0 flex-col gap-[var(--zen-space-2)]">
-      {showLcd && soonest && <SoonestTimerLcd timer={soonest} />}
+      {showLcd && soonest && <SoonestTimerLcd timer={soonest} onActivate={onActivateTimer} />}
       <ul class="zen-scroll m-0 flex max-h-[calc(var(--zen-font-size)*17)] list-none flex-col overflow-y-auto p-0">
         {timers.map((timer) => (
           <li
             key={timer.tabId}
             class="flex min-h-[calc(var(--zen-row-height)*1.2)] items-center gap-[var(--zen-space-2)] px-[var(--zen-space-1)]"
           >
-            <button
-              type="button"
-              class="zs-row-title flex-1 cursor-pointer truncate border-0 bg-transparent p-0 text-left text-inherit"
-              onClick={() => onActivateTimer(timer.tabId)}
-            >
-              {timerName(timer)}
-            </button>
+            <GoToTabButton name={timerName(timer)} onActivate={() => onActivateTimer(timer.tabId)} />
             <Lcd class="zs-digits shrink-0 rounded-[var(--zen-radius)] px-[var(--zen-space-3)] py-[var(--zen-space-1)] text-[length:var(--zen-text-sm)] font-medium whitespace-nowrap shadow-none">
               <TimerCountdown endAt={timer.endAt} prefix="" format="short" />
             </Lcd>

@@ -1,9 +1,9 @@
-import { useId } from "preact/hooks";
 import { cn } from "@/shared/ui/cn";
+import "@/shared/ui/hardware/checkbox.css";
 
 /**
- * A checkbox: empty for a tab that is not a todo, and `checked` — a solid box
- * with the tick cut out — for one that is.
+ * A small hardware checkbox key: a recessed square well with an indicator
+ * dot when off and a latching tick when on.
  */
 export function TodoIcon({
   checked = false,
@@ -12,29 +12,20 @@ export function TodoIcon({
   checked?: boolean;
   class?: string;
 }) {
-  const maskId = useId();
-
   return (
     <svg class={cn("zen-icon", className)} viewBox="0 0 24 24" aria-hidden="true">
+      <rect class="zs-checkbox-icon-key" x="3" y="3" width="18" height="18" rx="3" />
+      <rect class="zs-checkbox-icon-well" x="5" y="5" width="14" height="14" rx="2" />
       {checked ? (
-        <>
-          {/* The tick is cut out of the solid box, so it shows whatever is behind. */}
-          <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-            <rect width="24" height="24" fill="white" stroke="none" />
-            <path d="M8 12.5l2.75 2.75L16.5 9.5" stroke="black" />
-          </mask>
-          <rect
-            x="4"
-            y="4"
-            width="16"
-            height="16"
-            rx="3"
-            fill="currentColor"
-            mask={`url(#${maskId})`}
-          />
-        </>
+        <path class="zs-checkbox-icon-tick" data-checkbox-tick="" d="M8 12.25l2.5 2.5L16.25 9" />
       ) : (
-        <rect x="4" y="4" width="16" height="16" rx="3" />
+        <circle
+          class="zs-checkbox-icon-indicator"
+          data-checkbox-indicator=""
+          cx="8"
+          cy="8"
+          r="1.5"
+        />
       )}
     </svg>
   );

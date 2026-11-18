@@ -1,0 +1,45 @@
+/*
+ * Spec-01 hardware scroll wells. Firefox gets the native thin scrollbar;
+ * WebKit selectors add the recessed track and molded thumb where supported.
+ */
+[data-zen-ui] {
+  --zs-scroll-track: var(--zs-pressed);
+  --zs-scroll-thumb: var(--zs-ink-3);
+  --zs-scroll-thumb-hover: var(--zs-ink-2);
+}
+
+[data-zen-ui]:is(.zen-scroll, .overflow-y-auto),
+[data-zen-ui] :is(.zen-scroll, .overflow-y-auto) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--zs-scroll-thumb) var(--zs-scroll-track);
+}
+
+[data-zen-ui]:is(.zen-scroll, .overflow-y-auto)::-webkit-scrollbar,
+[data-zen-ui] :is(.zen-scroll, .overflow-y-auto)::-webkit-scrollbar {
+  width: calc(var(--zen-font-size) * 0.714);
+  height: calc(var(--zen-font-size) * 0.714);
+}
+
+[data-zen-ui]:is(.zen-scroll, .overflow-y-auto)::-webkit-scrollbar-track,
+[data-zen-ui] :is(.zen-scroll, .overflow-y-auto)::-webkit-scrollbar-track {
+  border: 1px solid var(--zs-scroll-track);
+  border-radius: 999px;
+  background: var(--zs-scroll-track);
+  box-shadow: var(--zs-well);
+}
+
+[data-zen-ui]:is(.zen-scroll, .overflow-y-auto)::-webkit-scrollbar-thumb,
+[data-zen-ui] :is(.zen-scroll, .overflow-y-auto)::-webkit-scrollbar-thumb {
+  min-height: calc(var(--zen-font-size) * 2);
+  border: 2px solid var(--zs-scroll-track);
+  border-radius: 999px;
+  background: var(--zs-scroll-thumb);
+  box-shadow:
+    inset 0 1px 0 var(--zs-highlight),
+    inset 0 -1px 0 rgb(0 0 0 / 18%);
+}
+
+[data-zen-ui]:is(.zen-scroll, .overflow-y-auto)::-webkit-scrollbar-thumb:hover,
+[data-zen-ui] :is(.zen-scroll, .overflow-y-auto)::-webkit-scrollbar-thumb:hover {
+  background: var(--zs-scroll-thumb-hover);
+}

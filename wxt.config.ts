@@ -39,6 +39,8 @@ export default defineConfig({
       "storage",
       "sessions",
       "contextMenus",
+      // Copy link on a tab row and in the overlay context menu.
+      "clipboardWrite",
       // Routes a tab's traffic for overridden hostnames to the loopback host proxy.
       "proxy",
     ],

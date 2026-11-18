@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import "@/shared/ui/hardware/field.css";
 import { generateBridgeToken, normalizeBridgeToken } from "@/features/bridge/model/token";
 import {
   cursorInstallUrl,
@@ -11,6 +12,7 @@ import { settingsKeyClass } from "@/shared/ui/button-styles";
 import { Lcd } from "@/shared/ui/primitives/Lcd";
 import { FieldText, Module } from "@/shared/ui/primitives/Module";
 import { Switch } from "@/shared/ui/primitives/Switch";
+import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
 import { BRIDGE_PORT, BRIDGE_TOKEN_STORAGE_KEY } from "@/shared/messaging/bridge-protocol";
 
 /**
@@ -23,6 +25,20 @@ export function BridgeSettings() {
   const [copied, setCopied] = useState(false);
   const [configCopied, setConfigCopied] = useState(false);
   const [downloadFailed, setDownloadFailed] = useState(false);
+  const { anchor, show, hide, showAfterPause } = useTooltip();
+  const [tooltip, setTooltip] = useState("");
+  const showTip = (content: string, element: HTMLElement) => {
+    setTooltip(content);
+    showAfterPause(element);
+  };
+  const showTipNow = (content: string, element: HTMLElement) => {
+    setTooltip(content);
+    show(element);
+  };
+  const hideTip = () => {
+    setTooltip("");
+    hide();
+  };
 
   useEffect(() => {
     void browser.storage.local
@@ -92,6 +108,7 @@ export function BridgeSettings() {
           <Lcd class="flex items-center gap-[var(--zen-space-3)] px-[var(--zen-space-3)] py-[var(--zen-space-2)]">
             <em class="zs-label zs-label-red not-italic">TOKEN</em>
             <input
+              data-kit="input"
               type="text"
               readOnly
               class="min-w-0 flex-1 border-0 bg-transparent p-0 font-mono text-[length:var(--zen-text-md)] text-inherit outline-none"
@@ -108,7 +125,17 @@ export function BridgeSettings() {
             <button
               type="button"
               class={settingsKeyClass}
-              title="Disconnects any MCP server still using the old token"
+              onMouseEnter={(event) =>
+                showTip("Disconnects any MCP server still using the old token", event.currentTarget)
+              }
+              onMouseLeave={hideTip}
+              onFocus={(event) =>
+                showTipNow(
+                  "Disconnects any MCP server still using the old token",
+                  event.currentTarget,
+                )
+              }
+              onBlur={hideTip}
               onClick={() => saveToken(generateBridgeToken())}
             >
               New token
@@ -128,7 +155,20 @@ export function BridgeSettings() {
               role="button"
               data-testid="zen-mcpAddToCursor"
               href={cursorInstallUrl(token)}
-              title="Opens Cursor and adds this server. Replace the path placeholder afterwards."
+              onMouseEnter={(event) =>
+                showTip(
+                  "Opens Cursor and adds this server. Replace the path placeholder afterwards.",
+                  event.currentTarget,
+                )
+              }
+              onMouseLeave={hideTip}
+              onFocus={(event) =>
+                showTipNow(
+                  "Opens Cursor and adds this server. Replace the path placeholder afterwards.",
+                  event.currentTarget,
+                )
+              }
+              onBlur={hideTip}
             >
               Add to Cursor
             </a>
@@ -136,12 +176,26 @@ export function BridgeSettings() {
               type="button"
               class={settingsKeyClass}
               data-testid="zen-mcpCopyConfig"
-              title="Copies an mcpServers JSON fragment with placeholders for the path and token"
+              onMouseEnter={(event) =>
+                showTip(
+                  "Copies an mcpServers JSON fragment with placeholders for the path and token",
+                  event.currentTarget,
+                )
+              }
+              onMouseLeave={hideTip}
+              onFocus={(event) =>
+                showTipNow(
+                  "Copies an mcpServers JSON fragment with placeholders for the path and token",
+                  event.currentTarget,
+                )
+              }
+              onBlur={hideTip}
               onClick={copyConfig}
             >
               {configCopied ? "Copied config" : "Copy MCP config"}
             </button>
           </div>
+          {anchor && <TooltipLegend anchor={anchor} content={tooltip} />}
           {downloadFailed && (
             <span class="text-zen-danger text-[length:var(--zen-text-sm)]">
               Download failed. Reload the extension and try again.

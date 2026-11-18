@@ -1,6 +1,7 @@
 import { describeHostOverride } from "@/features/hosts/model/host-override";
 import type { HostOverrideGroup } from "@/shared/types";
 import { secondaryButtonClass, toggleButtonClass } from "@/features/hosts/ui/lib/styles";
+import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
 
 export interface HostGroupCardProps {
   group: HostOverrideGroup;
@@ -13,15 +14,14 @@ export interface HostGroupCardProps {
 export function HostGroupCard({ group, onToggle, onEdit, onDelete }: HostGroupCardProps) {
   return (
     <li class="zs-well flex flex-wrap items-start gap-[var(--zen-space-2)] rounded-[var(--zs-r-lcd)] p-[var(--zen-space-2)]">
-      <button
-        type="button"
+      <TooltipButton
+        label={group.enabled ? "Turn this override off" : "Turn this override on"}
         class={toggleButtonClass(group.enabled)}
         aria-pressed={group.enabled}
-        title={group.enabled ? "Turn this override off" : "Turn this override on"}
         onClick={onToggle}
       >
         {group.enabled ? "On" : "Off"}
-      </button>
+      </TooltipButton>
       <div class="flex min-w-0 flex-[1_1_12em] flex-col gap-[var(--zen-space-1)]">
         <span class="truncate text-[length:var(--zen-text-sm)] font-semibold">
           {describeHostOverride(group)}

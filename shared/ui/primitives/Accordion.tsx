@@ -3,6 +3,7 @@ import { useId } from "preact/hooks";
 import { cn } from "@/shared/ui/cn";
 import { Led } from "@/shared/ui/primitives/Led";
 import { useSound } from "@/shared/ui/sound/SoundContext";
+import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 export interface AccordionProps {
   /** The header text; shown uppercase after the row number. */
@@ -41,17 +42,23 @@ export function Accordion({
   children,
 }: AccordionProps) {
   const { play } = useSound();
+  const tooltip = useTooltip();
   const panelId = useId();
 
   return (
     <div class={cn("zs-acc min-w-0", className)} data-open={open || undefined} data-testid={testId}>
+      <>
       <button
-        type="button"
         class={cn("zs-acc-trigger", triggerClass)}
+        aria-label={typeof title === "string" ? title : undefined}
         aria-expanded={open}
         aria-controls={panelId}
-        title={title}
+        onMouseEnter={(event) => title && tooltip.showAfterPause(event.currentTarget)}
+        onMouseLeave={tooltip.hide}
+        onFocus={(event) => title && tooltip.show(event.currentTarget)}
+        onBlur={tooltip.hide}
         onClick={() => {
+          tooltip.hide();
           play("tick");
           onToggle();
         }}
@@ -60,6 +67,8 @@ export function Accordion({
         {!open && count !== undefined && <span class="zs-acc-count zs-digits">{count}</span>}
         <Led on={open} />
       </button>
+      {tooltip.anchor && title && <TooltipLegend content={title} anchor={tooltip.anchor} />}
+      </>
       <div id={panelId} class="zs-acc-panel" role="region" aria-hidden={!open}>
         <div class="zs-acc-clip" inert={!open}>
           <div class="zs-tray zs-acc-list">{children}</div>

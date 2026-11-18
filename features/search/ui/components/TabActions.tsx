@@ -3,6 +3,8 @@ import { TimerIcon } from "@/features/search/ui/components/TimerIcon";
 import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
 import { StatusButton } from "@/features/status/ui/StatusButton";
 import { TodoIcon } from "@/features/todos/ui/TodoIcon";
+import { copyText } from "@/features/search/ui/lib/copy-text";
+import { miniKeyClass } from "@/features/search/ui/lib/styles";
 import {
   isEssentialTab,
   tabBrowserId,
@@ -11,15 +13,14 @@ import {
   type TrafficLight,
 } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
-import { miniKeyClass } from "@/features/search/ui/lib/styles";
 import { Led } from "@/shared/ui/primitives/Led";
 
 /**
- * The todo, timer and status buttons for a tab, shared by the result rows and
- * the issue column. They are put away until the row is selected, hovered or holds
- * focus (see `.zs-acts`). On a result row they float over the right edge so the
- * list does not relayout as the pointer moves. A todo shows a checked checkbox,
- * anything else an empty one.
+ * The todo, copy, timer and status buttons for a tab, shared by the result rows
+ * and the issue column. They are put away until the row is selected, hovered or
+ * holds focus (see `.zs-acts`). On a result row they float over the right edge so
+ * the list does not relayout as the pointer moves. A todo shows a checked
+ * checkbox, anything else an empty one.
  */
 export function TabActions({
   tab,
@@ -79,6 +80,22 @@ export function TabActions({
         >
           <TodoIcon checked={isTodo} class="size-[var(--zen-icon-sm)]" />
           <Led on={isTodo} />
+        </TooltipButton>
+      )}
+      {tab.url !== "" && (
+        <TooltipButton
+          label="Copy link"
+          data-testid="zen-copy-link-button"
+          class={miniKeyClass}
+          onClick={(event) => {
+            event.stopPropagation();
+            void copyText(tab.url);
+          }}
+        >
+          <svg class="zen-icon size-[var(--zen-icon-sm)]" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 13a5 5 0 0 0 7.54.54l2-2a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-2 2a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
         </TooltipButton>
       )}
       <TooltipButton

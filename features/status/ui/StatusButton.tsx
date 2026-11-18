@@ -31,7 +31,7 @@ export function StatusButton({
   return (
     <TooltipButton
       label={light ? `Status: ${light}` : "Set status color"}
-      tooltip={light ? `Status: ${light}. Change color` : "Set a status color"}
+      tooltip={light ? `Status: ${light}` : "Status"}
       aria-haspopup="menu"
       aria-expanded={open}
       data-testid="zen-status-button"

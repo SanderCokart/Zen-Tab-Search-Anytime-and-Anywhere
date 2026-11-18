@@ -1,0 +1,77 @@
+/*
+ * Spec-01's dialog is a raised molded panel around a recessed working surface.
+ * The surrounding UI owns the data-zen-ui theme and all --zs-* tokens.
+ */
+[data-kit="backdrop"].zs-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: var(--zs-scrim);
+  padding: var(--zen-space-4);
+}
+
+[data-kit="dialog"].zs-dialog {
+  width: 100%;
+  max-inline-size: calc(var(--zen-font-size) * 28);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--zs-ink-1);
+  font: inherit;
+}
+
+[data-kit="dialog-surface"].zs-dialog-surface {
+  border: 1px solid var(--zs-line-medium);
+  border-radius: var(--zs-r-card);
+  background: linear-gradient(145deg, var(--zs-card-hi), transparent 42%), var(--zs-card);
+  box-shadow:
+    inset 0 1px 0 var(--zs-highlight),
+    var(--zs-shadow);
+  padding: var(--zen-space-5);
+}
+
+[data-kit="dialog-title"].zs-dialog-title {
+  margin: 0 0 var(--zen-space-4);
+  color: var(--zs-ink-1);
+  font-size: var(--zen-text-lg);
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+
+[data-kit="dialog"] .zs-dialog-field {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--zs-line-soft);
+  border-radius: var(--zs-r-lcd);
+  background: var(--zs-pressed);
+  box-shadow: var(--zs-well);
+  color: var(--zs-ink-1);
+  font: inherit;
+  outline: none;
+  padding: var(--zen-space-2);
+}
+
+[data-kit="dialog"] .zs-dialog-field:focus {
+  border-color: var(--zs-red);
+  box-shadow:
+    var(--zs-well),
+    0 0 0 1px var(--zs-red);
+}
+
+[data-kit="actions"].zs-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--zen-space-2);
+  margin-top: var(--zen-space-4);
+}
+
+[data-kit="actions"].zs-dialog-actions > button {
+  min-height: var(--zen-control);
+  padding-inline: var(--zen-space-3);
+  padding-block: var(--zen-space-1);
+  font-size: var(--zen-text-md);
+}

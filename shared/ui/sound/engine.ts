@@ -21,6 +21,16 @@ export const SOUND_VOICES = [
   "type-space",
   "type-big",
   "type-up",
+  "print",
+  "print-2",
+  "print-3",
+  "print-4",
+  "print-5",
+  "print-6",
+  "print-7",
+  "print-8",
+  "print-9",
+  "print-10",
   "open",
   "mark",
   "success",
@@ -117,6 +127,68 @@ export const VOICE_TABLE: Record<SoundVoice, VoiceSpec> = {
   "type-up": {
     bursts: [{ filter: "bandpass", freq: 4400, q: 1.3, level: 0.08, decay: ms(8) }],
     tones: [],
+  },
+  // LCD print: a quiet cousin of latch-down, short enough to stack as letters appear.
+  print: {
+    bursts: [
+      { filter: "bandpass", freq: 1900, q: 0.85, level: 0.2, decay: ms(16) },
+      { filter: "bandpass", freq: 1080, q: 11, level: 0.04, decay: ms(28), at: ms(3) },
+    ],
+    tones: [{ wave: "sine", freq: 175, to: 118, level: 0.22, decay: ms(34) }],
+  },
+  // Deeper latch: more bass body, closer to the status key.
+  "print-2": {
+    bursts: [
+      { filter: "bandpass", freq: 1450, q: 0.7, level: 0.28, decay: ms(22) },
+      { filter: "bandpass", freq: 720, q: 8, level: 0.07, decay: ms(42), at: ms(4) },
+    ],
+    tones: [{ wave: "sine", freq: 145, to: 92, level: 0.34, decay: ms(52) }],
+  },
+  // Soft: less noise, a muted thump.
+  "print-3": {
+    bursts: [{ filter: "bandpass", freq: 2100, q: 1, level: 0.12, decay: ms(12) }],
+    tones: [{ wave: "sine", freq: 188, to: 132, level: 0.16, decay: ms(30) }],
+  },
+  // Tight: a short, snappy detent.
+  "print-4": {
+    bursts: [
+      { filter: "bandpass", freq: 2400, q: 1.2, level: 0.26, decay: ms(10) },
+      { filter: "bandpass", freq: 1280, q: 14, level: 0.035, decay: ms(16), at: ms(2) },
+    ],
+    tones: [{ wave: "sine", freq: 205, to: 148, level: 0.16, decay: ms(18) }],
+  },
+  // Woody: triangle body, less hiss.
+  "print-5": {
+    bursts: [{ filter: "lowpass", freq: 1600, q: 0.55, level: 0.2, decay: ms(20) }],
+    tones: [{ wave: "triangle", freq: 158, to: 102, level: 0.3, decay: ms(44) }],
+  },
+  // RPG text: a short high square tick.
+  "print-6": {
+    bursts: [],
+    tones: [{ wave: "square", freq: 1318, level: 0.045, decay: ms(16), attack: ms(1) }],
+  },
+  // Game Boy: pulse that drops a fifth.
+  "print-7": {
+    bursts: [],
+    tones: [{ wave: "square", freq: 1568, to: 1046, level: 0.04, decay: ms(22), attack: ms(1) }],
+  },
+  // Arcade bloop: lower square.
+  "print-8": {
+    bursts: [],
+    tones: [{ wave: "square", freq: 659, to: 523, level: 0.05, decay: ms(26), attack: ms(1) }],
+  },
+  // Two-channel beep: tonic plus octave.
+  "print-9": {
+    bursts: [],
+    tones: [
+      { wave: "square", freq: 880, level: 0.03, decay: ms(18), attack: ms(1) },
+      { wave: "square", freq: 1760, level: 0.022, decay: ms(12), attack: ms(1) },
+    ],
+  },
+  // Noisy chip: square plus a speck of static.
+  "print-10": {
+    bursts: [{ filter: "bandpass", freq: 3400, q: 2.2, level: 0.07, decay: ms(8) }],
+    tones: [{ wave: "square", freq: 988, level: 0.035, decay: ms(14), attack: ms(1) }],
   },
   open: {
     bursts: [{ filter: "bandpass", freq: 2600, q: 1, level: 0.2, decay: ms(14) }],

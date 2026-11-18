@@ -50,6 +50,7 @@ import { useTabRename } from "@/features/search/ui/hooks/useTabRename";
 import { useTimerActions } from "@/features/search/ui/hooks/useTimerActions";
 import { useStatusActions } from "@/features/search/ui/hooks/useStatusActions";
 import { useTodoActions } from "@/features/search/ui/hooks/useTodoActions";
+import { copyText } from "@/features/search/ui/lib/copy-text";
 import { stripTimerPrefixFromTab } from "@/features/search/ui/lib/format";
 import { primaryButtonClass } from "@/features/search/ui/lib/styles";
 import type { SearchLayout } from "@/features/search/ui/types";
@@ -61,6 +62,8 @@ import { type ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import { cn } from "@/shared/ui/cn";
 import { CollapseAllButton } from "@/shared/ui/primitives/CollapseAllButton";
 import { Led } from "@/shared/ui/primitives/Led";
+import { TipText } from "@/shared/ui/primitives/Tooltip";
+import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
 import { useSoundEngine } from "@/shared/ui/sound/SoundContext";
 
 export type { SearchLayout };
@@ -451,10 +454,10 @@ export function SearchApp({
           }}
           onKeyDown={navigation.onKeyDown}
         />
-        <button
-          type="button"
+        <TooltipButton
+          label={timersOpen ? "Close active timers" : "Show active timers"}
+          tooltip={timersOpen ? "Close timers" : "Timers"}
           class={cn(iconButtonClass, "relative")}
-          title={timersOpen ? "Close active timers" : "Show active timers"}
           aria-pressed={timersOpen}
           onClick={toggleTimers}
         >
@@ -471,12 +474,11 @@ export function SearchApp({
               {timers.size}
             </span>
           )}
-        </button>
-        <button
-          type="button"
+        </TooltipButton>
+        <TooltipButton
+          label="Host overrides for this tab"
+          tooltip="Hosts"
           class={cn(iconButtonClass, "relative")}
-          title="Host overrides for this tab"
-          aria-label="Host overrides for this tab"
           aria-pressed={swapsViews ? hostsOpen : undefined}
           disabled={currentTabId === undefined}
           onClick={() => {
@@ -489,12 +491,11 @@ export function SearchApp({
             ⇄
           </span>
           {swapsViews && <Led on={hostsOpen} />}
-        </button>
-        <button
-          type="button"
+        </TooltipButton>
+        <TooltipButton
+          label="Open display settings"
+          tooltip="Settings"
           class={iconButtonClass}
-          title="Open display settings"
-          aria-label="Open display settings"
           onClick={() =>
             void sendExtensionMessage({ type: "openSettings" }).catch((error) =>
               debugError("Could not open settings:", error),
@@ -504,7 +505,7 @@ export function SearchApp({
           <span aria-hidden="true" class="text-[length:var(--zen-text-base)]">
             ⚙
           </span>
-        </button>
+        </TooltipButton>
       </div>
 
       {results.currentTab && !(view?.kind === "timer" || view?.kind === "hosts") && (
@@ -586,13 +587,9 @@ export function SearchApp({
                 ) : (
                   <span class="zs-head-rule" aria-hidden="true" />
                 )}
-                <span
-                  class="text-zen-danger shrink-0"
-                  data-testid="zen-tab-count"
-                  title={pluralize(tabCount, "tab")}
-                >
-                  {tabCount}
-                </span>
+                <TipText label={pluralize(tabCount, "tab")} class="text-zen-danger shrink-0">
+                  <span data-testid="zen-tab-count">{tabCount}</span>
+                </TipText>
               </div>
             )}
             <ul
@@ -716,7 +713,8 @@ export function SearchApp({
                 onClearAll={timerActions.clearAllTimers}
                 onClearTimer={timerActions.clearTimer}
                 onActivateTimer={(tabId) => {
-                  void sendExtensionMessage({ type: "switchTab", tabId }).then(onClose);
+                  const tab = tabs.find((item) => tabBrowserId(item) === tabId);
+                  activateTab(tabId, tab?.domId, "timer tab");
                 }}
                 onEditTimer={openTimer}
               />
@@ -751,6 +749,13 @@ export function SearchApp({
           onRename={() => {
             rename.open(contextMenu.tab, stripTimerPrefixFromTab(contextMenu.tab));
             setContextMenu(null);
+          }}
+          onCopyLink={() => {
+            const url = contextMenu.tab.url;
+            setContextMenu(null);
+            if (url) {
+              void copyText(url);
+            }
           }}
           onOpenTimer={(tabId) => {
             setContextMenu(null);

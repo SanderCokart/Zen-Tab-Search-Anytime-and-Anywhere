@@ -52,7 +52,14 @@ export function TimersDock({
         )}
       </div>
       <div class="flex min-w-0 flex-col gap-[var(--zen-space-2)]">
-        {soonest && <SoonestTimerLcd timer={soonest} onEdit={onEditTimer} onClear={onClearTimer} />}
+        {soonest && (
+          <SoonestTimerLcd
+            timer={soonest}
+            onEdit={onEditTimer}
+            onClear={onClearTimer}
+            onActivate={onActivateTimer}
+          />
+        )}
         <ActiveTimersList
           timers={upcoming}
           onClearTimer={onClearTimer}

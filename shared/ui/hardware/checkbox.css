@@ -1,0 +1,31 @@
+/*
+ * The todo icon is the small version of Spec-01's latching checkbox key:
+ * raised cap, recessed well, and a tiny indicator that changes from a dot to
+ * a keyed tick. All dimensions stay in the SVG viewBox so the icon follows
+ * --zen-icon-sm at each surface's scale.
+ */
+.zs-checkbox-icon-key {
+  fill: var(--zs-key);
+  stroke: var(--zs-key-edge);
+  stroke-width: 0.8;
+  filter: drop-shadow(0 0.8px 0 var(--zs-key-edge));
+}
+
+.zs-checkbox-icon-well {
+  fill: var(--zs-pressed);
+  stroke: var(--zs-line-medium);
+  stroke-width: 0.7;
+}
+
+.zs-checkbox-icon-indicator {
+  fill: var(--zs-led-off);
+  stroke: none;
+}
+
+.zs-checkbox-icon-tick {
+  fill: none;
+  stroke: var(--zs-red-ink);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

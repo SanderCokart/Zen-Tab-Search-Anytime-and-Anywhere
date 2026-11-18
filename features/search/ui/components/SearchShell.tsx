@@ -1,5 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { useRef } from "preact/hooks";
+import { useState } from "preact/hooks";
 import type { DisplaySettings } from "@/features/settings/model/display-settings";
 import { useCtrlWheelFontSize } from "@/features/search/ui/hooks/useCtrlWheelFontSize";
 import { themeColorStyle } from "@/features/settings/model/theme-colors";
@@ -47,9 +47,9 @@ export function SearchShell({
   const backgroundPercent = Math.round(displaySettings.backgroundOpacity * 100);
   // Only the overlay needs the zoom: it holds its size on screen.
   const zoom = usePageZoom(layout === "overlay");
-  const overlayRef = useRef<HTMLDivElement>(null);
+  const [overlay, setOverlay] = useState<HTMLDivElement | null>(null);
   // Ctrl + wheel changes the font size on the overlay; the popup's size is fixed.
-  useCtrlWheelFontSize(overlayRef, displaySettings, layout === "overlay");
+  useCtrlWheelFontSize(overlay, displaySettings, layout === "overlay", sound);
 
   // Presses are heard on the way down and up, from one listener for the whole surface.
   const onPointerDown = (event: PointerEvent) => {
@@ -82,7 +82,7 @@ export function SearchShell({
 
   return frame(
     <div
-      ref={overlayRef}
+      ref={setOverlay}
       class="bg-zen-overlay flex h-full w-full items-center justify-center"
       onClick={onClose}
       onContextMenu={(event) => event.preventDefault()}

@@ -134,7 +134,7 @@ const captures: Capture[] = [
       await page.locator("[data-omnibar-stage='open']").waitFor();
       await expect(page.getByText("Active timers")).toBeVisible();
     },
-    after: (page) => highlight(page.locator("button[title='Close active timers']")),
+    after: (page) => highlight(page.locator("button[aria-label='Close active timers']")),
     clip: "omnibar",
   },
   {
@@ -304,9 +304,9 @@ const captures: Capture[] = [
     scene: "search-omnibar",
     file: "timers-button.png",
     ready: (page) => waitForSearch(page, true),
-    after: (page) => highlight(page.locator("button[title='Show active timers']")),
+    after: (page) => highlight(page.locator("button[aria-label='Show active timers']")),
     around:
-      "button[title='Show active timers'], button[title='Host overrides for this tab'], button[title='Open display settings']",
+      "button[aria-label='Show active timers'], button[aria-label='Host overrides for this tab'], button[aria-label='Open display settings']",
   },
   {
     scene: "display-settings",

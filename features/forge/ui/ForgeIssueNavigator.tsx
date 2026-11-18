@@ -1,3 +1,4 @@
+import type { ComponentChildren } from "preact";
 import { useMemo } from "preact/hooks";
 import {
   FORGE_NAVIGATOR_PREFIXES,
@@ -33,6 +34,8 @@ import { Led } from "@/shared/ui/primitives/Led";
 import { CollapseAllButton } from "@/shared/ui/primitives/CollapseAllButton";
 import { TreeNode } from "@/shared/ui/primitives/TreeNode";
 import { Segmented } from "@/shared/ui/primitives/Segmented";
+import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
+import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 /** The outlined ISSUE / MR / PR tag; `TAG_CLASS` adds its colour. */
 export const TAG_BASE_CLASS =
@@ -44,6 +47,37 @@ export const TAG_CLASS: Record<ForgeRowTag, string> = {
   PR: "border-[color-mix(in_srgb,var(--zs-red)_40%,transparent)] text-zen-danger",
   EPIC: "border-zen-text bg-zen-text text-zen-raised",
 };
+
+function ForgeDateHint({
+  label,
+  absolute,
+  children,
+}: {
+  label: string;
+  absolute: string;
+  children: ComponentChildren;
+}) {
+  const tooltip = useTooltip();
+  return (
+    <>
+      <span
+        class="zs-digits"
+        aria-label={`${label}: ${absolute}`}
+        onMouseEnter={(event) => tooltip.showAfterPause(event.currentTarget)}
+        onMouseLeave={tooltip.hide}
+        onFocus={(event) => tooltip.show(event.currentTarget)}
+        onBlur={tooltip.hide}
+        onClick={tooltip.hide}
+        tabIndex={0}
+      >
+        {children}
+      </span>
+      {tooltip.anchor && (
+        <TooltipLegend content={`${label}: ${absolute}`} anchor={tooltip.anchor} />
+      )}
+    </>
+  );
+}
 
 export function ForgeIssueNavigator({
   entries,
@@ -143,6 +177,7 @@ export function ForgeIssueNavigator({
               statusRowClass(light, selected),
             )}
             data-testid="zen-issue-entry"
+            data-issue-url={entry.ref.url}
             data-status-light={light}
             data-issue-selected={selected ? "true" : undefined}
             ref={(element) => {
@@ -155,10 +190,10 @@ export function ForgeIssueNavigator({
             <div class="zs-row-line flex min-h-[var(--zen-row-height)] min-w-0 items-center pl-[var(--zen-row-pad)]">
               <button
                 type="button"
+                data-testid="zen-issue-activate"
                 class="flex h-full min-h-[var(--zen-row-height)] min-w-0 flex-1 cursor-pointer items-center gap-[var(--zen-space-3)] overflow-hidden border-0 bg-transparent p-0 text-left font-[inherit] text-inherit"
                 onClick={() => onActivate(entry)}
                 onFocus={() => onSelect(entryIndex)}
-                title={entry.ref.url}
               >
                 <span class={cn(TAG_BASE_CLASS, TAG_CLASS[parts.tag])}>{parts.tag}</span>
                 <span class="text-zen-muted shrink-0 font-mono text-[length:var(--zen-text-sm)]">
@@ -173,9 +208,9 @@ export function ForgeIssueNavigator({
                     </span>
                   )}
                   {entryDate && lastOpenedAt !== undefined && (
-                    <span class="zs-digits" title={`${entryDate.label}: ${entryDate.absolute}`}>
+                    <ForgeDateHint label={entryDate.label} absolute={entryDate.absolute}>
                       {formatShortAge(Date.now() - lastOpenedAt)}
-                    </span>
+                    </ForgeDateHint>
                   )}
                 </span>
               </button>
@@ -227,14 +262,13 @@ export function ForgeIssueNavigator({
           ) : (
             <span class="zs-head-rule" aria-hidden="true" />
           )}
-          <button
-            type="button"
+          <TooltipButton
+            label="Change issue sorting"
             class="text-zen-danger shrink-0 cursor-pointer border-0 bg-transparent p-0 font-[inherit] tracking-[inherit] uppercase"
             onClick={onToggleSort}
-            title="Change issue sorting"
           >
             {sortMode === "recent" ? "Recent" : "Old"} · {count}
-          </button>
+          </TooltipButton>
         </div>
         <Segmented<ForgeKindFilter>
           class="mb-[var(--zen-space-5)]"

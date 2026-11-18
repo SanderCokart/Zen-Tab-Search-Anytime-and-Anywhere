@@ -3,6 +3,7 @@ import { useId } from "preact/hooks";
 import { cn } from "@/shared/ui/cn";
 import { Led } from "@/shared/ui/primitives/Led";
 import { useSound } from "@/shared/ui/sound/SoundContext";
+import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 export interface TreeNodeProps {
   /** The uppercase label. */
@@ -44,17 +45,22 @@ export function TreeNode({
   children,
 }: TreeNodeProps) {
   const { play } = useSound();
+  const tooltip = useTooltip();
   const panelId = useId();
 
   return (
     <div class={cn("zs-acc min-w-0", className)} data-open={open || undefined} data-testid={testId}>
       <button
-        type="button"
         class="zs-tree-trigger"
+        aria-label={typeof title === "string" ? title : undefined}
         aria-expanded={open}
         aria-controls={panelId}
-        title={title}
+        onMouseEnter={(event) => title && tooltip.showAfterPause(event.currentTarget)}
+        onMouseLeave={tooltip.hide}
+        onFocus={(event) => title && tooltip.show(event.currentTarget)}
+        onBlur={tooltip.hide}
         onClick={() => {
+          tooltip.hide();
           play("tick");
           onToggle();
         }}
@@ -74,6 +80,7 @@ export function TreeNode({
         {count !== undefined && <span class="zs-tree-count zs-digits zs-acc-count">{count}</span>}
         {led && <Led on={open} />}
       </button>
+      {tooltip.anchor && title && <TooltipLegend content={title} anchor={tooltip.anchor} />}
       <div id={panelId} class="zs-acc-panel" role="region" aria-hidden={!open}>
         <div class="zs-acc-clip" inert={!open}>
           <div class="zs-tree-kids">{children}</div>

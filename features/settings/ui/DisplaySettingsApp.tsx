@@ -1,3 +1,4 @@
+import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import {
   AUTO_COLOR,
@@ -36,6 +37,8 @@ import { SoundProvider, useSoundEngine } from "@/shared/ui/sound/SoundContext";
 import { useResolvedTheme, type ThemePreference } from "@/shared/ui/theme";
 import { ColorPickerField } from "@/features/settings/ui/ColorPickerField";
 import { BridgeSettings } from "@/features/bridge/ui/BridgeSettings";
+import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
+import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 const COLOR_SETTINGS: readonly [ThemeColorKey, string, string][] = [
   ["accentColor", "Accent color", "Accent"],
@@ -53,13 +56,13 @@ const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
 const PINNED_VISIBILITY = [
   [
     "hideSpacesInOverlay",
-    "Hide spaces in the omnibar",
-    "Leaves the spaces grid out of the omnibar until you search.",
+    "Hiding Spaces in the Zen Deck",
+    "Removes the spaces grid from the Zen Deck. You can still find a space by searching; this does not hide spaces from search results.",
   ],
   [
     "hideEssentialsInOverlay",
-    "Hide essential tabs in the omnibar",
-    "Leaves essential tabs out of the omnibar until you search.",
+    "Hiding Essentials in the Zen Deck",
+    "Removes the essentials grid from the Zen Deck. You can still find those tabs by searching; this does not hide them from search results.",
   ],
 ] as const;
 
@@ -75,6 +78,25 @@ const TRUNCATE_SETTINGS = [
     "Cuts each title in the issue navigator to one line. Off, long titles wrap onto as many lines as they need.",
   ],
 ] as const;
+
+function Hint({ text, children }: { text: string; children: ComponentChildren }) {
+  const tooltip = useTooltip();
+  return (
+    <>
+      <span
+        onMouseEnter={(event) => tooltip.showAfterPause(event.currentTarget)}
+        onMouseLeave={tooltip.hide}
+        onFocus={(event) => tooltip.show(event.currentTarget)}
+        onBlur={tooltip.hide}
+        onClick={tooltip.hide}
+        tabIndex={0}
+      >
+        {children}
+      </span>
+      {tooltip.anchor && <TooltipLegend content={text} anchor={tooltip.anchor} />}
+    </>
+  );
+}
 
 /** Setting key, full label (the accessible name), the short label on the module, hint. */
 const GAP_CONTROLS: readonly (readonly [GapSettingKey, string, string, string])[] = [
@@ -125,19 +147,21 @@ function TestKey({
   play,
   disabled,
   red = false,
+  testId,
 }: {
   label: string;
   voice: SoundVoice;
   play: (voice: SoundVoice) => void;
   disabled: boolean;
   red?: boolean;
+  testId?: string;
 }) {
   return (
     <button
       type="button"
       class={cn(settingsKeyClass, red && "zs-key-red !text-white")}
       data-own-sound
-      data-testid={`zen-sound-test-${label.toLowerCase()}`}
+      data-testid={testId ?? `zen-sound-test-${label.toLowerCase()}`}
       disabled={disabled}
       onClick={() => play(voice)}
     >
@@ -155,7 +179,6 @@ export function DisplaySettingsApp() {
     enabled: settings.soundEnabled,
     volume: settings.soundVolume,
   });
-
   useEffect(() => {
     void readDisplaySettings()
       .then((stored) => {
@@ -171,7 +194,9 @@ export function DisplaySettingsApp() {
       }
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, []);
 
   const updateSettings = (changes: Partial<DisplaySettings>) => {
@@ -253,16 +278,15 @@ export function DisplaySettingsApp() {
                               updateSettings({ [key]: isSwatch ? AUTO_COLOR : color });
                             }}
                           />
-                          <button
-                            type="button"
+                          <TooltipButton
+                            label={`Reset ${label.toLowerCase()}`}
+                            tooltip="Reset to default"
                             class="zs-key zs-key-mini flex items-center justify-center text-[var(--zs-ink-2)]"
                             disabled={!loaded || isDefault}
-                            aria-label={`Reset ${label.toLowerCase()}`}
-                            title="Reset to default"
                             onClick={() => updateSettings({ [key]: DEFAULT_DISPLAY_SETTINGS[key] })}
                           >
                             <ResetIcon class="size-[var(--zen-icon-md)]" />
-                          </button>
+                          </TooltipButton>
                         </div>
                       </div>
                     );
@@ -390,23 +414,25 @@ export function DisplaySettingsApp() {
               </p>
               <div class="zs-mod-two">
                 {GAP_CONTROLS.map(([key, label, short, hint]) => (
-                  <div class="flex items-center gap-[var(--zen-space-3)]" key={key} title={hint}>
-                    <span class={cn(monoLabelClass, "w-[calc(var(--zen-font-size)*7)] shrink-0")}>
-                      {short}
-                    </span>
-                    <Slider
-                      class="[--zs-slider-width:calc(var(--zen-font-size)*9.2)]"
-                      label={label}
-                      data-testid={`zen-${key}`}
-                      min={MIN_GAP}
-                      max={MAX_GAP}
-                      step={GAP_STEP}
-                      disabled={!loaded}
-                      value={settings[key]}
-                      unit="px"
-                      onChange={(value) => updateSettings({ [key]: value })}
-                    />
-                  </div>
+                  <Hint key={key} text={hint}>
+                    <div class="flex items-center gap-[var(--zen-space-3)]" key={key}>
+                      <span class={cn(monoLabelClass, "w-[calc(var(--zen-font-size)*7)] shrink-0")}>
+                        {short}
+                      </span>
+                      <Slider
+                        class="[--zs-slider-width:calc(var(--zen-font-size)*9.2)]"
+                        label={label}
+                        data-testid={`zen-${key}`}
+                        min={MIN_GAP}
+                        max={MAX_GAP}
+                        step={GAP_STEP}
+                        disabled={!loaded}
+                        value={settings[key]}
+                        unit="px"
+                        onChange={(value) => updateSettings({ [key]: value })}
+                      />
+                    </div>
+                  </Hint>
                 ))}
                 <div class="flex items-center justify-self-end">
                   <button
@@ -437,9 +463,9 @@ export function DisplaySettingsApp() {
                   disabled={!loaded}
                   onChange={(checked) => updateSettings({ [key]: checked })}
                 >
-                  <span title={hint}>
+                  <Hint text={hint}>
                     <FieldText label={label} />
-                  </span>
+                  </Hint>
                 </Switch>
               ))}
               <Switch
@@ -453,9 +479,9 @@ export function DisplaySettingsApp() {
                   })
                 }
               >
-                <span title="Shows each folder as a separate section in the tab results.">
+                <Hint text="Shows each folder as a separate section in the tab results.">
                   <FieldText label="Group tabs by folders" />
-                </span>
+                </Hint>
               </Switch>
               <Switch
                 class={cn("ml-[var(--zen-space-4)]", !settings.groupFolders && "opacity-50")}
@@ -464,13 +490,13 @@ export function DisplaySettingsApp() {
                 disabled={!loaded || !settings.groupFolders}
                 onChange={(checked) => updateSettings({ groupSubfolders: checked })}
               >
-                <span title="Adds nested folder sections inside their parent folder.">
+                <Hint text="Adds nested folder sections inside their parent folder.">
                   <FieldText label="Group by subfolders" />
-                </span>
+                </Hint>
               </Switch>
             </Module>
 
-            <Module title="Omnibar">
+            <Module title="Zen Deck">
               {PINNED_VISIBILITY.map(([key, label, hint]) => (
                 <Switch
                   key={key}
@@ -479,9 +505,9 @@ export function DisplaySettingsApp() {
                   disabled={!loaded}
                   onChange={(checked) => updateSettings({ [key]: checked })}
                 >
-                  <span title={hint}>
+                  <Hint text={hint}>
                     <FieldText label={label} />
-                  </span>
+                  </Hint>
                 </Switch>
               ))}
             </Module>
@@ -496,12 +522,9 @@ export function DisplaySettingsApp() {
                   disabled={!loaded}
                   onChange={(reuseExternalTabs) => updateSettings({ reuseExternalTabs })}
                 >
-                  <span
-                    class={monoLabelClass}
-                    title="When another app opens a link in Zen, such as a mail client, focus the tab that already has that address instead of opening a new one."
-                  >
-                    Reuse an open tab
-                  </span>
+                  <Hint text="When another app opens a link in Zen, such as a mail client, focus the tab that already has that address instead of opening a new one.">
+                    <span class={monoLabelClass}>Reuse an open tab</span>
+                  </Hint>
                 </Switch>
                 <Switch
                   data-testid="zen-detectForgeIssues"
@@ -515,12 +538,9 @@ export function DisplaySettingsApp() {
                     })
                   }
                 >
-                  <span
-                    class={monoLabelClass}
-                    title="Finds issue and pull-request tabs and shows them in the issue navigator."
-                  >
-                    Auto-detect GitHub and GitLab issues
-                  </span>
+                  <Hint text="Finds issue and pull-request tabs and shows them in the issue navigator.">
+                    <span class={monoLabelClass}>Auto-detect GitHub and GitLab issues</span>
+                  </Hint>
                 </Switch>
                 <Switch
                   class={cn(!settings.detectForgeIssues && "opacity-50")}
@@ -529,12 +549,9 @@ export function DisplaySettingsApp() {
                   disabled={!loaded || !settings.detectForgeIssues}
                   onChange={(filterIssuesInOverlay) => updateSettings({ filterIssuesInOverlay })}
                 >
-                  <span
-                    class={monoLabelClass}
-                    title="Removes issue tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect."
-                  >
-                    Show issues only in the Issue Navigator
-                  </span>
+                  <Hint text="Removes issue tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect.">
+                    <span class={monoLabelClass}>Show issues only in the Issue Navigator</span>
+                  </Hint>
                 </Switch>
                 <Switch
                   class={cn(!settings.detectForgeIssues && "opacity-50")}
@@ -545,12 +562,11 @@ export function DisplaySettingsApp() {
                     updateSettings({ filterRequestsInOverlay })
                   }
                 >
-                  <span
-                    class={monoLabelClass}
-                    title="Removes merge-request and pull-request tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect."
-                  >
-                    Show merge requests or pull requests only in the Issue Navigator
-                  </span>
+                  <Hint text="Removes merge-request and pull-request tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect.">
+                    <span class={monoLabelClass}>
+                      Show merge requests or pull requests only in the Issue Navigator
+                    </span>
+                  </Hint>
                 </Switch>
               </div>
             </Module>

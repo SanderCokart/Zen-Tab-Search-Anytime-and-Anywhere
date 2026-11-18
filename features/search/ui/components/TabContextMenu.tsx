@@ -9,6 +9,7 @@ import { trafficLightDotClass } from "@/features/status/ui/traffic-light";
 import { debugError } from "@/shared/debug";
 import { sendExtensionMessage } from "@/shared/messaging/client";
 import type { OverlayFolderInfo } from "@/shared/messaging/protocol";
+import { MenuItem } from "@/shared/ui/primitives/Menu";
 import {
   canRenameTab,
   isEssentialTab,
@@ -18,6 +19,7 @@ import {
   type TrafficLight,
 } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
+import "@/shared/ui/hardware/menu.css";
 
 export interface TabContextMenuProps {
   tab: TabInfo;
@@ -27,6 +29,7 @@ export interface TabContextMenuProps {
   /** The tab's status color, if it has one. */
   light?: TrafficLight;
   onRename: () => void;
+  onCopyLink: () => void;
   onOpenTimer: (tabId: number) => void;
   onOpenHostOverrides: (tabId: number) => void;
   /** "none" marks the todo done, which removes it. */
@@ -40,12 +43,10 @@ export interface TabContextMenuProps {
   onRemoveFromFolder: (tabId: number) => void;
 }
 
-const itemClass =
-  "hover:bg-zen-line-soft flex w-full cursor-pointer items-center gap-[var(--zen-space-2)] rounded-[var(--zen-radius)] px-[var(--zen-space-3)] py-[var(--zen-space-2)] text-left font-[inherit] text-[length:var(--zen-text-md)]";
+const itemClass = "zs-hardware-menu-item w-full";
 
 /** A status color in the menu's row of buttons, with no written label. */
-const statusButtonClass =
-  "hover:bg-zen-line-soft flex flex-1 cursor-pointer items-center justify-center rounded-[var(--zen-radius)] p-[var(--zen-space-2)]";
+const statusButtonClass = "zs-hardware-menu-item flex-1";
 
 function MenuIcon({ children }: { children: ComponentChildren }) {
   return (
@@ -67,6 +68,7 @@ export function TabContextMenu({
   isTodo,
   light,
   onRename,
+  onCopyLink,
   onOpenTimer,
   onOpenHostOverrides,
   onSetTodo,
@@ -110,7 +112,7 @@ export function TabContextMenu({
   return (
     <div
       ref={menuRef}
-      class="zs-menu border-zen-line-medium fixed z-50 min-w-[180px] rounded-[var(--zs-r-lcd)] border p-[var(--zen-space-1)]"
+      class="zs-menu zs-hardware-menu fixed z-50"
       style={{ left: `${position.left}px`, top: `${position.top}px` }}
       data-testid="zen-tab-context-menu"
       role="menu"
@@ -131,6 +133,21 @@ export function TabContextMenu({
             <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z" />
           </MenuIcon>
           Rename
+        </button>
+      )}
+      {tab.url !== "" && (
+        <button
+          type="button"
+          class={itemClass}
+          role="menuitem"
+          data-testid="zen-copy-link-menu"
+          onClick={onCopyLink}
+        >
+          <MenuIcon>
+            <path d="M10 13a5 5 0 0 0 7.54.54l2-2a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-2 2a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </MenuIcon>
+          Copy link
         </button>
       )}
       {canMove && (
@@ -163,7 +180,8 @@ export function TabContextMenu({
                 <button
                   key={folder.id}
                   type="button"
-                  class={cn(itemClass, tab.folderId === folder.id && "bg-zen-line-soft")}
+                  class={itemClass}
+                  data-selected={tab.folderId === folder.id || undefined}
                   role="menuitem"
                   onClick={() => onMoveToFolder(tabId, folder.id)}
                 >
@@ -186,7 +204,7 @@ export function TabContextMenu({
       )}
       {tabId !== undefined && pinned && (
         <>
-          <div class="bg-zen-line-soft my-1 h-px" role="separator" />
+          <div class="zs-hardware-menu-separator" role="separator" />
           <button
             type="button"
             class={itemClass}
@@ -215,7 +233,7 @@ export function TabContextMenu({
       )}
       {canTodo && (
         <>
-          <div class="bg-zen-line-soft my-1 h-px" role="separator" />
+          <div class="zs-hardware-menu-separator" role="separator" />
           <button
             type="button"
             class={itemClass}
@@ -228,16 +246,12 @@ export function TabContextMenu({
         </>
       )}
       {tabId !== undefined && (
-        <div
-          class="flex items-center gap-[var(--zen-space-1)] px-[var(--zen-space-1)] py-[var(--zen-space-1)]"
-          role="group"
-          aria-label="Status"
-        >
+        <div class="zs-hardware-menu-group" role="group" aria-label="Status">
           {TRAFFIC_LIGHT_OPTIONS.map((option) => (
             <button
               key={option.light}
               type="button"
-              class={cn(statusButtonClass, light === option.light && "bg-zen-line-soft")}
+              class={statusButtonClass}
               role="menuitemradio"
               aria-checked={light === option.light}
               aria-label={option.label}
@@ -253,13 +267,12 @@ export function TabContextMenu({
               />
             </button>
           ))}
-          <button
-            type="button"
+          <MenuItem
             class={statusButtonClass}
             role="menuitemradio"
             aria-checked={false}
             aria-label="No status"
-            title="No status"
+            tooltip="No status"
             data-traffic-light="none"
             onClick={() => onSetLight("none")}
           >
@@ -267,12 +280,12 @@ export function TabContextMenu({
               <circle cx="12" cy="12" r="8" />
               <path d="M7.5 16.5 16.5 7.5" />
             </MenuIcon>
-          </button>
+          </MenuItem>
         </div>
       )}
       {tabId !== undefined && (
         <>
-          <div class="bg-zen-line-soft my-1 h-px" role="separator" />
+          <div class="zs-hardware-menu-separator" role="separator" />
           <button
             type="button"
             class={itemClass}

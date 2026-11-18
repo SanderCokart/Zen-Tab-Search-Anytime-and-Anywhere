@@ -26,6 +26,8 @@ function mountTimerForm(onSet = vi.fn(), onClear = vi.fn()) {
 describe("TimerForm", () => {
   it("applies a preset and submits the parsed end time", async () => {
     const { root, onSet } = mountTimerForm();
+    expect(root.querySelector("[data-kit='field'] [data-kit='label']")?.textContent).toBe("Days");
+    expect(root.querySelectorAll("[data-kit='input']")).toHaveLength(4);
     const preset = [...root.querySelectorAll("button")].find(
       (button) => button.textContent === "30 minutes",
     );

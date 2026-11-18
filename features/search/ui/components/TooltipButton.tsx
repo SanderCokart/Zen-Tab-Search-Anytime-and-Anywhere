@@ -1,12 +1,5 @@
 import type { ComponentChildren, JSX } from "preact";
-import { createPortal } from "preact/compat";
-import { useEffect, useRef, useState } from "preact/hooks";
-import { cn } from "@/shared/ui/cn";
-
-/** A sweep down the list should not open a tooltip, measure it, and portal it on every row. */
-const TOOLTIP_DELAY_MS = 280;
-
-type TooltipAnchor = { rect: DOMRect; container: Element };
+import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 export type TooltipButtonProps = Omit<
   JSX.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -19,21 +12,8 @@ export type TooltipButtonProps = Omit<
 };
 
 /**
- * Where the tooltip goes: above the button and right-aligned with it, flipping
- * below or to the left edge when it would run off the top or the left.
- */
-function tooltipStyle({ rect }: TooltipAnchor): JSX.CSSProperties {
-  const below = rect.top < 48;
-  const alignLeft = rect.right < 240;
-  return {
-    left: `${alignLeft ? rect.left : rect.right}px`,
-    top: `${below ? rect.bottom + 4 : rect.top - 4}px`,
-    transform: `translate(${alignLeft ? "0" : "-100%"}, ${below ? "0" : "-100%"})`,
-  };
-}
-
-/**
- * An icon button with a styled tooltip. The tooltip is portalled to the search
+ * An icon button with a Spec-01 hardware tooltip: a small LCD above the key
+ * whose characters print in on hover. The legend is portalled to the search
  * surface's root and fixed to the viewport, so a row's `overflow-hidden`, its
  * paint containment and the column's scroll area cannot clip it. It shows on
  * hover, after a short pause so a fast pass does not spawn one per row, on
@@ -49,40 +29,17 @@ export function TooltipButton({
   onBlur,
   onMouseEnter,
   onMouseLeave,
+  "aria-label": ariaLabel,
   ...rest
 }: TooltipButtonProps) {
-  const [anchor, setAnchor] = useState<TooltipAnchor | null>(null);
-  const pending = useRef<number | undefined>(undefined);
-  const cancel = () => {
-    if (pending.current !== undefined) {
-      window.clearTimeout(pending.current);
-      pending.current = undefined;
-    }
-  };
-  useEffect(() => cancel, []);
-  const show = (element: HTMLElement) =>
-    setAnchor({
-      rect: element.getBoundingClientRect(),
-      container: element.closest("[data-zen-ui]") ?? document.body,
-    });
-  const hide = () => {
-    cancel();
-    setAnchor(null);
-  };
-  const showAfterPause = (element: HTMLElement) => {
-    cancel();
-    pending.current = window.setTimeout(() => {
-      pending.current = undefined;
-      show(element);
-    }, TOOLTIP_DELAY_MS);
-  };
+  const { anchor, show, hide, showAfterPause } = useTooltip();
 
   return (
     <>
       <button
         type="button"
         {...rest}
-        aria-label={label}
+        aria-label={ariaLabel ?? label}
         class={className}
         onMouseEnter={(event) => {
           showAfterPause(event.currentTarget);
@@ -107,19 +64,7 @@ export function TooltipButton({
       >
         {children}
       </button>
-      {anchor &&
-        createPortal(
-          <span
-            role="tooltip"
-            class={cn(
-              "bg-zen-tooltip pointer-events-none fixed z-50 w-max max-w-[220px] rounded px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-[length:var(--zen-text-xs)] text-white shadow",
-            )}
-            style={tooltipStyle(anchor)}
-          >
-            {tooltip ?? label}
-          </span>,
-          anchor.container,
-        )}
+      {anchor && <TooltipLegend content={tooltip ?? label} anchor={anchor} />}
     </>
   );
 }

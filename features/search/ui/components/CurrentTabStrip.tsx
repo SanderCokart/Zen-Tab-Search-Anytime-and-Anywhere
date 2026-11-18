@@ -66,7 +66,7 @@ export function CurrentTabStrip({
     <div
       class={cn(
         // Sized to its content and left-aligned, never wider than the row.
-        "zs-card flex max-w-full shrink-0 items-center self-start",
+        "zs-card flex max-w-full min-w-0 shrink-0 items-center self-start overflow-hidden",
         compact ? "w-full gap-[var(--zen-space-3)]" : "w-fit gap-[var(--zen-space-4)]",
         "mb-[var(--zen-space-5)] min-h-[var(--zen-row-height)] cursor-pointer rounded-[var(--zen-radius-lg)]",
         "py-[var(--zen-space-2)] pr-[var(--zen-space-3)] pl-[var(--zen-space-4)]",
@@ -93,10 +93,7 @@ export function CurrentTabStrip({
           )}
         </>
       ) : null}
-      <span
-        class={cn("zs-row-title", compact && "flex-1", entryTextClass(truncate))}
-        title={tab.url}
-      >
+      <span class={cn("zs-row-title min-w-0 flex-1", entryTextClass(truncate))}>
         {parts ? parts.title : title}
       </span>
       {!compact && timer && !isEssentialTab(tab) && (

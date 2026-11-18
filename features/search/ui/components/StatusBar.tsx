@@ -1,6 +1,7 @@
 import type { ComponentChildren } from "preact";
 import { pluralize, type SearchStats } from "@/features/search/model/stats";
 import { cn } from "@/shared/ui/cn";
+import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 interface Stat {
   key: string;
@@ -80,12 +81,30 @@ export function StatusBar({ stats, showForge, children }: StatusBarProps) {
     >
       <ul class="m-0 flex min-w-0 list-none flex-nowrap items-center gap-x-[var(--zen-status-gap)] overflow-hidden p-0 whitespace-nowrap">
         {visibleStats(stats, showForge).map((stat) => (
-          <li key={stat.key} title={stat.title} data-stat={stat.key}>
-            {stat.text}
-          </li>
+          <StatusStat key={stat.key} stat={stat} />
         ))}
       </ul>
       {children}
     </footer>
+  );
+}
+
+function StatusStat({ stat }: { stat: Stat }) {
+  const tooltip = useTooltip();
+  return (
+    <>
+      <li
+        data-stat={stat.key}
+        tabIndex={0}
+        onMouseEnter={(event) => tooltip.showAfterPause(event.currentTarget)}
+        onMouseLeave={tooltip.hide}
+        onFocus={(event) => tooltip.show(event.currentTarget)}
+        onBlur={tooltip.hide}
+        onClick={tooltip.hide}
+      >
+        {stat.text}
+      </li>
+      {tooltip.anchor && <TooltipLegend content={stat.title} anchor={tooltip.anchor} />}
+    </>
   );
 }

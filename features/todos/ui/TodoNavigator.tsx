@@ -15,6 +15,7 @@ import {
   type TrafficLight,
 } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
+import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 /**
  * The third overlay column: tabs marked as todo. Clicking a row switches to its
@@ -79,6 +80,7 @@ export function TodoNavigator({
   // The omnibar is a <browser> in Zen's chrome, not a tab, so `window.confirm`
   // has nowhere to show and returns false: the confirmation lives in the column.
   const [pendingClear, setPendingClear] = useState<TodoClearFilter | null>(null);
+  const clearTooltip = useTooltip();
   const pendingTabIds =
     pendingClear === null ? [] : todoTabIdsToClear(allTabs, statuses, pendingClear);
   return (
@@ -92,31 +94,39 @@ export function TodoNavigator({
         <span class="zs-head-rule" aria-hidden="true" />
         <span class="flex shrink-0 items-center gap-[var(--zen-space-2)]">
           <span class="text-zen-danger">{allTabs.length} to do</span>
-          <select
-            class="zs-key text-zen-subtle hover:text-zen-text h-[var(--zen-control)] cursor-pointer py-0 pr-[var(--zen-space-5)] pl-[var(--zen-space-3)] font-[inherit] text-[length:var(--zen-text-sm)] leading-none tracking-[0.04em] normal-case"
-            aria-label="Clear todos"
-            title="Mark several todos as done"
-            data-testid="zen-todo-clear"
-            value=""
-            onChange={(event) => {
-              const select = event.currentTarget;
-              const filter = select.value as TodoClearFilter;
-              // Always back to the "Clear…" prompt, whatever the answer.
-              select.value = "";
-              if (todoTabIdsToClear(allTabs, statuses, filter).length > 0) {
-                setPendingClear(filter);
-              }
-            }}
-          >
-            <option value="" disabled>
-              Clear…
-            </option>
-            {clearOptions(allTabs, statuses).map(({ filter, label, count }) => (
-              <option key={filter} value={filter} disabled={count === 0}>
-                {label} ({count})
+          <>
+            <select
+              class="zs-key text-zen-subtle hover:text-zen-text h-[var(--zen-control)] cursor-pointer py-0 pr-[var(--zen-space-5)] pl-[var(--zen-space-3)] font-[inherit] text-[length:var(--zen-text-sm)] leading-none tracking-[0.04em] normal-case"
+              aria-label="Clear todos"
+              data-testid="zen-todo-clear"
+              value=""
+              onMouseEnter={(event) => clearTooltip.showAfterPause(event.currentTarget)}
+              onMouseLeave={clearTooltip.hide}
+              onFocus={(event) => clearTooltip.show(event.currentTarget)}
+              onBlur={clearTooltip.hide}
+              onClick={clearTooltip.hide}
+              onChange={(event) => {
+                const select = event.currentTarget;
+                const filter = select.value as TodoClearFilter;
+                select.value = "";
+                if (todoTabIdsToClear(allTabs, statuses, filter).length > 0) {
+                  setPendingClear(filter);
+                }
+              }}
+            >
+              <option value="" disabled>
+                Clear…
               </option>
-            ))}
-          </select>
+              {clearOptions(allTabs, statuses).map(({ filter, label, count }) => (
+                <option key={filter} value={filter} disabled={count === 0}>
+                  {label} ({count})
+                </option>
+              ))}
+            </select>
+            {clearTooltip.anchor && (
+              <TooltipLegend content="Mark several todos as done" anchor={clearTooltip.anchor} />
+            )}
+          </>
         </span>
       </div>
       {pendingClear !== null && pendingTabIds.length > 0 && (
@@ -184,7 +194,6 @@ export function TodoNavigator({
                 class="zs-row-title block w-full cursor-pointer border-0 bg-transparent p-0 text-left text-inherit after:absolute after:inset-0 after:rounded-[inherit] after:content-['']"
                 onClick={() => onActivate(tab)}
                 onFocus={() => onSelect(index)}
-                title={tab.url}
               >
                 <span class={cn("block w-full min-w-0", entryTextClass(truncate))}>
                   {formatTabDisplayTitle(tab)}
@@ -197,7 +206,7 @@ export function TodoNavigator({
                 <span class="flex shrink-0 items-center gap-[var(--zen-space-2)]">
                   <TooltipButton
                     label="Mark as done"
-                    tooltip="Mark as done and remove from your todos"
+                    tooltip="Mark as done"
                     data-testid="zen-todo-done-button"
                     class="text-zen-muted hover:text-zen-text shrink-0 cursor-pointer border-0 bg-transparent p-0 font-[inherit] tracking-[inherit] whitespace-nowrap uppercase hover:underline"
                     onClick={() => onDone(tab)}

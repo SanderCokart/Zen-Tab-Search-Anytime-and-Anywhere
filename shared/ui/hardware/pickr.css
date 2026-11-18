@@ -1,0 +1,209 @@
+/*
+ * Pickr's nano theme is deliberately plain. Keep its geometry and interaction
+ * model, but give the picker the same molded, key-like surfaces as the rest of
+ * the settings page.
+ */
+.pcr-app[data-theme="nano"] {
+  --pickr-panel: var(--zs-card, #fafaf8);
+  --pickr-panel-hi: var(--zs-card-hi, #fff);
+  --pickr-well: var(--zs-pressed, #ececea);
+  --pickr-ink: var(--zs-ink-1, #161616);
+  --pickr-muted: var(--zs-ink-2, #4c4c4a);
+  --pickr-line: var(--zs-line, #c9c9c4);
+  --pickr-key: var(--zs-key, #f4f4f1);
+  --pickr-key-edge: var(--zs-key-edge, #cfcfca);
+  --pickr-red: var(--zs-red, #ff2a1f);
+  --pickr-shadow: var(
+    --zs-shadow,
+    0 1px 0 #fff inset,
+    0 14px 26px -16px rgb(0 0 0 / 30%),
+    0 2px 5px rgb(0 0 0 / 6%)
+  );
+  --pickr-key-shadow: var(
+    --zs-key-shadow,
+    inset 0 1px 0 rgb(255 255 255 / 95%),
+    0 3px 0 var(--pickr-key-edge),
+    0 5px 8px -3px rgb(0 0 0 / 18%)
+  );
+
+  width: calc(var(--zen-font-size, 14px) * 20);
+  max-width: 95vw;
+  padding: var(--zen-space-3, 12px);
+  border: 1px solid var(--pickr-line);
+  border-radius: var(--zs-r-card, 18px);
+  background: var(--pickr-panel);
+  color: var(--pickr-ink);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  box-shadow: var(--pickr-shadow);
+}
+
+/* Pickr's useAsButton trigger is our existing hardware key, not a second swatch. */
+.pcr-button,
+.pickr .pcr-button {
+  width: auto;
+  height: auto;
+  padding: inherit;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow: none;
+}
+
+.pcr-button::before,
+.pcr-button::after,
+.pickr .pcr-button::before,
+.pickr .pcr-button::after {
+  display: none;
+}
+
+.pcr-app[data-theme="nano"] .pcr-selection {
+  height: calc(var(--zen-font-size, 14px) * 12);
+  gap: var(--zen-space-2, 8px);
+}
+
+.pcr-app[data-theme="nano"] .pcr-selection .pcr-color-palette .pcr-palette {
+  border: 1px solid var(--pickr-line);
+  border-radius: var(--zs-r-key, 12px);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 45%),
+    inset 0 2px 5px rgb(0 0 0 / 18%);
+}
+
+.pcr-app[data-theme="nano"] .pcr-selection .pcr-color-chooser,
+.pcr-app[data-theme="nano"] .pcr-selection .pcr-color-opacity {
+  height: calc(var(--zen-font-size, 14px) * 0.57);
+  margin: 0 var(--zen-space-2, 8px);
+  overflow: visible;
+  border: 1px solid var(--pickr-line);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 25%);
+}
+
+.pcr-app[data-theme="nano"] .pcr-selection .pcr-color-chooser .pcr-slider,
+.pcr-app[data-theme="nano"] .pcr-selection .pcr-color-opacity .pcr-slider {
+  border-radius: inherit;
+}
+
+.pcr-app[data-theme="nano"] .pcr-selection .pcr-picker {
+  width: calc(var(--zen-font-size, 14px) * 0.9);
+  height: calc(var(--zen-font-size, 14px) * 0.9);
+  border: 2px solid var(--pickr-panel-hi);
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 35%),
+    0 1px 2px rgb(0 0 0 / 30%);
+}
+
+.pcr-app[data-theme="nano"] .pcr-selection .pcr-color-preview {
+  margin-left: var(--zen-space-2, 8px);
+  padding: 2px;
+  border: 1px solid var(--pickr-line);
+  border-radius: var(--zs-r-key, 12px);
+  background: var(--pickr-key);
+  box-shadow: var(--pickr-key-shadow);
+}
+
+.pcr-app[data-theme="nano"] .pcr-selection .pcr-color-preview .pcr-current-color {
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--zs-r-key, 12px) - 3px);
+}
+
+.pcr-app[data-theme="nano"] .pcr-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(calc(var(--zen-font-size, 14px) * 1.75), 1fr));
+  gap: var(--zen-space-1, 4px);
+  margin: var(--zen-space-3, 12px) 0 0;
+  padding: var(--zen-space-2, 8px);
+  border: 1px solid var(--pickr-line);
+  border-radius: var(--zs-r-key, 12px);
+  background: var(--pickr-well);
+  box-shadow: inset 0 2px 5px rgb(0 0 0 / 12%);
+}
+
+.pcr-app[data-theme="nano"] .pcr-swatches > button {
+  width: auto;
+  height: calc(var(--zen-font-size, 14px) * 1.75);
+  margin: 0;
+  border: 1px solid var(--pickr-key-edge);
+  border-radius: var(--zs-r-key, 12px);
+  background: var(--pickr-key);
+  box-shadow: var(--pickr-key-shadow);
+}
+
+.pcr-app[data-theme="nano"] .pcr-swatches > button::after {
+  border: 3px solid var(--pickr-key);
+  border-radius: calc(var(--zs-r-key, 12px) - 2px);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 18%);
+}
+
+.pcr-app[data-theme="nano"] .pcr-swatches > button:hover,
+.pcr-app[data-theme="nano"] .pcr-swatches > button.pcr-active {
+  filter: none;
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 20%);
+}
+
+.pcr-app[data-theme="nano"] .pcr-interaction {
+  gap: var(--zen-space-1, 4px);
+  padding: var(--zen-space-3, 12px) 0 0;
+}
+
+.pcr-app[data-theme="nano"] .pcr-interaction > * {
+  margin: 0;
+}
+
+/* The HEXA result is the panel's little LCD readout. */
+.pcr-app[data-theme="nano"] .pcr-interaction .pcr-result,
+.pcr-app[data-theme="nano"] .pcr-interaction .pcr-type {
+  min-height: calc(var(--zen-font-size, 14px) * 2);
+  border: 1px solid var(--pickr-line);
+  border-radius: var(--zs-r-key, 12px);
+  color: var(--pickr-ink);
+  background: var(--pickr-key);
+  font-family: inherit;
+  box-shadow: var(--pickr-key-shadow);
+}
+
+.pcr-app[data-theme="nano"] .pcr-interaction .pcr-result {
+  min-width: 0;
+  padding: var(--zen-space-2, 8px);
+  text-align: center;
+  letter-spacing: 0.12em;
+}
+
+.pcr-app[data-theme="nano"] .pcr-interaction .pcr-type {
+  padding: var(--zen-space-1, 4px) var(--zen-space-2, 8px);
+  cursor: pointer;
+  font-size: var(--zen-text-xs, 11px);
+}
+
+.pcr-app[data-theme="nano"] .pcr-interaction .pcr-type.active {
+  color: var(--pickr-panel-hi);
+  background: var(--pickr-ink);
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 25%);
+}
+
+.pcr-app[data-theme="nano"] input:focus,
+.pcr-app[data-theme="nano"] button:focus {
+  box-shadow:
+    0 0 0 2px var(--pickr-panel),
+    0 0 0 4px var(--pickr-red);
+}
+
+/* Pickr appends the panel to body, outside the element carrying the theme tokens. */
+body:has([data-zen-ui][data-theme="dark"]) .pcr-app[data-theme="nano"] {
+  --pickr-panel: #1b1b1b;
+  --pickr-panel-hi: #262626;
+  --pickr-well: #151515;
+  --pickr-ink: #ededea;
+  --pickr-muted: #a9a9a4;
+  --pickr-line: #3a3a3a;
+  --pickr-key: #262626;
+  --pickr-key-edge: #0c0c0c;
+  --pickr-shadow: var(--zs-shadow, 0 16px 30px -16px rgb(0 0 0 / 90%));
+  --pickr-key-shadow: var(
+    --zs-key-shadow,
+    inset 0 1px 0 rgb(255 255 255 / 9%),
+    0 3px 0 var(--pickr-key-edge),
+    0 5px 8px -3px rgb(0 0 0 / 70%)
+  );
+}

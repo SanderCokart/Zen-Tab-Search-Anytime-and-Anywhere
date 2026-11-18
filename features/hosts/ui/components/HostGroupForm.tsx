@@ -6,6 +6,7 @@ import {
 } from "@/features/hosts/model/host-override";
 import type { HostOverrideGroup } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
+import { TextField } from "@/shared/ui/primitives/TextField";
 import {
   fieldClass,
   primaryButtonClass,
@@ -72,32 +73,29 @@ export function HostGroupForm({ initial, submitLabel, onSubmit, onCancel }: Host
         ))}
       </div>
       <div class="flex flex-wrap gap-[var(--zen-space-2)]">
-        <label class="text-zen-faint flex min-w-0 flex-[1_1_9em] flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-sm)]">
-          IP address
-          <input
-            ref={ipRef}
-            class={fieldClass}
-            type="text"
-            spellcheck={false}
-            placeholder="10.0.0.12"
-            value={draft.ip}
-            onInput={(event) => update({ ip: event.currentTarget.value })}
-          />
-        </label>
-        <label class="text-zen-faint flex min-w-0 flex-[1.4_1_11em] flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-sm)]">
-          Description
-          <input
-            class={fieldClass}
-            type="text"
-            placeholder="Staging"
-            value={draft.description}
-            onInput={(event) => update({ description: event.currentTarget.value })}
-          />
-        </label>
+        <TextField
+          class="min-w-0 flex-[1_1_9em]"
+          label="IP address"
+          ref={ipRef}
+          type="text"
+          spellcheck={false}
+          placeholder="10.0.0.12"
+          value={draft.ip}
+          onInput={(event) => update({ ip: event.currentTarget.value })}
+        />
+        <TextField
+          class="min-w-0 flex-[1.4_1_11em]"
+          label="Description"
+          type="text"
+          placeholder="Staging"
+          value={draft.description}
+          onInput={(event) => update({ description: event.currentTarget.value })}
+        />
       </div>
       <label class="text-zen-faint flex flex-col gap-[var(--zen-space-1)] text-[length:var(--zen-text-sm)]">
         Hostnames (one per line, *.example.com for subdomains)
         <textarea
+          data-kit="input"
           class={cn(
             fieldClass,
             "h-auto min-h-[calc(var(--zen-font-size)*5)] py-[var(--zen-space-1)]",

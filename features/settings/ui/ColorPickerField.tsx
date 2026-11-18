@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import Pickr from "@simonwep/pickr";
 import "@simonwep/pickr/dist/themes/nano.min.css";
+import "@/shared/ui/hardware/pickr.css";
 
 interface ColorPickerFieldProps {
   label: string;
