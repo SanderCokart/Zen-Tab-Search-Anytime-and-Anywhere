@@ -16,7 +16,7 @@ export interface SearchEnginePickerProps {
 
 /**
  * The left end of the search bar: the current engine, and a menu of the rest.
- * Shift+Enter in the field searches with whichever engine this shows.
+ * Shift+Enter in the field opens a site or searches with this engine.
  */
 export function SearchEnginePicker({
   engineId,
@@ -41,7 +41,7 @@ export function SearchEnginePicker({
       <button
         type="button"
         data-testid="zen-search-engine"
-        aria-label={`Search engine: ${engine.name}. Shift+Enter searches the web.`}
+        aria-label={`Search engine: ${engine.name}. Shift+Enter opens a site or searches.`}
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={disabled}

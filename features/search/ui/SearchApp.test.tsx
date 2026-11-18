@@ -125,6 +125,27 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("opens a typed site on Shift+Enter instead of searching it", async () => {
+    const { root, sendMessage } = mountSearchApp();
+    await vi.waitFor(() => expect(root.textContent).toContain("First tab"));
+
+    const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
+    input.value = "youtube.com";
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", shiftKey: true, bubbles: true }),
+    );
+
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "openUrl",
+        url: "https://youtube.com/",
+      }),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
   it("searches with the engine chosen from the search bar", async () => {
     const { root, sendMessage } = mountSearchApp(vi.fn(), tabs, "overlay", {
       searchEngine: "duckduckgo",

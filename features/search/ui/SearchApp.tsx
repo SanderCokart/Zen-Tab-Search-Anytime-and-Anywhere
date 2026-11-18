@@ -30,7 +30,7 @@ import { ActiveTimersPanel } from "@/features/search/ui/components/ActiveTimersP
 import { OmnibarViewPanel } from "@/features/search/ui/components/OmnibarViewPanel";
 import { StatusBar } from "@/features/search/ui/components/StatusBar";
 import { parsePinnedUrl } from "@/features/search/model/pinned-url";
-import { webSearchUrl, type SearchEngineId } from "@/features/search/model/web-search";
+import { openFromQuery, type SearchEngineId } from "@/features/search/model/web-search";
 import { EditPinnedUrlDialog } from "@/features/search/ui/components/EditPinnedUrlDialog";
 import { RenameTabDialog } from "@/features/search/ui/components/RenameTabDialog";
 import { SearchInput } from "@/features/search/ui/components/SearchInput";
@@ -349,7 +349,7 @@ export function SearchApp({
 
   searchWebRef.current = () => {
     const typed = navigation.inputRef.current?.value ?? query;
-    const url = webSearchUrl(displaySettings.searchEngine, typed);
+    const url = openFromQuery(displaySettings.searchEngine, typed);
     if (!url) return;
     void sendExtensionMessage({ type: "openUrl", url })
       .then(onClose)
