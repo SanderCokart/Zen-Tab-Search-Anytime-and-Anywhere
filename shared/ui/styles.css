@@ -1499,6 +1499,10 @@
   .zen-scroll {
     scrollbar-width: thin;
     scrollbar-color: var(--zs-ink-3) transparent;
+    /* Overlay scrollbars sit on the content; keep folder counts and row
+       meta out of the track. */
+    scrollbar-gutter: stable;
+    padding-inline-end: var(--zen-space-2);
   }
 
   .zen-scroll::-webkit-scrollbar {

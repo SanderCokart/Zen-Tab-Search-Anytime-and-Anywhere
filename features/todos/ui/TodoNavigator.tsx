@@ -96,34 +96,50 @@ export function TodoNavigator({
         <span class="flex shrink-0 items-center gap-[var(--zen-space-2)]">
           <span class="text-zen-danger">{allTabs.length} to do</span>
           <>
-            <select
-              class="zs-key text-zen-subtle hover:text-zen-text h-[var(--zen-control)] cursor-pointer py-0 pr-[var(--zen-space-5)] pl-[var(--zen-space-3)] font-[inherit] text-[length:var(--zen-text-sm)] leading-none tracking-[0.04em] normal-case"
-              aria-label="Clear todos"
-              data-testid="zen-todo-clear"
-              value=""
-              onMouseEnter={(event) => clearTooltip.showAfterPause(event.currentTarget)}
-              onMouseLeave={clearTooltip.hide}
-              onFocus={(event) => clearTooltip.show(event.currentTarget)}
-              onBlur={clearTooltip.hide}
-              onClick={clearTooltip.hide}
-              onChange={(event) => {
-                const select = event.currentTarget;
-                const filter = select.value as TodoClearFilter;
-                select.value = "";
-                if (todoTabIdsToClear(allTabs, statuses, filter).length > 0) {
-                  setPendingClear(filter);
-                }
-              }}
-            >
-              <option value="" disabled>
-                Clear…
-              </option>
-              {clearOptions(allTabs, statuses).map(({ filter, label, count }) => (
-                <option key={filter} value={filter} disabled={count === 0}>
-                  {label} ({count})
+            <span class="relative inline-flex items-center">
+              <select
+                class="zs-key text-zen-subtle hover:text-zen-text h-[var(--zen-mini-key)] appearance-none py-0 pr-[calc(var(--zen-icon-sm)+var(--zen-space-4))] pl-[var(--zen-space-3)] font-[inherit] text-[length:var(--zen-text-sm)] leading-none tracking-[0.04em] normal-case"
+                aria-label="Clear todos"
+                data-testid="zen-todo-clear"
+                value=""
+                onMouseEnter={(event) => clearTooltip.showAfterPause(event.currentTarget)}
+                onMouseLeave={clearTooltip.hide}
+                onFocus={(event) => clearTooltip.show(event.currentTarget)}
+                onBlur={clearTooltip.hide}
+                onClick={clearTooltip.hide}
+                onChange={(event) => {
+                  const select = event.currentTarget;
+                  const filter = select.value as TodoClearFilter;
+                  select.value = "";
+                  if (todoTabIdsToClear(allTabs, statuses, filter).length > 0) {
+                    setPendingClear(filter);
+                  }
+                }}
+              >
+                <option value="" disabled>
+                  Clear…
                 </option>
-              ))}
-            </select>
+                {clearOptions(allTabs, statuses).map(({ filter, label, count }) => (
+                  <option key={filter} value={filter} disabled={count === 0}>
+                    {label} ({count})
+                  </option>
+                ))}
+              </select>
+              <svg
+                class="text-zen-subtle pointer-events-none absolute right-[var(--zen-space-2)] h-[var(--zen-icon-sm)] w-[var(--zen-icon-sm)]"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 9l6 6 6-6"
+                />
+              </svg>
+            </span>
             {clearTooltip.anchor && (
               <TooltipLegend content="Mark several todos as done" anchor={clearTooltip.anchor} />
             )}

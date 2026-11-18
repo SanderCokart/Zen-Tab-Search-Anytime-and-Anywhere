@@ -12,6 +12,7 @@
 [data-zen-ui] :is(.zen-scroll, .overflow-y-auto) {
   scrollbar-width: thin;
   scrollbar-color: var(--zs-scroll-thumb) var(--zs-scroll-track);
+  scrollbar-gutter: stable;
 }
 
 [data-zen-ui]:is(.zen-scroll, .overflow-y-auto)::-webkit-scrollbar,
