@@ -465,6 +465,30 @@ describe("forge issue entries", () => {
       "10",
     ]);
     expect(sortForgeIssueEntries(entries, "old").map((entry) => entry.ref.id)).toEqual(["10", "2"]);
+    expect(sortForgeIssueEntries(entries, "asc").map((entry) => entry.ref.id)).toEqual(["2", "10"]);
+    expect(sortForgeIssueEntries(entries, "desc").map((entry) => entry.ref.id)).toEqual([
+      "10",
+      "2",
+    ]);
+  });
+
+  it("sorts by issue number without moving the current tab to the top", () => {
+    const entries = buildForgeIssueEntries([
+      {
+        ...tab(1),
+        title: "High",
+        url: "https://github.com/acme/project/issues/40",
+        lastOpenedAt: 900,
+        active: true,
+      },
+      {
+        ...tab(2),
+        title: "Low",
+        url: "https://github.com/acme/project/issues/3",
+        lastOpenedAt: 100,
+      },
+    ]);
+    expect(sortForgeIssueEntries(entries, "asc").map((entry) => entry.ref.id)).toEqual(["3", "40"]);
   });
 
   it("puts each project's requests in folders by target branch, unknown last", () => {

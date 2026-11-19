@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { collectTodoTabs, todoTabIdsToClear, todosByTabId } from "@/features/todos/model/todo";
+import {
+  applyTodoOrder,
+  collectTodoTabs,
+  moveListItem,
+  parseTodoOrder,
+  todoTabIdsToClear,
+  todosByTabId,
+} from "@/features/todos/model/todo";
 import type { TabInfo, TabTodo, TrafficLight } from "@/shared/types";
 
 function tab(id: number | null, title = `Tab ${id}`): TabInfo {
@@ -23,7 +30,7 @@ describe("todo model", () => {
     expect(collectTodoTabs(tabs, todos).map((entry) => entry.id)).toEqual([3, 1]);
   });
 
-  it("moves the current tab to the top when it is a todo", () => {
+  it("leaves the current tab where it sits when it is a todo", () => {
     const tabs = [tab(5), tab(3), { ...tab(1), active: true }, tab(2)];
     const todos = todosByTabId([
       { tabId: 1, status: "todo" },
@@ -31,7 +38,28 @@ describe("todo model", () => {
       { tabId: 3, status: "todo" },
     ]);
 
-    expect(collectTodoTabs(tabs, todos).map((entry) => entry.id)).toEqual([1, 3, 2]);
+    expect(collectTodoTabs(tabs, todos).map((entry) => entry.id)).toEqual([3, 1, 2]);
+  });
+
+  it("applies a saved order, then leftover tabs in list order", () => {
+    const tabs = [tab(1), tab(2), tab(3)];
+    expect(applyTodoOrder(tabs, [3, 1]).map((entry) => entry.id)).toEqual([3, 1, 2]);
+    expect(applyTodoOrder(tabs, [9, 2]).map((entry) => entry.id)).toEqual([2, 1, 3]);
+    expect(applyTodoOrder(tabs, []).map((entry) => entry.id)).toEqual([1, 2, 3]);
+  });
+
+  it("moves an item in a list, and ignores indexes that are out of range", () => {
+    expect(moveListItem([1, 2, 3], 0, 2)).toEqual([2, 3, 1]);
+    expect(moveListItem([1, 2, 3], 2, 0)).toEqual([3, 1, 2]);
+    expect(moveListItem([1, 2, 3], 1, 1)).toEqual([1, 2, 3]);
+    expect(moveListItem([1, 2, 3], -1, 0)).toEqual([1, 2, 3]);
+    expect(moveListItem([1, 2, 3], 0, 9)).toEqual([1, 2, 3]);
+  });
+
+  it("reads a saved todo order, and treats junk as none", () => {
+    expect(parseTodoOrder([3, 1, 2])).toEqual([3, 1, 2]);
+    expect(parseTodoOrder(["3"])).toEqual([]);
+    expect(parseTodoOrder(undefined)).toEqual([]);
   });
 
   it("keeps tab order when the current tab is not a todo", () => {

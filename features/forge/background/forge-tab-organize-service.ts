@@ -10,10 +10,8 @@ import type { OrganizeForgeIssueTabsResult, TabInfo } from "@/shared/types";
 import { tabBrowserId } from "@/shared/types";
 
 export async function organizeForgeIssueTabs(options: {
-  workspace: Pick<
-    WorkspaceAdapter,
-    "createFolder" | "moveTabsToFolder" | "listFolders" | "moveTab"
-  >;
+  workspace: Pick<WorkspaceAdapter, "createFolder" | "moveTabsToFolder" | "listFolders"> &
+    Pick<Partial<WorkspaceAdapter>, "moveTab">;
   tabs: TabInfo[];
   mode: ForgeOrganizeMode;
   tabIds?: number[];

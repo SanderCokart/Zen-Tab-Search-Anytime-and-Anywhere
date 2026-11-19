@@ -9,7 +9,15 @@ import {
 import { visibleForgeEntries } from "@/features/forge/model/forge-collapse";
 import { type ForgeIssueEntry } from "@/features/forge/model/forge-label";
 
-export type ForgeIssueSortMode = "recent" | "old";
+export const FORGE_ISSUE_SORT_MODES = ["asc", "desc", "recent", "old"] as const;
+export type ForgeIssueSortMode = (typeof FORGE_ISSUE_SORT_MODES)[number];
+
+export const FORGE_ISSUE_SORT_OPTIONS: { value: ForgeIssueSortMode; label: string }[] = [
+  { value: "asc", label: "Ascending" },
+  { value: "desc", label: "Descending" },
+  { value: "recent", label: "Most recent" },
+  { value: "old", label: "Least recent" },
+];
 
 interface FuzzyMatch {
   matches: boolean;
@@ -576,15 +584,31 @@ function compareOptionalTimestamp(
   return direction === "asc" ? first - second : second - first;
 }
 
+function compareIssueNumber(first: string, second: string, direction: "asc" | "desc"): number {
+  const left = Number(first);
+  const right = Number(second);
+  const cmp =
+    Number.isFinite(left) && Number.isFinite(right)
+      ? left - right
+      : first.localeCompare(second, undefined, { numeric: true });
+  return direction === "asc" ? cmp : -cmp;
+}
+
 export function sortForgeIssueEntries(
   entries: ForgeIssueEntry[],
   mode: ForgeIssueSortMode,
 ): ForgeIssueEntry[] {
   return [...entries].sort((first, second) => {
+    if (mode === "asc" || mode === "desc") {
+      return (
+        compareIssueNumber(first.ref.id, second.ref.id, mode) ||
+        compareOptionalTimestamp(first.tab.lastOpenedAt, second.tab.lastOpenedAt, "desc")
+      );
+    }
     const direction = mode === "recent" ? "desc" : "asc";
     return (
       compareOptionalTimestamp(first.tab.lastOpenedAt, second.tab.lastOpenedAt, direction) ||
-      Number(first.ref.id) - Number(second.ref.id)
+      compareIssueNumber(first.ref.id, second.ref.id, "asc")
     );
   });
 }

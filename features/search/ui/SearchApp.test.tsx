@@ -643,11 +643,17 @@ describe("SearchApp", () => {
     expect(root.textContent).toContain("#42");
     expect(root.textContent).not.toContain("Merge request #7");
     expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(0);
-    await vi.waitFor(() => expect(root.textContent).toContain("Recent"));
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLSelectElement>("[data-testid='zen-forge-sort']")?.value).toBe(
+        "asc",
+      ),
+    );
     expect(root.querySelector("span[aria-label^='Last opened:']")).not.toBeNull();
     play.mockClear();
-    root.querySelector<HTMLButtonElement>("button[aria-label='Change issue sorting']")?.click();
-    await vi.waitFor(() => expect(root.textContent).toContain("Old"));
+    const sort = root.querySelector<HTMLSelectElement>("[data-testid='zen-forge-sort']")!;
+    sort.value = "old";
+    sort.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() => expect(sort.value).toBe("old"));
     expect(play).toHaveBeenCalledWith("tick");
 
     const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
@@ -972,7 +978,7 @@ describe("SearchApp", () => {
     root.remove();
   });
 
-  it("lists the current tab first in the todo column and highlights it there", async () => {
+  it("keeps todo order and highlights the current tab in its place", async () => {
     const { root, onClose, sendMessage } = mountSearchApp(
       vi.fn(),
       [
@@ -994,12 +1000,11 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(root.querySelector("[data-todo-selected='true']")?.textContent).toContain("First tab"),
     );
-    expect(todoRows()[0]?.textContent).toContain("First tab");
-    expect(todoRows()[0]?.textContent).not.toContain("Current tab");
-    expect(todoRows()[0]?.getAttribute("data-current")).toBe("true");
-    expect(todoRows()[0]?.querySelector("[data-testid='zen-now-tag']")).not.toBeNull();
-    expect(todoRows()[1]?.textContent).toContain("Second tab");
-    expect(todoRows()[1]?.querySelector("[data-testid='zen-now-tag']")).toBeNull();
+    expect(todoRows()[0]?.textContent).toContain("Second tab");
+    expect(todoRows()[0]?.querySelector("[data-testid='zen-now-tag']")).toBeNull();
+    expect(todoRows()[1]?.textContent).toContain("First tab");
+    expect(todoRows()[1]?.getAttribute("data-current")).toBe("true");
+    expect(todoRows()[1]?.querySelector("[data-testid='zen-now-tag']")).not.toBeNull();
     // The todo column has the keyboard, so nothing in the tab list is selected.
     expect(root.querySelector("[data-selected='true']")).toBeNull();
 
@@ -1022,6 +1027,69 @@ describe("SearchApp", () => {
       expect(sendMessage).toHaveBeenCalledWith({ type: "switchTab", tabId: 1, domId: undefined }),
     );
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("reorders todos from the row handle and remembers the order", async () => {
+    const { root } = mountSearchApp(
+      vi.fn(),
+      tabs.map((tab) => ({ ...tab, active: false })),
+      "overlay",
+      undefined,
+      [],
+      [
+        { tabId: 1, status: "todo" },
+        { tabId: 2, status: "todo" },
+      ],
+    );
+
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll("[data-testid='zen-todo-row']")).toHaveLength(2),
+    );
+    const rows = () => [...root.querySelectorAll<HTMLElement>("[data-testid='zen-todo-row']")];
+    expect(rows()[0]?.textContent).toContain("First tab");
+    expect(rows()[1]?.textContent).toContain("Second tab");
+
+    const layout = (element: HTMLElement, top: number) => {
+      element.getBoundingClientRect = () =>
+        ({
+          x: 0,
+          y: top,
+          top,
+          left: 0,
+          right: 100,
+          bottom: top + 40,
+          width: 100,
+          height: 40,
+          toJSON() {
+            return {};
+          },
+        }) as DOMRect;
+    };
+    layout(rows()[0]!, 0);
+    layout(rows()[1]!, 40);
+    const handle = rows()[0]!.querySelector<HTMLButtonElement>("[data-testid='zen-todo-drag']")!;
+    handle.setPointerCapture = vi.fn();
+    handle.hasPointerCapture = () => true;
+    handle.releasePointerCapture = vi.fn();
+
+    handle.dispatchEvent(
+      new PointerEvent("pointerdown", { button: 0, clientY: 10, pointerId: 1, bubbles: true }),
+    );
+    handle.dispatchEvent(
+      new PointerEvent("pointermove", { clientY: 55, pointerId: 1, bubbles: true }),
+    );
+    handle.dispatchEvent(
+      new PointerEvent("pointerup", { clientY: 55, pointerId: 1, bubbles: true }),
+    );
+
+    await vi.waitFor(() => {
+      expect(rows()[0]?.textContent).toContain("Second tab");
+      expect(rows()[1]?.textContent).toContain("First tab");
+    });
+    expect(browser.storage.local.set).toHaveBeenCalledWith({ todoOrder: [2, 1] });
 
     render(null, root);
     root.remove();
@@ -1915,8 +1983,8 @@ describe("SearchApp", () => {
     // Like a normal current tab, the current issue stays in its list too.
     const entries = [...root.querySelectorAll("[data-testid='zen-issue-entry']")];
     expect(entries.map((entry) => entry.textContent)).toEqual([
-      expect.stringContaining("Newer issue"),
       expect.stringContaining("Older issue"),
+      expect.stringContaining("Newer issue"),
     ]);
     // And it is marked there, so it can be found with every folder open.
     const current = [...root.querySelectorAll("[data-testid='zen-issue-entry'][data-current]")];
@@ -2481,7 +2549,7 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     expect(button().textContent).toBe("Collapse all");
     expect(button().previousElementSibling?.classList.contains("zs-head-rule")).toBe(true);
     expect(button().nextElementSibling?.classList.contains("zs-head-rule")).toBe(true);
-    expect(button().closest(".zs-head")?.textContent).toContain("Recent");
+    expect(button().closest(".zs-head")?.textContent).toContain("Ascending");
 
     button().click();
     await vi.waitFor(() => expect(button().textContent).toBe("Expand all"));

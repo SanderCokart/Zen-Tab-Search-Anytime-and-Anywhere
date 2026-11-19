@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { hostname } from "@/features/search/ui/lib/format";
 import { NowTag } from "@/features/search/ui/components/NowTag";
@@ -59,6 +59,7 @@ export function TodoNavigator({
   onClear,
   onOpenStatusMenu,
   onContextMenu,
+  onReorder,
 }: {
   /** The rows to list: every todo, or the ones an "@" query matches. */
   tabs: TabInfo[];
@@ -77,11 +78,37 @@ export function TodoNavigator({
   /** Opens the status menu under the button at `anchor`. */
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
   onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
+  /** Drag-reorder among `tabs`. Left out while a query is filtering the list. */
+  onReorder?: (from: number, to: number) => void;
 }) {
   // The omnibar is a <browser> in Zen's chrome, not a tab, so `window.confirm`
   // has nowhere to show and returns false: the confirmation lives in the column.
   const [pendingClear, setPendingClear] = useState<TodoClearFilter | null>(null);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const draggingIndexRef = useRef<number | null>(null);
+  const rowEls = useRef(new Map<number, HTMLElement>());
+  const prevTops = useRef(new Map<number, number>());
   const clearTooltip = useTooltip();
+
+  useLayoutEffect(() => {
+    const next = new Map<number, number>();
+    for (const [id, element] of rowEls.current) {
+      const top = element.getBoundingClientRect().top;
+      const previous = prevTops.current.get(id);
+      if (previous !== undefined) {
+        const delta = previous - top;
+        if (Math.abs(delta) > 1) {
+          element.style.transition = "none";
+          element.style.transform = `translateY(${delta}px)`;
+          element.getBoundingClientRect();
+          element.style.transition = "transform 180ms cubic-bezier(0.45, 0, 0.15, 1)";
+          element.style.transform = "";
+        }
+      }
+      next.set(id, top);
+    }
+    prevTops.current = next;
+  }, [tabs]);
   const pendingTabIds =
     pendingClear === null ? [] : todoTabIdsToClear(allTabs, statuses, pendingClear);
   return (
@@ -188,36 +215,116 @@ export function TodoNavigator({
           const selected = selectedIndex === index;
           const tabId = tabBrowserId(tab);
           const light = tabId === undefined ? undefined : statuses.get(tabId);
+          const dragging = draggingIndex === index;
           return (
             <div
               key={tab.id ?? tab.domId ?? tab.url}
               class={cn(
-                "zs-row flex w-full max-w-full min-w-0 shrink-0 flex-col gap-[calc(var(--zen-font-size)*0.43)] rounded-[var(--zen-radius-lg)]",
+                "zs-row relative flex w-full max-w-full min-w-0 shrink-0 flex-col gap-[calc(var(--zen-font-size)*0.43)] rounded-[var(--zen-radius-lg)]",
                 "px-[var(--zen-space-3)] py-[calc(var(--zen-space-3)+var(--zen-todo-pad))]",
                 statusRowClass(light, selected),
+                dragging && "opacity-70",
               )}
+              data-testid="zen-todo-row"
               data-status-light={light}
               data-todo-selected={selected ? "true" : undefined}
               data-current={tab.active === true ? "true" : undefined}
               ref={(element) => {
+                const id = tabBrowserId(tab);
+                if (element && id !== undefined) {
+                  rowEls.current.set(id, element);
+                } else if (id !== undefined) {
+                  rowEls.current.delete(id);
+                }
                 if (selected) {
                   element?.scrollIntoView({ block: "nearest", inline: "nearest" });
                 }
               }}
               onContextMenu={(event) => onContextMenu(tab, event)}
             >
-              <button
-                type="button"
-                // Stretched over the whole block, so the space line below clicks through too.
-                class="zs-row-title flex w-full cursor-pointer items-center gap-[var(--zen-space-2)] border-0 bg-transparent p-0 text-left text-inherit after:absolute after:inset-0 after:rounded-[inherit] after:content-['']"
-                onClick={() => onActivate(tab)}
-                onFocus={() => onSelect(index)}
-              >
-                <span class={cn("min-w-0 flex-1", entryTextClass(truncate))}>
-                  {formatTabDisplayTitle(tab)}
-                </span>
-                {tab.active === true && <NowTag />}
-              </button>
+              <div class="relative z-10 flex min-w-0 items-center gap-[var(--zen-space-2)]">
+                {onReorder && (
+                  <button
+                    type="button"
+                    class="text-zen-subtle hover:text-zen-text relative z-20 shrink-0 cursor-grab border-0 bg-transparent p-[var(--zen-space-1)] active:cursor-grabbing"
+                    aria-label="Reorder todo"
+                    data-testid="zen-todo-drag"
+                    onPointerDown={(event) => {
+                      if (event.button !== 0) return;
+                      event.preventDefault();
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      draggingIndexRef.current = index;
+                      setDraggingIndex(index);
+                    }}
+                    onPointerMove={(event) => {
+                      const from = draggingIndexRef.current;
+                      if (
+                        from === null ||
+                        !event.currentTarget.hasPointerCapture(event.pointerId)
+                      ) {
+                        return;
+                      }
+                      const rows = [
+                        ...(event.currentTarget
+                          .closest("[data-testid='zen-todo-column']")
+                          ?.querySelectorAll<HTMLElement>("[data-testid='zen-todo-row']") ?? []),
+                      ];
+                      let next = rows.length - 1;
+                      for (let i = 0; i < rows.length; i += 1) {
+                        const rect = rows[i]?.getBoundingClientRect();
+                        if (rect && event.clientY < rect.top + rect.height / 2) {
+                          next = i;
+                          break;
+                        }
+                      }
+                      if (next >= 0 && next !== from) {
+                        onReorder(from, next);
+                        draggingIndexRef.current = next;
+                        setDraggingIndex(next);
+                      }
+                    }}
+                    onPointerUp={(event) => {
+                      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                        event.currentTarget.releasePointerCapture(event.pointerId);
+                      }
+                      draggingIndexRef.current = null;
+                      setDraggingIndex(null);
+                    }}
+                    onPointerCancel={(event) => {
+                      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                        event.currentTarget.releasePointerCapture(event.pointerId);
+                      }
+                      draggingIndexRef.current = null;
+                      setDraggingIndex(null);
+                    }}
+                  >
+                    <svg
+                      class="h-[var(--zen-icon-sm)] w-[var(--zen-icon-sm)]"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <circle cx="9" cy="7" r="1.4" fill="currentColor" />
+                      <circle cx="15" cy="7" r="1.4" fill="currentColor" />
+                      <circle cx="9" cy="12" r="1.4" fill="currentColor" />
+                      <circle cx="15" cy="12" r="1.4" fill="currentColor" />
+                      <circle cx="9" cy="17" r="1.4" fill="currentColor" />
+                      <circle cx="15" cy="17" r="1.4" fill="currentColor" />
+                    </svg>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  // Stretched over the whole block, so the space line below clicks through too.
+                  class="zs-row-title flex min-w-0 flex-1 cursor-pointer items-center gap-[var(--zen-space-2)] border-0 bg-transparent p-0 text-left text-inherit after:absolute after:inset-0 after:rounded-[inherit] after:content-['']"
+                  onClick={() => onActivate(tab)}
+                  onFocus={() => onSelect(index)}
+                >
+                  <span class={cn("min-w-0 flex-1", entryTextClass(truncate))}>
+                    {formatTabDisplayTitle(tab)}
+                  </span>
+                  {tab.active === true && <NowTag />}
+                </button>
+              </div>
               <div class="text-zen-muted relative z-10 flex min-w-0 items-center justify-between gap-[var(--zen-space-2)] font-mono text-[length:var(--zen-text-xs)] tracking-[0.04em]">
                 <span class={cn("min-w-0", entryTextClass(truncate))}>
                   {tab.workspaceName || hostname(tab.url)}

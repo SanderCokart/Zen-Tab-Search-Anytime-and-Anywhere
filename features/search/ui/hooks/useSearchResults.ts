@@ -32,7 +32,7 @@ import {
 } from "@/features/search/model/tab-folder-collapse";
 import type { DisplaySettings } from "@/features/settings/model/display-settings";
 import type { SearchLayout } from "@/features/search/ui/types";
-import { collectTodoTabs } from "@/features/todos/model/todo";
+import { applyTodoOrder, collectTodoTabs } from "@/features/todos/model/todo";
 import type { SpaceInfo, TabInfo, TabTodo } from "@/shared/types";
 
 export interface UseSearchResultsOptions {
@@ -44,6 +44,8 @@ export interface UseSearchResultsOptions {
   layout: SearchLayout;
   query: string;
   forgeSortMode: ForgeIssueSortMode;
+  /** Saved todo-column tab IDs; missing IDs keep tab-list order. */
+  todoOrder?: readonly number[];
   /** Which kinds of issue-navigator entry are listed. */
   forgeKindFilter?: ForgeKindFilter;
   /** Keys of the navigator groups the user collapsed; their entries leave the keyboard order. */
@@ -71,6 +73,7 @@ export function useSearchResults({
   forgeKindFilter = "all",
   forgeCollapsed,
   tabFolderCollapsed,
+  todoOrder = [],
 }: UseSearchResultsOptions) {
   // Essential tabs carry an extension-local name rather than a Zen label.
   const labeledTabs = useMemo(
@@ -128,7 +131,10 @@ export function useSearchResults({
   );
 
   /** Every todo tab, whatever the query; decides whether the column is shown at all. */
-  const allTodoTabs = useMemo(() => collectTodoTabs(labeledTabs, todos), [labeledTabs, todos]);
+  const allTodoTabs = useMemo(
+    () => applyTodoOrder(collectTodoTabs(labeledTabs, todos), todoOrder),
+    [labeledTabs, todoOrder, todos],
+  );
 
   const todoTabs = useMemo(
     () =>

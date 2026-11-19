@@ -17,7 +17,9 @@ import {
   type ForgeIssueSortMode,
 } from "@/features/search/model/ranking";
 import { pluralize } from "@/features/search/model/stats";
+import { moveListItem } from "@/features/todos/model/todo";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
+import { useTodoOrder } from "@/features/todos/ui/useTodoOrder";
 import { TimersDock } from "@/features/timers/ui/TimersDock";
 import {
   TRAFFIC_LIGHT_MENU_SELECTOR,
@@ -130,7 +132,8 @@ export function SearchApp({
   );
 
   const [query, setQuery] = useState(initialQuery);
-  const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("recent");
+  const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("asc");
+  const todoOrder = useTodoOrder();
   const [forgeKindFilter, setForgeKindFilter] = useState<ForgeKindFilter>("all");
   const forgeCollapse = useForgeCollapse();
   const tabFolderCollapse = useStoredCollapse(TAB_FOLDER_COLLAPSED_STORAGE_KEY);
@@ -199,6 +202,7 @@ export function SearchApp({
     forgeKindFilter,
     forgeCollapsed: forgeCollapse.collapsed,
     tabFolderCollapsed: tabFolderCollapse.collapsed,
+    todoOrder: todoOrder.order,
   });
 
   const onTimerFormClose = useCallback(() => setTimerTabId(null), []);
@@ -750,9 +754,9 @@ export function SearchApp({
                     .catch((error) => debugError("Could not open project:", error));
                 }}
                 onSelect={navigation.setSelectedForgeIndex}
-                onToggleSort={() => {
+                onSortChange={(mode) => {
                   sound.play("tick");
-                  setForgeSortMode((current) => (current === "recent" ? "old" : "recent"));
+                  setForgeSortMode(mode);
                   navigation.setSelectedForgeIndex(0);
                 }}
                 onContextMenu={openContextMenu}
@@ -814,6 +818,20 @@ export function SearchApp({
                     }}
                     onOpenStatusMenu={toggleStatusMenu}
                     onContextMenu={openContextMenu}
+                    onReorder={
+                      results.todoNavigatorQuery.active
+                        ? undefined
+                        : (from, to) => {
+                            const ids = results.allTodoTabs.flatMap((tab) => {
+                              const id = tabBrowserId(tab);
+                              return id === undefined ? [] : [id];
+                            });
+                            todoOrder.setOrder(moveListItem(ids, from, to));
+                            if (navigation.selectedTodoIndex === from) {
+                              navigation.setSelectedTodoIndex(to);
+                            }
+                          }
+                    }
                   />
                 )}
                 {showTimersDock && (

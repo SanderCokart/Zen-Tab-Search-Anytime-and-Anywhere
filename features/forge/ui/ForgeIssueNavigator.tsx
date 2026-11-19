@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   FORGE_NAVIGATOR_PREFIXES,
   forgeEntryDisplayTitle,
+  FORGE_ISSUE_SORT_OPTIONS,
   groupForgeIssueEntries,
   type ForgeIssueSortMode,
 } from "@/features/search/model/ranking";
@@ -100,19 +101,19 @@ function OrganizeForgeMenu({
   const [preview, setPreview] = useState<ForgeOrganizeMode | null>(null);
   const [dontAsk, setDontAsk] = useState(false);
   const dontAskRef = useRef(false);
-  const previewTimer = useRef<number>(undefined);
+  const previewTimer = useRef<number | null>(null);
   const disabled = tabCount === 0;
   useCloseOnOutsideClick(open, "[data-testid='zen-organize-forge-wrap']", () => setOpen(false));
 
   const showPreview = (mode: ForgeOrganizeMode) => {
-    window.clearTimeout(previewTimer.current);
+    window.clearTimeout(previewTimer.current ?? undefined);
     previewTimer.current = window.setTimeout(() => setPreview(mode), TOOLTIP_DELAY_MS);
   };
   const hidePreview = () => {
-    window.clearTimeout(previewTimer.current);
+    window.clearTimeout(previewTimer.current ?? undefined);
     setPreview(null);
   };
-  useEffect(() => () => window.clearTimeout(previewTimer.current), []);
+  useEffect(() => () => window.clearTimeout(previewTimer.current ?? undefined), []);
 
   const choose = (mode: ForgeOrganizeMode) => {
     if (confirm) {
@@ -311,7 +312,7 @@ export function ForgeIssueNavigator({
   onActivate,
   onOpenProject,
   onSelect,
-  onToggleSort,
+  onSortChange,
   onContextMenu,
   timers,
   todos,
@@ -351,7 +352,7 @@ export function ForgeIssueNavigator({
   /** Opens the repository homepage for this project. */
   onOpenProject?: (url: string) => void;
   onSelect: (index: number) => void;
-  onToggleSort: () => void;
+  onSortChange: (mode: ForgeIssueSortMode) => void;
   /** Right-click on an entry opens the context menu for its tab. */
   onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
   timers: Map<number, TabTimer>;
@@ -495,13 +496,38 @@ export function ForgeIssueNavigator({
           ) : (
             <span class="zs-head-rule" aria-hidden="true" />
           )}
-          <TooltipButton
-            label="Change issue sorting"
-            class="text-zen-danger shrink-0 cursor-pointer border-0 bg-transparent p-0 font-[inherit] tracking-[inherit] uppercase"
-            onClick={onToggleSort}
-          >
-            {sortMode === "recent" ? "Recent" : "Old"} · {count}
-          </TooltipButton>
+          <span class="text-zen-danger flex shrink-0 items-center gap-[var(--zen-space-1)]">
+            <span class="relative inline-flex items-center">
+              <select
+                class="zs-key text-zen-danger hover:text-zen-text h-[var(--zen-mini-key)] appearance-none py-0 pr-[calc(var(--zen-icon-sm)+var(--zen-space-4))] pl-[var(--zen-space-3)] font-[inherit] text-[length:var(--zen-text-sm)] leading-none tracking-[0.04em] uppercase"
+                aria-label="Change issue sorting"
+                data-testid="zen-forge-sort"
+                value={sortMode}
+                onChange={(event) => onSortChange(event.currentTarget.value as ForgeIssueSortMode)}
+              >
+                {FORGE_ISSUE_SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <svg
+                class="pointer-events-none absolute right-[var(--zen-space-2)] h-[var(--zen-icon-sm)] w-[var(--zen-icon-sm)]"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 9l6 6 6-6"
+                />
+              </svg>
+            </span>
+            <span aria-hidden="true">· {count}</span>
+          </span>
         </div>
         <div class="mb-[var(--zen-space-5)] grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-[var(--zen-space-2)]">
           <Segmented<ForgeKindFilter>
