@@ -1,5 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   FORGE_NAVIGATOR_PREFIXES,
   forgeEntryDisplayTitle,
@@ -25,6 +25,7 @@ import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import {
   countMovableForgeTabs,
   organizeForgeConfirmMessage,
+  organizeForgePreviewTree,
   type ForgeOrganizeMode,
 } from "@/features/forge/model/forge-tab-organize";
 import { forgeProjectHomeUrl, formatForgePlatform } from "@/features/forge/model/forge-label";
@@ -45,7 +46,12 @@ import { CollapseAllButton } from "@/shared/ui/primitives/CollapseAllButton";
 import { TreeNode } from "@/shared/ui/primitives/TreeNode";
 import { Segmented } from "@/shared/ui/primitives/Segmented";
 import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
-import { TooltipLegend, TruncatedTip, useTooltip } from "@/shared/ui/primitives/Tooltip";
+import {
+  TOOLTIP_DELAY_MS,
+  TooltipLegend,
+  TruncatedTip,
+  useTooltip,
+} from "@/shared/ui/primitives/Tooltip";
 
 /** The outlined ISSUE / MR / PR tag; `TAG_CLASS` adds its colour. */
 export const TAG_BASE_CLASS =
@@ -91,10 +97,22 @@ function OrganizeForgeMenu({
 }) {
   const [pending, setPending] = useState<ForgeOrganizeMode | null>(null);
   const [open, setOpen] = useState(false);
+  const [preview, setPreview] = useState<ForgeOrganizeMode | null>(null);
   const [dontAsk, setDontAsk] = useState(false);
   const dontAskRef = useRef(false);
+  const previewTimer = useRef<number>(undefined);
   const disabled = tabCount === 0;
   useCloseOnOutsideClick(open, "[data-testid='zen-organize-forge-wrap']", () => setOpen(false));
+
+  const showPreview = (mode: ForgeOrganizeMode) => {
+    window.clearTimeout(previewTimer.current);
+    previewTimer.current = window.setTimeout(() => setPreview(mode), TOOLTIP_DELAY_MS);
+  };
+  const hidePreview = () => {
+    window.clearTimeout(previewTimer.current);
+    setPreview(null);
+  };
+  useEffect(() => () => window.clearTimeout(previewTimer.current), []);
 
   const choose = (mode: ForgeOrganizeMode) => {
     if (confirm) {
@@ -144,31 +162,54 @@ function OrganizeForgeMenu({
             data-testid="zen-organize-forge-menu"
             role="menu"
             onPointerDown={(event) => event.stopPropagation()}
+            onMouseLeave={hidePreview}
           >
-            <button
-              type="button"
-              role="menuitem"
-              data-testid="zen-organize-forge-tree"
-              class="zs-label text-zen-subtle hover:text-zen-text cursor-pointer border-0 bg-transparent px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-left font-[inherit]"
-              onClick={() => {
-                setOpen(false);
-                choose("tree");
-              }}
-            >
-              As in this list
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              data-testid="zen-organize-forge-by-issue"
-              class="zs-label text-zen-subtle hover:text-zen-text cursor-pointer border-0 bg-transparent px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-left font-[inherit]"
-              onClick={() => {
-                setOpen(false);
-                choose("byIssue");
-              }}
-            >
-              Group with issues
-            </button>
+            {(
+              [
+                {
+                  mode: "tree",
+                  label: "As in this list",
+                  testId: "zen-organize-forge-tree",
+                },
+                {
+                  mode: "byIssue",
+                  label: "Group with issues",
+                  testId: "zen-organize-forge-by-issue",
+                },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.mode}
+                type="button"
+                role="menuitem"
+                data-testid={option.testId}
+                class="zs-label text-zen-subtle hover:text-zen-text cursor-pointer border-0 bg-transparent px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-left font-[inherit]"
+                onMouseEnter={() => showPreview(option.mode)}
+                onFocus={() => showPreview(option.mode)}
+                onBlur={hidePreview}
+                onClick={() => {
+                  hidePreview();
+                  setOpen(false);
+                  choose(option.mode);
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+            {preview && (
+              <div
+                class={cn(
+                  "zs-lcd pointer-events-none absolute top-0 right-full mr-[var(--zen-space-2)]",
+                  "px-[var(--zen-space-3)] py-[var(--zen-space-2)]",
+                )}
+                data-testid="zen-organize-forge-preview"
+                role="tooltip"
+              >
+                <pre class="m-0 font-mono text-[length:var(--zen-text-xs)] leading-snug font-normal tracking-normal whitespace-pre normal-case">
+                  {organizeForgePreviewTree(preview)}
+                </pre>
+              </div>
+            )}
           </div>
         )}
       </span>

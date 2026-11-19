@@ -50,6 +50,31 @@ export function organizeForgeConfirmMessage(mode: ForgeOrganizeMode, tabCount: n
   return `Create folders matching this list and move ${tabs} into them?`;
 }
 
+/** ASCII sketch of the folders that mode creates, for the organize menu hover card. */
+export function organizeForgePreviewTree(mode: ForgeOrganizeMode): string {
+  if (mode === "byIssue") {
+    return [
+      "project",
+      "├─ Issues",
+      "│  └─ issue",
+      "└─ MRs / PRs",
+      "   ├─ #12 Title",
+      "   │  ├─ issue",
+      "   │  └─ MR / PR",
+      "   └─ branch",
+      "      └─ MR / PR",
+    ].join("\n");
+  }
+  return [
+    "project",
+    "├─ Issues",
+    "│  └─ issue",
+    "└─ MRs / PRs",
+    "   └─ branch",
+    "      └─ MR / PR",
+  ].join("\n");
+}
+
 function tabIdsOf(entries: readonly ForgeIssueEntry[]): number[] {
   return entries.flatMap((entry) => {
     const id = movableForgeTabId(entry.tab);

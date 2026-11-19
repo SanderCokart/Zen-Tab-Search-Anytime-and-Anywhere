@@ -2358,6 +2358,38 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     unmount();
   });
 
+  it("previews each organize mode as an ASCII tree on hover", async () => {
+    const { root, unmount } = mountOverlay({ snapshotTabs: forgeSnapshotTabs() });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge']")).not.toBeNull(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge']")!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge-menu']")).not.toBeNull(),
+    );
+
+    const tree = root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge-tree']")!;
+    tree.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector("[data-testid='zen-organize-forge-preview']")?.textContent,
+      ).toContain("└─ branch"),
+    );
+    expect(
+      root.querySelector("[data-testid='zen-organize-forge-preview']")?.textContent,
+    ).not.toContain("#12 Title");
+
+    root
+      .querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge-by-issue']")!
+      .dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector("[data-testid='zen-organize-forge-preview']")?.textContent,
+      ).toContain("#12 Title"),
+    );
+    unmount();
+  });
+
   it("organizes by issue without a prompt when confirmation is off", async () => {
     const { root, sendMessage, unmount } = mountOverlay({
       snapshotTabs: forgeSnapshotTabs(),

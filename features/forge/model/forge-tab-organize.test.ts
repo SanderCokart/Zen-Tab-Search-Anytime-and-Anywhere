@@ -7,6 +7,7 @@ import {
   issueGroupFolderName,
   matchExistingFolder,
   organizeForgeConfirmMessage,
+  organizeForgePreviewTree,
   planForgeTabFolders,
 } from "@/features/forge/model/forge-tab-organize";
 
@@ -244,6 +245,13 @@ describe("folder naming helpers", () => {
     expect(organizeForgeConfirmMessage("byIssue", 3)).toBe(
       "Group issues with their MRs/PRs and move 3 tabs into folders?",
     );
+  });
+
+  it("sketches each organize mode as an ASCII tree", () => {
+    expect(organizeForgePreviewTree("tree")).toContain("└─ branch");
+    expect(organizeForgePreviewTree("tree")).not.toContain("#12");
+    expect(organizeForgePreviewTree("byIssue")).toContain("#12 Title");
+    expect(organizeForgePreviewTree("byIssue")).toContain("├─ issue");
   });
 });
 
