@@ -89,4 +89,41 @@ describe("organizeForgeIssueTabs", () => {
     expect(moveTabsToFolder).not.toHaveBeenCalledWith([2], expect.anything());
     expect(result.tabsMoved).toBe(1);
   });
+
+  it("only rearranges forge tabs inside the clicked folder", async () => {
+    const createFolder = vi.fn(async (name: string) => `id:${name}`);
+    const moveTabsToFolder = vi.fn(async (tabIds: number[]) => tabIds.length);
+    const result = await organizeForgeIssueTabs({
+      workspace: { createFolder, moveTabsToFolder, listFolders: vi.fn(async () => []) },
+      mode: "tree",
+      parentFolderId: "work",
+      tabs: [
+        tab({
+          id: 1,
+          url: "https://gitlab.com/acme/app/-/issues/4",
+          folderId: "work",
+          folderPath: [{ id: "work", name: "Work" }],
+        }),
+        tab({
+          id: 2,
+          url: "https://gitlab.com/acme/app/-/merge_requests/8",
+          forgeTargetBranch: "main",
+          folderId: "work",
+          folderPath: [{ id: "work", name: "Work" }],
+        }),
+        tab({
+          id: 3,
+          url: "https://gitlab.com/acme/other/-/issues/1",
+          folderId: "other",
+        }),
+      ],
+    });
+    expect(createFolder.mock.calls.map((call) => call.slice(0, 4))).toEqual([
+      ["Issues", "work", [], "work"],
+      ["MRs", "work", [], "work"],
+      ["main", "work", [], "id:MRs"],
+    ]);
+    expect(moveTabsToFolder).not.toHaveBeenCalledWith([3], expect.anything());
+    expect(result.tabsMoved).toBe(2);
+  });
 });

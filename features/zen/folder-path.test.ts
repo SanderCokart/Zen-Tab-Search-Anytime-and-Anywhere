@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyFolderPaths, resolveFolderPath } from "@/features/zen/folder-path";
+import { applyFolderPaths, resolveFolderPath, tabBelongsToFolder } from "@/features/zen/folder-path";
 import type { TabInfo } from "@/shared/types";
 
 const docs = { id: "docs", name: "Docs", spaceId: "s", spaceName: "Work", collapsed: false };
@@ -45,6 +45,22 @@ describe("resolveFolderPath", () => {
 
   it("leaves a tab with no folder alone", () => {
     expect(resolveFolderPath({}, [docs, infra])).toEqual([]);
+  });
+});
+
+describe("tabBelongsToFolder", () => {
+  it("matches the leaf folder and any ancestor on the path", () => {
+    const tab = {
+      folderId: "infra",
+      folderPath: [
+        { id: "docs", name: "Docs" },
+        { id: "infra", name: "Infra" },
+      ],
+    };
+    expect(tabBelongsToFolder(tab, "infra")).toBe(true);
+    expect(tabBelongsToFolder(tab, "docs")).toBe(true);
+    expect(tabBelongsToFolder(tab, "other")).toBe(false);
+    expect(tabBelongsToFolder({}, "docs")).toBe(false);
   });
 });
 

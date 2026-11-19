@@ -100,19 +100,19 @@ function OrganizeForgeMenu({
   const [preview, setPreview] = useState<ForgeOrganizeMode | null>(null);
   const [dontAsk, setDontAsk] = useState(false);
   const dontAskRef = useRef(false);
-  const previewTimer = useRef<number>(undefined);
+  const previewTimer = useRef<number | null>(null);
   const disabled = tabCount === 0;
   useCloseOnOutsideClick(open, "[data-testid='zen-organize-forge-wrap']", () => setOpen(false));
 
   const showPreview = (mode: ForgeOrganizeMode) => {
-    window.clearTimeout(previewTimer.current);
+    window.clearTimeout(previewTimer.current ?? undefined);
     previewTimer.current = window.setTimeout(() => setPreview(mode), TOOLTIP_DELAY_MS);
   };
   const hidePreview = () => {
-    window.clearTimeout(previewTimer.current);
+    window.clearTimeout(previewTimer.current ?? undefined);
     setPreview(null);
   };
-  useEffect(() => () => window.clearTimeout(previewTimer.current), []);
+  useEffect(() => () => window.clearTimeout(previewTimer.current ?? undefined), []);
 
   const choose = (mode: ForgeOrganizeMode) => {
     if (confirm) {

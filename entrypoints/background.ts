@@ -114,6 +114,27 @@ export default defineBackground(() => {
     timers: timerService,
     todos: todoService,
     hosts: hostOverrideService,
+    organizeForgeTabs: async (tabId, mode) => {
+      const snapshot = await getSnapshot(tabId);
+      const parentFolderId = snapshot.tabs.find((tab) => tab.id === tabId)?.folderId;
+      if (!parentFolderId) {
+        return;
+      }
+      await organizeForgeIssueTabs({
+        workspace,
+        tabs: snapshot.tabs,
+        mode,
+        parentFolderId,
+        anchorTabId: tabId,
+      });
+    },
+    getTabFolderId: async (tabId) => {
+      try {
+        return (await workspace.getTab(tabId)).folderId;
+      } catch {
+        return undefined;
+      }
+    },
     onChanged: notify,
   });
   registerHostOverrides(hostOverrideService);

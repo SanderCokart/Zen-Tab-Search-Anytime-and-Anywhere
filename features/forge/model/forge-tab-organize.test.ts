@@ -9,6 +9,7 @@ import {
   organizeForgeConfirmMessage,
   organizeForgePreviewTree,
   planForgeTabFolders,
+  plansForParentFolder,
 } from "@/features/forge/model/forge-tab-organize";
 
 function tab(partial: Partial<TabInfo> & Pick<TabInfo, "id" | "url">): TabInfo {
@@ -269,6 +270,40 @@ describe("folder naming helpers", () => {
     );
   });
 
+  it("drops the lone project wrapper when organizing inside a folder", () => {
+    const planned = planForgeTabFolders(
+      entries([
+        tab({
+          id: 1,
+          url: "https://gitlab.com/acme/app/-/issues/4",
+          folderId: "work",
+        }),
+        tab({
+          id: 2,
+          url: "https://gitlab.com/acme/app/-/merge_requests/8",
+          forgeTargetBranch: "main",
+          folderId: "work",
+        }),
+      ]),
+      "tree",
+    );
+    expect(plansForParentFolder(planned).map((folder) => folder.name)).toEqual(["Issues", "MRs"]);
+  });
+
+  it("keeps project folders when more than one project is in the parent", () => {
+    const planned = planForgeTabFolders(
+      entries([
+        tab({ id: 1, url: "https://gitlab.com/acme/app/-/issues/4" }),
+        tab({ id: 2, url: "https://gitlab.com/acme/other/-/issues/1" }),
+      ]),
+      "tree",
+    );
+    expect(plansForParentFolder(planned).map((folder) => folder.name).sort()).toEqual([
+      "app",
+      "other",
+    ]);
+  });
+
   it("sketches each organize mode as an ASCII tree", () => {
     expect(organizeForgePreviewTree("tree")).toContain("└─ branch");
     expect(organizeForgePreviewTree("tree")).not.toContain("#12");
@@ -336,6 +371,18 @@ describe("applyForgeFolderPlan", () => {
       [2, { afterTabId: 1 }],
       [3, { afterTabId: 2 }],
     ]);
+  });
+
+  it("creates the tree inside an existing parent folder", async () => {
+    const createFolder = vi.fn(async (name: string) => `new:${name}`);
+    const moveTabsToFolder = vi.fn(async (tabIds: number[]) => tabIds.length);
+    await applyForgeFolderPlan(
+      [{ name: "Issues", spaceId: "work", tabIds: [1], children: [] }],
+      [],
+      { createFolder, moveTabsToFolder },
+      { parentId: "work" },
+    );
+    expect(createFolder).toHaveBeenCalledWith("Issues", "work", [], "work", undefined);
   });
 
   it("does not move a tab that is already in the destination folder", async () => {

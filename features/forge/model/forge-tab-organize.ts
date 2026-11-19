@@ -270,6 +270,22 @@ export function planForgeTabFolders(
   );
 }
 
+/**
+ * When organizing inside an existing folder, a single project's wrapper is the
+ * folder itself, so only its Issues / MRs children are created. Several projects
+ * still get a folder each.
+ */
+export function plansForParentFolder(plans: ForgeFolderPlan[]): ForgeFolderPlan[] {
+  const only = plans[0];
+  if (plans.length === 1 && only) {
+    return only.children.map((child) => ({
+      ...child,
+      spaceId: child.spaceId ?? only.spaceId,
+    }));
+  }
+  return plans;
+}
+
 export function matchExistingFolder(
   folders: readonly Pick<ZenFolderInfo, "id" | "name" | "parentId" | "spaceId">[],
   name: string,
@@ -305,6 +321,8 @@ export async function applyForgeFolderPlan(
     anchorTabId?: number;
     /** Tab id → current folder id; tabs already in the destination are left alone. */
     tabFolders?: ReadonlyMap<number, string | undefined>;
+    /** Create the top-level folders inside this folder instead of at space root. */
+    parentId?: string;
   } = {},
 ): Promise<{ foldersCreated: number; tabsMoved: number }> {
   const known = [...folders];
@@ -364,7 +382,7 @@ export async function applyForgeFolderPlan(
   };
 
   for (const plan of plans) {
-    await applyNode(plan, undefined);
+    await applyNode(plan, options.parentId);
   }
 
   return { foldersCreated, tabsMoved };
