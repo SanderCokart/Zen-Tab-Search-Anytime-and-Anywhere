@@ -3,30 +3,24 @@ import {
   applyForgeFolderPlan,
   countMovableForgeTabs,
   planForgeTabFolders,
-  plansForParentFolder,
   type ForgeOrganizeMode,
 } from "@/features/forge/model/forge-tab-organize";
 import type { WorkspaceAdapter } from "@/features/zen/adapter";
-import { tabBelongsToFolder } from "@/features/zen/folder-path";
 import type { OrganizeForgeIssueTabsResult, TabInfo } from "@/shared/types";
 import { tabBrowserId } from "@/shared/types";
 
 export async function organizeForgeIssueTabs(options: {
-  workspace: Pick<WorkspaceAdapter, "createFolder" | "moveTabsToFolder" | "listFolders"> &
-    Pick<Partial<WorkspaceAdapter>, "moveTab">;
+  workspace: Pick<
+    WorkspaceAdapter,
+    "createFolder" | "moveTabsToFolder" | "listFolders" | "moveTab"
+  >;
   tabs: TabInfo[];
   mode: ForgeOrganizeMode;
   tabIds?: number[];
-  /** Only tabs in this folder (or nested under it); create the tree inside it. */
-  parentFolderId?: string;
   anchorTabId?: number;
 }): Promise<OrganizeForgeIssueTabsResult> {
   const allowed = options.tabIds ? new Set(options.tabIds) : undefined;
-  const parentFolderId = options.parentFolderId;
-  const scopedTabs = parentFolderId
-    ? options.tabs.filter((tab) => tabBelongsToFolder(tab, parentFolderId))
-    : options.tabs;
-  const entries = buildForgeIssueEntries(scopedTabs).filter((entry) => {
+  const entries = buildForgeIssueEntries(options.tabs).filter((entry) => {
     if (!allowed) {
       return true;
     }
@@ -34,8 +28,7 @@ export async function organizeForgeIssueTabs(options: {
     return id !== undefined && allowed.has(id);
   });
   const skipped = entries.length - countMovableForgeTabs(entries);
-  const planned = planForgeTabFolders(entries, options.mode);
-  const plans = parentFolderId ? plansForParentFolder(planned) : planned;
+  const plans = planForgeTabFolders(entries, options.mode);
   if (plans.length === 0) {
     return { foldersCreated: 0, tabsMoved: 0, skipped };
   }
@@ -52,7 +45,6 @@ export async function organizeForgeIssueTabs(options: {
   const applied = await applyForgeFolderPlan(plans, folders, options.workspace, {
     anchorTabId: options.anchorTabId,
     tabFolders,
-    parentId: parentFolderId,
   });
   return { ...applied, skipped };
 }

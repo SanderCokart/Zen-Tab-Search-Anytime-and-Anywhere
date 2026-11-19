@@ -43,17 +43,6 @@ export function resolveFolderPath(
   return walked.reverse();
 }
 
-/** True when the tab sits in `folderId`, or in a folder nested under it. */
-export function tabBelongsToFolder(
-  tab: Pick<TabInfo, "folderId" | "folderPath">,
-  folderId: string,
-): boolean {
-  if (tab.folderId === folderId) {
-    return true;
-  }
-  return tab.folderPath?.some((folder) => folder.id === folderId) === true;
-}
-
 /** Copies each tab with a folder path that includes nested parents. */
 export function applyFolderPaths(tabs: TabInfo[], folders: readonly ZenFolderInfo[]): TabInfo[] {
   if (folders.length === 0) {
