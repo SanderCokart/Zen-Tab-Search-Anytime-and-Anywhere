@@ -124,6 +124,29 @@ const captures: Capture[] = [
     clip: "omnibar",
   },
   {
+    scene: "concept-dev&busy=1",
+    file: "organize-issue-tabs.png",
+    ready: async (page) => {
+      await waitForSearch(page, true);
+      await expect(page.locator("[data-testid='zen-issue-entry']").first()).toBeVisible();
+    },
+    after: async (page) => {
+      await page.locator("[data-testid='zen-organize-forge']").click();
+      await page.locator("[data-testid='zen-organize-forge-by-issue']").hover();
+      await expect(page.locator("[data-testid='zen-organize-forge-preview']")).toBeVisible();
+    },
+    clip: "omnibar",
+  },
+  {
+    scene: "concept-dev&busy=1",
+    file: "todo-reorder.png",
+    ready: async (page) => {
+      await waitForSearch(page, true);
+      await expect(page.locator("[data-testid='zen-todo-row']").nth(3)).toBeVisible();
+    },
+    locator: "[data-testid='zen-todo-column']",
+  },
+  {
     scene: "concept-dev",
     file: "concept-dev.png",
     ready: async (page) => {
