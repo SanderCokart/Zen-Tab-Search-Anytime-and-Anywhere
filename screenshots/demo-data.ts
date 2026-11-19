@@ -189,9 +189,66 @@ export const DEMO_TABS: TabInfo[] = [
   },
 ];
 
-export function demoSnapshot(now = Date.now()): SearchSnapshot {
+/** Extra forge tabs and todos for demos that need a longer list (`?busy=1` in the harness). */
+function busyTab(
+  id: number,
+  customLabel: string,
+  title: string,
+  url: string,
+  color: string,
+  lastOpenedAt: number,
+): TabInfo {
   return {
-    tabs: DEMO_TABS,
+    id,
+    title,
+    customLabel,
+    url,
+    favIconUrl: icon(color),
+    windowId: 1,
+    workspaceId: WORK,
+    workspaceName: "Work",
+    lastOpenedAt,
+  };
+}
+
+const BUSY_TABS: TabInfo[] = [
+  busyTab(
+    11,
+    "ISSUE: #98 - Timers drift after sleep",
+    "Timers drift after sleep",
+    "https://gitlab.com/example/zen-deck/-/issues/98",
+    "#fc6d26",
+    1_700_000_380_000,
+  ),
+  busyTab(
+    12,
+    "ISSUE: #131 - Dark theme contrast",
+    "Dark theme contrast",
+    "https://gitlab.com/example/zen-deck/-/issues/131",
+    "#fc6d26",
+    1_700_000_360_000,
+  ),
+  busyTab(
+    13,
+    "PR: #52 - Todo drag handles",
+    "Todo drag handles",
+    "https://github.com/example/zen-deck/pull/52",
+    "#3b82f6",
+    1_700_000_340_000,
+  ),
+  busyTab(
+    14,
+    "MR: !91 - Fix essential names",
+    "Fix essential names",
+    "https://gitlab.com/example/zen-deck/-/merge_requests/91",
+    "#fc6d26",
+    1_700_000_320_000,
+  ),
+];
+
+export function demoSnapshot(now = Date.now(), { busy = false } = {}): SearchSnapshot {
+  return {
+    tabs: busy ? [...DEMO_TABS, ...BUSY_TABS] : DEMO_TABS,
     spaces: DEMO_SPACES,
     timers: [
       {
@@ -214,6 +271,12 @@ export function demoSnapshot(now = Date.now()): SearchSnapshot {
     todos: [
       { tabId: 2, status: "todo" },
       { tabId: 10, status: "todo" },
+      ...(busy
+        ? [
+            { tabId: 12, status: "todo" as const },
+            { tabId: 13, status: "todo" as const },
+          ]
+        : []),
     ],
     statuses: [
       { tabId: 1, light: "green" },

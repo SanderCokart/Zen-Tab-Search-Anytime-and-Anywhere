@@ -47,7 +47,9 @@ export function installBrowserMock(
   displaySettings: DisplaySettings,
   { updateAvailable = false }: { updateAvailable?: boolean } = {},
 ): void {
-  const snapshot: SearchSnapshot = demoSnapshot();
+  const snapshot: SearchSnapshot = demoSnapshot(Date.now(), {
+    busy: new URLSearchParams(window.location.search).get("busy") === "1",
+  });
   const store: Record<string, unknown> = demoStorage(displaySettings);
   let tabGroups = DEMO_HOST_GROUPS.map((group) => ({ ...group }));
   let globalGroups = DEMO_GLOBAL_HOST_GROUPS.map((group) => ({ ...group }));
