@@ -6,7 +6,11 @@ import {
 } from "@/features/forge/model/forge-collapse";
 import type { ForgeKindFilter } from "@/features/forge/model/forge-filter";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
-import { useForgeCollapse, useStoredCollapse } from "@/features/forge/ui/useForgeCollapse";
+import {
+  useForgeCollapse,
+  useStoredCollapse,
+  type StoredStateCache,
+} from "@/features/forge/ui/useForgeCollapse";
 import {
   collectTabFolderKeys,
   TAB_FOLDER_COLLAPSED_STORAGE_KEY,
@@ -102,7 +106,7 @@ export interface SearchAppProps {
   cache?: SearchSessionCache;
 }
 
-export type SearchSessionCache = SearchSnapshotCache & DisplaySettingsCache;
+export type SearchSessionCache = SearchSnapshotCache & DisplaySettingsCache & StoredStateCache;
 
 export function createSearchSessionCache(): SearchSessionCache {
   return {};
@@ -132,10 +136,10 @@ export function SearchApp({
 
   const [query, setQuery] = useState(initialQuery);
   const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("asc");
-  const todoOrder = useTodoOrder();
+  const todoOrder = useTodoOrder(cache);
   const [forgeKindFilter, setForgeKindFilter] = useState<ForgeKindFilter>("all");
-  const forgeCollapse = useForgeCollapse();
-  const tabFolderCollapse = useStoredCollapse(TAB_FOLDER_COLLAPSED_STORAGE_KEY);
+  const forgeCollapse = useForgeCollapse(cache);
+  const tabFolderCollapse = useStoredCollapse(TAB_FOLDER_COLLAPSED_STORAGE_KEY, cache);
   const [timerTabId, setTimerTabId] = useState<number | null>(null);
   const [showTimers, setShowTimers] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ tab: TabInfo; x: number; y: number } | null>(
@@ -355,7 +359,11 @@ export function SearchApp({
   const overlayAspect = overlayColumns === 3 ? "2/1" : overlayColumns === 2 ? "3/2" : "1/1";
   const overlayOpen = useOverlayEntrance(
     layout === "overlay",
-    settingsLoaded && (setupDone ? snapshotLoaded : true),
+    settingsLoaded &&
+      forgeCollapse.loaded &&
+      tabFolderCollapse.loaded &&
+      todoOrder.loaded &&
+      (setupDone ? snapshotLoaded : true),
   );
 
   const searchWebRef = useRef(() => undefined as void);

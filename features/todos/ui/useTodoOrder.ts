@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import type { StoredStateCache } from "@/features/forge/ui/useForgeCollapse";
 import { debugError } from "@/shared/debug";
 import { parseTodoOrder, TODO_ORDER_STORAGE_KEY } from "@/features/todos/model/todo";
 
@@ -6,17 +7,25 @@ import { parseTodoOrder, TODO_ORDER_STORAGE_KEY } from "@/features/todos/model/t
  * The user's todo-column order, kept in `storage.local`. It is not a setting
  * and is not part of the settings backup: tab IDs only last for a session.
  */
-export function useTodoOrder(): {
+export function useTodoOrder(cache?: StoredStateCache): {
   order: readonly number[];
   setOrder: (next: readonly number[]) => void;
+  loaded: boolean;
 } {
-  const [order, setStored] = useState<number[]>([]);
+  const [order, setStored] = useState<number[]>(
+    () => (cache?.stored?.[TODO_ORDER_STORAGE_KEY] as number[] | undefined) ?? [],
+  );
+  const [loaded, setLoaded] = useState(cache?.stored?.[TODO_ORDER_STORAGE_KEY] !== undefined);
   const orderRef = useRef(order);
 
-  const apply = useCallback((next: number[]) => {
-    orderRef.current = next;
-    setStored(next);
-  }, []);
+  const apply = useCallback(
+    (next: number[]) => {
+      orderRef.current = next;
+      if (cache) (cache.stored ??= {})[TODO_ORDER_STORAGE_KEY] = next;
+      setStored(next);
+    },
+    [cache],
+  );
 
   useEffect(() => {
     let active = true;
@@ -25,7 +34,10 @@ export function useTodoOrder(): {
       .then((stored) => {
         if (active) apply(parseTodoOrder(stored[TODO_ORDER_STORAGE_KEY]));
       })
-      .catch((error) => debugError("Could not read todo order:", error));
+      .catch((error) => debugError("Could not read todo order:", error))
+      .finally(() => {
+        if (active) setLoaded(true);
+      });
 
     const onChanged = (changes: Record<string, { newValue?: unknown }>, area: string) => {
       if (area !== "local" || !(TODO_ORDER_STORAGE_KEY in changes)) return;
@@ -53,5 +65,5 @@ export function useTodoOrder(): {
     [apply],
   );
 
-  return { order, setOrder };
+  return { order, setOrder, loaded };
 }
