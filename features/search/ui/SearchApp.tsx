@@ -17,7 +17,6 @@ import {
   type ForgeIssueSortMode,
 } from "@/features/search/model/ranking";
 import { pluralize } from "@/features/search/model/stats";
-import { moveListItem } from "@/features/todos/model/todo";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
 import { useTodoOrder } from "@/features/todos/ui/useTodoOrder";
 import { TimersDock } from "@/features/timers/ui/TimersDock";
@@ -821,14 +820,14 @@ export function SearchApp({
                     onReorder={
                       results.todoNavigatorQuery.active
                         ? undefined
-                        : (from, to) => {
-                            const ids = results.allTodoTabs.flatMap((tab) => {
-                              const id = tabBrowserId(tab);
-                              return id === undefined ? [] : [id];
-                            });
-                            todoOrder.setOrder(moveListItem(ids, from, to));
-                            if (navigation.selectedTodoIndex === from) {
-                              navigation.setSelectedTodoIndex(to);
+                        : (ids) => {
+                            todoOrder.setOrder(ids);
+                            const selected = todoTabs[navigation.selectedTodoIndex];
+                            const selectedId = selected ? tabBrowserId(selected) : undefined;
+                            if (selectedId === undefined) return;
+                            const nextIndex = ids.indexOf(selectedId);
+                            if (nextIndex >= 0) {
+                              navigation.setSelectedTodoIndex(nextIndex);
                             }
                           }
                     }

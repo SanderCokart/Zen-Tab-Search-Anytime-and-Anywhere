@@ -7,12 +7,67 @@ import type { OmnibarView } from "@/shared/messaging/protocol";
 import type { SpaceInfo, TabInfo, TabStatus, TabTimer, TabTodo } from "@/shared/types";
 
 const play = vi.hoisted(() => vi.fn());
+const motionReorder = vi.hoisted(() => ({
+  onReorder: undefined as ((ids: number[]) => void) | undefined,
+}));
 
 // The real engine is silent in jsdom; this one records which voices are asked for.
 vi.mock("@/shared/ui/sound/engine", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/ui/sound/engine")>()),
   createSoundEngine: () => ({ play, setVolume: vi.fn() }),
 }));
+
+vi.mock("motion/react", async () => {
+  const { h } = await import("preact");
+  return {
+    useDragControls: () => ({ start: vi.fn() }),
+    Reorder: {
+      Group: (props: {
+        children?: unknown;
+        as?: string;
+        axis?: string;
+        values?: number[];
+        onReorder?: (ids: number[]) => void;
+        className?: string;
+        class?: string;
+      }) => {
+        motionReorder.onReorder = props.onReorder;
+        return h(
+          props.as ?? "div",
+          { class: props.class ?? props.className, "data-testid": "zen-todo-list" },
+          props.children as never,
+        );
+      },
+      Item: (props: {
+        children?: unknown;
+        as?: string;
+        value?: unknown;
+        dragListener?: boolean;
+        dragControls?: unknown;
+        whileDrag?: unknown;
+        className?: string;
+        class?: string;
+        "data-testid"?: string;
+        "data-todo-selected"?: string;
+        "data-current"?: string;
+        "data-status-light"?: string;
+        onContextMenu?: (event: MouseEvent) => void;
+      }) =>
+        h(
+          props.as ?? "div",
+          {
+            class: props.class ?? props.className,
+            "data-testid": props["data-testid"],
+            "data-todo-selected": props["data-todo-selected"],
+            "data-current": props["data-current"],
+            "data-status-light": props["data-status-light"],
+            onContextMenu: props.onContextMenu,
+          },
+          props.children as never,
+        ),
+    },
+  };
+});
 
 const tabs: TabInfo[] = [
   {
@@ -1032,7 +1087,7 @@ describe("SearchApp", () => {
     root.remove();
   });
 
-  it("reorders todos from the row handle and remembers the order", async () => {
+  it("reorders todos from Motion Reorder and remembers the order", async () => {
     const { root } = mountSearchApp(
       vi.fn(),
       tabs.map((tab) => ({ ...tab, active: false })),
@@ -1048,46 +1103,12 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(root.querySelectorAll("[data-testid='zen-todo-row']")).toHaveLength(2),
     );
-    const rows = () => [...root.querySelectorAll<HTMLElement>("[data-testid='zen-todo-row']")];
-    expect(rows()[0]?.textContent).toContain("First tab");
-    expect(rows()[1]?.textContent).toContain("Second tab");
-
-    const layout = (element: HTMLElement, top: number) => {
-      element.getBoundingClientRect = () =>
-        ({
-          x: 0,
-          y: top,
-          top,
-          left: 0,
-          right: 100,
-          bottom: top + 40,
-          width: 100,
-          height: 40,
-          toJSON() {
-            return {};
-          },
-        }) as DOMRect;
-    };
-    layout(rows()[0]!, 0);
-    layout(rows()[1]!, 40);
-    const handle = rows()[0]!.querySelector<HTMLButtonElement>("[data-testid='zen-todo-drag']")!;
-    handle.setPointerCapture = vi.fn();
-    handle.hasPointerCapture = () => true;
-    handle.releasePointerCapture = vi.fn();
-
-    handle.dispatchEvent(
-      new PointerEvent("pointerdown", { button: 0, clientY: 10, pointerId: 1, bubbles: true }),
-    );
-    handle.dispatchEvent(
-      new PointerEvent("pointermove", { clientY: 55, pointerId: 1, bubbles: true }),
-    );
-    handle.dispatchEvent(
-      new PointerEvent("pointerup", { clientY: 55, pointerId: 1, bubbles: true }),
-    );
-
+    expect(root.querySelector("[data-testid='zen-todo-drag']")).not.toBeNull();
+    motionReorder.onReorder?.([2, 1]);
     await vi.waitFor(() => {
-      expect(rows()[0]?.textContent).toContain("Second tab");
-      expect(rows()[1]?.textContent).toContain("First tab");
+      const rows = [...root.querySelectorAll("[data-testid='zen-todo-row']")];
+      expect(rows[0]?.textContent).toContain("Second tab");
+      expect(rows[1]?.textContent).toContain("First tab");
     });
     expect(browser.storage.local.set).toHaveBeenCalledWith({ todoOrder: [2, 1] });
 

@@ -11,7 +11,12 @@ export default defineConfig({
   publicDir: false,
   plugins: [preact({ reactAliasesEnabled: false }), tailwindcss()],
   resolve: {
-    alias: { "@": repoRoot },
+    alias: {
+      "@": repoRoot,
+      react: "preact/compat",
+      "react-dom": "preact/compat",
+      "react/jsx-runtime": "preact/jsx-runtime",
+    },
   },
   server: {
     host: "127.0.0.1",
