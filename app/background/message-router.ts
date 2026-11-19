@@ -3,6 +3,8 @@ import {
   type HostOverrideGroup,
   type HostProxyReport,
   type OverlayFolderInfo,
+  type OrganizeForgeIssueTabsResult,
+  type ForgeOrganizeMode,
   type TodoStatus,
   type TrafficLight,
   type UpdateStatus,
@@ -51,6 +53,11 @@ export interface MessageRouterHandlers {
   getFolders(anchorTabId?: number): Promise<OverlayFolderInfo[]>;
   moveTabToFolder(tabId: number, folderId: string): Promise<void>;
   removeTabFromFolder(tabId: number): Promise<void>;
+  organizeForgeIssueTabs(
+    mode: ForgeOrganizeMode,
+    anchorTabId?: number,
+    tabIds?: number[],
+  ): Promise<OrganizeForgeIssueTabsResult>;
   getPinnedUrl(tabId: number): Promise<string>;
   setPinnedUrl(tabId: number, url: string): Promise<void>;
   replacePinnedUrlWithCurrent(tabId: number): Promise<void>;
@@ -197,6 +204,8 @@ function handleParsedRequest(
       return handlers.moveTabToFolder(message.tabId, message.folderId);
     case "removeTabFromFolder":
       return handlers.removeTabFromFolder(message.tabId);
+    case "organizeForgeIssueTabs":
+      return handlers.organizeForgeIssueTabs(message.mode, anchorTabId, message.tabIds);
     case "getPinnedUrl":
       return handlers.getPinnedUrl(message.tabId);
     case "setPinnedUrl":

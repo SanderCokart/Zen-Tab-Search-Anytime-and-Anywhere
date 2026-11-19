@@ -71,6 +71,8 @@ const DEFAULTS = {
   mcp: false,
   /** Dedicated GitHub/GitLab tree column. Requires fullscreen. */
   forgeTree: false,
+  /** Confirm before creating Zen folders from the Issues and requests column. */
+  confirmOrganizeForgeTabs: true,
   /** Host-override header, menus, and proxy UI. */
   hosts: false,
   /** Persistent status bar (MCP link and version). Off, it appears only for an update. */
@@ -236,6 +238,7 @@ const displaySettingsSchema = v.pipe(
       statusColors: boolean(DEFAULTS.statusColors),
       mcp: boolean(DEFAULTS.mcp),
       forgeTree: boolean(DEFAULTS.forgeTree),
+      confirmOrganizeForgeTabs: boolean(DEFAULTS.confirmOrganizeForgeTabs),
       hosts: boolean(DEFAULTS.hosts),
       statusBar: boolean(DEFAULTS.statusBar),
       searchEngine: v.fallback(v.picklist(SEARCH_ENGINE_IDS), DEFAULTS.searchEngine),

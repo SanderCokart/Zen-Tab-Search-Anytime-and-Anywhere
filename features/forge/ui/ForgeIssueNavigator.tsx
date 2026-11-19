@@ -1,5 +1,5 @@
 import type { ComponentChildren } from "preact";
-import { useMemo } from "preact/hooks";
+import { useMemo, useRef, useState } from "preact/hooks";
 import {
   FORGE_NAVIGATOR_PREFIXES,
   forgeEntryDisplayTitle,
@@ -21,6 +21,11 @@ import { tabActionFlags } from "@/features/settings/model/complexity";
 import { formatForgeEntryDate, formatShortAge } from "@/features/search/ui/lib/format";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
+import {
+  countMovableForgeTabs,
+  organizeForgeConfirmMessage,
+  type ForgeOrganizeMode,
+} from "@/features/forge/model/forge-tab-organize";
 import { forgeProjectHomeUrl, formatForgePlatform } from "@/features/forge/model/forge-label";
 import { TimerCountdown } from "@/features/timers/ui/TimerCountdown";
 import { TimerForm } from "@/features/timers/ui/TimerForm";
@@ -51,6 +56,140 @@ export const TAG_CLASS: Record<ForgeRowTag, string> = {
   PR: "border-[color-mix(in_srgb,var(--zs-red)_40%,transparent)] text-zen-danger",
   EPIC: "border-zen-text bg-zen-text text-zen-raised",
 };
+
+function OrganizeForgeMenu({
+  tabCount,
+  confirm,
+  onOrganize,
+  onConfirmChange,
+}: {
+  tabCount: number;
+  confirm: boolean;
+  onOrganize: (mode: ForgeOrganizeMode) => void;
+  onConfirmChange?: (confirm: boolean) => void;
+}) {
+  const [pending, setPending] = useState<ForgeOrganizeMode | null>(null);
+  const [dontAsk, setDontAsk] = useState(false);
+  const dontAskRef = useRef(false);
+  const tooltip = useTooltip();
+  const disabled = tabCount === 0;
+
+  const choose = (mode: ForgeOrganizeMode) => {
+    if (confirm) {
+      dontAskRef.current = false;
+      setDontAsk(false);
+      setPending(mode);
+      return;
+    }
+    onOrganize(mode);
+  };
+
+  const runPending = () => {
+    if (pending === null) {
+      return;
+    }
+    if (dontAskRef.current) {
+      onConfirmChange?.(false);
+    }
+    onOrganize(pending);
+    setPending(null);
+  };
+
+  return (
+    <>
+      <span class="relative inline-flex shrink-0 items-center">
+        <select
+          class="zs-key text-zen-subtle hover:text-zen-text h-[var(--zen-mini-key)] appearance-none py-0 pr-[calc(var(--zen-icon-sm)+var(--zen-space-4))] pl-[var(--zen-space-3)] font-[inherit] text-[length:var(--zen-text-sm)] leading-none tracking-[0.04em] normal-case"
+          aria-label="Organize issue tabs into folders"
+          data-testid="zen-organize-forge"
+          disabled={disabled}
+          value=""
+          onMouseEnter={(event) => tooltip.showAfterPause(event.currentTarget)}
+          onMouseLeave={tooltip.hide}
+          onFocus={(event) => tooltip.show(event.currentTarget)}
+          onBlur={tooltip.hide}
+          onClick={tooltip.hide}
+          onChange={(event) => {
+            const select = event.currentTarget;
+            const mode = select.value as ForgeOrganizeMode;
+            select.value = "";
+            if (mode === "tree" || mode === "byIssue") {
+              choose(mode);
+            }
+          }}
+        >
+          <option value="" disabled>
+            Organize…
+          </option>
+          <option value="tree">As in this list</option>
+          <option value="byIssue">Group with issues</option>
+        </select>
+        <svg
+          class="text-zen-subtle pointer-events-none absolute right-[var(--zen-space-2)] h-[var(--zen-icon-sm)] w-[var(--zen-icon-sm)]"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 9l6 6 6-6"
+          />
+        </svg>
+        {tooltip.anchor && (
+          <TooltipLegend
+            content="Put open issue tabs into matching Zen folders"
+            anchor={tooltip.anchor}
+          />
+        )}
+      </span>
+      {pending !== null && tabCount > 0 && (
+        <div
+          class="zs-well col-span-full flex min-w-0 flex-col gap-[var(--zen-space-2)] rounded-[var(--zs-r-lcd)] p-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]"
+          role="alertdialog"
+          aria-label="Confirm organizing issue tabs"
+          data-testid="zen-organize-forge-confirm"
+        >
+          <span class="min-w-0">{organizeForgeConfirmMessage(pending, tabCount)}</span>
+          <label class="text-zen-subtle flex min-w-0 items-center gap-[var(--zen-space-2)]">
+            <input
+              type="checkbox"
+              class="accent-[var(--zen-text)]"
+              data-testid="zen-organize-forge-dont-ask"
+              checked={dontAsk}
+              onChange={(event) => {
+                dontAskRef.current = event.currentTarget.checked;
+                setDontAsk(event.currentTarget.checked);
+              }}
+            />
+            Don&apos;t ask this again
+          </label>
+          <span class="flex shrink-0 items-center justify-end gap-[var(--zen-space-2)]">
+            <button
+              type="button"
+              class="zs-key zs-key-red px-[var(--zen-space-2)] font-[inherit] text-[length:var(--zen-text-sm)]"
+              data-own-sound=""
+              data-testid="zen-organize-forge-confirm-button"
+              onClick={runPending}
+            >
+              Organize
+            </button>
+            <button
+              type="button"
+              class="text-zen-subtle hover:text-zen-text cursor-pointer border-0 bg-transparent px-[var(--zen-space-1)] font-[inherit] text-[length:var(--zen-text-sm)] hover:underline"
+              data-testid="zen-organize-forge-cancel-button"
+              onClick={() => setPending(null)}
+            >
+              Cancel
+            </button>
+          </span>
+        </div>
+      )}
+    </>
+  );
+}
 
 function ForgeDateHint({
   label,
@@ -114,6 +253,8 @@ export function ForgeIssueNavigator({
   statusMenuTabId,
   onOpenStatusMenu,
   displaySettings,
+  onOrganize,
+  onConfirmOrganizeChange,
 }: {
   entries: ForgeIssueEntry[];
   truncate: boolean;
@@ -155,6 +296,8 @@ export function ForgeIssueNavigator({
   statusMenuTabId: number | null;
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
   displaySettings?: DisplaySettings;
+  onOrganize?: (mode: ForgeOrganizeMode) => void;
+  onConfirmOrganizeChange?: (confirm: boolean) => void;
 }) {
   const providers = useMemo(() => groupForgeIssueEntries(entries, sortMode), [entries, sortMode]);
   // Index once instead of an indexOf scan per rendered row.
@@ -288,17 +431,27 @@ export function ForgeIssueNavigator({
             {sortMode === "recent" ? "Recent" : "Old"} · {count}
           </TooltipButton>
         </div>
-        <Segmented<ForgeKindFilter>
-          class="mb-[var(--zen-space-5)]"
-          label="Show"
-          value={kindFilter}
-          onChange={onKindFilterChange}
-          options={[
-            { value: "all", label: "All", count: kindCounts.all },
-            { value: "issues", label: "Issues", count: kindCounts.issues },
-            { value: "requests", label: requestsLabel, count: kindCounts.requests },
-          ]}
-        />
+        <div class="mb-[var(--zen-space-5)] grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-[var(--zen-space-2)]">
+          <Segmented<ForgeKindFilter>
+            class="min-w-0"
+            label="Show"
+            value={kindFilter}
+            onChange={onKindFilterChange}
+            options={[
+              { value: "all", label: "All", count: kindCounts.all },
+              { value: "issues", label: "Issues", count: kindCounts.issues },
+              { value: "requests", label: requestsLabel, count: kindCounts.requests },
+            ]}
+          />
+          {onOrganize && (
+            <OrganizeForgeMenu
+              tabCount={countMovableForgeTabs(entries)}
+              confirm={displaySettings?.confirmOrganizeForgeTabs !== false}
+              onOrganize={onOrganize}
+              onConfirmChange={onConfirmOrganizeChange}
+            />
+          )}
+        </div>
         <div class="zen-scroll min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
           {providers.length === 0 ? (
             <p class="text-zen-muted m-0 py-[var(--zen-space-3)] text-center text-[length:var(--zen-text-sm)]">

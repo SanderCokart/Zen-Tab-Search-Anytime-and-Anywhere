@@ -32,6 +32,20 @@ describe("parseExtensionRequest", () => {
     });
     expect(() => parseExtensionRequest({ type: "openUrl", url: "javascript:alert(1)" })).toThrow();
   });
+
+  it("accepts organizeForgeIssueTabs modes", () => {
+    expect(parseExtensionRequest({ type: "organizeForgeIssueTabs", mode: "tree" })).toEqual({
+      type: "organizeForgeIssueTabs",
+      mode: "tree",
+    });
+    expect(parseExtensionRequest({ type: "organizeForgeIssueTabs", mode: "byIssue" })).toEqual({
+      type: "organizeForgeIssueTabs",
+      mode: "byIssue",
+    });
+    expect(() =>
+      parseExtensionRequest({ type: "organizeForgeIssueTabs", mode: "nested" }),
+    ).toThrow();
+  });
 });
 
 describe("parseExtensionSuccess", () => {

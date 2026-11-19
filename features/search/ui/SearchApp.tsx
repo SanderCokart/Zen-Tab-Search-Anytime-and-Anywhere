@@ -76,6 +76,7 @@ import {
   tabMatchesForgeProjectHome,
   type ForgeIssueEntry,
 } from "@/features/forge/model/forge-label";
+import type { ForgeOrganizeMode } from "@/features/forge/model/forge-tab-organize";
 import { cn } from "@/shared/ui/cn";
 import { CollapseAllButton } from "@/shared/ui/primitives/CollapseAllButton";
 import { Led } from "@/shared/ui/primitives/Led";
@@ -345,10 +346,7 @@ export function SearchApp({
   // Fullscreen has room for the soonest LCD and the next two. Spotlight keeps
   // timers behind the header key so the card does not grow a third pane.
   const showTimersDock =
-    layout === "overlay" &&
-    displaySettings.fullscreen &&
-    displaySettings.timers &&
-    timers.size > 0;
+    layout === "overlay" && displaySettings.fullscreen && displaySettings.timers && timers.size > 0;
   const showRightColumn = showTodoColumn || showTimersDock;
   const overlayColumns = 1 + (showForgeColumn ? 1 : 0) + (showRightColumn ? 1 : 0);
   const overlayAspect = overlayColumns === 3 ? "2/1" : overlayColumns === 2 ? "3/2" : "1/1";
@@ -770,6 +768,23 @@ export function SearchApp({
                 statusMenuTabId={statusMenu?.tabId ?? null}
                 onOpenStatusMenu={toggleStatusMenu}
                 displaySettings={displaySettings}
+                onOrganize={(mode: ForgeOrganizeMode) => {
+                  sound.play("tick");
+                  const tabIds = results.listedForgeIssueEntries.flatMap((entry) => {
+                    const id = tabBrowserId(entry.tab);
+                    return id === undefined ? [] : [id];
+                  });
+                  void sendExtensionMessage({ type: "organizeForgeIssueTabs", mode, tabIds }).catch(
+                    (error) => debugError("Could not organize issue tabs:", error),
+                  );
+                }}
+                onConfirmOrganizeChange={(confirm) => {
+                  const next = { ...displaySettings, confirmOrganizeForgeTabs: confirm };
+                  setDisplaySettings(next);
+                  void saveDisplaySettings(next).catch((error) =>
+                    debugError("Could not save organize confirmation:", error),
+                  );
+                }}
               />
             )}
             {layout === "overlay" && showRightColumn && (

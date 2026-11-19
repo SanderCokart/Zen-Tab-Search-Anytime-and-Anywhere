@@ -617,6 +617,19 @@ export function DisplaySettingsApp() {
                     </span>
                   </Hint>
                 </Switch>
+                <Switch
+                  class={cn(!settings.detectForgeIssues && "opacity-50")}
+                  data-testid="zen-confirmOrganizeForgeTabs"
+                  checked={settings.confirmOrganizeForgeTabs}
+                  disabled={!loaded || !settings.detectForgeIssues}
+                  onChange={(confirmOrganizeForgeTabs) =>
+                    updateSettings({ confirmOrganizeForgeTabs })
+                  }
+                >
+                  <Hint text="Ask before the Issues and requests column creates Zen folders and moves tabs into them. Uncheck, or choose Don't ask this again on that prompt, to skip it.">
+                    <span class={monoLabelClass}>Confirm before organizing issue tabs</span>
+                  </Hint>
+                </Switch>
               </div>
             </Module>
 

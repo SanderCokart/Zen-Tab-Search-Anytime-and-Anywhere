@@ -7,6 +7,7 @@ import {
   forgeProjectHomeUrl,
   forgeTitleIncludesRefId,
   parseForgeUrl,
+  relatedIssueIdFromLabel,
   tabMatchesForgeProjectHome,
 } from "@/features/forge/model/forge-label";
 
@@ -75,9 +76,7 @@ describe("forgeProjectHomeUrl", () => {
       forgeProjectHomeUrl(parseForgeUrl("https://github.com/SanderCokart/Zen-Deck/pull/1")!),
     ).toBe("https://github.com/SanderCokart/Zen-Deck");
     expect(
-      forgeProjectHomeUrl(
-        parseForgeUrl("https://gitlab.com/gitlab-org/quality/app/-/issues/12")!,
-      ),
+      forgeProjectHomeUrl(parseForgeUrl("https://gitlab.com/gitlab-org/quality/app/-/issues/12")!),
     ).toBe("https://gitlab.com/gitlab-org/quality/app");
   });
 });
@@ -90,7 +89,10 @@ describe("tabMatchesForgeProjectHome", () => {
       true,
     );
     expect(
-      tabMatchesForgeProjectHome("https://github.com/SanderCokart/Zen-Deck?tab=readme-ov-file", home),
+      tabMatchesForgeProjectHome(
+        "https://github.com/SanderCokart/Zen-Deck?tab=readme-ov-file",
+        home,
+      ),
     ).toBe(true);
     expect(
       tabMatchesForgeProjectHome("https://github.com/SanderCokart/Zen-Deck/pull/1", home),
@@ -104,6 +106,15 @@ describe("forgeTitleIncludesRefId", () => {
     expect(forgeTitleIncludesRefId("ISSUE: #383 SalesPOS homepage", "383")).toBe(true);
     expect(forgeTitleIncludesRefId("Fix search", "42")).toBe(false);
     expect(forgeTitleIncludesRefId("Issue 421", "42")).toBe(false);
+  });
+});
+
+describe("relatedIssueIdFromLabel", () => {
+  it("reads the issue id from an MR or PR label prefix", () => {
+    expect(relatedIssueIdFromLabel("MR: #4 - !8 - Login", "8")).toBe("4");
+    expect(relatedIssueIdFromLabel("PR: #4 - !8 - Login", "8")).toBe("4");
+    expect(relatedIssueIdFromLabel("MR: !8 - Login", "8")).toBeUndefined();
+    expect(relatedIssueIdFromLabel("ISSUE: #4 - Login", "4")).toBeUndefined();
   });
 });
 

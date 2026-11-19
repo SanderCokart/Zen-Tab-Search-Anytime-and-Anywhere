@@ -60,6 +60,11 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
     getFolders: vi.fn(async () => []),
     moveTabToFolder: vi.fn(async () => undefined),
     removeTabFromFolder: vi.fn(async () => undefined),
+    organizeForgeIssueTabs: vi.fn(async () => ({
+      foldersCreated: 0,
+      tabsMoved: 0,
+      skipped: 0,
+    })),
     getPinnedUrl: vi.fn(async () => "https://example.com"),
     setPinnedUrl: vi.fn(async () => undefined),
     replacePinnedUrlWithCurrent: vi.fn(async () => undefined),
@@ -267,6 +272,10 @@ describe("dispatchExtensionMessage", () => {
       tabId: 4,
       folderId: "docs",
     });
+    const organize = dispatchExtensionMessage(api, {
+      type: "organizeForgeIssueTabs",
+      mode: "tree",
+    });
     const replace = dispatchExtensionMessage(api, {
       type: "replacePinnedUrlWithCurrent",
       tabId: 4,
@@ -278,15 +287,24 @@ describe("dispatchExtensionMessage", () => {
       !folders.async ||
       !move.handled ||
       !move.async ||
+      !organize.handled ||
+      !organize.async ||
       !replace.handled ||
       !replace.async
     ) {
       throw new Error("expected async dispatch");
     }
-    await Promise.all([close.promise, folders.promise, move.promise, replace.promise]);
+    await Promise.all([
+      close.promise,
+      folders.promise,
+      move.promise,
+      organize.promise,
+      replace.promise,
+    ]);
     expect(api.closeTab).toHaveBeenCalledWith(4);
     expect(api.getFolders).toHaveBeenCalled();
     expect(api.moveTabToFolder).toHaveBeenCalledWith(4, "docs");
+    expect(api.organizeForgeIssueTabs).toHaveBeenCalledWith("tree", undefined, undefined);
     expect(api.replacePinnedUrlWithCurrent).toHaveBeenCalledWith(4);
   });
 

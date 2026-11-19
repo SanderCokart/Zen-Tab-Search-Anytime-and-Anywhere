@@ -62,6 +62,9 @@ function mountSearchApp(
     if (message.type === "getFolders") {
       return [{ id: "docs", name: "Docs", spaceId: "s", spaceName: "Work", collapsed: false }];
     }
+    if (message.type === "organizeForgeIssueTabs") {
+      return { foldersCreated: 1, tabsMoved: 1, skipped: 0 };
+    }
     if (message.type === "getPinnedUrl") {
       return snapshotTabs.find((tab) => tab.id === message.tabId)?.url ?? "https://example.com/";
     }
@@ -709,9 +712,7 @@ describe("SearchApp", () => {
       }),
     );
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(sendMessage).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: "openUrl" }),
-    );
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "openUrl" }));
     render(null, root);
     root.remove();
   });
@@ -2200,11 +2201,28 @@ function mountOverlay({
   stored?: Record<string, unknown>;
 }) {
   const set = vi.fn(async (_items: Record<string, unknown>) => undefined);
-  const sendMessage = vi.fn(async ({ type }: { type: string }) =>
-    type === "getSnapshot"
-      ? { tabs: snapshotTabs, spaces: [], timers, todos, statuses: [] }
-      : undefined,
-  );
+  const sendMessage = vi.fn(async ({ type }: { type: string }) => {
+    if (type === "getSnapshot") {
+      return { tabs: snapshotTabs, spaces: [], timers, todos, statuses: [] };
+    }
+    if (type === "organizeForgeIssueTabs") {
+      return { foldersCreated: 1, tabsMoved: snapshotTabs.length, skipped: 0 };
+    }
+    if (type === "getUpdateStatus") {
+      return {
+        currentVersion: "4.0.0",
+        latest: null,
+        updateAvailable: false,
+        demo: false,
+        canInstall: true,
+        checkedAt: null,
+      };
+    }
+    if (type === "getBridgeStatus") {
+      return { connected: false };
+    }
+    return undefined;
+  });
   Object.assign(globalThis, {
     browser: {
       runtime: {
@@ -2296,6 +2314,70 @@ function folder(root: HTMLElement, label: string) {
 
 describe("SearchApp issue filter, accordions, timers dock and sound", () => {
   beforeEach(() => play.mockClear());
+
+  it("confirms organizing tabs into folders and can skip the prompt", async () => {
+    const { root, sendMessage, set, unmount } = mountOverlay({
+      snapshotTabs: forgeSnapshotTabs(),
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge']")).not.toBeNull(),
+    );
+
+    const select = root.querySelector<HTMLSelectElement>("[data-testid='zen-organize-forge']")!;
+    select.value = "tree";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge-confirm']")).not.toBeNull(),
+    );
+    expect(root.textContent).toContain("Create folders matching this list");
+
+    const skip = root.querySelector<HTMLInputElement>(
+      "[data-testid='zen-organize-forge-dont-ask']",
+    )!;
+    skip.checked = true;
+    skip.dispatchEvent(new Event("change", { bubbles: true }));
+    root
+      .querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge-confirm-button']")!
+      .click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "organizeForgeIssueTabs",
+        mode: "tree",
+        tabIds: expect.any(Array),
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          displaySettings: expect.objectContaining({ confirmOrganizeForgeTabs: false }),
+        }),
+      ),
+    );
+    unmount();
+  });
+
+  it("organizes by issue without a prompt when confirmation is off", async () => {
+    const { root, sendMessage, unmount } = mountOverlay({
+      snapshotTabs: forgeSnapshotTabs(),
+      displaySettings: { confirmOrganizeForgeTabs: false },
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge']")).not.toBeNull(),
+    );
+
+    const select = root.querySelector<HTMLSelectElement>("[data-testid='zen-organize-forge']")!;
+    select.value = "byIssue";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "organizeForgeIssueTabs",
+        mode: "byIssue",
+        tabIds: expect.any(Array),
+      }),
+    );
+    expect(root.querySelector("[data-testid='zen-organize-forge-confirm']")).toBeNull();
+    unmount();
+  });
 
   it("narrows the navigator to issues and shows the counts", async () => {
     const { root, unmount } = mountOverlay({ snapshotTabs: forgeSnapshotTabs() });

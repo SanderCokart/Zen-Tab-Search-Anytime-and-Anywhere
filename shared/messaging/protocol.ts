@@ -174,6 +174,14 @@ export const overlayFolderInfoSchema = v.object({
   collapsed: v.fallback(v.boolean(), false),
 });
 
+export const forgeOrganizeModeSchema = v.picklist(["tree", "byIssue"]);
+
+export const organizeForgeIssueTabsResultSchema = v.object({
+  foldersCreated: v.pipe(v.number(), v.integer(), v.minValue(0)),
+  tabsMoved: v.pipe(v.number(), v.integer(), v.minValue(0)),
+  skipped: v.pipe(v.number(), v.integer(), v.minValue(0)),
+});
+
 export const errorResponseSchema = v.object({
   error: v.string(),
 });
@@ -321,6 +329,12 @@ export const extensionRequestSchema = v.variant("type", [
     tabId: tabIdSchema,
   }),
   v.object({
+    type: v.literal("organizeForgeIssueTabs"),
+    mode: forgeOrganizeModeSchema,
+    tabIds: v.optional(v.array(tabIdSchema)),
+    anchorTabId: optionalTabIdSchema,
+  }),
+  v.object({
     type: v.literal("getPinnedUrl"),
     tabId: tabIdSchema,
   }),
@@ -447,6 +461,7 @@ export const EXTENSION_REQUEST_TYPES = [
   "getFolders",
   "moveTabToFolder",
   "removeTabFromFolder",
+  "organizeForgeIssueTabs",
   "getPinnedUrl",
   "setPinnedUrl",
   "replacePinnedUrlWithCurrent",
@@ -475,6 +490,8 @@ export type HostProxyReport = v.InferOutput<typeof hostProxyReportSchema>;
 export type LatestRelease = v.InferOutput<typeof latestReleaseSchema>;
 export type UpdateStatus = v.InferOutput<typeof updateStatusSchema>;
 export type BridgeStatus = v.InferOutput<typeof bridgeStatusSchema>;
+export type ForgeOrganizeMode = v.InferOutput<typeof forgeOrganizeModeSchema>;
+export type OrganizeForgeIssueTabsResult = v.InferOutput<typeof organizeForgeIssueTabsResultSchema>;
 
 export type ExtensionRequestType = (typeof EXTENSION_REQUEST_TYPES)[number];
 export type ExtensionRequest = v.InferOutput<typeof extensionRequestSchema>;
@@ -523,6 +540,7 @@ export type ExtensionSuccessMap = {
   getFolders: OverlayFolderInfo[];
   moveTabToFolder: void;
   removeTabFromFolder: void;
+  organizeForgeIssueTabs: OrganizeForgeIssueTabsResult;
   getPinnedUrl: string;
   setPinnedUrl: void;
   replacePinnedUrlWithCurrent: void;
@@ -669,6 +687,8 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
       return undefined as ExtensionSuccessMap[T];
     case "getFolders":
       return v.parse(v.array(overlayFolderInfoSchema), value) as ExtensionSuccessMap[T];
+    case "organizeForgeIssueTabs":
+      return v.parse(organizeForgeIssueTabsResultSchema, value) as ExtensionSuccessMap[T];
     case "getPinnedUrl":
       return v.parse(v.string(), value) as ExtensionSuccessMap[T];
     default: {

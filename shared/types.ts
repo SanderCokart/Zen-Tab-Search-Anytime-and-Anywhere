@@ -21,6 +21,8 @@ export type {
   TrafficLight,
   UpdateStatus,
   BridgeStatus,
+  ForgeOrganizeMode,
+  OrganizeForgeIssueTabsResult,
 } from "@/shared/messaging/protocol";
 
 export type SearchItem = { kind: "tab"; data: TabInfo } | { kind: "space"; data: SpaceInfo };
