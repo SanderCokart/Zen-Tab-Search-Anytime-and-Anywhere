@@ -1,6 +1,5 @@
-import type { ComponentChildren } from "preact";
-import { useState } from "preact/hooks";
-import { Reorder, useDragControls } from "motion/react";
+import { useRef, useState } from "preact/hooks";
+import { Reorder } from "motion/react";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { hostname } from "@/features/search/ui/lib/format";
 import { NowTag } from "@/features/search/ui/components/NowTag";
@@ -48,11 +47,12 @@ function clearOptions(
   );
 }
 
-function todoRowClass(light: TrafficLight | undefined, selected: boolean): string {
+function todoRowClass(light: TrafficLight | undefined, selected: boolean, grab = false): string {
   return cn(
     "zs-row relative flex w-full max-w-full min-w-0 shrink-0 flex-col gap-[calc(var(--zen-font-size)*0.43)] rounded-[var(--zen-radius-lg)]",
     "px-[var(--zen-space-3)] py-[calc(var(--zen-space-3)+var(--zen-todo-pad))]",
     statusRowClass(light, selected),
+    grab && "cursor-grab",
   );
 }
 
@@ -65,7 +65,6 @@ function TodoRowBody({
   onOpenStatusMenu,
   statusMenuTabId,
   statuses,
-  dragHandle,
 }: {
   tab: TabInfo;
   truncate: boolean;
@@ -75,14 +74,12 @@ function TodoRowBody({
   onOpenStatusMenu: (tab: TabInfo, anchor: DOMRect) => void;
   statusMenuTabId: number | null;
   statuses: Map<number, TrafficLight>;
-  dragHandle?: ComponentChildren;
 }) {
   const tabId = tabBrowserId(tab);
   const light = tabId === undefined ? undefined : statuses.get(tabId);
   return (
     <>
       <div class="relative z-10 flex min-w-0 items-center gap-[var(--zen-space-2)]">
-        {dragHandle}
         <button
           type="button"
           class="zs-row-title flex min-w-0 flex-1 cursor-pointer items-center gap-[var(--zen-space-2)] border-0 bg-transparent p-0 text-left text-inherit after:absolute after:inset-0 after:rounded-[inherit] after:content-['']"
@@ -135,6 +132,7 @@ function ReorderTodoRow({
   onContextMenu,
   statusMenuTabId,
   statuses,
+  onDraggingChange,
 }: {
   tab: TabInfo;
   index: number;
@@ -147,18 +145,30 @@ function ReorderTodoRow({
   onContextMenu: (tab: TabInfo, event: MouseEvent) => void;
   statusMenuTabId: number | null;
   statuses: Map<number, TrafficLight>;
+  onDraggingChange: (dragging: boolean) => void;
 }) {
-  const controls = useDragControls();
+  const skipClick = useRef(false);
   const tabId = tabBrowserId(tab);
   const light = tabId === undefined ? undefined : statuses.get(tabId);
   return (
     <Reorder.Item
       as="div"
       value={tabId}
-      dragListener={false}
-      dragControls={controls}
-      whileDrag={{ opacity: 0.7 }}
-      className={todoRowClass(light, selected)}
+      whileDrag={{ opacity: 0.7, userSelect: "none", cursor: "grabbing" }}
+      onPointerDown={(event: PointerEvent) => {
+        if (event.button !== 0) return;
+        window.getSelection()?.removeAllRanges();
+        onDraggingChange(true);
+      }}
+      onPointerUp={() => onDraggingChange(false)}
+      onPointerCancel={() => onDraggingChange(false)}
+      onDragStart={() => {
+        skipClick.current = true;
+        window.getSelection()?.removeAllRanges();
+        onDraggingChange(true);
+      }}
+      onDragEnd={() => onDraggingChange(false)}
+      className={todoRowClass(light, selected, true)}
       data-testid="zen-todo-row"
       data-status-light={light}
       data-todo-selected={selected ? "true" : undefined}
@@ -173,39 +183,18 @@ function ReorderTodoRow({
       <TodoRowBody
         tab={tab}
         truncate={truncate}
-        onActivate={onActivate}
+        onActivate={(next) => {
+          if (skipClick.current) {
+            skipClick.current = false;
+            return;
+          }
+          onActivate(next);
+        }}
         onSelect={() => onSelect(index)}
         onDone={onDone}
         onOpenStatusMenu={onOpenStatusMenu}
         statusMenuTabId={statusMenuTabId}
         statuses={statuses}
-        dragHandle={
-          <div
-            role="button"
-            aria-label="Reorder todo"
-            data-testid="zen-todo-drag"
-            tabIndex={-1}
-            class="text-zen-subtle hover:text-zen-text relative z-20 shrink-0 cursor-grab border-0 bg-transparent p-[var(--zen-space-1)] active:cursor-grabbing"
-            onPointerDown={(event) => {
-              if (event.button !== 0) return;
-              event.preventDefault();
-              controls.start(event);
-            }}
-          >
-            <svg
-              class="h-[var(--zen-icon-sm)] w-[var(--zen-icon-sm)]"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <circle cx="9" cy="7" r="1.4" fill="currentColor" />
-              <circle cx="15" cy="7" r="1.4" fill="currentColor" />
-              <circle cx="9" cy="12" r="1.4" fill="currentColor" />
-              <circle cx="15" cy="12" r="1.4" fill="currentColor" />
-              <circle cx="9" cy="17" r="1.4" fill="currentColor" />
-              <circle cx="15" cy="17" r="1.4" fill="currentColor" />
-            </svg>
-          </div>
-        }
       />
     </Reorder.Item>
   );
@@ -249,6 +238,7 @@ export function TodoNavigator({
   // The omnibar is a <browser> in Zen's chrome, not a tab, so `window.confirm`
   // has nowhere to show and returns false: the confirmation lives in the column.
   const [pendingClear, setPendingClear] = useState<TodoClearFilter | null>(null);
+  const [dragging, setDragging] = useState(false);
   const clearTooltip = useTooltip();
   const pendingTabIds =
     pendingClear === null ? [] : todoTabIdsToClear(allTabs, statuses, pendingClear);
@@ -280,6 +270,7 @@ export function TodoNavigator({
           onContextMenu={onContextMenu}
           statusMenuTabId={statusMenuTabId}
           statuses={statuses}
+          onDraggingChange={setDragging}
         />
       );
     }
@@ -314,8 +305,12 @@ export function TodoNavigator({
 
   return (
     <aside
-      class="zs-card flex min-h-0 min-w-0 flex-1 flex-col p-[var(--zen-space-5)]"
+      class={cn(
+        "zs-card flex min-h-0 min-w-0 flex-1 flex-col p-[var(--zen-space-5)]",
+        dragging && "select-none",
+      )}
       data-testid="zen-todo-column"
+      data-dragging={dragging ? "true" : undefined}
     >
       <div class="zs-head">
         <PrefixHint prefixes={TODO_NAVIGATOR_PREFIXES} column="todos" />
@@ -412,7 +407,7 @@ export function TodoNavigator({
           axis="y"
           values={reorderIds}
           onReorder={onReorder}
-          className={listClass}
+          className={cn(listClass, dragging && "select-none")}
           data-testid="zen-todo-list"
         >
           {rows}

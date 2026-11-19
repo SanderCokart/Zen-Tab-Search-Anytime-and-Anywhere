@@ -20,7 +20,6 @@ vi.mock("@/shared/ui/sound/engine", async (importOriginal) => ({
 vi.mock("motion/react", async () => {
   const { h } = await import("preact");
   return {
-    useDragControls: () => ({ start: vi.fn() }),
     Reorder: {
       Group: (props: {
         children?: unknown;
@@ -42,8 +41,6 @@ vi.mock("motion/react", async () => {
         children?: unknown;
         as?: string;
         value?: unknown;
-        dragListener?: boolean;
-        dragControls?: unknown;
         whileDrag?: unknown;
         className?: string;
         class?: string;
@@ -52,6 +49,9 @@ vi.mock("motion/react", async () => {
         "data-current"?: string;
         "data-status-light"?: string;
         onContextMenu?: (event: MouseEvent) => void;
+        onPointerDown?: (event: PointerEvent) => void;
+        onPointerUp?: () => void;
+        onPointerCancel?: () => void;
       }) =>
         h(
           props.as ?? "div",
@@ -62,6 +62,9 @@ vi.mock("motion/react", async () => {
             "data-current": props["data-current"],
             "data-status-light": props["data-status-light"],
             onContextMenu: props.onContextMenu,
+            onPointerDown: props.onPointerDown,
+            onPointerUp: props.onPointerUp,
+            onPointerCancel: props.onPointerCancel,
           },
           props.children as never,
         ),
@@ -1103,7 +1106,14 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(root.querySelectorAll("[data-testid='zen-todo-row']")).toHaveLength(2),
     );
-    expect(root.querySelector("[data-testid='zen-todo-drag']")).not.toBeNull();
+    expect(root.querySelector("[data-testid='zen-todo-drag']")).toBeNull();
+    const row = root.querySelector("[data-testid='zen-todo-row']")!;
+    row.dispatchEvent(new PointerEvent("pointerdown", { button: 0, pointerId: 1, bubbles: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-column']")?.className).toContain(
+        "select-none",
+      ),
+    );
     motionReorder.onReorder?.([2, 1]);
     await vi.waitFor(() => {
       const rows = [...root.querySelectorAll("[data-testid='zen-todo-row']")];
