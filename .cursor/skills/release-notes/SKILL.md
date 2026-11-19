@@ -34,6 +34,10 @@ One visual per highlight, plus one hero image under the Highlights list. Use the
 - Output lands in `docs/screenshots/` (light) and `docs/screenshots/dark/` (dark). Release notes use the **dark** variants. Use `highlight()` in `capture.spec.ts` to outline a control that is hard to find.
 
 **GIF** (when the feature is motion: typing, swapping, tooltips printing, dials, folding). Prefer GIF over MP4, because GitHub release bodies render GIFs inline and do not render `<video>` from repo URLs.
+Use `scripts/record-gif.mjs`: add a flow to `FLOWS`, run `node scripts/record-gif.mjs <name>`. It starts the harness, records, trims the blank lead-in and writes `docs/gifs/<name>.gif`. Append `?busy=1` to a scene (the script already does) for a longer demo list of forge tabs and todos. Then check frames:
+`ffmpeg -i x.gif -vf "fps=1/1.2,scale=480:-1,tile=3x2" -frames:v 1 sheet.png` and read the sheet.
+
+What the script does, if you need a one-off:
 1. Record the harness with Playwright (`recordVideo: { dir, size: { width: 960, height: 600 } }`, dark colour scheme), drive it with real `page.keyboard`/`click` calls and `waitForTimeout` pauses so the result is readable. Aim for 3 to 8 seconds.
 2. Convert with ffmpeg (on PATH):
 
