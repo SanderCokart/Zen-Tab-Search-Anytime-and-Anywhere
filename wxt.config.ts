@@ -153,5 +153,14 @@ export default defineConfig({
   vite: () => ({
     envPrefix: ["VITE_", "WXT_"],
     plugins: [preact({ reactAliasesEnabled: false }), tailwindcss()],
+    // Motion's Reorder lives in `motion/react` and imports `react`. Preact is
+    // not supported; this alias is the documented compat path.
+    resolve: {
+      alias: {
+        react: "preact/compat",
+        "react-dom": "preact/compat",
+        "react/jsx-runtime": "preact/jsx-runtime",
+      },
+    },
   }),
 });

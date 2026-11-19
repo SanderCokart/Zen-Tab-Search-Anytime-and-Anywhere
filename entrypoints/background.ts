@@ -34,6 +34,7 @@ import { createTabQuery } from "@/features/zen/tabs-query";
 import { createTabSwitcher } from "@/features/zen/tabs-switch";
 import { createTimerService } from "@/features/timers/background/timer-service";
 import { createZenWorkspaceAdapter } from "@/features/zen/adapter";
+import { organizeForgeIssueTabs } from "@/features/forge/background/forge-tab-organize-service";
 import { logZenDebugInfo, warmUpZenTabsApi } from "@/features/zen/debug";
 import { isAllowedTimerEnd } from "@/features/timers/model/timer";
 import { isUsableTabId } from "@/shared/types";
@@ -321,6 +322,18 @@ export default defineBackground(() => {
     removeTabFromFolder: async (tabId) => {
       await workspace.removeTabsFromFolder([tabId]);
       notify();
+    },
+    organizeForgeIssueTabs: async (mode, anchorTabId, tabIds) => {
+      const snapshot = await getSnapshot(anchorTabId);
+      const result = await organizeForgeIssueTabs({
+        workspace,
+        tabs: snapshot.tabs,
+        mode,
+        tabIds,
+        anchorTabId,
+      });
+      notify();
+      return result;
     },
     getPinnedUrl: (tabId) => workspace.getPinnedUrl(tabId),
     setPinnedUrl: async (tabId, url) => {

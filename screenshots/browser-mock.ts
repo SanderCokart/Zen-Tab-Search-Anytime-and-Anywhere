@@ -132,6 +132,8 @@ export function installBrowserMock(
         return undefined;
       case "getFolders":
         return DEMO_FOLDERS;
+      case "organizeForgeIssueTabs":
+        return { foldersCreated: 0, tabsMoved: 0, skipped: 0 };
       case "getPinnedUrl":
         return snapshot.tabs.find((tab) => tab.id === message.tabId)?.url ?? "https://example.com/";
       default: {

@@ -90,7 +90,7 @@ export function useSearchNavigation({
   });
   const [todoSelection, setTodoSelection] = useState<{ query: string; index: number }>({
     query: "",
-    index: 0,
+    index: -1,
   });
   const optionRefs = useRef<Array<HTMLLIElement | null>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -111,8 +111,9 @@ export function useSearchNavigation({
       (Boolean(searchQuery) && bestForgeWordCount > 0 && bestForgeWordCount >= bestTabWordCount));
 
   // With no query, a current tab that is a todo starts highlighted in the todo
-  // column, where it is listed first, rather than in the tab list.
-  const shouldFocusCurrentTodo = canFocusTodos && !query.trim() && todoTabs[0]?.active === true;
+  // column, in its list place, rather than in the tab list.
+  const currentTodoIndex = todoTabs.findIndex((tab) => tab.active === true);
+  const shouldFocusCurrentTodo = canFocusTodos && !query.trim() && currentTodoIndex >= 0;
 
   const userPane = paneOverride?.query === query ? paneOverride.pane : null;
 
@@ -165,7 +166,11 @@ export function useSearchNavigation({
         : 0;
 
   const selectedTodoIndex =
-    todoSelection.query === query ? clampIndex(todoSelection.index, todoTabs.length) : 0;
+    todoSelection.query === query && todoSelection.index >= 0
+      ? clampIndex(todoSelection.index, todoTabs.length)
+      : shouldFocusCurrentTodo
+        ? currentTodoIndex
+        : 0;
 
   const focusForgePane = (index: number) => {
     setPaneOverride({ query, pane: "forge" });

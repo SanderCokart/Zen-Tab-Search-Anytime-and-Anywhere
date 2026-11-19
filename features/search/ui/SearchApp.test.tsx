@@ -7,12 +7,82 @@ import type { OmnibarView } from "@/shared/messaging/protocol";
 import type { SpaceInfo, TabInfo, TabStatus, TabTimer, TabTodo } from "@/shared/types";
 
 const play = vi.hoisted(() => vi.fn());
+const motionReorder = vi.hoisted(() => ({
+  onReorder: undefined as ((ids: number[]) => void) | undefined,
+  dragStart: undefined as ((event: PointerEvent) => void) | undefined,
+}));
 
 // The real engine is silent in jsdom; this one records which voices are asked for.
 vi.mock("@/shared/ui/sound/engine", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/shared/ui/sound/engine")>()),
   createSoundEngine: () => ({ play, setVolume: vi.fn() }),
 }));
+
+vi.mock("motion/react", async () => {
+  const { h } = await import("preact");
+  return {
+    useDragControls: () => ({
+      start: (event: PointerEvent) => motionReorder.dragStart?.(event),
+      cancel: () => undefined,
+      stop: () => undefined,
+    }),
+    Reorder: {
+      Group: (props: {
+        children?: unknown;
+        as?: string;
+        axis?: string;
+        values?: number[];
+        onReorder?: (ids: number[]) => void;
+        className?: string;
+        class?: string;
+      }) => {
+        motionReorder.onReorder = props.onReorder;
+        return h(
+          props.as ?? "div",
+          { class: props.class ?? props.className, "data-testid": "zen-todo-list" },
+          props.children as never,
+        );
+      },
+      Item: (props: {
+        children?: unknown;
+        as?: string;
+        value?: unknown;
+        whileDrag?: unknown;
+        dragListener?: boolean;
+        dragControls?: unknown;
+        className?: string;
+        class?: string;
+        "data-testid"?: string;
+        "data-todo-selected"?: string;
+        "data-current"?: string;
+        "data-status-light"?: string;
+        onContextMenu?: (event: MouseEvent) => void;
+        onPointerDown?: (event: PointerEvent) => void;
+        onPointerMove?: (event: PointerEvent) => void;
+        onPointerUp?: () => void;
+        onPointerCancel?: () => void;
+        onClick?: (event: MouseEvent) => void;
+      }) =>
+        h(
+          props.as ?? "div",
+          {
+            class: props.class ?? props.className,
+            "data-testid": props["data-testid"],
+            "data-todo-selected": props["data-todo-selected"],
+            "data-current": props["data-current"],
+            "data-status-light": props["data-status-light"],
+            onContextMenu: props.onContextMenu,
+            onPointerDown: props.onPointerDown,
+            onPointerMove: props.onPointerMove,
+            onPointerUp: props.onPointerUp,
+            onPointerCancel: props.onPointerCancel,
+            onClick: props.onClick,
+          },
+          props.children as never,
+        ),
+    },
+  };
+});
 
 const tabs: TabInfo[] = [
   {
@@ -61,6 +131,9 @@ function mountSearchApp(
     }
     if (message.type === "getFolders") {
       return [{ id: "docs", name: "Docs", spaceId: "s", spaceName: "Work", collapsed: false }];
+    }
+    if (message.type === "organizeForgeIssueTabs") {
+      return { foldersCreated: 1, tabsMoved: 1, skipped: 0 };
     }
     if (message.type === "getPinnedUrl") {
       return snapshotTabs.find((tab) => tab.id === message.tabId)?.url ?? "https://example.com/";
@@ -640,11 +713,17 @@ describe("SearchApp", () => {
     expect(root.textContent).toContain("#42");
     expect(root.textContent).not.toContain("Merge request #7");
     expect(root.querySelectorAll("[data-testid='zen-search-item']")).toHaveLength(0);
-    await vi.waitFor(() => expect(root.textContent).toContain("Recent"));
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLSelectElement>("[data-testid='zen-forge-sort']")?.value).toBe(
+        "asc",
+      ),
+    );
     expect(root.querySelector("span[aria-label^='Last opened:']")).not.toBeNull();
     play.mockClear();
-    root.querySelector<HTMLButtonElement>("button[aria-label='Change issue sorting']")?.click();
-    await vi.waitFor(() => expect(root.textContent).toContain("Old"));
+    const sort = root.querySelector<HTMLSelectElement>("[data-testid='zen-forge-sort']")!;
+    sort.value = "old";
+    sort.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() => expect(sort.value).toBe("old"));
     expect(play).toHaveBeenCalledWith("tick");
 
     const input = root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")!;
@@ -709,9 +788,7 @@ describe("SearchApp", () => {
       }),
     );
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(sendMessage).not.toHaveBeenCalledWith(
-      expect.objectContaining({ type: "openUrl" }),
-    );
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "openUrl" }));
     render(null, root);
     root.remove();
   });
@@ -971,7 +1048,7 @@ describe("SearchApp", () => {
     root.remove();
   });
 
-  it("lists the current tab first in the todo column and highlights it there", async () => {
+  it("keeps todo order and highlights the current tab in its place", async () => {
     const { root, onClose, sendMessage } = mountSearchApp(
       vi.fn(),
       [
@@ -993,12 +1070,11 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(root.querySelector("[data-todo-selected='true']")?.textContent).toContain("First tab"),
     );
-    expect(todoRows()[0]?.textContent).toContain("First tab");
-    expect(todoRows()[0]?.textContent).not.toContain("Current tab");
-    expect(todoRows()[0]?.getAttribute("data-current")).toBe("true");
-    expect(todoRows()[0]?.querySelector("[data-testid='zen-now-tag']")).not.toBeNull();
-    expect(todoRows()[1]?.textContent).toContain("Second tab");
-    expect(todoRows()[1]?.querySelector("[data-testid='zen-now-tag']")).toBeNull();
+    expect(todoRows()[0]?.textContent).toContain("Second tab");
+    expect(todoRows()[0]?.querySelector("[data-testid='zen-now-tag']")).toBeNull();
+    expect(todoRows()[1]?.textContent).toContain("First tab");
+    expect(todoRows()[1]?.getAttribute("data-current")).toBe("true");
+    expect(todoRows()[1]?.querySelector("[data-testid='zen-now-tag']")).not.toBeNull();
     // The todo column has the keyboard, so nothing in the tab list is selected.
     expect(root.querySelector("[data-selected='true']")).toBeNull();
 
@@ -1021,6 +1097,105 @@ describe("SearchApp", () => {
       expect(sendMessage).toHaveBeenCalledWith({ type: "switchTab", tabId: 1, domId: undefined }),
     );
     await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("opens a todo from a still click anywhere on the row", async () => {
+    const { root, sendMessage, onClose } = mountSearchApp(
+      vi.fn(),
+      tabs.map((tab) => ({ ...tab, active: false })),
+      "overlay",
+      undefined,
+      [],
+      [
+        { tabId: 1, status: "todo" },
+        { tabId: 2, status: "todo" },
+      ],
+    );
+
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll("[data-testid='zen-todo-row']")).toHaveLength(2),
+    );
+    const row = root.querySelector<HTMLElement>("[data-testid='zen-todo-row']")!;
+    row.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        button: 0,
+        pointerId: 1,
+        bubbles: true,
+        clientX: 10,
+        clientY: 10,
+      }),
+    );
+    expect(root.querySelector("[data-testid='zen-todo-column']")?.className).not.toContain(
+      "select-none",
+    );
+    row.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "switchTab", tabId: 1, domId: undefined }),
+    );
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("reorders todos from Motion Reorder and remembers the order", async () => {
+    const { root, sendMessage } = mountSearchApp(
+      vi.fn(),
+      tabs.map((tab) => ({ ...tab, active: false })),
+      "overlay",
+      undefined,
+      [],
+      [
+        { tabId: 1, status: "todo" },
+        { tabId: 2, status: "todo" },
+      ],
+    );
+
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll("[data-testid='zen-todo-row']")).toHaveLength(2),
+    );
+    expect(root.querySelector("[data-testid='zen-todo-drag']")).toBeNull();
+    const row = root.querySelector<HTMLElement>("[data-testid='zen-todo-row']")!;
+    motionReorder.dragStart = vi.fn();
+    row.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        button: 0,
+        pointerId: 1,
+        bubbles: true,
+        clientX: 10,
+        clientY: 10,
+      }),
+    );
+    expect(root.querySelector("[data-testid='zen-todo-column']")?.className).not.toContain(
+      "select-none",
+    );
+    row.dispatchEvent(
+      new PointerEvent("pointermove", {
+        button: 0,
+        pointerId: 1,
+        bubbles: true,
+        clientX: 10,
+        clientY: 24,
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-column']")?.className).toContain(
+        "select-none",
+      ),
+    );
+    expect(motionReorder.dragStart).toHaveBeenCalled();
+    row.click();
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "switchTab" }));
+    motionReorder.onReorder?.([2, 1]);
+    await vi.waitFor(() => {
+      const rows = [...root.querySelectorAll("[data-testid='zen-todo-row']")];
+      expect(rows[0]?.textContent).toContain("Second tab");
+      expect(rows[1]?.textContent).toContain("First tab");
+    });
+    expect(browser.storage.local.set).toHaveBeenCalledWith({ todoOrder: [2, 1] });
 
     render(null, root);
     root.remove();
@@ -1914,8 +2089,8 @@ describe("SearchApp", () => {
     // Like a normal current tab, the current issue stays in its list too.
     const entries = [...root.querySelectorAll("[data-testid='zen-issue-entry']")];
     expect(entries.map((entry) => entry.textContent)).toEqual([
-      expect.stringContaining("Newer issue"),
       expect.stringContaining("Older issue"),
+      expect.stringContaining("Newer issue"),
     ]);
     // And it is marked there, so it can be found with every folder open.
     const current = [...root.querySelectorAll("[data-testid='zen-issue-entry'][data-current]")];
@@ -2200,11 +2375,28 @@ function mountOverlay({
   stored?: Record<string, unknown>;
 }) {
   const set = vi.fn(async (_items: Record<string, unknown>) => undefined);
-  const sendMessage = vi.fn(async ({ type }: { type: string }) =>
-    type === "getSnapshot"
-      ? { tabs: snapshotTabs, spaces: [], timers, todos, statuses: [] }
-      : undefined,
-  );
+  const sendMessage = vi.fn(async ({ type }: { type: string }) => {
+    if (type === "getSnapshot") {
+      return { tabs: snapshotTabs, spaces: [], timers, todos, statuses: [] };
+    }
+    if (type === "organizeForgeIssueTabs") {
+      return { foldersCreated: 1, tabsMoved: snapshotTabs.length, skipped: 0 };
+    }
+    if (type === "getUpdateStatus") {
+      return {
+        currentVersion: "4.0.0",
+        latest: null,
+        updateAvailable: false,
+        demo: false,
+        canInstall: true,
+        checkedAt: null,
+      };
+    }
+    if (type === "getBridgeStatus") {
+      return { connected: false };
+    }
+    return undefined;
+  });
   Object.assign(globalThis, {
     browser: {
       runtime: {
@@ -2297,6 +2489,106 @@ function folder(root: HTMLElement, label: string) {
 describe("SearchApp issue filter, accordions, timers dock and sound", () => {
   beforeEach(() => play.mockClear());
 
+  it("confirms organizing tabs into folders and can skip the prompt", async () => {
+    const { root, sendMessage, set, unmount } = mountOverlay({
+      snapshotTabs: forgeSnapshotTabs(),
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge']")).not.toBeNull(),
+    );
+
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge']")!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge-menu']")).not.toBeNull(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge-tree']")!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge-confirm']")).not.toBeNull(),
+    );
+    expect(root.textContent).toContain("Create folders matching this list");
+
+    const skip = root.querySelector<HTMLInputElement>(
+      "[data-testid='zen-organize-forge-dont-ask']",
+    )!;
+    skip.checked = true;
+    skip.dispatchEvent(new Event("change", { bubbles: true }));
+    root
+      .querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge-confirm-button']")!
+      .click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "organizeForgeIssueTabs",
+        mode: "tree",
+        tabIds: expect.any(Array),
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          displaySettings: expect.objectContaining({ confirmOrganizeForgeTabs: false }),
+        }),
+      ),
+    );
+    unmount();
+  });
+
+  it("previews each organize mode as an ASCII tree on hover", async () => {
+    const { root, unmount } = mountOverlay({ snapshotTabs: forgeSnapshotTabs() });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge']")).not.toBeNull(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge']")!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge-menu']")).not.toBeNull(),
+    );
+
+    const tree = root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge-tree']")!;
+    tree.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector("[data-testid='zen-organize-forge-preview']")?.textContent,
+      ).toContain("└─ branch"),
+    );
+    expect(
+      root.querySelector("[data-testid='zen-organize-forge-preview']")?.textContent,
+    ).not.toContain("#12 Title");
+
+    root
+      .querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge-by-issue']")!
+      .dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector("[data-testid='zen-organize-forge-preview']")?.textContent,
+      ).toContain("#12 Title"),
+    );
+    unmount();
+  });
+
+  it("organizes by issue without a prompt when confirmation is off", async () => {
+    const { root, sendMessage, unmount } = mountOverlay({
+      snapshotTabs: forgeSnapshotTabs(),
+      displaySettings: { confirmOrganizeForgeTabs: false },
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge']")).not.toBeNull(),
+    );
+
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge']")!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge-menu']")).not.toBeNull(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge-by-issue']")!.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "organizeForgeIssueTabs",
+        mode: "byIssue",
+        tabIds: expect.any(Array),
+      }),
+    );
+    expect(root.querySelector("[data-testid='zen-organize-forge-confirm']")).toBeNull();
+    unmount();
+  });
+
   it("narrows the navigator to issues and shows the counts", async () => {
     const { root, unmount } = mountOverlay({ snapshotTabs: forgeSnapshotTabs() });
     await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(5));
@@ -2363,7 +2655,7 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     expect(button().textContent).toBe("Collapse all");
     expect(button().previousElementSibling?.classList.contains("zs-head-rule")).toBe(true);
     expect(button().nextElementSibling?.classList.contains("zs-head-rule")).toBe(true);
-    expect(button().closest(".zs-head")?.textContent).toContain("Recent");
+    expect(button().closest(".zs-head")?.textContent).toContain("Ascending");
 
     button().click();
     await vi.waitFor(() => expect(button().textContent).toBe("Expand all"));

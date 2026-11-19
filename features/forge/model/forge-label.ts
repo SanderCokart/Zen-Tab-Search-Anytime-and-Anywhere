@@ -125,6 +125,24 @@ export function extractRelatedIssueId(text: string, selfId?: string): string | u
   return undefined;
 }
 
+/** The related issue id encoded in `MR: #9 - !12 - Title` / `PR: #9 - !12 - Title`. */
+export function relatedIssueIdFromLabel(
+  label: string | undefined,
+  selfId?: string,
+): string | undefined {
+  if (!label) {
+    return undefined;
+  }
+
+  const match = label.match(/^(?:MR|PR):\s*#(\d+)\s*-\s*!/i);
+  const id = match?.[1];
+  if (id && id !== selfId) {
+    return id;
+  }
+
+  return undefined;
+}
+
 export function forgeTitleIncludesRefId(title: string, id: string): boolean {
   if (!title || !id) {
     return false;

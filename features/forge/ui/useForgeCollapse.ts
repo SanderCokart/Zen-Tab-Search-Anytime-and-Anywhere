@@ -16,6 +16,13 @@ export interface CollapseState {
   setCollapsed: (key: string, collapsed: boolean) => void;
   /** Replaces the whole set: every key collapsed, or none. */
   setKeys: (keys: readonly string[]) => void;
+  /** False until the stored list has been read. */
+  loaded: boolean;
+}
+
+/** Outlives the component so a reopen starts from the last stored values. */
+export interface StoredStateCache {
+  stored?: Record<string, unknown>;
 }
 
 export type ForgeCollapseState = CollapseState;
@@ -25,20 +32,27 @@ export type ForgeCollapseState = CollapseState;
  * project stays collapsed between visits. It is not a setting and is not part
  * of the settings backup.
  */
-export function useForgeCollapse(): ForgeCollapseState {
-  return useStoredCollapse(FORGE_COLLAPSED_STORAGE_KEY);
+export function useForgeCollapse(cache?: StoredStateCache): ForgeCollapseState {
+  return useStoredCollapse(FORGE_COLLAPSED_STORAGE_KEY, cache);
 }
 
 /** The same, for any list of collapsed keys kept under `storageKey` in `storage.local`. */
-export function useStoredCollapse(storageKey: string): CollapseState {
-  const [keys, setStoredKeys] = useState<string[]>([]);
+export function useStoredCollapse(storageKey: string, cache?: StoredStateCache): CollapseState {
+  const [keys, setStoredKeys] = useState<string[]>(
+    () => (cache?.stored?.[storageKey] as string[] | undefined) ?? [],
+  );
+  const [loaded, setLoaded] = useState(cache?.stored?.[storageKey] !== undefined);
   // The latest list, so two toggles in one tick compose instead of overwriting.
   const keysRef = useRef(keys);
 
-  const apply = useCallback((next: string[]) => {
-    keysRef.current = next;
-    setStoredKeys(next);
-  }, []);
+  const apply = useCallback(
+    (next: string[]) => {
+      keysRef.current = next;
+      if (cache) (cache.stored ??= {})[storageKey] = next;
+      setStoredKeys(next);
+    },
+    [cache, storageKey],
+  );
 
   useEffect(() => {
     let active = true;
@@ -47,7 +61,10 @@ export function useStoredCollapse(storageKey: string): CollapseState {
       .then((stored) => {
         if (active) apply(parseCollapsedGroups(stored[storageKey]));
       })
-      .catch((error) => debugError("Could not read collapsed groups:", error));
+      .catch((error) => debugError("Could not read collapsed groups:", error))
+      .finally(() => {
+        if (active) setLoaded(true);
+      });
 
     const onChanged = (changes: Record<string, { newValue?: unknown }>, area: string) => {
       if (area !== "local" || !(storageKey in changes)) return;
@@ -99,5 +116,5 @@ export function useStoredCollapse(storageKey: string): CollapseState {
   );
 
   const collapsed = useMemo(() => new Set(keys), [keys]);
-  return { collapsed, toggle, setCollapsed, setKeys };
+  return { collapsed, toggle, setCollapsed, setKeys, loaded };
 }

@@ -6,7 +6,11 @@ import {
 } from "@/features/forge/model/forge-collapse";
 import type { ForgeKindFilter } from "@/features/forge/model/forge-filter";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
-import { useForgeCollapse, useStoredCollapse } from "@/features/forge/ui/useForgeCollapse";
+import {
+  useForgeCollapse,
+  useStoredCollapse,
+  type StoredStateCache,
+} from "@/features/forge/ui/useForgeCollapse";
 import {
   collectTabFolderKeys,
   TAB_FOLDER_COLLAPSED_STORAGE_KEY,
@@ -18,6 +22,7 @@ import {
 } from "@/features/search/model/ranking";
 import { pluralize } from "@/features/search/model/stats";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
+import { useTodoOrder } from "@/features/todos/ui/useTodoOrder";
 import { TimersDock } from "@/features/timers/ui/TimersDock";
 import {
   TRAFFIC_LIGHT_MENU_SELECTOR,
@@ -76,6 +81,7 @@ import {
   tabMatchesForgeProjectHome,
   type ForgeIssueEntry,
 } from "@/features/forge/model/forge-label";
+import type { ForgeOrganizeMode } from "@/features/forge/model/forge-tab-organize";
 import { cn } from "@/shared/ui/cn";
 import { CollapseAllButton } from "@/shared/ui/primitives/CollapseAllButton";
 import { Led } from "@/shared/ui/primitives/Led";
@@ -100,7 +106,7 @@ export interface SearchAppProps {
   cache?: SearchSessionCache;
 }
 
-export type SearchSessionCache = SearchSnapshotCache & DisplaySettingsCache;
+export type SearchSessionCache = SearchSnapshotCache & DisplaySettingsCache & StoredStateCache;
 
 export function createSearchSessionCache(): SearchSessionCache {
   return {};
@@ -129,10 +135,11 @@ export function SearchApp({
   );
 
   const [query, setQuery] = useState(initialQuery);
-  const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("recent");
+  const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("asc");
+  const todoOrder = useTodoOrder(cache);
   const [forgeKindFilter, setForgeKindFilter] = useState<ForgeKindFilter>("all");
-  const forgeCollapse = useForgeCollapse();
-  const tabFolderCollapse = useStoredCollapse(TAB_FOLDER_COLLAPSED_STORAGE_KEY);
+  const forgeCollapse = useForgeCollapse(cache);
+  const tabFolderCollapse = useStoredCollapse(TAB_FOLDER_COLLAPSED_STORAGE_KEY, cache);
   const [timerTabId, setTimerTabId] = useState<number | null>(null);
   const [showTimers, setShowTimers] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ tab: TabInfo; x: number; y: number } | null>(
@@ -198,6 +205,7 @@ export function SearchApp({
     forgeKindFilter,
     forgeCollapsed: forgeCollapse.collapsed,
     tabFolderCollapsed: tabFolderCollapse.collapsed,
+    todoOrder: todoOrder.order,
   });
 
   const onTimerFormClose = useCallback(() => setTimerTabId(null), []);
@@ -345,16 +353,17 @@ export function SearchApp({
   // Fullscreen has room for the soonest LCD and the next two. Spotlight keeps
   // timers behind the header key so the card does not grow a third pane.
   const showTimersDock =
-    layout === "overlay" &&
-    displaySettings.fullscreen &&
-    displaySettings.timers &&
-    timers.size > 0;
+    layout === "overlay" && displaySettings.fullscreen && displaySettings.timers && timers.size > 0;
   const showRightColumn = showTodoColumn || showTimersDock;
   const overlayColumns = 1 + (showForgeColumn ? 1 : 0) + (showRightColumn ? 1 : 0);
   const overlayAspect = overlayColumns === 3 ? "2/1" : overlayColumns === 2 ? "3/2" : "1/1";
   const overlayOpen = useOverlayEntrance(
     layout === "overlay",
-    settingsLoaded && (setupDone ? snapshotLoaded : true),
+    settingsLoaded &&
+      forgeCollapse.loaded &&
+      tabFolderCollapse.loaded &&
+      todoOrder.loaded &&
+      (setupDone ? snapshotLoaded : true),
   );
 
   const searchWebRef = useRef(() => undefined as void);
@@ -752,9 +761,9 @@ export function SearchApp({
                     .catch((error) => debugError("Could not open project:", error));
                 }}
                 onSelect={navigation.setSelectedForgeIndex}
-                onToggleSort={() => {
+                onSortChange={(mode) => {
                   sound.play("tick");
-                  setForgeSortMode((current) => (current === "recent" ? "old" : "recent"));
+                  setForgeSortMode(mode);
                   navigation.setSelectedForgeIndex(0);
                 }}
                 onContextMenu={openContextMenu}
@@ -770,6 +779,23 @@ export function SearchApp({
                 statusMenuTabId={statusMenu?.tabId ?? null}
                 onOpenStatusMenu={toggleStatusMenu}
                 displaySettings={displaySettings}
+                onOrganize={(mode: ForgeOrganizeMode) => {
+                  sound.play("tick");
+                  const tabIds = results.listedForgeIssueEntries.flatMap((entry) => {
+                    const id = tabBrowserId(entry.tab);
+                    return id === undefined ? [] : [id];
+                  });
+                  void sendExtensionMessage({ type: "organizeForgeIssueTabs", mode, tabIds }).catch(
+                    (error) => debugError("Could not organize issue tabs:", error),
+                  );
+                }}
+                onConfirmOrganizeChange={(confirm) => {
+                  const next = { ...displaySettings, confirmOrganizeForgeTabs: confirm };
+                  setDisplaySettings(next);
+                  void saveDisplaySettings(next).catch((error) =>
+                    debugError("Could not save organize confirmation:", error),
+                  );
+                }}
               />
             )}
             {layout === "overlay" && showRightColumn && (
@@ -799,6 +825,20 @@ export function SearchApp({
                     }}
                     onOpenStatusMenu={toggleStatusMenu}
                     onContextMenu={openContextMenu}
+                    onReorder={
+                      results.todoNavigatorQuery.active
+                        ? undefined
+                        : (ids) => {
+                            todoOrder.setOrder(ids);
+                            const selected = todoTabs[navigation.selectedTodoIndex];
+                            const selectedId = selected ? tabBrowserId(selected) : undefined;
+                            if (selectedId === undefined) return;
+                            const nextIndex = ids.indexOf(selectedId);
+                            if (nextIndex >= 0) {
+                              navigation.setSelectedTodoIndex(nextIndex);
+                            }
+                          }
+                    }
                   />
                 )}
                 {showTimersDock && (

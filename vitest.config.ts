@@ -11,7 +11,12 @@ export default defineConfig({
   resolve: {
     // Mirrors the `@/*` alias WXT generates in .wxt/tsconfig.json so tests and
     // the extension build resolve imports identically.
-    alias: { "@": root.replace(/\/$/, "") },
+    alias: {
+      "@": root.replace(/\/$/, ""),
+      react: "preact/compat",
+      "react-dom": "preact/compat",
+      "react/jsx-runtime": "preact/jsx-runtime",
+    },
   },
   test: {
     environment: "happy-dom",
