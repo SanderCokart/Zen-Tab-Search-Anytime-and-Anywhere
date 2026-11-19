@@ -19,7 +19,8 @@ import { TabActions } from "@/features/search/ui/components/TabActions";
 import type { DisplaySettings } from "@/features/settings/model/display-settings";
 import { tabActionFlags } from "@/features/settings/model/complexity";
 import { formatForgeEntryDate, formatShortAge } from "@/features/search/ui/lib/format";
-import { entryTextClass } from "@/features/search/ui/lib/styles";
+import { useCloseOnOutsideClick } from "@/features/search/ui/hooks/useCloseOnOutsideClick";
+import { entryTextClass, miniKeyClass } from "@/features/search/ui/lib/styles";
 import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import {
   countMovableForgeTabs,
@@ -57,6 +58,26 @@ export const TAG_CLASS: Record<ForgeRowTag, string> = {
   EPIC: "border-zen-text bg-zen-text text-zen-raised",
 };
 
+/** Lucide Boxes: stacked cartons, for folding tabs into folders. */
+function OrganizeBoxesIcon({ class: className }: { class?: string }) {
+  return (
+    <svg class={cn("zen-icon", className)} viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z" />
+      <path d="m7 16.5-4.74-2.85" />
+      <path d="m7 16.5 5-3" />
+      <path d="M7 16.5v5.17" />
+      <path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z" />
+      <path d="m17 16.5-5-3" />
+      <path d="m17 16.5 4.74-2.85" />
+      <path d="M17 16.5v5.17" />
+      <path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z" />
+      <path d="M12 8 7.26 5.15" />
+      <path d="m12 8 4.74-2.85" />
+      <path d="M12 13.5V8" />
+    </svg>
+  );
+}
+
 function OrganizeForgeMenu({
   tabCount,
   confirm,
@@ -69,10 +90,11 @@ function OrganizeForgeMenu({
   onConfirmChange?: (confirm: boolean) => void;
 }) {
   const [pending, setPending] = useState<ForgeOrganizeMode | null>(null);
+  const [open, setOpen] = useState(false);
   const [dontAsk, setDontAsk] = useState(false);
   const dontAskRef = useRef(false);
-  const tooltip = useTooltip();
   const disabled = tabCount === 0;
+  useCloseOnOutsideClick(open, "[data-testid='zen-organize-forge-wrap']", () => setOpen(false));
 
   const choose = (mode: ForgeOrganizeMode) => {
     if (confirm) {
@@ -97,52 +119,57 @@ function OrganizeForgeMenu({
 
   return (
     <>
-      <span class="relative inline-flex shrink-0 items-center">
-        <select
-          class="zs-key text-zen-subtle hover:text-zen-text h-[var(--zen-mini-key)] appearance-none py-0 pr-[calc(var(--zen-icon-sm)+var(--zen-space-4))] pl-[var(--zen-space-3)] font-[inherit] text-[length:var(--zen-text-sm)] leading-none tracking-[0.04em] normal-case"
-          aria-label="Organize issue tabs into folders"
+      <span
+        class="relative inline-flex shrink-0 items-center"
+        data-testid="zen-organize-forge-wrap"
+      >
+        <TooltipButton
+          label="Organize issue tabs into folders"
+          tooltip="Put open issue tabs into matching Zen folders"
           data-testid="zen-organize-forge"
+          class={miniKeyClass}
           disabled={disabled}
-          value=""
-          onMouseEnter={(event) => tooltip.showAfterPause(event.currentTarget)}
-          onMouseLeave={tooltip.hide}
-          onFocus={(event) => tooltip.show(event.currentTarget)}
-          onBlur={tooltip.hide}
-          onClick={tooltip.hide}
-          onChange={(event) => {
-            const select = event.currentTarget;
-            const mode = select.value as ForgeOrganizeMode;
-            select.value = "";
-            if (mode === "tree" || mode === "byIssue") {
-              choose(mode);
-            }
-          }}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((current) => !current)}
         >
-          <option value="" disabled>
-            Organize…
-          </option>
-          <option value="tree">As in this list</option>
-          <option value="byIssue">Group with issues</option>
-        </select>
-        <svg
-          class="text-zen-subtle pointer-events-none absolute right-[var(--zen-space-2)] h-[var(--zen-icon-sm)] w-[var(--zen-icon-sm)]"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path
-            fill="none"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M6 9l6 6 6-6"
-          />
-        </svg>
-        {tooltip.anchor && (
-          <TooltipLegend
-            content="Put open issue tabs into matching Zen folders"
-            anchor={tooltip.anchor}
-          />
+          <OrganizeBoxesIcon class="size-[var(--zen-icon-sm)]" />
+        </TooltipButton>
+        {open && (
+          <div
+            class={cn(
+              "zs-menu absolute top-full right-0 z-50 mt-[var(--zen-space-2)]",
+              "flex min-w-[calc(var(--zen-font-size)*12)] flex-col p-[var(--zen-space-1)]",
+            )}
+            data-testid="zen-organize-forge-menu"
+            role="menu"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="zen-organize-forge-tree"
+              class="zs-label text-zen-subtle hover:text-zen-text cursor-pointer border-0 bg-transparent px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-left font-[inherit]"
+              onClick={() => {
+                setOpen(false);
+                choose("tree");
+              }}
+            >
+              As in this list
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="zen-organize-forge-by-issue"
+              class="zs-label text-zen-subtle hover:text-zen-text cursor-pointer border-0 bg-transparent px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-left font-[inherit]"
+              onClick={() => {
+                setOpen(false);
+                choose("byIssue");
+              }}
+            >
+              Group with issues
+            </button>
+          </div>
         )}
       </span>
       {pending !== null && tabCount > 0 && (

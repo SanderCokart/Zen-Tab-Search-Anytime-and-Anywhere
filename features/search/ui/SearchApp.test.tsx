@@ -2323,9 +2323,11 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
       expect(root.querySelector("[data-testid='zen-organize-forge']")).not.toBeNull(),
     );
 
-    const select = root.querySelector<HTMLSelectElement>("[data-testid='zen-organize-forge']")!;
-    select.value = "tree";
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge']")!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge-menu']")).not.toBeNull(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge-tree']")!.click();
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-organize-forge-confirm']")).not.toBeNull(),
     );
@@ -2365,9 +2367,11 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
       expect(root.querySelector("[data-testid='zen-organize-forge']")).not.toBeNull(),
     );
 
-    const select = root.querySelector<HTMLSelectElement>("[data-testid='zen-organize-forge']")!;
-    select.value = "byIssue";
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge']")!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-organize-forge-menu']")).not.toBeNull(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-organize-forge-by-issue']")!.click();
     await vi.waitFor(() =>
       expect(sendMessage).toHaveBeenCalledWith({
         type: "organizeForgeIssueTabs",
