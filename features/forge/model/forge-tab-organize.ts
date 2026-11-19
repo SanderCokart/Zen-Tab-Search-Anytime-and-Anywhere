@@ -188,7 +188,7 @@ function byIssueChildren(
   for (const id of orderedIssueIds) {
     const requests = grouped.get(id) ?? [];
     const issue = issueById.get(id);
-    const tabs = [...(issue ? tabIdsOf([issue]) : []), ...tabIdsOf(requests)];
+    const tabs = [...tabIdsOf(issue ? [issue] : []), ...tabIdsOf(requests)];
     if (tabs.length === 0) {
       continue;
     }
@@ -296,6 +296,10 @@ export async function applyForgeFolderPlan(
       anchorTabId?: number,
     ): Promise<string>;
     moveTabsToFolder(tabIds: number[], folderId: string): Promise<number>;
+    moveTab?(
+      tabId: number,
+      placement: { beforeTabId: number } | { afterTabId: number },
+    ): Promise<void>;
   },
   options: {
     anchorTabId?: number;
@@ -329,8 +333,29 @@ export async function applyForgeFolderPlan(
     }
 
     const toMove = node.tabIds.filter((tabId) => options.tabFolders?.get(tabId) !== folderId);
-    if (toMove.length > 0) {
-      tabsMoved += await workspace.moveTabsToFolder(toMove, folderId);
+    const lead = node.tabIds[0];
+    const leadMove = lead !== undefined && toMove.includes(lead) ? [lead] : [];
+    const restMove = toMove.filter((tabId) => tabId !== lead);
+    if (leadMove.length > 0) {
+      tabsMoved += await workspace.moveTabsToFolder(leadMove, folderId);
+    }
+    if (restMove.length > 0) {
+      tabsMoved += await workspace.moveTabsToFolder(restMove, folderId);
+    }
+    if (workspace.moveTab && node.tabIds.length > 1) {
+      const head = node.tabIds[0];
+      const next = node.tabIds[1];
+      if (head !== undefined && next !== undefined) {
+        await workspace.moveTab(head, { beforeTabId: next });
+      }
+      for (let index = 1; index < node.tabIds.length; index += 1) {
+        const tabId = node.tabIds[index];
+        const previous = node.tabIds[index - 1];
+        if (tabId === undefined || previous === undefined) {
+          continue;
+        }
+        await workspace.moveTab(tabId, { afterTabId: previous });
+      }
     }
 
     for (const child of node.children) {

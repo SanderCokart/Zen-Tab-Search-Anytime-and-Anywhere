@@ -20,7 +20,7 @@ import type { DisplaySettings } from "@/features/settings/model/display-settings
 import { tabActionFlags } from "@/features/settings/model/complexity";
 import { formatForgeEntryDate, formatShortAge } from "@/features/search/ui/lib/format";
 import { useCloseOnOutsideClick } from "@/features/search/ui/hooks/useCloseOnOutsideClick";
-import { entryTextClass, miniKeyClass } from "@/features/search/ui/lib/styles";
+import { entryTextClass } from "@/features/search/ui/lib/styles";
 import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
 import {
   countMovableForgeTabs,
@@ -145,13 +145,17 @@ function OrganizeForgeMenu({
           label="Organize issue tabs into folders"
           tooltip="Put open issue tabs into matching Zen folders"
           data-testid="zen-organize-forge"
-          class={miniKeyClass}
+          class={cn(
+            "zs-key relative inline-flex shrink-0 items-center justify-center p-0 font-[inherit]",
+            "h-[calc(var(--zen-font-size)*2.286+var(--zen-space-1)*2)] w-[calc(var(--zen-font-size)*2.286+var(--zen-space-1)*2)]",
+            "rounded-[var(--zs-r-seg)]",
+          )}
           disabled={disabled}
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setOpen((current) => !current)}
         >
-          <OrganizeBoxesIcon class="size-[var(--zen-icon-sm)]" />
+          <OrganizeBoxesIcon class="size-[var(--zen-icon-md)]" />
         </TooltipButton>
         {open && (
           <div

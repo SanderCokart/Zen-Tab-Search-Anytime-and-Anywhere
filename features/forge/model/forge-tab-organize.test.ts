@@ -193,6 +193,28 @@ describe("planForgeTabFolders byIssue", () => {
     );
   });
 
+  it("keeps the issue first when the MR was opened more recently", () => {
+    const plan = planForgeTabFolders(
+      entries([
+        tab({
+          id: 2,
+          url: "https://gitlab.com/acme/app/-/merge_requests/8",
+          customLabel: "MR: #4 - !8 - Login",
+          lastOpenedAt: 200,
+        }),
+        tab({
+          id: 1,
+          url: "https://gitlab.com/acme/app/-/issues/4",
+          customLabel: "ISSUE: #4 - Login",
+          lastOpenedAt: 50,
+        }),
+      ]),
+      "byIssue",
+    );
+
+    expect(plan[0]?.children[0]?.children[0]?.tabIds).toEqual([1, 2]);
+  });
+
   it("still groups MRs whose issue tab is not open", () => {
     const plan = planForgeTabFolders(
       entries([
@@ -296,6 +318,24 @@ describe("applyForgeFolderPlan", () => {
     expect(moveTabsToFolder).toHaveBeenCalledWith([1], "new:Issues");
     expect(moveTabsToFolder).toHaveBeenCalledWith([2], "new:main");
     expect(result).toEqual({ foldersCreated: 3, tabsMoved: 2 });
+  });
+
+  it("moves the issue into the folder first, then the MRs, then lines them up", async () => {
+    const createFolder = vi.fn(async () => "group");
+    const moveTabsToFolder = vi.fn(async (tabIds: number[]) => tabIds.length);
+    const moveTab = vi.fn(async () => undefined);
+    await applyForgeFolderPlan(
+      [{ name: "#4 Login", spaceId: "work", tabIds: [1, 2, 3], children: [] }],
+      [],
+      { createFolder, moveTabsToFolder, moveTab },
+    );
+
+    expect(moveTabsToFolder.mock.calls.map((call) => call[0])).toEqual([[1], [2, 3]]);
+    expect(moveTab.mock.calls).toEqual([
+      [1, { beforeTabId: 2 }],
+      [2, { afterTabId: 1 }],
+      [3, { afterTabId: 2 }],
+    ]);
   });
 
   it("does not move a tab that is already in the destination folder", async () => {
