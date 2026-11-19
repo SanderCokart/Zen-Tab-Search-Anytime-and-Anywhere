@@ -9,6 +9,7 @@ import type { SpaceInfo, TabInfo, TabStatus, TabTimer, TabTodo } from "@/shared/
 const play = vi.hoisted(() => vi.fn());
 const motionReorder = vi.hoisted(() => ({
   onReorder: undefined as ((ids: number[]) => void) | undefined,
+  dragStart: undefined as ((event: PointerEvent) => void) | undefined,
 }));
 
 // The real engine is silent in jsdom; this one records which voices are asked for.
@@ -20,6 +21,11 @@ vi.mock("@/shared/ui/sound/engine", async (importOriginal) => ({
 vi.mock("motion/react", async () => {
   const { h } = await import("preact");
   return {
+    useDragControls: () => ({
+      start: (event: PointerEvent) => motionReorder.dragStart?.(event),
+      cancel: () => undefined,
+      stop: () => undefined,
+    }),
     Reorder: {
       Group: (props: {
         children?: unknown;
@@ -42,6 +48,8 @@ vi.mock("motion/react", async () => {
         as?: string;
         value?: unknown;
         whileDrag?: unknown;
+        dragListener?: boolean;
+        dragControls?: unknown;
         className?: string;
         class?: string;
         "data-testid"?: string;
@@ -50,8 +58,10 @@ vi.mock("motion/react", async () => {
         "data-status-light"?: string;
         onContextMenu?: (event: MouseEvent) => void;
         onPointerDown?: (event: PointerEvent) => void;
+        onPointerMove?: (event: PointerEvent) => void;
         onPointerUp?: () => void;
         onPointerCancel?: () => void;
+        onClick?: (event: MouseEvent) => void;
       }) =>
         h(
           props.as ?? "div",
@@ -63,8 +73,10 @@ vi.mock("motion/react", async () => {
             "data-status-light": props["data-status-light"],
             onContextMenu: props.onContextMenu,
             onPointerDown: props.onPointerDown,
+            onPointerMove: props.onPointerMove,
             onPointerUp: props.onPointerUp,
             onPointerCancel: props.onPointerCancel,
+            onClick: props.onClick,
           },
           props.children as never,
         ),
@@ -1090,8 +1102,47 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("opens a todo from a still click anywhere on the row", async () => {
+    const { root, sendMessage, onClose } = mountSearchApp(
+      vi.fn(),
+      tabs.map((tab) => ({ ...tab, active: false })),
+      "overlay",
+      undefined,
+      [],
+      [
+        { tabId: 1, status: "todo" },
+        { tabId: 2, status: "todo" },
+      ],
+    );
+
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll("[data-testid='zen-todo-row']")).toHaveLength(2),
+    );
+    const row = root.querySelector<HTMLElement>("[data-testid='zen-todo-row']")!;
+    row.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        button: 0,
+        pointerId: 1,
+        bubbles: true,
+        clientX: 10,
+        clientY: 10,
+      }),
+    );
+    expect(root.querySelector("[data-testid='zen-todo-column']")?.className).not.toContain(
+      "select-none",
+    );
+    row.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "switchTab", tabId: 1, domId: undefined }),
+    );
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalled());
+
+    render(null, root);
+    root.remove();
+  });
+
   it("reorders todos from Motion Reorder and remembers the order", async () => {
-    const { root } = mountSearchApp(
+    const { root, sendMessage } = mountSearchApp(
       vi.fn(),
       tabs.map((tab) => ({ ...tab, active: false })),
       "overlay",
@@ -1107,13 +1158,37 @@ describe("SearchApp", () => {
       expect(root.querySelectorAll("[data-testid='zen-todo-row']")).toHaveLength(2),
     );
     expect(root.querySelector("[data-testid='zen-todo-drag']")).toBeNull();
-    const row = root.querySelector("[data-testid='zen-todo-row']")!;
-    row.dispatchEvent(new PointerEvent("pointerdown", { button: 0, pointerId: 1, bubbles: true }));
+    const row = root.querySelector<HTMLElement>("[data-testid='zen-todo-row']")!;
+    motionReorder.dragStart = vi.fn();
+    row.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        button: 0,
+        pointerId: 1,
+        bubbles: true,
+        clientX: 10,
+        clientY: 10,
+      }),
+    );
+    expect(root.querySelector("[data-testid='zen-todo-column']")?.className).not.toContain(
+      "select-none",
+    );
+    row.dispatchEvent(
+      new PointerEvent("pointermove", {
+        button: 0,
+        pointerId: 1,
+        bubbles: true,
+        clientX: 10,
+        clientY: 24,
+      }),
+    );
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-todo-column']")?.className).toContain(
         "select-none",
       ),
     );
+    expect(motionReorder.dragStart).toHaveBeenCalled();
+    row.click();
+    expect(sendMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: "switchTab" }));
     motionReorder.onReorder?.([2, 1]);
     await vi.waitFor(() => {
       const rows = [...root.querySelectorAll("[data-testid='zen-todo-row']")];

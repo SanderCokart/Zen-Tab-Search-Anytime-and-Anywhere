@@ -1,5 +1,5 @@
 import { useRef, useState } from "preact/hooks";
-import { Reorder } from "motion/react";
+import { Reorder, useDragControls } from "motion/react";
 import { entryTextClass } from "@/features/search/ui/lib/styles";
 import { hostname } from "@/features/search/ui/lib/format";
 import { NowTag } from "@/features/search/ui/components/NowTag";
@@ -8,6 +8,7 @@ import { PrefixHint } from "@/features/search/ui/components/PrefixHint";
 import { TODO_NAVIGATOR_PREFIXES } from "@/features/search/model/ranking";
 import { StatusButton } from "@/features/status/ui/StatusButton";
 import { TRAFFIC_LIGHT_OPTIONS } from "@/features/status/model/status";
+import { pointerMovedPastDragThreshold } from "@/features/todos/model/todo-pointer";
 import { todoTabIdsToClear, type TodoClearFilter } from "@/features/todos/model/todo";
 import { statusRowClass } from "@/features/status/ui/traffic-light";
 import {
@@ -56,6 +57,13 @@ function todoRowClass(light: TrafficLight | undefined, selected: boolean, grab =
   );
 }
 
+/** Mark as done and status keep their own clicks; the title is part of the row. */
+function isTodoRowAction(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element && target.closest("button:not(.zs-row-title), select, a") !== null
+  );
+}
+
 function TodoRowBody({
   tab,
   truncate,
@@ -82,8 +90,11 @@ function TodoRowBody({
       <div class="relative z-10 flex min-w-0 items-center gap-[var(--zen-space-2)]">
         <button
           type="button"
-          class="zs-row-title flex min-w-0 flex-1 cursor-pointer items-center gap-[var(--zen-space-2)] border-0 bg-transparent p-0 text-left text-inherit after:absolute after:inset-0 after:rounded-[inherit] after:content-['']"
-          onClick={() => onActivate(tab)}
+          class="zs-row-title relative z-10 flex min-w-0 flex-1 cursor-pointer items-center gap-[var(--zen-space-2)] border-0 bg-transparent p-0 text-left text-inherit"
+          onClick={(event) => {
+            event.stopPropagation();
+            onActivate(tab);
+          }}
           onFocus={onSelect}
         >
           <span class={cn("min-w-0 flex-1", entryTextClass(truncate))}>
@@ -102,7 +113,10 @@ function TodoRowBody({
             tooltip="Mark as done"
             data-testid="zen-todo-done-button"
             class="text-zen-muted hover:text-zen-text shrink-0 cursor-pointer border-0 bg-transparent p-0 font-[inherit] tracking-[inherit] whitespace-nowrap uppercase hover:underline"
-            onClick={() => onDone(tab)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDone(tab);
+            }}
           >
             Mark as done
           </TooltipButton>
@@ -148,26 +162,62 @@ function ReorderTodoRow({
   onDraggingChange: (dragging: boolean) => void;
 }) {
   const skipClick = useRef(false);
+  const origin = useRef<{ x: number; y: number } | null>(null);
+  const dragControls = useDragControls();
   const tabId = tabBrowserId(tab);
   const light = tabId === undefined ? undefined : statuses.get(tabId);
   return (
     <Reorder.Item
       as="div"
       value={tabId}
+      dragListener={false}
+      dragControls={dragControls}
       whileDrag={{ opacity: 0.7, userSelect: "none", cursor: "grabbing" }}
       onPointerDown={(event: PointerEvent) => {
-        if (event.button !== 0) return;
+        if (event.button !== 0 || isTodoRowAction(event.target)) return;
+        origin.current = { x: event.clientX, y: event.clientY };
+        skipClick.current = false;
+        window.getSelection()?.removeAllRanges();
+        const row = event.currentTarget;
+        if (row instanceof HTMLElement && typeof row.setPointerCapture === "function") {
+          row.setPointerCapture(event.pointerId);
+        }
+      }}
+      onPointerMove={(event: PointerEvent) => {
+        if (origin.current === null || skipClick.current) return;
+        if (
+          !pointerMovedPastDragThreshold(origin.current, { x: event.clientX, y: event.clientY })
+        ) {
+          return;
+        }
+        skipClick.current = true;
+        origin.current = null;
         window.getSelection()?.removeAllRanges();
         onDraggingChange(true);
+        dragControls.start(event);
       }}
-      onPointerUp={() => onDraggingChange(false)}
-      onPointerCancel={() => onDraggingChange(false)}
+      onPointerUp={() => {
+        origin.current = null;
+        onDraggingChange(false);
+      }}
+      onPointerCancel={() => {
+        origin.current = null;
+        onDraggingChange(false);
+      }}
       onDragStart={() => {
         skipClick.current = true;
         window.getSelection()?.removeAllRanges();
         onDraggingChange(true);
       }}
       onDragEnd={() => onDraggingChange(false)}
+      onClick={(event: MouseEvent) => {
+        if (isTodoRowAction(event.target)) return;
+        if (skipClick.current) {
+          skipClick.current = false;
+          return;
+        }
+        onActivate(tab);
+      }}
       className={todoRowClass(light, selected, true)}
       data-testid="zen-todo-row"
       data-status-light={light}
@@ -288,6 +338,10 @@ export function TodoNavigator({
           }
         }}
         onContextMenu={(event) => onContextMenu(tab, event)}
+        onClick={(event) => {
+          if (isTodoRowAction(event.target)) return;
+          onActivate(tab);
+        }}
       >
         <TodoRowBody
           tab={tab}
