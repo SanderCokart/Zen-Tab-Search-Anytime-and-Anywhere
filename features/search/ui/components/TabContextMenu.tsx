@@ -21,6 +21,14 @@ import {
 import { cn } from "@/shared/ui/cn";
 import "@/shared/ui/hardware/menu.css";
 
+export interface TabContextMenuActions {
+  todos?: boolean;
+  copyLink?: boolean;
+  timers?: boolean;
+  statusColors?: boolean;
+  hosts?: boolean;
+}
+
 export interface TabContextMenuProps {
   tab: TabInfo;
   x: number;
@@ -28,6 +36,8 @@ export interface TabContextMenuProps {
   isTodo: boolean;
   /** The tab's status color, if it has one. */
   light?: TrafficLight;
+  /** Missing keys stay on, matching TabActions. */
+  actions?: TabContextMenuActions;
   onRename: () => void;
   onCopyLink: () => void;
   onOpenTimer: (tabId: number) => void;
@@ -67,6 +77,7 @@ export function TabContextMenu({
   y,
   isTodo,
   light,
+  actions = {},
   onRename,
   onCopyLink,
   onOpenTimer,
@@ -80,7 +91,12 @@ export function TabContextMenu({
   onRemoveFromFolder,
 }: TabContextMenuProps) {
   const tabId = tabBrowserId(tab);
-  const canTodo = tabId !== undefined && !isEssentialTab(tab);
+  const showTodos = actions.todos !== false;
+  const showCopy = actions.copyLink !== false;
+  const showTimers = actions.timers !== false;
+  const showStatus = actions.statusColors !== false;
+  const showHosts = actions.hosts !== false;
+  const canTodo = showTodos && tabId !== undefined && !isEssentialTab(tab);
   const canMove = tabId !== undefined && !isEssentialTab(tab);
   const pinned = isPinnedTab(tab);
   const [folders, setFolders] = useState<OverlayFolderInfo[] | null>(null);
@@ -135,7 +151,7 @@ export function TabContextMenu({
           Rename
         </button>
       )}
-      {tab.url !== "" && (
+      {showCopy && tab.url !== "" && (
         <button
           type="button"
           class={itemClass}
@@ -245,7 +261,7 @@ export function TabContextMenu({
           </button>
         </>
       )}
-      {tabId !== undefined && (
+      {showStatus && tabId !== undefined && (
         <div class="zs-hardware-menu-group" role="group" aria-label="Status">
           {TRAFFIC_LIGHT_OPTIONS.map((option) => (
             <button
@@ -283,27 +299,31 @@ export function TabContextMenu({
           </MenuItem>
         </div>
       )}
-      {tabId !== undefined && (
+      {tabId !== undefined && (showTimers || showHosts) && (
         <>
           <div class="zs-hardware-menu-separator" role="separator" />
-          <button
-            type="button"
-            class={itemClass}
-            role="menuitem"
-            onClick={() => onOpenTimer(tabId)}
-          >
-            <TimerIcon class="size-[var(--zen-icon-md)]" />
-            Timer
-          </button>
-          <button
-            type="button"
-            class={itemClass}
-            role="menuitem"
-            onClick={() => onOpenHostOverrides(tabId)}
-          >
-            <span aria-hidden="true">⇄</span>
-            Host overrides…
-          </button>
+          {showTimers && (
+            <button
+              type="button"
+              class={itemClass}
+              role="menuitem"
+              onClick={() => onOpenTimer(tabId)}
+            >
+              <TimerIcon class="size-[var(--zen-icon-md)]" />
+              Timer
+            </button>
+          )}
+          {showHosts && (
+            <button
+              type="button"
+              class={itemClass}
+              role="menuitem"
+              onClick={() => onOpenHostOverrides(tabId)}
+            >
+              <span aria-hidden="true">⇄</span>
+              Host overrides…
+            </button>
+          )}
         </>
       )}
     </div>

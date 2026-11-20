@@ -878,6 +878,13 @@ export function SearchApp({
               y={contextMenu.y}
               isTodo={todos.has(tabBrowserId(contextMenu.tab) ?? -1)}
               light={statuses.get(tabBrowserId(contextMenu.tab) ?? -1)}
+              actions={{
+                todos: displaySettings.todos,
+                copyLink: displaySettings.copyLink,
+                timers: displaySettings.timers,
+                statusColors: displaySettings.statusColors,
+                hosts: displaySettings.hosts,
+              }}
               onRename={() => {
                 rename.open(contextMenu.tab, stripTimerPrefixFromTab(contextMenu.tab));
                 setContextMenu(null);
@@ -899,7 +906,6 @@ export function SearchApp({
               }}
               onSetTodo={(status) => {
                 const tabId = tabBrowserId(contextMenu.tab);
-                setContextMenu(null);
                 if (tabId !== undefined) {
                   sound.play(status === "none" ? "success" : "mark");
                   todoActions.setTodo(tabId, status);

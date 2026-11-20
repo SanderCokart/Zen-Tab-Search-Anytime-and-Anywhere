@@ -1866,11 +1866,68 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(sendMessage).toHaveBeenCalledWith({ type: "setTodo", tabId: 1, status: "todo" }),
     );
+    expect(menu()).toBeTruthy();
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Mark as done"));
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-todo-column']")?.textContent).toContain(
         "Fix search",
       ),
     );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("keeps the context menu open after marking a todo so a status color can still be set", async () => {
+    const { root, sendMessage } = mountSearchApp(vi.fn(), tabs, "overlay");
+    const menu = () => root.querySelector("[data-testid='zen-tab-context-menu']");
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-search-item']")).toBeTruthy(),
+    );
+    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 20, clientY: 20 }),
+    );
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Mark as todo"));
+
+    [...menu()!.querySelectorAll("[role='menuitem']")]
+      .find((node) => node.textContent?.includes("Mark as todo"))
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({ type: "setTodo", tabId: 1, status: "todo" }),
+    );
+    expect(menu()).toBeTruthy();
+
+    menu()!.querySelector<HTMLButtonElement>("[data-traffic-light='green']")!.click();
+    await vi.waitFor(() => expect(menu()).toBeNull());
+    expect(sendMessage).toHaveBeenCalledWith({ type: "setTabStatus", tabId: 1, light: "green" });
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("hides disabled features from the tab context menu", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", {
+      todos: false,
+      statusColors: false,
+      timers: false,
+      hosts: false,
+      copyLink: false,
+    });
+    const menu = () => root.querySelector("[data-testid='zen-tab-context-menu']");
+
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-search-item']")).toBeTruthy(),
+    );
+    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(
+      new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 20, clientY: 20 }),
+    );
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Close tab"));
+    expect(menu()?.textContent).not.toContain("Mark as todo");
+    expect(menu()?.querySelector("[aria-label='Status']")).toBeNull();
+    expect(menu()?.textContent).not.toContain("Timer");
+    expect(menu()?.textContent).not.toContain("Host overrides");
+    expect(menu()?.querySelector("[data-testid='zen-copy-link-menu']")).toBeNull();
 
     render(null, root);
     root.remove();
