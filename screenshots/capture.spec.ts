@@ -98,8 +98,9 @@ const captures: Capture[] = [
     file: "concept-enhanced.png",
     ready: async (page) => {
       await waitForSearch(page, true);
-      await expect(page.locator("[data-testid='zen-space-section']").first()).toBeVisible();
-      await expect(page.locator("[data-testid='zen-essential-section']").first()).toBeVisible();
+      await expect(page.locator("[data-testid='zen-space-section']")).toHaveCount(0);
+      await expect(page.locator("[data-testid='zen-essential-section']")).toHaveCount(0);
+      await expect(page.locator("button[aria-label='Show active timers']")).toBeVisible();
     },
     clip: "omnibar",
   },
@@ -161,6 +162,39 @@ const captures: Capture[] = [
     file: "search-popup.png",
     ready: (page) => waitForSearch(page, false),
     clip: "popup",
+  },
+  {
+    scene: "search-omnibar",
+    file: "search-query-help.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      await page.getByTestId("zen-search-help").hover();
+      await expect(page.locator("[role='tooltip']")).toBeVisible();
+      await page.waitForTimeout(1200);
+    },
+    around: ".zs-search-lcd, [role='tooltip']",
+  },
+  {
+    scene: "search-omnibar",
+    file: "todo-clear-menu.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      await page.getByTestId("zen-todo-clear").click();
+      await expect(page.getByTestId("zen-todo-clear-menu")).toBeVisible();
+    },
+    around: "[data-testid='zen-todo-column']",
+  },
+  {
+    scene: "concept-simple",
+    file: "search-query-exclude.png",
+    ready: (page) => waitForSearch(page, true),
+    after: async (page) => {
+      const input = page.locator("[data-testid='zen-search-input']");
+      await input.fill("-gitlab");
+      await expect(page.getByRole("option", { name: /Improve tab search/ })).toBeVisible();
+      await expect(page.getByRole("option", { name: /Fix the search results/ })).toHaveCount(0);
+    },
+    clip: "omnibar",
   },
   {
     scene: "search-omnibar",

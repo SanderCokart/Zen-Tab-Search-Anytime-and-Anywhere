@@ -74,6 +74,24 @@ const FLOWS = {
       await pause(page, 1100);
     }
   },
+  "query-exclude": async (page) => {
+    await openScene(page, "concept-simple");
+    await pause(page, 800);
+    const input = page.locator("[data-testid='zen-search-input']");
+    await input.click();
+    for (const ch of "-gitlab") {
+      await page.keyboard.type(ch);
+      await pause(page, 180);
+    }
+    await pause(page, 1800);
+  },
+  "query-help": async (page) => {
+    await openScene(page, "concept-dev");
+    await pause(page, 700);
+    await page.getByTestId("zen-search-help").hover();
+    await page.locator("[role='tooltip']").waitFor();
+    await pause(page, 2200);
+  },
 };
 
 function toGif(video, gif, trimSeconds) {
