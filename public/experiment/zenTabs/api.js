@@ -1,4 +1,4 @@
-/* global ExtensionAPI, ChromeUtils, Cu, Services, console, setTimeout */
+/* global ExtensionAPI, ChromeUtils, Cu, Services, console */
 
 const DEBUG = false;
 
@@ -386,7 +386,7 @@ this.zenTabs = class extends ExtensionAPI {
 
       Promise.resolve().then(() => {
         if (!store()) {
-          setTimeout(store, 0);
+          chromeWindowForNativeTab(tab)?.setTimeout(store, 0);
         }
       });
     }
@@ -920,8 +920,8 @@ this.zenTabs = class extends ExtensionAPI {
     // A tab pinned while it is still loading gets about:blank (or nothing) as
     // its pinned URL, because Zen captures the session entry at pin time. Once
     // the page has loaded, store the real URL instead.
-    function healPinnedUrlAfterLoad(tab, waited = 0) {
-      if (!tab.pinned || tab.closing || !tab.linkedBrowser) {
+    function healPinnedUrlAfterLoad(win, tab, waited = 0) {
+      if (!win || win.closed || !tab.pinned || tab.closing || !tab.linkedBrowser) {
         return;
       }
       const loaded = !isBlankPinUrl(currentTabUrl(tab));
@@ -938,8 +938,8 @@ this.zenTabs = class extends ExtensionAPI {
       if (waited >= PIN_HEAL_TIMEOUT_MS) {
         return;
       }
-      setTimeout(
-        () => healPinnedUrlAfterLoad(tab, waited + PIN_HEAL_INTERVAL_MS),
+      win.setTimeout(
+        () => healPinnedUrlAfterLoad(win, tab, waited + PIN_HEAL_INTERVAL_MS),
         PIN_HEAL_INTERVAL_MS,
       );
     }
@@ -1744,7 +1744,7 @@ this.zenTabs = class extends ExtensionAPI {
                 : {}),
             });
             for (const tab of tabs) {
-              healPinnedUrlAfterLoad(tab);
+              healPinnedUrlAfterLoad(chromeWindowForNativeTab(tab), tab);
             }
             return String(folder.id);
           } catch (error) {
@@ -1787,7 +1787,7 @@ this.zenTabs = class extends ExtensionAPI {
             for (const tab of tabs) {
               if (!tab.pinned) {
                 folderWindow.gBrowser.pinTab(tab);
-                healPinnedUrlAfterLoad(tab);
+                healPinnedUrlAfterLoad(folderWindow, tab);
               }
             }
             folder.addTabs(tabs);
@@ -2071,7 +2071,7 @@ this.zenTabs = class extends ExtensionAPI {
                   gBrowser.pinTab(tab);
                   changed++;
                 }
-                healPinnedUrlAfterLoad(tab);
+                healPinnedUrlAfterLoad(chromeWindowForNativeTab(tab), tab);
               } else if (tab.pinned) {
                 // Zen folders only hold pinned tabs, so leave the folder first.
                 if (tab.group?.isZenFolder) {
