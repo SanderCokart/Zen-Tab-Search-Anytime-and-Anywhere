@@ -94,6 +94,8 @@ const DEFAULTS = {
   theme: "system" as (typeof THEME_PREFERENCES)[number],
   /** How the omnibar comes in. "none" shows it at once. */
   openTransition: "none" as OpenTransition,
+  /** How long that entrance takes, in milliseconds, on 100ms steps. */
+  openTransitionMs: 300,
   /** "auto" takes the colour from the theme; a hex value overrides it. */
   accentColor: "auto",
   chassisColor: "auto",
@@ -161,6 +163,18 @@ export function customColor(value: string): string | undefined {
 export const MIN_BACKGROUND_OPACITY = 0;
 /** Fully solid. The stored default is 75%. */
 export const MAX_BACKGROUND_OPACITY = 1;
+
+/** Open animation length. 0 shows the deck at once. */
+export const MIN_OPEN_TRANSITION_MS = 0;
+export const MAX_OPEN_TRANSITION_MS = 2000;
+export const OPEN_TRANSITION_MS_STEP = 100;
+
+/** Snaps an open-animation length onto 100ms steps, inside 0..2000. */
+export function clampOpenTransitionMs(value: number): number {
+  if (!Number.isFinite(value)) return 300;
+  const clamped = Math.min(MAX_OPEN_TRANSITION_MS, Math.max(MIN_OPEN_TRANSITION_MS, value));
+  return Math.round(clamped / OPEN_TRANSITION_MS_STEP) * OPEN_TRANSITION_MS_STEP;
+}
 
 /** Snaps an omnibar background opacity onto the dial's 5% steps, inside 0%..100%. */
 export function clampBackgroundOpacity(value: number): number {
@@ -257,6 +271,7 @@ const displaySettingsSchema = v.pipe(
       searchEngine: v.fallback(v.picklist(SEARCH_ENGINE_IDS), DEFAULTS.searchEngine),
       theme: v.fallback(v.picklist(THEME_PREFERENCES), DEFAULTS.theme),
       openTransition: v.fallback(v.picklist(OPEN_TRANSITIONS), DEFAULTS.openTransition),
+      openTransitionMs: scalar(DEFAULTS.openTransitionMs, clampOpenTransitionMs),
       accentColor: color("accentColor"),
       chassisColor: color("chassisColor"),
       panelColor: color("panelColor"),

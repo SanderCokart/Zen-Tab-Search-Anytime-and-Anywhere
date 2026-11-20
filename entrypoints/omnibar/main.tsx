@@ -39,7 +39,7 @@ function OmnibarPage() {
     () =>
       subscribeToOmnibarShown((shown) => {
         if (shown.overlayId !== overlayId) return false;
-        replayOpenMotion(document.querySelector("[data-omnibar]"));
+        replayOpenMotion(document.querySelector("[data-omnibar-stage]"));
         setView(shown.view);
         setReveal((current) => current + 1);
         return true;

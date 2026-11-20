@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   clampBackgroundOpacity,
+  clampOpenTransitionMs,
   customColor,
   DEFAULT_DISPLAY_SETTINGS,
   readDisplaySettings,
@@ -274,9 +275,19 @@ describe("display settings", () => {
       await expect(readDisplaySettings()).resolves.toMatchObject({ theme: "system" });
     });
 
+    it("snaps the open duration onto 100ms steps inside 0..2000", () => {
+      expect(clampOpenTransitionMs(250)).toBe(300);
+      expect(clampOpenTransitionMs(-20)).toBe(0);
+      expect(clampOpenTransitionMs(2400)).toBe(2000);
+      expect(clampOpenTransitionMs(Number.NaN)).toBe(300);
+    });
+
     it("keeps a stored open transition and falls back from an unknown one", async () => {
-      store({ openTransition: "zoom" });
-      await expect(readDisplaySettings()).resolves.toMatchObject({ openTransition: "zoom" });
+      store({ openTransition: "zoom", openTransitionMs: 250 });
+      await expect(readDisplaySettings()).resolves.toMatchObject({
+        openTransition: "zoom",
+        openTransitionMs: 300,
+      });
       store({ openTransition: "spin" });
       await expect(readDisplaySettings()).resolves.toMatchObject({ openTransition: "none" });
     });

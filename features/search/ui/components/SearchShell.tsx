@@ -57,7 +57,6 @@ export function SearchShell({
   // Only the overlay needs the zoom: it holds its size on screen.
   const zoom = usePageZoom(layout === "overlay");
   const [overlay, setOverlay] = useState<HTMLDivElement | null>(null);
-  const [chassisEl, setChassisEl] = useState<HTMLDivElement | null>(null);
   const [motionOn, setMotionOn] = useState(false);
   const seenGeneration = useRef<number | undefined>(undefined);
   const playedInPage = useRef(false);
@@ -65,7 +64,7 @@ export function SearchShell({
   useCtrlWheelFontSize(overlay, displaySettings, layout === "overlay", sound);
 
   useLayoutEffect(() => {
-    if (layout !== "overlay" || !open || !chassisEl) return;
+    if (layout !== "overlay" || !open || !overlay) return;
     if (displaySettings.openTransition === "none" || shownGeneration === 0) return;
     if (shownGeneration === undefined) {
       if (playedInPage.current) return;
@@ -76,8 +75,8 @@ export function SearchShell({
       seenGeneration.current = shownGeneration;
     }
     setMotionOn(true);
-    replayOpenMotion(chassisEl);
-  }, [chassisEl, displaySettings.openTransition, layout, open, shownGeneration]);
+    replayOpenMotion(overlay);
+  }, [displaySettings.openTransition, layout, open, overlay, shownGeneration]);
 
   // Presses are heard on the way down and up, from one listener for the whole surface.
   const onPointerDown = (event: PointerEvent) => {
@@ -111,15 +110,20 @@ export function SearchShell({
   return frame(
     <div
       ref={setOverlay}
-      class="bg-zen-overlay flex h-full w-full items-center justify-center"
+      class={cn(
+        "bg-zen-overlay flex h-full w-full items-center justify-center",
+        motionOn && "zs-open-motion",
+      )}
       onClick={onClose}
       onContextMenu={(event) => event.preventDefault()}
       data-zen-ui
       data-theme={theme}
       data-omnibar-stage={open ? "open" : "loading"}
+      data-open-transition={displaySettings.openTransition}
       style={{
         ...uiScaleStyle(displaySettings, "overlay", zoom),
         "--zs-bg-opacity": String(backgroundPercent / 100),
+        "--zs-open-ms": `${displaySettings.openTransitionMs}ms`,
         // A live backdrop blur is resampled on every hover in Firefox, which
         // drops frames on a high-refresh display. The scrim dims the page on its own.
         backgroundColor: `color-mix(in srgb, var(--zs-scrim) ${backgroundPercent}%, transparent)`,
@@ -128,18 +132,13 @@ export function SearchShell({
       }}
     >
       <div
-        ref={setChassisEl}
-        class={cn(
-          "zs-chassis flex min-h-0 shrink-0 flex-col overflow-hidden p-[var(--zen-space-6)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
-          motionOn && "zs-open-motion",
-        )}
+        class="zs-chassis flex min-h-0 shrink-0 flex-col overflow-hidden p-[var(--zen-space-6)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
         onClick={(event) => event.stopPropagation()}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         data-omnibar
         data-omnibar-layout={chassis ?? (displaySettings.fullscreen ? "fullscreen" : "spotlight")}
         data-omnibar-aspect={aspect}
-        data-open-transition={displaySettings.openTransition}
       >
         {children}
       </div>

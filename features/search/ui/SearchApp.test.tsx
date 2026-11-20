@@ -905,9 +905,11 @@ describe("SearchApp", () => {
       ),
     );
     await vi.waitFor(() =>
-      expect(root.querySelector("[data-omnibar]")?.classList.contains("zs-open-motion")).toBe(true),
+      expect(root.querySelector("[data-omnibar-stage]")?.classList.contains("zs-open-motion")).toBe(
+        true,
+      ),
     );
-    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-open-transition")).toBe(
+    expect(root.querySelector("[data-omnibar-stage]")?.getAttribute("data-open-transition")).toBe(
       "slide-up",
     );
     render(null, root);

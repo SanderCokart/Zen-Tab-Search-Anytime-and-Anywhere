@@ -6,7 +6,10 @@ import {
   customColor,
   DEFAULT_DISPLAY_SETTINGS,
   MAX_BACKGROUND_OPACITY,
+  MAX_OPEN_TRANSITION_MS,
   MIN_BACKGROUND_OPACITY,
+  MIN_OPEN_TRANSITION_MS,
+  OPEN_TRANSITION_MS_STEP,
   readDisplaySettings,
   saveDisplaySettings,
   type DisplaySettings,
@@ -63,10 +66,10 @@ const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
 const OPEN_TRANSITION_OPTIONS: readonly { value: OpenTransition; label: string }[] = [
   { value: "none", label: "None" },
   { value: "fade", label: "Fade" },
-  { value: "slide-up", label: "Up" },
-  { value: "slide-down", label: "Down" },
-  { value: "slide-left", label: "Left" },
-  { value: "slide-right", label: "Right" },
+  { value: "slide-up", label: "Bottom" },
+  { value: "slide-down", label: "Top" },
+  { value: "slide-right", label: "Left" },
+  { value: "slide-left", label: "Right" },
   { value: "zoom", label: "Zoom" },
 ];
 
@@ -328,15 +331,35 @@ export function DisplaySettingsApp() {
                   })}
                 </div>
               </div>
-              <div class="flex flex-col gap-[var(--zen-space-2)]">
-                <span class={monoLabelClass}>Open</span>
-                <Segmented
-                  label="Open"
-                  options={OPEN_TRANSITION_OPTIONS}
-                  value={settings.openTransition}
-                  disabled={!loaded}
-                  onChange={(openTransition) => updateSettings({ openTransition })}
-                />
+              <div class="flex flex-wrap items-end gap-[var(--zen-space-6)]">
+                <div class="flex min-w-[calc(var(--zen-font-size)*28)] flex-1 flex-col gap-[var(--zen-space-2)]">
+                  <span class={monoLabelClass}>Open</span>
+                  <Segmented
+                    label="Open"
+                    options={OPEN_TRANSITION_OPTIONS}
+                    value={settings.openTransition}
+                    disabled={!loaded}
+                    onChange={(openTransition) => updateSettings({ openTransition })}
+                  />
+                </div>
+                <div class="flex w-fit flex-col items-center gap-[var(--zen-space-2)] text-center">
+                  <Dial
+                    label="Open duration"
+                    data-testid="zen-open-duration"
+                    min={MIN_OPEN_TRANSITION_MS}
+                    max={MAX_OPEN_TRANSITION_MS}
+                    step={OPEN_TRANSITION_MS_STEP}
+                    disabled={!loaded}
+                    value={settings.openTransitionMs}
+                    valueText={`${settings.openTransitionMs} milliseconds`}
+                    onChange={(openTransitionMs) => updateSettings({ openTransitionMs })}
+                  />
+                  <Lcd class="zs-readout zs-digits">
+                    {settings.openTransitionMs}
+                    <u>ms</u>
+                  </Lcd>
+                  <span class={monoLabelClass}>Duration</span>
+                </div>
               </div>
               <div class="flex w-fit flex-col items-center gap-[var(--zen-space-2)] text-center">
                 <Dial
