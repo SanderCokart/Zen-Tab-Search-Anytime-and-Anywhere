@@ -332,7 +332,7 @@ export function DisplaySettingsApp() {
                   })}
                 </div>
               </div>
-              <div class="flex flex-wrap items-end gap-[var(--zen-space-6)]">
+              <div class="flex flex-wrap items-center gap-[var(--zen-space-6)]">
                 <div class="flex flex-col gap-[var(--zen-space-2)]">
                   <span class={monoLabelClass}>Open</span>
                   <Select

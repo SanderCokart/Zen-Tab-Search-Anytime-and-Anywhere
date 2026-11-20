@@ -4,7 +4,7 @@ import { formatError, LOG_PREFIX } from "@/shared/log";
 let settingsPopupWindowId: number | undefined;
 
 /** Narrow enough that Complexity stays one column; widen the window for two. */
-const SETTINGS_POPUP_WIDTH = 460;
+const SETTINGS_POPUP_WIDTH = 436;
 const SETTINGS_POPUP_HEIGHT = 620;
 
 export function forgetSettingsPopupWindow(windowId: number): void {
