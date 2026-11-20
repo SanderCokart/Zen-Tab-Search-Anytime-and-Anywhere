@@ -22,6 +22,7 @@
     "release": "node scripts/release.mjs",
     "screenshots": "playwright install chromium && playwright test -c screenshots/playwright.config.ts",
     "screenshots:dev": "npx vite --config screenshots/vite.config.ts",
+    "paint:bench": "playwright test -c screenshots/paint-bench.playwright.config.ts",
     "prepare": "husky",
     "postinstall": "node scripts/generate-icons.mjs"
   },

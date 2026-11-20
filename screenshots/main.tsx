@@ -6,6 +6,8 @@ import { TimerPopup } from "@/features/timers/ui/TimerPopup";
 import { HostOverridesPopup } from "@/features/hosts/ui/HostOverridesPopup";
 import { PrototypeTodoClearClose } from "@/features/todos/ui/prototype-clear-close";
 import { installBrowserMock } from "@/screenshots/browser-mock";
+import { startPaintBench } from "@/screenshots/paint-bench";
+import { paintBenchSettings } from "@/screenshots/paint-bench-cases";
 import {
   displaySettingsFor,
   sceneFromSearch,
@@ -15,8 +17,11 @@ import "@/shared/ui/styles.css";
 import "@/screenshots/harness.css";
 
 const scene = sceneFromSearch(window.location.search);
-installBrowserMock(displaySettingsFor(scene), { updateAvailable: scene.updateAvailable });
-document.documentElement.dataset.harnessScene = scene.id;
+const paintBench = new URLSearchParams(window.location.search).get("scene") === "paint-bench";
+installBrowserMock(paintBench ? paintBenchSettings() : displaySettingsFor(scene), {
+  updateAvailable: scene.updateAvailable,
+});
+document.documentElement.dataset.harnessScene = paintBench ? "paint-bench" : scene.id;
 if ((SPOTLIGHT_CONCEPT_SCENES as readonly string[]).includes(scene.id)) {
   document.documentElement.dataset.harnessLayout = "spotlight";
 }
@@ -115,4 +120,8 @@ if (!root) {
   throw new Error("Missing screenshot harness mount.");
 }
 
-render(<HarnessApp />, root);
+if (paintBench) {
+  startPaintBench(root);
+} else {
+  render(<HarnessApp />, root);
+}
