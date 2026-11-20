@@ -72,6 +72,7 @@ describe("tab folder collapse", () => {
 
     expect(activeCollapsedFolders(collapsed, { query: "", groupFolders: true })).toBe(collapsed);
     expect(activeCollapsedFolders(collapsed, { query: "  ", groupFolders: true })).toBe(collapsed);
+    expect(activeCollapsedFolders(collapsed, { query: "-", groupFolders: true })).toBe(collapsed);
     expect(activeCollapsedFolders(collapsed, { query: "arch", groupFolders: true }).size).toBe(0);
     expect(activeCollapsedFolders(collapsed, { query: "", groupFolders: false }).size).toBe(0);
   });

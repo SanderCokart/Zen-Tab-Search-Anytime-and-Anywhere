@@ -24,11 +24,13 @@ type Navigation = ReturnType<typeof useSearchNavigation>;
 
 function Harness({
   query,
+  list = items,
   onRender,
   onWebSearch,
   onActivateItem,
 }: {
   query: string;
+  list?: SearchItem[];
   onRender: (nav: Navigation) => void;
   onWebSearch?: () => void;
   onActivateItem?: () => void;
@@ -37,7 +39,7 @@ function Harness({
     layout: "overlay",
     query,
     pageJump: 5,
-    items,
+    items: list,
     navigatorEntries: [],
     todoTabs,
     forgeNavigatorQuery: parseForgeNavigatorQuery(query),
@@ -55,7 +57,9 @@ function Harness({
   return null;
 }
 
-function mount(options: { onWebSearch?: () => void; onActivateItem?: () => void } = {}) {
+function mount(
+  options: { onWebSearch?: () => void; onActivateItem?: () => void; list?: SearchItem[] } = {},
+) {
   let latest: Navigation | undefined;
   const root = document.createElement("div");
   const onRender = (nav: Navigation) => {
@@ -75,15 +79,19 @@ function mount(options: { onWebSearch?: () => void; onActivateItem?: () => void 
   };
 }
 
-function press(nav: Navigation, key: string, init: { shiftKey?: boolean } = {}) {
+function press(
+  nav: Navigation,
+  key: string,
+  init: { shiftKey?: boolean; ctrlKey?: boolean; preventDefault?: () => void } = {},
+) {
   act(() => {
     nav.onKeyDown({
       key,
-      ctrlKey: false,
+      ctrlKey: init.ctrlKey === true,
       metaKey: false,
       altKey: false,
       shiftKey: init.shiftKey === true,
-      preventDefault: () => undefined,
+      preventDefault: init.preventDefault ?? (() => undefined),
     } as unknown as JSX.TargetedKeyboardEvent<HTMLInputElement>);
   });
 }
@@ -111,6 +119,36 @@ describe("useSearchNavigation", () => {
     press(nav(), "Enter", { shiftKey: true });
     expect(onWebSearch).toHaveBeenCalledOnce();
     expect(onActivateItem).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  it("jumps five rows with Ctrl+Up and Ctrl+Down, and leaves Left and Right for the caret", () => {
+    const list: SearchItem[] = Array.from({ length: 12 }, (_, index) => ({
+      kind: "tab",
+      data: tab(index + 1),
+    }));
+    const { show, nav, unmount } = mount({ list });
+    show("");
+    expect(nav().selectedIndex).toBe(0);
+
+    const preventJump = vi.fn();
+    press(nav(), "ArrowDown", { ctrlKey: true, preventDefault: preventJump });
+    expect(nav().selectedIndex).toBe(5);
+    expect(preventJump).toHaveBeenCalledOnce();
+
+    const preventLeft = vi.fn();
+    press(nav(), "ArrowLeft", { preventDefault: preventLeft });
+    expect(nav().selectedIndex).toBe(5);
+    expect(preventLeft).not.toHaveBeenCalled();
+
+    press(nav(), "ArrowRight");
+    expect(nav().selectedIndex).toBe(5);
+
+    press(nav(), "ArrowUp", { ctrlKey: true });
+    expect(nav().selectedIndex).toBe(0);
+
+    press(nav(), "ArrowUp", { ctrlKey: true });
+    expect(nav().selectedIndex).toBe(0);
     unmount();
   });
 });

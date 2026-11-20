@@ -88,6 +88,20 @@ describe("excludePinnedSearchSources", () => {
       spaces,
     });
   });
+
+  it("does not treat a lone minus as a query", () => {
+    const tabs = [tab(1), { ...tab(2), essential: true }];
+    expect(
+      excludePinnedSearchSources(tabs, spaces, {
+        excludeSpaces: true,
+        excludeEssentials: true,
+        query: "-",
+      }),
+    ).toEqual({
+      tabs: [tabs[0]],
+      spaces: [],
+    });
+  });
 });
 
 describe("pinnedFirst", () => {
@@ -116,12 +130,26 @@ describe("splitSearchQuery", () => {
       includeQuery: "auth",
       excludeWords: ["gitlab"],
     });
-    expect(splitSearchQuery("-")).toEqual({ includeQuery: "-", excludeWords: [] });
+    expect(splitSearchQuery("-")).toEqual({ includeQuery: "", excludeWords: [] });
+    expect(splitSearchQuery("auth -")).toEqual({ includeQuery: "auth", excludeWords: [] });
+    expect(splitSearchQuery("-draft -")).toEqual({ includeQuery: "", excludeWords: ["draft"] });
     expect(splitSearchQuery("foo-bar")).toEqual({ includeQuery: "foo-bar", excludeWords: [] });
   });
 });
 
 describe("filterSearchItems", () => {
+  it("keeps every tab while a minus has no word yet", () => {
+    const items: SearchItem[] = buildSearchItems(
+      [
+        { ...tab(1), title: "Auth service" },
+        { ...tab(2), title: "GitLab auth review" },
+      ],
+      [],
+    );
+    expect(filterSearchItems(items, "-").map((item) => item.data.id)).toEqual([1, 2]);
+    expect(filterSearchItems(items, "auth -").map((item) => item.data.id)).toEqual([1, 2]);
+  });
+
   it("hides tabs that match a -word exclude", () => {
     const items: SearchItem[] = buildSearchItems(
       [
@@ -131,6 +159,62 @@ describe("filterSearchItems", () => {
       [],
     );
     expect(filterSearchItems(items, "auth -gitlab").map((item) => item.data.id)).toEqual([1]);
+    expect(filterSearchItems(items, "-gitlab").map((item) => item.data.id)).toEqual([1]);
+  });
+
+  it("treats -word as a whole word, not a substring", () => {
+    const items: SearchItem[] = buildSearchItems(
+      [
+        { ...tab(1), title: "Undrafted notes" },
+        { ...tab(2), title: "Draft: notes" },
+      ],
+      [],
+    );
+    expect(filterSearchItems(items, "-draft").map((item) => item.data.id)).toEqual([1]);
+  });
+
+  it("does not hide a GitLab merge request whose title is not the word draft", () => {
+    const items: SearchItem[] = buildSearchItems(
+      [
+        {
+          ...tab(1),
+          title: "Ready checkout flow",
+          url: "https://gitlab.example.com/shop/checkout/-/merge_requests/80",
+        },
+        {
+          ...tab(2),
+          title: "Draft: extra logging",
+          url: "https://gitlab.example.com/shop/checkout/-/merge_requests/81",
+        },
+      ],
+      [],
+    );
+    expect(filterSearchItems(items, "-draft").map((item) => item.data.id)).toEqual([1]);
+  });
+
+  it("does not exclude a renamed tab by Draft: left in the page title", () => {
+    const items: SearchItem[] = buildSearchItems(
+      [
+        {
+          ...tab(1),
+          title: "Draft: ready checkout flow (!80) · Merge request · shop · GitLab",
+          customLabel: "MR: !80 - ready checkout flow",
+          url: "https://gitlab.example.com/shop/checkout/-/merge_requests/80",
+        },
+      ],
+      [],
+    );
+    expect(filterSearchItems(items, "-draft").map((item) => item.data.id)).toEqual([1]);
+  });
+
+  it("still excludes by hostname so -gitlab drops GitLab tabs", () => {
+    const items: SearchItem[] = buildSearchItems(
+      [
+        { ...tab(1), title: "Auth service", url: "https://github.com/acme/app" },
+        { ...tab(2), title: "Auth service", url: "https://gitlab.com/acme/app" },
+      ],
+      [],
+    );
     expect(filterSearchItems(items, "-gitlab").map((item) => item.data.id)).toEqual([1]);
   });
 
@@ -373,9 +457,27 @@ describe("forge issue entries", () => {
       },
     ]);
 
+    expect(filterForgeIssueEntries(entries, "-")).toHaveLength(2);
     expect(filterForgeIssueEntries(entries, "42")).toHaveLength(1);
     expect(filterForgeIssueEntries(entries, "merge request")[0]?.ref.id).toBe("7");
     expect(filterForgeIssueEntries(entries, "gitlab")[0]?.ref.id).toBe("7");
+  });
+
+  it("does not hide a merge request for -draft unless that word is in the visible title", () => {
+    const entries = buildForgeIssueEntries([
+      {
+        ...tab(1),
+        title: "Draft: ready checkout flow (!80) · Merge request · shop · GitLab",
+        customLabel: "MR: !80 - ready checkout flow",
+        url: "https://gitlab.example.com/shop/checkout/-/merge_requests/80",
+      },
+      {
+        ...tab(2),
+        title: "Draft: extra logging",
+        url: "https://gitlab.example.com/shop/checkout/-/merge_requests/81",
+      },
+    ]);
+    expect(filterForgeIssueEntries(entries, "-draft").map((entry) => entry.ref.id)).toEqual(["80"]);
   });
 
   it("matches a renamed issue by both its custom label and original title", () => {

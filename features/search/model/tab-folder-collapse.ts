@@ -1,4 +1,8 @@
-import { searchItemFolderPath, type SearchItemGroup } from "@/features/search/model/ranking";
+import {
+  queryHasFilterTerms,
+  searchItemFolderPath,
+  type SearchItemGroup,
+} from "@/features/search/model/ranking";
 import type { SearchItem } from "@/shared/types";
 
 /** Where the collapsed tab folders are kept; disposable UI state, not a setting. */
@@ -28,7 +32,7 @@ export function activeCollapsedFolders(
   collapsed: ReadonlySet<string>,
   options: { query: string; groupFolders: boolean },
 ): ReadonlySet<string> {
-  return options.query.trim() || !options.groupFolders ? new Set() : collapsed;
+  return queryHasFilterTerms(options.query) || !options.groupFolders ? new Set() : collapsed;
 }
 
 /**

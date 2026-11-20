@@ -2,7 +2,7 @@ import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
 
 /**
  * The cheat-sheet for query prefixes, next to the search field: column jumps
- * and `-word` excludes.
+ * and chained `-word` excludes.
  */
 export function SearchQueryHelp({
   todos = true,
@@ -19,7 +19,7 @@ export function SearchQueryHelp({
           { key: "!", meaning: "MRs and PRs" },
         ]
       : []),
-    { key: "-word", meaning: "Hide matches" },
+    { key: "-word -word", meaning: "Hide matches" },
   ];
 
   return (
@@ -31,7 +31,7 @@ export function SearchQueryHelp({
         <span class="flex flex-col gap-[calc(var(--zen-space-1)*0.5)] text-left tracking-[0.08em] text-[var(--zs-tip-ink)] normal-case">
           {hints.map((hint) => (
             <span key={hint.key} class="flex items-baseline gap-[var(--zen-space-2)]">
-              <span class="zs-label-red min-w-[4.5ch] font-semibold">{hint.key}</span>
+              <span class="zs-label-red min-w-[11ch] font-semibold">{hint.key}</span>
               <span>{hint.meaning}</span>
             </span>
           ))}

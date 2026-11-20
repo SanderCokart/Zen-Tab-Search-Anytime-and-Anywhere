@@ -31,9 +31,10 @@ export interface UseSearchNavigationOptions {
   onWebSearch?: () => void;
   /**
    * Alt+Left / Alt+Right in the issue navigator: collapse the group of the
-   * selected entry, or expand the collapsed group nearest to it. Plain Left and
-   * Right already page through the list. Returns how many entries are visible
-   * afterwards, so the selection can stay in range; undefined when nothing changed.
+   * selected entry, or expand the collapsed group nearest to it. Ctrl+Up and
+   * Ctrl+Down page through the list. Plain Left and Right move the caret.
+   * Returns how many entries are visible afterwards, so the selection can stay
+   * in range; undefined when nothing changed.
    */
   onForgeGroupKey?: (
     action: "collapse" | "expand",
@@ -271,6 +272,30 @@ export function useSearchNavigation({
         }
       }
       event.preventDefault();
+    } else if (
+      (event.key === "ArrowDown" || event.key === "ArrowUp") &&
+      event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey
+    ) {
+      const delta = event.key === "ArrowDown" ? pageJump : -pageJump;
+      if (activePane === "forge" && forgeCount) {
+        setForgeSelection({
+          query,
+          index: Math.max(0, Math.min(selectedForgeIndex + delta, forgeCount - 1)),
+        });
+      } else if (activePane === "todos" && todoCount) {
+        setTodoSelection({
+          query,
+          index: Math.max(0, Math.min(selectedTodoIndex + delta, todoCount - 1)),
+        });
+      } else if (count) {
+        setTabSelection({
+          query,
+          index: Math.max(0, Math.min(selectedIndex + delta, count - 1)),
+        });
+      }
+      event.preventDefault();
     } else if (event.key === "ArrowDown") {
       if (activePane === "forge") {
         setForgeSelection({ query, index: (selectedForgeIndex + 1) % forgeCount });
@@ -313,30 +338,6 @@ export function useSearchNavigation({
           query,
           index: Math.max(0, Math.min(selectedForgeIndex, remaining - 1)),
         });
-      }
-      event.preventDefault();
-    } else if (event.key === "ArrowRight") {
-      if (activePane === "forge") {
-        setForgeSelection({
-          query,
-          index: Math.min(selectedForgeIndex + pageJump, forgeCount - 1),
-        });
-      } else if (activePane === "todos") {
-        setTodoSelection({
-          query,
-          index: Math.min(selectedTodoIndex + pageJump, todoCount - 1),
-        });
-      } else if (count) {
-        setTabSelection({ query, index: Math.min(selectedIndex + pageJump, count - 1) });
-      }
-      event.preventDefault();
-    } else if (event.key === "ArrowLeft") {
-      if (activePane === "forge") {
-        setForgeSelection({ query, index: Math.max(selectedForgeIndex - pageJump, 0) });
-      } else if (activePane === "todos") {
-        setTodoSelection({ query, index: Math.max(selectedTodoIndex - pageJump, 0) });
-      } else if (count) {
-        setTabSelection({ query, index: Math.max(selectedIndex - pageJump, 0) });
       }
       event.preventDefault();
     }

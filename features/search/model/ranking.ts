@@ -141,25 +141,53 @@ export function tokenizeSearchText(value: string): string[] {
 
 /**
  * Pulls `-word` tokens out of a query. `auth -gitlab` keeps auth and hides
- * gitlab; a leading `-wip` hides wip with no include term. A lone `-` is not
- * an exclude. Hyphenated titles typed without a space (`foo-bar`) stay includes.
+ * gitlab as a whole word on the visible title, folder, space or host; a leading
+ * `-wip` hides wip with no include term. A lone `-` is an unfinished exclude
+ * and is ignored, so the list does not empty while you type. Hyphenated titles
+ * typed without a space (`foo-bar`) stay includes.
  */
 export function splitSearchQuery(query: string): { includeQuery: string; excludeWords: string[] } {
   const include: string[] = [];
   const excludeWords: string[] = [];
   for (const token of query.trim().split(/\s+/).filter(Boolean)) {
-    if (token.startsWith("-") && token.length > 1) {
+    if (token.startsWith("-")) {
       const word = normalizeSearchText(token.slice(1));
       if (word) excludeWords.push(word);
-    } else {
-      include.push(token);
+      continue;
     }
+    include.push(token);
   }
   return { includeQuery: include.join(" "), excludeWords };
 }
 
-function haystackContainsExclude(haystack: string, excludeWords: readonly string[]): boolean {
-  return excludeWords.some((word) => haystack.includes(word));
+/** True once the query has an include word or a finished -word exclude. */
+export function queryHasFilterTerms(query: string): boolean {
+  const { includeQuery, excludeWords } = splitSearchQuery(query);
+  return excludeWords.length > 0 || Boolean(normalizeSearchText(includeQuery));
+}
+
+/** Host only: path tokens like merge_requests must not satisfy -word. */
+function urlHostSearchText(url: string): string {
+  try {
+    const href = SCHEME_RE.test(url) ? url : `https://${url}`;
+    return new URL(href).hostname;
+  } catch {
+    return urlSearchText(url);
+  }
+}
+
+function normalizedHasExcludeWord(normalized: string, word: string): boolean {
+  if (!normalized || !word) {
+    return false;
+  }
+  return ` ${normalized} `.includes(` ${word} `);
+}
+
+function textsMatchExclude(texts: readonly string[], excludeWords: readonly string[]): boolean {
+  const normalized = texts.map((text) => normalizeSearchText(text));
+  return excludeWords.some((word) =>
+    normalized.some((value) => normalizedHasExcludeWord(value, word)),
+  );
 }
 
 function documentMatchesExclude(
@@ -169,12 +197,42 @@ function documentMatchesExclude(
   if (excludeWords.length === 0) {
     return false;
   }
-  const fields = [
-    ...document.fields,
-    ...(document.combinedField ? [document.combinedField] : []),
-    ...(document.urlField ? [document.urlField] : []),
-  ];
-  return haystackContainsExclude(fields.map((field) => field.normalized).join(" "), excludeWords);
+  if (document.item.kind === "space") {
+    return textsMatchExclude(
+      document.fields.map((field) => field.normalized),
+      excludeWords,
+    );
+  }
+  const tab = document.item.data;
+  const labeled = Boolean(tab.customLabel?.trim());
+  return textsMatchExclude(
+    [
+      labeled ? tab.customLabel || "" : tab.title || "",
+      tab.workspaceName || "",
+      tab.folderName || "",
+      urlHostSearchText(tab.url || ""),
+    ],
+    excludeWords,
+  );
+}
+
+function forgeEntryMatchesExclude(
+  entry: ForgeIssueEntry,
+  excludeWords: readonly string[],
+): boolean {
+  if (excludeWords.length === 0) {
+    return false;
+  }
+  const labeled = Boolean(entry.tab.customLabel?.trim());
+  return textsMatchExclude(
+    [
+      labeled ? entry.tab.customLabel || "" : forgeEntryDisplayTitle(entry),
+      labeled ? "" : entry.title,
+      entry.projectLabel,
+      urlHostSearchText(entry.tab.url || ""),
+    ],
+    excludeWords,
+  );
 }
 
 export function countExactQueryWordsPrepared(tokenSet: Set<string>, queryWords: string[]): number {
@@ -262,7 +320,7 @@ export function excludePinnedSearchSources(
   spaces: SpaceInfo[],
   options: { excludeSpaces: boolean; excludeEssentials: boolean; query: string },
 ): { tabs: TabInfo[]; spaces: SpaceInfo[] } {
-  if (options.query.trim()) {
+  if (queryHasFilterTerms(options.query)) {
     return { tabs, spaces };
   }
   return {
@@ -470,7 +528,7 @@ export function parseTodoNavigatorQuery(query: string): NavigatorQuery {
  * column's own order, which already puts the current tab first.
  */
 export function filterTodoTabs(todoTabs: TabInfo[], query: string): TabInfo[] {
-  if (!query.trim()) {
+  if (!queryHasFilterTerms(query)) {
     return todoTabs;
   }
   return filterSearchItems(
@@ -532,20 +590,13 @@ export function rankForgeIssueEntries(
   query: string,
 ): RankedForgeIssueEntry[] {
   const { includeQuery, excludeWords } = splitSearchQuery(query);
-  const kept = (entry: ForgeIssueEntry) =>
-    !haystackContainsExclude(
-      compileForgeEntryFields(entry)
-        .map((field) => field.normalized)
-        .join(" "),
-      excludeWords,
-    );
-
-  if (!includeQuery) {
-    return entries.filter(kept).map((entry) => ({ entry, score: 0, direct: false, words: 0 }));
-  }
-
+  const kept = (entry: ForgeIssueEntry) => !forgeEntryMatchesExclude(entry, excludeWords);
   const queryNormalized = normalizeSearchText(includeQuery);
   const queryWords = queryNormalized.split(" ").filter(Boolean);
+
+  if (queryWords.length === 0) {
+    return entries.filter(kept).map((entry) => ({ entry, score: 0, direct: false, words: 0 }));
+  }
   return entries
     .filter(kept)
     .map((entry) => {
@@ -614,7 +665,7 @@ export function filterForgeIssueEntries(
   entries: ForgeIssueEntry[],
   query: string,
 ): ForgeIssueEntry[] {
-  if (!query.trim()) {
+  if (!queryHasFilterTerms(query)) {
     return entries;
   }
 
@@ -753,7 +804,9 @@ export function filterSearchDocuments(
   query: string,
 ): FilterSearchResult {
   const { includeQuery, excludeWords } = splitSearchQuery(query);
-  if (!includeQuery && excludeWords.length === 0) {
+  const queryNormalized = normalizeSearchText(includeQuery);
+  const queryWords = queryNormalized.split(" ").filter(Boolean);
+  if (queryWords.length === 0 && excludeWords.length === 0) {
     return { items: documents.map((document) => document.item), bestExactWordCount: 0 };
   }
 
@@ -762,12 +815,9 @@ export function filterSearchDocuments(
       ? documents
       : documents.filter((document) => !documentMatchesExclude(document, excludeWords));
 
-  if (!includeQuery) {
+  if (queryWords.length === 0) {
     return { items: remaining.map((document) => document.item), bestExactWordCount: 0 };
   }
-
-  const queryNormalized = normalizeSearchText(includeQuery);
-  const queryWords = queryNormalized.split(" ").filter(Boolean);
   const includeUrl = queryNormalized.length >= 2;
   const scored: { item: SearchItem; score: number; words: number }[] = [];
 

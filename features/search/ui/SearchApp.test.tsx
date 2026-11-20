@@ -1279,7 +1279,7 @@ describe("SearchApp", () => {
     const tip = root.querySelector("[role='tooltip']")!.textContent ?? "";
     expect(tip).toContain("#");
     expect(tip).toContain("!");
-    expect(tip).toContain("-word");
+    expect(tip).toContain("-word -word");
     expect(tip).toContain("Todos");
     expect(tip).toContain("Hide matches");
 
@@ -2950,7 +2950,7 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
     await vi.waitFor(() => expect(selectedUrl(root)).toContain("/issues/10"));
 
     const issues = folder(root, "Issues");
-    // Plain Left still pages through the list; only Alt+Left collapses.
+    // Plain Left moves the caret; only Alt+Left collapses.
     press("ArrowLeft");
     expect(issues.trigger.getAttribute("aria-expanded")).toBe("true");
 

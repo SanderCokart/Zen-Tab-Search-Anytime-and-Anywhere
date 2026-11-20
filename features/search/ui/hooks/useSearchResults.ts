@@ -17,6 +17,7 @@ import {
   buildSearchItems,
   excludePinnedSearchSources,
   filterSearchDocuments,
+  queryHasFilterTerms,
   filterTodoTabs,
   flattenForgeNavigatorEntries,
   groupSearchItems,
@@ -229,7 +230,7 @@ export function useSearchResults({
 
   const filtered = useMemo(() => {
     const matches = filterSearchDocuments(searchDocuments, effectiveQuery);
-    if (effectiveQuery.trim()) {
+    if (queryHasFilterTerms(effectiveQuery)) {
       return matches;
     }
     return { items: pinnedFirst(matches.items), bestExactWordCount: 0 };
