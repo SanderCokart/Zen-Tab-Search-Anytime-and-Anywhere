@@ -70,6 +70,7 @@ function printUsage() {
     "",
     "Options:",
     "  --canary       GitHub prerelease; not marked Latest",
+    "  --draft        GitHub draft release; publish it on GitHub after review",
     "  --dry-run",
   ].join("\n");
 
@@ -90,6 +91,7 @@ function parseArgs(args) {
     notesSince: undefined,
     title: undefined,
     canary: false,
+    draft: false,
     dryRun: false,
   };
 
@@ -132,6 +134,8 @@ function parseArgs(args) {
       parsed.title = arg.slice("--title=".length);
     } else if (arg === "--canary") {
       parsed.canary = true;
+    } else if (arg === "--draft") {
+      parsed.draft = true;
     } else if (arg === "--dry-run") {
       parsed.dryRun = true;
     } else if (arg.startsWith("-")) {
@@ -324,13 +328,14 @@ function releaseTitle(newVersion, canary, title) {
   return canary ? `${tagName} (canary)` : tagName;
 }
 
-function printDryRun({ oldVersion, newVersion, tagName, canary, title, notes }) {
+function printDryRun({ oldVersion, newVersion, tagName, canary, draft, title, notes }) {
   console.log("");
   console.log("Dry run only. No files, commits, tags, pushes, or releases were created.");
   console.log(`Version: ${oldVersion} -> ${newVersion}`);
   console.log(`Tag: ${tagName}`);
   console.log(`Title: ${releaseTitle(newVersion, canary, title)}`);
   console.log(`GitHub prerelease: ${canary ? "yes" : "no"}`);
+  console.log(`GitHub draft: ${draft ? "yes" : "no"}`);
   console.log(`Assets: zen-deck-${tagName}-firefox.zip, zen-deck-mcp.mjs`);
   if (notes.sinceTag) {
     console.log(`Generated notes since: ${notes.sinceTag}`);
@@ -388,6 +393,7 @@ function main() {
       newVersion,
       tagName,
       canary: args.canary,
+      draft: args.draft,
       title: args.title,
       notes,
     });
@@ -453,6 +459,9 @@ function main() {
   ];
   if (args.canary) {
     releaseArgs.push("--prerelease", "--latest=false");
+  }
+  if (args.draft) {
+    releaseArgs.push("--draft");
   }
   if (notes.type === "file") {
     releaseArgs.push("--notes-file", notes.value);
