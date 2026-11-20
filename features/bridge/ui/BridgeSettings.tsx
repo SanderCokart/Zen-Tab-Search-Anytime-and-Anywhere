@@ -5,8 +5,9 @@ import {
   cursorInstallUrl,
   mcpConfigFragment,
   MCP_PATH_PLACEHOLDER,
-  MCP_SERVER_ASSET_PATH,
   MCP_SERVER_FILE_NAME,
+  mcpServerDownloadUrl,
+  mcpServerReleasePageUrl,
 } from "@/features/bridge/model/mcp-install";
 import { settingsKeyClass } from "@/shared/ui/button-styles";
 import { Lcd } from "@/shared/ui/primitives/Lcd";
@@ -24,7 +25,8 @@ export function BridgeSettings() {
   const [loaded, setLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [configCopied, setConfigCopied] = useState(false);
-  const [downloadFailed, setDownloadFailed] = useState(false);
+  // The extension version whose server failed to download, or undefined.
+  const [failedVersion, setFailedVersion] = useState<string | undefined>();
   const { anchor, show, hide, showAfterPause } = useTooltip();
   const [tooltip, setTooltip] = useState("");
   const showTip = (content: string, element: HTMLElement) => {
@@ -66,12 +68,13 @@ export function BridgeSettings() {
     void navigator.clipboard.writeText(mcpConfigFragment()).then(() => setConfigCopied(true));
   };
 
+  // Fetched rather than linked, so a missing asset shows an error here instead of
+  // replacing this page with GitHub's 404. `<all_urls>` lets the page read it.
   const downloadServer = async () => {
-    setDownloadFailed(false);
+    setFailedVersion(undefined);
+    const extensionVersion = browser.runtime.getManifest().version;
     try {
-      // WXT types getURL against known public paths, so resolve the bundled asset from the root.
-      const assetUrl = new URL(MCP_SERVER_ASSET_PATH, browser.runtime.getURL("/"));
-      const response = await fetch(assetUrl);
+      const response = await fetch(mcpServerDownloadUrl(extensionVersion));
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -82,7 +85,7 @@ export function BridgeSettings() {
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1_000);
     } catch {
-      setDownloadFailed(true);
+      setFailedVersion(extensionVersion);
     }
   };
 
@@ -196,9 +199,21 @@ export function BridgeSettings() {
             </button>
           </div>
           {anchor && <TooltipLegend anchor={anchor} content={tooltip} />}
-          {downloadFailed && (
-            <span class="text-zen-danger text-[length:var(--zen-text-sm)]">
-              Download failed. Reload the extension and try again.
+          {failedVersion && (
+            <span
+              class="text-zen-danger text-[length:var(--zen-text-sm)]"
+              data-testid="zen-mcpDownloadFailed"
+            >
+              Download failed. Get <code>{MCP_SERVER_FILE_NAME}</code> from the{" "}
+              <a
+                href={mcpServerReleasePageUrl(failedVersion)}
+                target="_blank"
+                rel="noreferrer"
+                class="text-inherit underline"
+              >
+                v{failedVersion} release
+              </a>{" "}
+              instead.
             </span>
           )}
           <span class="text-[length:var(--zen-text-sm)] text-[var(--zs-ink-3)]">

@@ -4,12 +4,6 @@ import { resolve } from "node:path";
 import { defineConfig } from "wxt";
 // @ts-expect-error - plain .mjs build helper with no type declarations
 import { injectExperimentDebugAsset } from "./scripts/experiment-debug.mjs";
-// @ts-expect-error - plain .mjs build helper with no type declarations
-import { buildMcp, MCP_OUTFILE } from "./scripts/build-mcp.mjs";
-
-// Where the bundled MCP server sits inside the extension. Must match MCP_SERVER_ASSET_PATH
-// in features/bridge/model/mcp-install.ts.
-const MCP_SERVER_ASSET = "mcp/zen-deck-mcp.mjs";
 
 // The overlay's fonts, shipped as plain files (see shared/ui/page-fonts.ts for why).
 // Only the weights the UI uses; keep in step with shared/ui/fonts.css and page-fonts.ts.
@@ -131,11 +125,10 @@ export default defineConfig({
     disabled: true,
   },
   hooks: {
-    "build:publicAssets": async (wxt, files) => {
+    // The MCP server is not shipped here: the settings page downloads it from the
+    // GitHub release that matches the extension (features/bridge/model/mcp-install.ts).
+    "build:publicAssets": (wxt, files) => {
       injectExperimentDebugAsset(wxt, files);
-      // Ship the MCP server with the extension so its settings page can offer the matching build.
-      await buildMcp();
-      files.push({ relativeDest: MCP_SERVER_ASSET, absoluteSrc: MCP_OUTFILE });
       for (const { file, weights } of FONT_FILES) {
         for (const weight of weights) {
           const name = `${file}-latin-${weight}-normal.woff2`;

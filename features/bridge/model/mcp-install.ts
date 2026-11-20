@@ -1,11 +1,23 @@
+import { RELEASE_DOWNLOAD_PREFIX, RELEASES_REPO } from "@/features/updates/model/release";
+
 /** Name the MCP server is registered under in client configs. */
 export const MCP_SERVER_NAME = "zen-deck";
 
-/** File name the settings page downloads the server as. */
+/** The release asset's name, which `scripts/release.mjs` uploads with every release. */
 export const MCP_SERVER_FILE_NAME = "zen-deck-mcp.mjs";
 
-/** Path inside the extension package; matches the asset added in wxt.config.ts. */
-export const MCP_SERVER_ASSET_PATH = "mcp/zen-deck-mcp.mjs";
+/**
+ * The server from the release that matches this extension. The bridge protocol
+ * refuses a server from another release, so this is the release's, not the latest.
+ */
+export function mcpServerDownloadUrl(extensionVersion: string): string {
+  return `${RELEASE_DOWNLOAD_PREFIX}v${extensionVersion}/${MCP_SERVER_FILE_NAME}`;
+}
+
+/** The release page, for downloading by hand when the direct download fails. */
+export function mcpServerReleasePageUrl(extensionVersion: string): string {
+  return `https://github.com/${RELEASES_REPO}/releases/tag/v${extensionVersion}`;
+}
 
 /** Stand-ins the user replaces: where they saved the server, and the token from this page. */
 export const MCP_PATH_PLACEHOLDER = `<path-to>/${MCP_SERVER_FILE_NAME}`;

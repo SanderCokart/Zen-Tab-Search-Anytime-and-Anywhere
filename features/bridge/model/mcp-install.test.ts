@@ -5,7 +5,10 @@ import {
   MCP_PATH_PLACEHOLDER,
   MCP_SERVER_NAME,
   MCP_TOKEN_PLACEHOLDER,
+  mcpServerDownloadUrl,
+  mcpServerReleasePageUrl,
 } from "@/features/bridge/model/mcp-install";
+import { RELEASE_DOWNLOAD_PREFIX } from "@/features/updates/model/release";
 
 function fromBase64Url(value: string): string {
   const padded =
@@ -54,5 +57,25 @@ describe("cursorInstallUrl", () => {
       args: [MCP_PATH_PLACEHOLDER],
       env: { ZEN_BRIDGE_TOKEN: token },
     });
+  });
+});
+
+describe("mcpServerDownloadUrl", () => {
+  it("points at the asset of the release matching the extension, not the latest", () => {
+    expect(mcpServerDownloadUrl("5.4.0")).toBe(
+      "https://github.com/SanderCokart/Zen-Deck/releases/download/v5.4.0/zen-deck-mcp.mjs",
+    );
+  });
+
+  it("stays under the prefix the update check trusts", () => {
+    expect(mcpServerDownloadUrl("1.2.3").startsWith(RELEASE_DOWNLOAD_PREFIX)).toBe(true);
+  });
+});
+
+describe("mcpServerReleasePageUrl", () => {
+  it("links the release page of the matching version", () => {
+    expect(mcpServerReleasePageUrl("5.4.0")).toBe(
+      "https://github.com/SanderCokart/Zen-Deck/releases/tag/v5.4.0",
+    );
   });
 });
