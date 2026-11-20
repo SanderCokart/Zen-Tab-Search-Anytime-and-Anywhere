@@ -3,7 +3,7 @@ import type { DisplaySettings } from "@/features/settings/model/display-settings
 import { ESSENTIAL_TAB_NAMES_KEY } from "@/features/search/ui/hooks/useEssentialTabNames";
 import { DISPLAY_SETTINGS_STORAGE_KEY } from "@/features/settings/model/display-settings";
 import { COMPLEXITY_SETUP_DONE_KEY } from "@/features/settings/model/complexity";
-import type { SearchSnapshot } from "@/shared/messaging/protocol";
+import type { SearchSnapshot, TabTodo } from "@/shared/messaging/protocol";
 import type { HostOverrideGroup, HostProxyReport, SpaceInfo, TabInfo } from "@/shared/types";
 
 const MINUTE = 60_000;
@@ -268,22 +268,26 @@ export function demoSnapshot(now = Date.now(), { busy = false } = {}): SearchSna
         url: "",
       },
     ],
-    todos: [
-      { tabId: 2, status: "todo" },
-      { tabId: 10, status: "todo" },
-      ...(busy
-        ? [
-            { tabId: 12, status: "todo" as const },
-            { tabId: 13, status: "todo" as const },
-          ]
-        : []),
-    ],
     statuses: [
       { tabId: 1, light: "green" },
       { tabId: 2, light: "orange" },
       { tabId: 10, light: "red" },
     ],
   };
+}
+
+/** The demo todo marks; `busy` adds two more so the todo column fills. */
+export function demoTodos({ busy = false } = {}): TabTodo[] {
+  return [
+    { tabId: 2, status: "todo" },
+    { tabId: 10, status: "todo" },
+    ...(busy
+      ? [
+          { tabId: 12, status: "todo" as const },
+          { tabId: 13, status: "todo" as const },
+        ]
+      : []),
+  ];
 }
 
 export const DEMO_HOST_GROUPS: HostOverrideGroup[] = [

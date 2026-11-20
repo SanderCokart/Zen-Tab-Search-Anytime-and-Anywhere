@@ -219,6 +219,10 @@ export const extensionRequestSchema = v.variant("type", [
     anchorTabId: optionalTabIdSchema,
   }),
   v.object({
+    type: v.literal("getTodos"),
+    tabIds: v.array(tabIdSchema),
+  }),
+  v.object({
     type: v.literal("getTimers"),
   }),
   v.object({
@@ -424,7 +428,6 @@ export const searchSnapshotSchema = v.object({
   tabs: v.array(tabInfoSchema),
   spaces: v.array(spaceInfoSchema),
   timers: v.array(tabTimerSchema),
-  todos: v.fallback(v.array(tabTodoSchema), []),
   statuses: v.fallback(v.array(tabStatusSchema), []),
 });
 
@@ -436,6 +439,7 @@ export const EXTENSION_REQUEST_TYPES = [
   "switchSpace",
   "getTab",
   "getSnapshot",
+  "getTodos",
   "getTimers",
   "openTimerPopup",
   "setTimer",
@@ -514,6 +518,7 @@ export type ExtensionSuccessMap = {
   switchSpace: void;
   getTab: TabInfo;
   getSnapshot: SearchSnapshot;
+  getTodos: TabTodo[];
   getTimers: TabTimer[];
   openTimerPopup: void;
   setTimer: TabTimer;
@@ -644,6 +649,8 @@ export function parseExtensionSuccess<T extends ExtensionRequestType>(
       return v.parse(tabInfoSchema, value) as ExtensionSuccessMap[T];
     case "getSnapshot":
       return v.parse(searchSnapshotSchema, value) as ExtensionSuccessMap[T];
+    case "getTodos":
+      return v.parse(v.array(tabTodoSchema), value) as ExtensionSuccessMap[T];
     case "getTimers":
       return v.parse(v.array(tabTimerSchema), value) as ExtensionSuccessMap[T];
     case "openTimerPopup":

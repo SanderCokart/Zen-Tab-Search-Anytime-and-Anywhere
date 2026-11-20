@@ -25,6 +25,7 @@ export interface MessageRouterHandlers {
   switchSpace(spaceId: string, anchorTabId?: number): Promise<void>;
   getTab(tabId: number): Promise<unknown>;
   getSnapshot(anchorTabId?: number): Promise<unknown>;
+  getTodos(tabIds: number[]): Promise<unknown>;
   getTimers(): Promise<unknown>;
   openTimerPopup(tabId: number): Promise<void>;
   setTimer(tabId: number, endAt: number): Promise<unknown>;
@@ -141,6 +142,8 @@ function handleParsedRequest(
       return handlers.getTab(message.tabId);
     case "getSnapshot":
       return handlers.getSnapshot(anchorTabId);
+    case "getTodos":
+      return handlers.getTodos(message.tabIds);
     case "getTimers":
       return handlers.getTimers();
     case "openTimerPopup":

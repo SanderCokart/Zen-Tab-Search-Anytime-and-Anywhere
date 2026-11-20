@@ -3,6 +3,7 @@ import { debugError } from "@/shared/debug";
 import { sendExtensionMessage, subscribeToSnapshotChanged } from "@/shared/messaging/client";
 import {
   isActivatableTab,
+  tabBrowserId,
   type SpaceInfo,
   type TabInfo,
   type TabTimer,
@@ -122,6 +123,19 @@ export function useSearchSnapshot(cache?: SearchSnapshotCache): SearchSnapshotSt
     let cancelled = false;
     let inFlight = false;
     let queued = false;
+    // Todos come in their own request. A newer one supersedes an older one still in flight.
+    let todoRequest = 0;
+
+    const loadTodos = (tabIds: number[]) => {
+      const request = ++todoRequest;
+      sendExtensionMessage({ type: "getTodos", tabIds })
+        .then((list) => {
+          if (!cancelled && request === todoRequest) {
+            setTodos(todosByTabId(list));
+          }
+        })
+        .catch((error) => debugError("Could not load todos:", error));
+    };
 
     const load = () => {
       if (cancelled) {
@@ -143,9 +157,14 @@ export function useSearchSnapshot(cache?: SearchSnapshotCache): SearchSnapshotSt
             sameSpaces(current, snapshot.spaces) ? current : snapshot.spaces,
           );
           setTimers(new Map(snapshot.timers.map((item) => [item.tabId, item])));
-          setTodos(todosByTabId(snapshot.todos));
           setStatuses(statusesByTabId(snapshot.statuses));
           setLoadError(null);
+          loadTodos(
+            nextTabs.flatMap((tab) => {
+              const id = tabBrowserId(tab);
+              return id === undefined ? [] : [id];
+            }),
+          );
         })
         .catch((error) => {
           debugError("Could not load search data:", error);

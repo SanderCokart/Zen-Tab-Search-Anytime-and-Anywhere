@@ -97,7 +97,6 @@ export default defineBackground(() => {
       queryTabs,
       getSpaces,
       getTimers: timerService.getActiveTimers,
-      getTodos: todoService.getTodos,
       getStatuses: statusService.getStatuses,
       readLastOpened: readTabLastOpened,
       readTargetBranches: targetBranchService.read,
@@ -109,6 +108,8 @@ export default defineBackground(() => {
   };
   const getSnapshot = async (anchorTabId?: number) =>
     v.parse(searchSnapshotSchema, await snapshotCache.getSnapshot(anchorTabId));
+  // Todos come in their own request, after the tab list, so a slow session read does not hold it up.
+  const getTodos = (tabIds: number[]) => todoService.getTodos(tabIds);
 
   registerContextMenus({
     timers: timerService,
@@ -242,6 +243,7 @@ export default defineBackground(() => {
     switchSpace: switchToSpace,
     getTab: getTabInfo,
     getSnapshot,
+    getTodos,
     getTimers: timerService.getActiveTimers,
     openTimerPopup: (tabId) => openCustomTimerPopup(tabId),
     setTimer: timerService.setTabTimer,

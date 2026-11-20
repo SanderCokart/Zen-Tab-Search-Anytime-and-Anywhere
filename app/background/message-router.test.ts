@@ -21,6 +21,7 @@ function handlers(overrides: Partial<MessageRouterHandlers> = {}): MessageRouter
       windowId: 1,
     })),
     getSnapshot: vi.fn(async () => ({ tabs: [], spaces: [], timers: [] })),
+    getTodos: vi.fn(async () => []),
     getTimers: vi.fn(async () => []),
     setTimer: vi.fn(async (tabId, endAt) => ({
       tabId,
@@ -198,6 +199,16 @@ describe("dispatchExtensionMessage", () => {
     }
     await expect(result.promise).resolves.toBeUndefined();
     expect(api.setTabLabel).toHaveBeenCalledWith(4, "Docs");
+  });
+
+  it("dispatches getTodos for the tab IDs it is given", async () => {
+    const api = handlers();
+    const result = dispatchExtensionMessage(api, { type: "getTodos", tabIds: [4, 5] });
+    if (!result.handled || !result.async) {
+      throw new Error("expected async dispatch");
+    }
+    await result.promise;
+    expect(api.getTodos).toHaveBeenCalledWith([4, 5]);
   });
 
   it("dispatches setTodo, including clearing it with none", async () => {

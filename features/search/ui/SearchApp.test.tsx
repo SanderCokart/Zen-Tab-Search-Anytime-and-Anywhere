@@ -122,9 +122,11 @@ function mountSearchApp(
         tabs: snapshotTabs,
         spaces: snapshotSpaces,
         timers: snapshotTimers,
-        todos: snapshotTodos,
         statuses: snapshotStatuses,
       };
+    }
+    if (message.type === "getTodos") {
+      return snapshotTodos;
     }
     if (message.type === "getTab") {
       return snapshotTabs[0];
@@ -2543,7 +2545,10 @@ function mountOverlay({
   const set = vi.fn(async (_items: Record<string, unknown>) => undefined);
   const sendMessage = vi.fn(async ({ type }: { type: string }) => {
     if (type === "getSnapshot") {
-      return { tabs: snapshotTabs, spaces: [], timers, todos, statuses: [] };
+      return { tabs: snapshotTabs, spaces: [], timers, statuses: [] };
+    }
+    if (type === "getTodos") {
+      return todos;
     }
     if (type === "organizeForgeIssueTabs") {
       return { foldersCreated: 1, tabsMoved: snapshotTabs.length, skipped: 0 };
