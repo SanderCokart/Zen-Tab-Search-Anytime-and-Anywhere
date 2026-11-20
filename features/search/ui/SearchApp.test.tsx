@@ -369,8 +369,8 @@ describe("SearchApp", () => {
     root.remove();
   });
 
-  it("shows the MCP link and version in the status bar on Pro", async () => {
-    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", applyPreset("pro"));
+  it("shows the MCP link and version in the status bar on Dev", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", applyPreset("dev"));
 
     await vi.waitFor(() => {
       const bar = root.querySelector("[data-testid='zen-status-bar']");

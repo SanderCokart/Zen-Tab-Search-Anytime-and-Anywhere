@@ -4,6 +4,7 @@ import { SearchApp } from "@/features/search/ui/SearchApp";
 import { DisplaySettingsApp } from "@/features/settings/ui/DisplaySettingsApp";
 import { TimerPopup } from "@/features/timers/ui/TimerPopup";
 import { HostOverridesPopup } from "@/features/hosts/ui/HostOverridesPopup";
+import { PrototypeTodoClearClose } from "@/features/todos/ui/prototype-clear-close";
 import { installBrowserMock } from "@/screenshots/browser-mock";
 import {
   displaySettingsFor,
@@ -69,6 +70,13 @@ function CardFrame({ children, widthClass }: { children: ComponentChildren; widt
 }
 
 function HarnessApp() {
+  if (scene.surface === "prototype-todo-clear") {
+    return (
+      <FakeZenChrome>
+        <PrototypeTodoClearClose />
+      </FakeZenChrome>
+    );
+  }
   if (scene.surface === "settings") {
     return <DisplaySettingsApp />;
   }
