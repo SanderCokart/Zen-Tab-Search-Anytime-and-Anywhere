@@ -66,6 +66,36 @@ import { formatTimerCountdown } from "@/features/timers/model/timer";
 Tests live next to the code they cover as `*.test.ts(x)`. Vitest discovers them
 anywhere under `app/`, `features/`, `shared/` and `tests/`.
 
+## Code map: where things are configured
+
+To extend X, start at the file listed for it. Lines marked **⇄** name values that
+are stored in two places and must stay in step, because nothing checks them.
+
+| To change…                                         | Edit                                                                                                                    |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Permissions, keyboard commands, toolbar button, add-on ID | `wxt.config.ts` → `manifest`                                                                                      |
+| What a keyboard command or toolbar click does     | `app/background/commands.ts`                                                                                            |
+| Keys inside the omnibar                            | `features/search/ui/hooks/useSearchNavigation.ts`, `features/search/ui/components/SearchInput.tsx`                      |
+| A privileged experiment API                        | `public/experiment/<name>/{schema.json,api.js}`, registered under `experiment_apis` in `wxt.config.ts`                  |
+| A UI ↔ background message                          | `shared/messaging/protocol.ts`, handled in `app/background/message-router.ts`                                           |
+| An MCP tool                                        | `mcp/tools.ts` → `bridgeCommandSchema` in `shared/messaging/bridge-protocol.ts` → `features/bridge/background/zen-commands.ts` |
+| A user setting                                     | `DEFAULTS` **and** `displaySettingsSchema` in `features/settings/model/display-settings.ts`; its control in `features/settings/ui/DisplaySettingsApp.tsx` |
+| A feature behind the Simple → Dev complexity presets | `COMPLEXITY_FLAG_KEYS`, `PRESETS` and `FULLSCREEN_REQUIRED` in `features/settings/model/complexity.ts`; UI in `features/settings/ui/ComplexitySettings.tsx` |
+| Slider ranges for font size, scale and gaps        | `features/settings/model/ui-scale.ts`                                                                                   |
+| Theme colours                                      | `THEME_COLOR_KEYS` and `AUTO_SWATCH` in `display-settings.ts`; CSS variables in `features/settings/model/theme-colors.ts` |
+| Design tokens (type, spacing, icons, tile widths)  | `shared/ui/styles.css` under `[data-zen-ui]`                                                                            |
+| Interface sounds                                   | `SOUND_VOICES` and `VOICE_TABLE` in `shared/ui/sound/engine.ts`                                                         |
+| Search ranking                                     | `features/search/model/ranking.ts`                                                                                      |
+| GitLab/GitHub URL recognition                      | `parseForgeUrl` in `features/forge/model/forge-label.ts`                                                                |
+| A context-menu entry                               | `features/<name>/background/context-menu.ts`, wired in `app/background/context-menus.ts`                                |
+| A background listener or service                   | `entrypoints/background.ts`                                                                                             |
+| A storage key                                      | A `*_STORAGE_KEY` constant beside the code that owns it (`grep -rn '_KEY = "' features shared`); user settings also go in `BACKED_UP_STORAGE_KEYS` (`features/settings/model/settings-backup.ts`) |
+| Which import directions are allowed                | `no-restricted-imports` in `eslint.config.js`                                                                           |
+| Shipped fonts **⇄**                                | `FONT_FILES` in `wxt.config.ts`, `shared/ui/fonts.css`, `shared/ui/page-fonts.ts`                                       |
+| MCP server asset name **⇄**                        | `MCP_OUTFILE` in `scripts/build-mcp.mjs`, `mcpArtifact` in `scripts/release.mjs`, `MCP_SERVER_FILE_NAME` in `features/bridge/model/mcp-install.ts` (Settings downloads it from the matching release) |
+| Release asset name **⇄**                           | `zip.artifactTemplate` in `wxt.config.ts`, the upload in `scripts/release.mjs`, the `-firefox.zip` match in `features/updates/model/release.ts` |
+| Release download URL **⇄**                         | `RELEASE_DOWNLOAD_PREFIX` in `features/updates/model/release.ts` and in `public/experiment/zenUpdate/api.js`            |
+
 ## Types come from the schemas
 
 `shared/messaging/protocol.ts` defines the valibot schemas for everything crossing
