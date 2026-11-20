@@ -262,6 +262,8 @@ export const extensionRequestSchema = v.variant("type", [
     type: v.literal("clearTodos"),
     /** The todo tabs to mark done, as the todo column chose them. */
     tabIds: v.array(tabIdSchema),
+    /** When true, close those tabs after marking them done. */
+    close: v.optional(v.boolean()),
   }),
   v.object({
     type: v.literal("getHostOverrides"),

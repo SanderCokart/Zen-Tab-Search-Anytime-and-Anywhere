@@ -2,6 +2,7 @@ import type { JSX, Ref } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { SearchEngineId } from "@/features/search/model/web-search";
 import { SearchEnginePicker } from "@/features/search/ui/components/SearchEnginePicker";
+import { SearchQueryHelp } from "@/features/search/ui/components/SearchQueryHelp";
 import { cn } from "@/shared/ui/cn";
 import { Lcd } from "@/shared/ui/primitives/Lcd";
 import { useTypingSound } from "@/shared/ui/sound/useTypingSound";
@@ -14,6 +15,10 @@ export interface SearchInputProps {
   inert?: boolean;
   searchEngine: SearchEngineId;
   onSearchEngineChange: (engineId: SearchEngineId) => void;
+  /** `@` in the prefix cheat-sheet. Left on when omitted. */
+  todos?: boolean;
+  /** `#` and `!` in the prefix cheat-sheet. Left on when omitted. */
+  forge?: boolean;
   onQueryChange: (query: string) => void;
   onKeyDown: (event: JSX.TargetedKeyboardEvent<HTMLInputElement>) => void;
 }
@@ -30,6 +35,8 @@ export function SearchInput({
   inert = false,
   searchEngine,
   onSearchEngineChange,
+  todos,
+  forge,
   onQueryChange,
   onKeyDown,
 }: SearchInputProps) {
@@ -116,6 +123,7 @@ export function SearchInput({
         }}
         onKeyUp={typing.onKeyUp}
       />
+      <SearchQueryHelp todos={todos} forge={forge} />
     </Lcd>
   );
 }

@@ -338,6 +338,7 @@
     );
     border-radius: var(--zs-r-card);
     box-shadow: var(--zs-shadow);
+    min-width: 0;
   }
 
   /* Menus stay solid whatever the background opacity, so their text stays readable. */
@@ -880,7 +881,17 @@
     transition: none;
   }
 
-  /* A small lamp after the title of a todo, while its keys are put away. */
+  /* Todo lamp sits at the far right of the row. Meta already has
+     margin-left: auto; when it is present the lamp follows it. */
+  .zs-todo-dot {
+    margin-left: auto;
+  }
+
+  .zs-meta + .zs-todo-dot {
+    margin-left: 0;
+  }
+
+  /* Hidden while the row keys cover the right edge. */
   .zs-row:hover .zs-todo-dot {
     visibility: hidden;
     transition: visibility 0s linear 60ms;
@@ -1240,7 +1251,13 @@
     position: relative;
     flex: none;
     width: var(--zs-slider-width, calc(var(--zen-font-size) * 14.6));
+    min-width: 0;
     height: var(--zs-thumb);
+  }
+
+  .zs-slider[data-fill] {
+    flex: 1 1 0;
+    width: auto;
   }
 
   .zs-slider-bar,
@@ -1424,6 +1441,7 @@
   /* The settings page's grid of modules: two columns when wide, one when narrow. */
   .zs-mod-host {
     container-type: inline-size;
+    min-width: 0;
   }
 
   .zs-mod-grid {
@@ -1431,12 +1449,14 @@
     grid-template-columns: 1fr;
     gap: var(--zen-space-4);
     counter-reset: zs-mod;
+    min-width: 0;
   }
 
   .zs-mod-two {
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--zen-space-3) calc(var(--zen-font-size) * 1.7);
+    min-width: 0;
   }
 
   @container (min-width: 40rem) {

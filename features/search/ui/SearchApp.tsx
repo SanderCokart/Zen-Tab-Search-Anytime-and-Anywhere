@@ -524,6 +524,8 @@ export function SearchApp({
               inert={view?.kind === "timer" || view?.kind === "hosts"}
               searchEngine={displaySettings.searchEngine}
               onSearchEngineChange={onSearchEngineChange}
+              todos={displaySettings.todos}
+              forge={displaySettings.detectForgeIssues}
               onQueryChange={(next) => {
                 setQuery(next);
                 // Typing goes back to the search the input is for.
@@ -819,9 +821,9 @@ export function SearchApp({
                         todoActions.setTodo(tabId, "none");
                       }
                     }}
-                    onClear={(tabIds) => {
+                    onClear={(tabIds, close) => {
                       sound.play("success");
-                      todoActions.clearTodos(tabIds);
+                      todoActions.clearTodos(tabIds, close);
                     }}
                     onOpenStatusMenu={toggleStatusMenu}
                     onContextMenu={openContextMenu}

@@ -117,7 +117,7 @@ export function ComplexitySettings({
   return (
     <Module title="Complexity" meta={PRESET_LABELS[match]} wide>
       <Slider
-        class="[--zs-slider-width:calc(var(--zen-font-size)*22)]"
+        fill
         label="Complexity preset"
         data-testid="zen-complexity-preset"
         min={0}

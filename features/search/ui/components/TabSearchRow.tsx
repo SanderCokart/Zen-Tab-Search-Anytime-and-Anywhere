@@ -68,7 +68,6 @@ export const TabSearchRow = memo(function TabSearchRow({
           }
         />
         {tab.active === true && <NowTag />}
-        {isTodo && <Led on class="zs-todo-dot" />}
         {!isEssentialTab(tab) && (
           <span class="zs-meta">
             {timer && displaySettings?.timers !== false && (
@@ -81,6 +80,7 @@ export const TabSearchRow = memo(function TabSearchRow({
             </span>
           </span>
         )}
+        {isTodo && <Led on class="zs-todo-dot" />}
       </div>
       <TabActions
         tab={tab}

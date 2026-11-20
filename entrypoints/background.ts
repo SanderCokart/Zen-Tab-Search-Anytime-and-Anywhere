@@ -263,13 +263,16 @@ export default defineBackground(() => {
       await statusService.setStatus(tabId, light);
       notify();
     },
-    clearTodos: async (tabIds) => {
+    clearTodos: async (tabIds, close) => {
       await Promise.all(
         tabIds.flatMap((tabId) => [
           todoService.setTodo(tabId, "none"),
           statusService.setStatus(tabId, "none"),
         ]),
       );
+      if (close && tabIds.length > 0) {
+        await workspace.closeTabs(tabIds);
+      }
       notify();
     },
     getHostOverrides: hostOverrideService.getOverrides,

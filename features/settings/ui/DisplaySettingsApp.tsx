@@ -248,14 +248,14 @@ export function DisplaySettingsApp() {
   return (
     <SoundProvider sound={sound}>
       <main
-        class="zs-chassis min-h-screen p-[calc(var(--zen-font-size)*1.7)]"
+        class="zs-chassis min-h-screen min-w-0 p-[calc(var(--zen-font-size)*1.7)]"
         data-zen-ui="page"
         data-theme={theme}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         style={{ colorScheme: theme, ...themeColorStyle(theme, settings) }}
       >
-        <div class="zs-mod-host mx-auto max-w-[calc(var(--zen-font-size)*60)]">
+        <div class="zs-mod-host mx-auto max-w-[calc(var(--zen-font-size)*60)] min-w-0">
           <header class="px-[var(--zen-space-1)] pb-[calc(var(--zen-font-size)*1.4)]">
             <h1 class="m-0 text-[length:calc(var(--zen-font-size)*2.6)] leading-none font-normal tracking-[-0.02em] uppercase">
               Settings

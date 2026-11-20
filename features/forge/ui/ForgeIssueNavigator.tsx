@@ -433,7 +433,6 @@ export function ForgeIssueNavigator({
                   text={parts.title}
                 />
                 {isCurrentForgeEntry(entry) && <NowTag />}
-                {isTodo && <Led on class="zs-todo-dot" />}
                 <span class="zs-meta">
                   {timer && displaySettings?.timers !== false && (
                     <span class="zs-meta-timer zs-digits">
@@ -446,6 +445,7 @@ export function ForgeIssueNavigator({
                     </ForgeDateHint>
                   )}
                 </span>
+                {isTodo && <Led on class="zs-todo-dot" />}
               </button>
             </div>
             <TabActions

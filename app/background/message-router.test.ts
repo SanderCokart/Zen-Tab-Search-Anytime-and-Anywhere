@@ -212,6 +212,22 @@ describe("dispatchExtensionMessage", () => {
     expect(api.setTodo).toHaveBeenNthCalledWith(2, 4, "none");
   });
 
+  it("dispatches clearTodos, and close when the UI asked to close the tabs", async () => {
+    const api = handlers();
+    const cleared = dispatchExtensionMessage(api, { type: "clearTodos", tabIds: [4, 5] });
+    const closed = dispatchExtensionMessage(api, {
+      type: "clearTodos",
+      tabIds: [4],
+      close: true,
+    });
+    if (!cleared.handled || !cleared.async || !closed.handled || !closed.async) {
+      throw new Error("expected async dispatch");
+    }
+    await Promise.all([cleared.promise, closed.promise]);
+    expect(api.clearTodos).toHaveBeenNthCalledWith(1, [4, 5], false);
+    expect(api.clearTodos).toHaveBeenNthCalledWith(2, [4], true);
+  });
+
   it("asks for the zoom of a content-script sender, and of nothing for any other sender", async () => {
     const api = handlers();
     const fromPage = dispatchExtensionMessage(

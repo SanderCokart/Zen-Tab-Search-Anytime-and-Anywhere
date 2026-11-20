@@ -1268,6 +1268,44 @@ describe("SearchApp", () => {
     root.remove();
   });
 
+  it("lists search prefixes in a hovercard next to the query", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
+    const help = () => root.querySelector("[data-testid='zen-search-help']");
+    await vi.waitFor(() => expect(help()).not.toBeNull());
+    help()!.dispatchEvent(new MouseEvent("mouseenter"));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[role='tooltip']")?.textContent).toContain("@"),
+    );
+    const tip = root.querySelector("[role='tooltip']")!.textContent ?? "";
+    expect(tip).toContain("#");
+    expect(tip).toContain("!");
+    expect(tip).toContain("-word");
+    expect(tip).toContain("Todos");
+    expect(tip).toContain("Hide matches");
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("does not tooltip the todo column's Mark as done label", async () => {
+    const { root } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [{ tabId: 2, status: "todo" }],
+    );
+    const done = () => root.querySelector("[data-testid='zen-todo-done-button']");
+    await vi.waitFor(() => expect(done()).not.toBeNull());
+    done()!.dispatchEvent(new MouseEvent("mouseenter"));
+    await new Promise((resolve) => setTimeout(resolve, 320));
+    expect(root.querySelector("[role='tooltip']")).toBeNull();
+
+    render(null, root);
+    root.remove();
+  });
+
   it("shows a tooltip on the todo and timer buttons", async () => {
     const { root } = mountSearchApp(vi.fn(), tabs, "overlay");
     await vi.waitFor(() =>
@@ -1323,6 +1361,13 @@ describe("SearchApp", () => {
         "Fix search",
       ),
     );
+    const issueLine = issue()!.querySelector(".zs-row-line")!;
+    const issueMeta = issueLine.querySelector(".zs-meta")!;
+    const issueLamp = issueLine.querySelector(".zs-todo-dot")!;
+    expect(issueLamp).not.toBeNull();
+    expect(
+      issueMeta.compareDocumentPosition(issueLamp) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
 
     issue()!.querySelector<HTMLButtonElement>("[data-testid='zen-timer-button']")!.click();
     await vi.waitFor(() => expect(issue()!.querySelector("form")).not.toBeNull());
@@ -1573,18 +1618,18 @@ describe("SearchApp", () => {
       ],
       [{ tabId: 2, light: "red" }],
     );
-    const select = () => root.querySelector<HTMLSelectElement>("[data-testid='zen-todo-clear']")!;
-    await vi.waitFor(() => expect(select()).toBeTruthy());
-    expect([...select().options].map((option) => option.textContent)).toEqual([
-      "Clear…",
-      "All (2)",
-      "Red (1)",
-      "Orange (0)",
-      "Green (0)",
-    ]);
+    const clear = () => root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear']")!;
+    await vi.waitFor(() => expect(clear()).toBeTruthy());
+    clear().click();
+    const menu = () => root.querySelector("[data-testid='zen-todo-clear-menu']");
+    await vi.waitFor(() => expect(menu()?.textContent).toContain("Mark done and close"));
+    expect(menu()?.textContent).toContain("All");
+    expect(menu()?.textContent).toContain("Red");
+    expect(
+      root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-done-orange']")?.disabled,
+    ).toBe(true);
 
-    select().value = "red";
-    select().dispatchEvent(new Event("change", { bubbles: true }));
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-done-red']")!.click();
 
     // window.confirm can't show in the omnibar's chrome <browser>; the column asks instead.
     const prompt = () => root.querySelector("[data-testid='zen-todo-clear-confirm']");
@@ -1626,15 +1671,17 @@ describe("SearchApp", () => {
       [],
       [{ tabId: 1, status: "todo" }],
     );
-    const select = () => root.querySelector<HTMLSelectElement>("[data-testid='zen-todo-clear']")!;
-    await vi.waitFor(() => expect(select()).toBeTruthy());
-
-    select().value = "all";
-    select().dispatchEvent(new Event("change", { bubbles: true }));
+    const clear = () => root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear']")!;
+    await vi.waitFor(() => expect(clear()).toBeTruthy());
+    clear().click();
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-clear-done-all']")).toBeTruthy(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-done-all']")!.click();
 
     const prompt = () => root.querySelector("[data-testid='zen-todo-clear-confirm']");
     await vi.waitFor(() => expect(prompt()?.textContent).toContain("Mark 1 todo as done?"));
-    expect(select().value).toBe("");
+    expect(root.querySelector("[data-testid='zen-todo-clear-menu']")).toBeNull();
 
     root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-cancel-button']")!.click();
     await vi.waitFor(() => expect(prompt()).toBeNull());
@@ -1642,6 +1689,68 @@ describe("SearchApp", () => {
     expect(root.querySelector("[data-testid='zen-todo-column']")?.textContent).toContain(
       "First tab",
     );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("closes the cleared tabs when the confirm is Done & close", async () => {
+    const { root, sendMessage } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [
+        { tabId: 1, status: "todo" },
+        { tabId: 2, status: "todo" },
+      ],
+    );
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-clear']")).toBeTruthy(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear']")!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-testid='zen-todo-clear-close-all']")).toBeTruthy(),
+    );
+    root.querySelector<HTMLButtonElement>("[data-testid='zen-todo-clear-close-all']")!.click();
+
+    const prompt = () => root.querySelector("[data-testid='zen-todo-clear-confirm']");
+    await vi.waitFor(() =>
+      expect(prompt()?.textContent).toContain("Mark 2 todos as done and close their tabs?"),
+    );
+    const confirmButton = root.querySelector<HTMLButtonElement>(
+      "[data-testid='zen-todo-clear-confirm-button']",
+    )!;
+    expect(confirmButton.textContent).toBe("Done & close");
+    confirmButton.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    confirmButton.click();
+    await vi.waitFor(() =>
+      expect(sendMessage).toHaveBeenCalledWith({
+        type: "clearTodos",
+        tabIds: [1, 2],
+        close: true,
+      }),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("puts the todo lamp after the host, at the end of the row", async () => {
+    const { root } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [{ tabId: 1, status: "todo" }],
+    );
+    await vi.waitFor(() => expect(root.querySelector(".zs-todo-dot")).not.toBeNull());
+    const line = root.querySelector("[data-testid='zen-search-item'] .zs-row-line")!;
+    const meta = line.querySelector(".zs-meta")!;
+    const lamp = line.querySelector(".zs-todo-dot")!;
+    expect(meta.compareDocumentPosition(lamp) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     render(null, root);
     root.remove();

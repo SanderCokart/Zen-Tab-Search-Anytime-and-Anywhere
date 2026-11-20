@@ -24,6 +24,8 @@ export interface SliderProps {
   "data-testid"?: string;
   /** Extra classes for the wrapper; set `--zs-slider-width` to change the rail length. */
   class?: string;
+  /** Use the leftover width in the row, and shrink instead of overflowing. */
+  fill?: boolean;
 }
 
 /**
@@ -44,14 +46,21 @@ export function Slider({
   disabled = false,
   "data-testid": testId,
   class: className,
+  fill = false,
 }: SliderProps) {
   const { play } = useSound();
   const fraction = fractionOf(value, min, max);
   const ticks = tickCountFor(min, max, step);
 
   return (
-    <span class={cn("flex flex-none items-center gap-[var(--zen-space-3)]", className)}>
-      <span class="zs-slider" data-disabled={disabled || undefined}>
+    <span
+      class={cn(
+        "flex items-center gap-[var(--zen-space-3)]",
+        fill ? "w-full min-w-0" : "flex-none",
+        className,
+      )}
+    >
+      <span class="zs-slider" data-fill={fill || undefined} data-disabled={disabled || undefined}>
         <span class="zs-slider-bar" />
         <span class="zs-slider-fill" style={{ width: `${fraction * 100}%` }} />
         <span

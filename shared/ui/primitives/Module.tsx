@@ -25,14 +25,16 @@ export function Module({
   const headingId = useId();
   return (
     <section
-      class={cn("zs-card p-[var(--zen-space-4)]", wide && "zs-mod-wide", className)}
+      class={cn("zs-card min-w-0 p-[var(--zen-space-4)]", wide && "zs-mod-wide", className)}
       aria-labelledby={headingId}
     >
       <h2 id={headingId} class="zs-mod-head">
         {title}
         {meta && <span class="zs-mod-meta">{meta}</span>}
       </h2>
-      <div class="flex flex-col gap-[var(--zen-space-4)] pt-[var(--zen-space-4)]">{children}</div>
+      <div class="flex min-w-0 flex-col gap-[var(--zen-space-4)] pt-[var(--zen-space-4)]">
+        {children}
+      </div>
     </section>
   );
 }

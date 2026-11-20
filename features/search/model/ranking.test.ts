@@ -17,6 +17,7 @@ import {
   pinnedFirst,
   rankForgeIssueEntries,
   sortForgeIssueEntries,
+  splitSearchQuery,
 } from "@/features/search/model/ranking";
 import type { SearchItem, TabInfo } from "@/shared/types";
 import { forgeGroupKeys } from "@/features/forge/model/forge-collapse";
@@ -108,7 +109,31 @@ describe("pinnedFirst", () => {
   });
 });
 
+describe("splitSearchQuery", () => {
+  it("treats a leading minus as an exclude, not an include", () => {
+    expect(splitSearchQuery("-gitlab")).toEqual({ includeQuery: "", excludeWords: ["gitlab"] });
+    expect(splitSearchQuery("auth -gitlab")).toEqual({
+      includeQuery: "auth",
+      excludeWords: ["gitlab"],
+    });
+    expect(splitSearchQuery("-")).toEqual({ includeQuery: "-", excludeWords: [] });
+    expect(splitSearchQuery("foo-bar")).toEqual({ includeQuery: "foo-bar", excludeWords: [] });
+  });
+});
+
 describe("filterSearchItems", () => {
+  it("hides tabs that match a -word exclude", () => {
+    const items: SearchItem[] = buildSearchItems(
+      [
+        { ...tab(1), title: "Auth service" },
+        { ...tab(2), title: "GitLab auth review" },
+      ],
+      [],
+    );
+    expect(filterSearchItems(items, "auth -gitlab").map((item) => item.data.id)).toEqual([1]);
+    expect(filterSearchItems(items, "-gitlab").map((item) => item.data.id)).toEqual([1]);
+  });
+
   it("ranks exact whole-word matches before fuzzy matches", () => {
     const items: SearchItem[] = buildSearchItems(
       [

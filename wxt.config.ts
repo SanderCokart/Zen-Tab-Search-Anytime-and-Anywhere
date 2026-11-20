@@ -12,8 +12,11 @@ import { buildMcp, MCP_OUTFILE } from "./scripts/build-mcp.mjs";
 const MCP_SERVER_ASSET = "mcp/zen-deck-mcp.mjs";
 
 // The overlay's fonts, shipped as plain files (see shared/ui/page-fonts.ts for why).
-const FONT_WEIGHTS = [400, 500, 600];
-const FONT_FILES = ["ibm-plex-mono", "inter"];
+// Only the weights the UI uses; keep in step with shared/ui/fonts.css and page-fonts.ts.
+const FONT_FILES = [
+  { file: "ibm-plex-mono", weights: [400, 500, 600] },
+  { file: "inter", weights: [400, 500] },
+];
 
 const zipLabel = process.env.ZIP_ARTIFACT_LABEL?.trim() || "demo";
 const zipSources = process.env.ZIP_SOURCES === "false" ? false : undefined;
@@ -133,8 +136,8 @@ export default defineConfig({
       // Ship the MCP server with the extension so its settings page can offer the matching build.
       await buildMcp();
       files.push({ relativeDest: MCP_SERVER_ASSET, absoluteSrc: MCP_OUTFILE });
-      for (const file of FONT_FILES) {
-        for (const weight of FONT_WEIGHTS) {
+      for (const { file, weights } of FONT_FILES) {
+        for (const weight of weights) {
           const name = `${file}-latin-${weight}-normal.woff2`;
           files.push({
             relativeDest: `fonts/${name}`,
@@ -153,6 +156,14 @@ export default defineConfig({
   vite: () => ({
     envPrefix: ["VITE_", "WXT_"],
     plugins: [preact({ reactAliasesEnabled: false }), tailwindcss()],
+    build: {
+      rollupOptions: {
+        // `/fonts/*.woff2` is copied into the extension by the build hook above, after
+        // Vite has processed CSS. Marking it external leaves the URLs unchanged and
+        // silences Vite's "didn't resolve at build time" warning.
+        external: (id: string) => id.startsWith("/fonts/"),
+      },
+    },
     // Motion's Reorder lives in `motion/react` and imports `react`. Preact is
     // not supported; this alias is the documented compat path.
     resolve: {

@@ -139,6 +139,44 @@ export function tokenizeSearchText(value: string): string[] {
   return normalizeSearchText(value).split(" ").filter(Boolean);
 }
 
+/**
+ * Pulls `-word` tokens out of a query. `auth -gitlab` keeps auth and hides
+ * gitlab; a leading `-wip` hides wip with no include term. A lone `-` is not
+ * an exclude. Hyphenated titles typed without a space (`foo-bar`) stay includes.
+ */
+export function splitSearchQuery(query: string): { includeQuery: string; excludeWords: string[] } {
+  const include: string[] = [];
+  const excludeWords: string[] = [];
+  for (const token of query.trim().split(/\s+/).filter(Boolean)) {
+    if (token.startsWith("-") && token.length > 1) {
+      const word = normalizeSearchText(token.slice(1));
+      if (word) excludeWords.push(word);
+    } else {
+      include.push(token);
+    }
+  }
+  return { includeQuery: include.join(" "), excludeWords };
+}
+
+function haystackContainsExclude(haystack: string, excludeWords: readonly string[]): boolean {
+  return excludeWords.some((word) => haystack.includes(word));
+}
+
+function documentMatchesExclude(
+  document: SearchDocument,
+  excludeWords: readonly string[],
+): boolean {
+  if (excludeWords.length === 0) {
+    return false;
+  }
+  const fields = [
+    ...document.fields,
+    ...(document.combinedField ? [document.combinedField] : []),
+    ...(document.urlField ? [document.urlField] : []),
+  ];
+  return haystackContainsExclude(fields.map((field) => field.normalized).join(" "), excludeWords);
+}
+
 export function countExactQueryWordsPrepared(tokenSet: Set<string>, queryWords: string[]): number {
   if (queryWords.length === 0) {
     return 0;
@@ -193,13 +231,13 @@ export function searchDocumentExactWordCount(
 }
 
 export function searchItemExactWordCount(item: SearchItem, query: string): number {
-  const queryWords = tokenizeSearchText(query);
+  const queryWords = tokenizeSearchText(splitSearchQuery(query).includeQuery);
   const documents = buildSearchDocuments([item]);
   return documents[0] ? searchDocumentExactWordCount(documents[0], queryWords) : 0;
 }
 
 export function forgeEntryExactWordCount(entry: ForgeIssueEntry, query: string): number {
-  const queryWords = tokenizeSearchText(query);
+  const queryWords = tokenizeSearchText(splitSearchQuery(query).includeQuery);
   return maxExactWordCount(compileForgeEntryFields(entry), queryWords);
 }
 
@@ -493,13 +531,23 @@ export function rankForgeIssueEntries(
   entries: ForgeIssueEntry[],
   query: string,
 ): RankedForgeIssueEntry[] {
-  if (!query.trim()) {
-    return entries.map((entry) => ({ entry, score: 0, direct: false, words: 0 }));
+  const { includeQuery, excludeWords } = splitSearchQuery(query);
+  const kept = (entry: ForgeIssueEntry) =>
+    !haystackContainsExclude(
+      compileForgeEntryFields(entry)
+        .map((field) => field.normalized)
+        .join(" "),
+      excludeWords,
+    );
+
+  if (!includeQuery) {
+    return entries.filter(kept).map((entry) => ({ entry, score: 0, direct: false, words: 0 }));
   }
 
-  const queryNormalized = normalizeSearchText(query);
+  const queryNormalized = normalizeSearchText(includeQuery);
   const queryWords = queryNormalized.split(" ").filter(Boolean);
   return entries
+    .filter(kept)
     .map((entry) => {
       const fields = compileForgeEntryFields(entry);
       let bestFieldScore = Number.NEGATIVE_INFINITY;
@@ -536,7 +584,7 @@ export function bestForgeNavigatorIndex(
   query = "",
 ): number {
   const rankedByKey = new Map(ranked.map((entry) => [forgeEntryKey(entry.entry), entry]));
-  const queryWords = tokenizeSearchText(query);
+  const queryWords = tokenizeSearchText(splitSearchQuery(query).includeQuery);
   if (queryWords.length === 0) {
     const best = ranked.find((entry) => entry.direct) ?? ranked[0];
     if (!best) {
@@ -704,16 +752,26 @@ export function filterSearchDocuments(
   documents: SearchDocument[],
   query: string,
 ): FilterSearchResult {
-  if (!query.trim()) {
+  const { includeQuery, excludeWords } = splitSearchQuery(query);
+  if (!includeQuery && excludeWords.length === 0) {
     return { items: documents.map((document) => document.item), bestExactWordCount: 0 };
   }
 
-  const queryNormalized = normalizeSearchText(query);
+  const remaining =
+    excludeWords.length === 0
+      ? documents
+      : documents.filter((document) => !documentMatchesExclude(document, excludeWords));
+
+  if (!includeQuery) {
+    return { items: remaining.map((document) => document.item), bestExactWordCount: 0 };
+  }
+
+  const queryNormalized = normalizeSearchText(includeQuery);
   const queryWords = queryNormalized.split(" ").filter(Boolean);
   const includeUrl = queryNormalized.length >= 2;
   const scored: { item: SearchItem; score: number; words: number }[] = [];
 
-  for (const document of documents) {
+  for (const document of remaining) {
     let best = Number.NEGATIVE_INFINITY;
     let matched = false;
     for (const field of document.fields) {

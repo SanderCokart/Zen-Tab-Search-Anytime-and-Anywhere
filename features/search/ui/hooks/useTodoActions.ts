@@ -34,7 +34,7 @@ export function useTodoActions({ setTodos, setStatuses }: UseTodoActionsOptions)
 
   /** Marks every tab in `tabIds` done and clears its status color, in one background call. */
   const clearTodos = useCallback(
-    (tabIds: number[]) => {
+    (tabIds: number[], close = false) => {
       const without = <T>(current: Map<number, T>) => {
         const next = new Map(current);
         for (const tabId of tabIds) {
@@ -44,9 +44,11 @@ export function useTodoActions({ setTodos, setStatuses }: UseTodoActionsOptions)
       };
       setTodos(without);
       setStatuses(without);
-      void sendExtensionMessage({ type: "clearTodos", tabIds }).catch((error) =>
-        debugError("Could not clear todos:", error),
-      );
+      void sendExtensionMessage({
+        type: "clearTodos",
+        tabIds,
+        ...(close ? { close: true } : {}),
+      }).catch((error) => debugError("Could not clear todos:", error));
     },
     [setTodos, setStatuses],
   );

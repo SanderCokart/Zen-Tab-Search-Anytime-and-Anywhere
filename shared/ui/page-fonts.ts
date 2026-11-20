@@ -1,9 +1,9 @@
 const STYLE_ID = "zen-deck-fonts";
-const WEIGHTS = [400, 500, 600];
-// Family name as CSS uses it, and the `fonts/` file prefix the build copies it under.
+// Family name as CSS uses it, the `fonts/` file prefix the build copies it under,
+// and the weights shipped. Keep in step with `shared/ui/fonts.css` and `wxt.config.ts`.
 const FONTS = [
-  { family: "IBM Plex Mono", file: "ibm-plex-mono" },
-  { family: "Inter", file: "inter" },
+  { family: "IBM Plex Mono", file: "ibm-plex-mono", weights: [400, 500, 600] },
+  { family: "Inter", file: "inter", weights: [400, 500] },
 ];
 
 /**
@@ -23,8 +23,8 @@ export function injectPageFonts(): void {
   }
   const style = document.createElement("style");
   style.id = STYLE_ID;
-  style.textContent = FONTS.flatMap(({ family, file }) =>
-    WEIGHTS.map((weight) => {
+  style.textContent = FONTS.flatMap(({ family, file, weights }) =>
+    weights.map((weight) => {
       const url = browser.runtime.getURL(`/fonts/${file}-latin-${weight}-normal.woff2` as never);
       return `@font-face{font-family:"${family}";font-style:normal;font-display:swap;font-weight:${weight};src:url("${url}") format("woff2");}`;
     }),
