@@ -1,6 +1,9 @@
 import {
+  clampOpenTransitionMs,
   DEFAULT_DISPLAY_SETTINGS,
+  OPEN_TRANSITIONS,
   type DisplaySettings,
+  type OpenTransition,
 } from "@/features/settings/model/display-settings";
 import { applyPreset } from "@/features/settings/model/complexity";
 import type { OmnibarView } from "@/shared/messaging/protocol";
@@ -177,11 +180,23 @@ export function sceneFromSearch(search: string): HarnessScene {
   return SCENES[id] ?? SCENES["search-omnibar"]!;
 }
 
-export function displaySettingsFor(scene: HarnessScene): DisplaySettings {
+function isOpenTransition(value: string | null): value is OpenTransition {
+  return value !== null && (OPEN_TRANSITIONS as readonly string[]).includes(value);
+}
+
+/** `?transition=zoom&ms=500` overrides the scene so GIF flows can pick a motion. */
+export function displaySettingsFor(scene: HarnessScene, search = ""): DisplaySettings {
   const spotlight = (SPOTLIGHT_CONCEPT_SCENES as readonly string[]).includes(scene.id);
+  const params = new URLSearchParams(search);
+  const transition = params.get("transition");
+  const msRaw = params.get("ms");
   return {
     ...DEFAULT_DISPLAY_SETTINGS,
     ...(spotlight ? applyPreset("simple") : applyPreset("dev")),
     ...scene.displaySettings,
+    ...(isOpenTransition(transition) ? { openTransition: transition } : {}),
+    ...(msRaw !== null && msRaw !== ""
+      ? { openTransitionMs: clampOpenTransitionMs(Number(msRaw)) }
+      : {}),
   };
 }

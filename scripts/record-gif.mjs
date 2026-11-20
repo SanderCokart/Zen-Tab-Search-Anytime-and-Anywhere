@@ -20,13 +20,25 @@ const SIZE = { width: 1500, height: 900 };
 
 const pause = (page, ms) => page.waitForTimeout(ms);
 
-async function openScene(page, scene) {
-  await page.goto(`${base}?scene=${scene}&busy=1`);
+async function openScene(page, scene, extra = "") {
+  await page.goto(`${base}?scene=${scene}&busy=1${extra}`);
   await page.locator("[data-testid='zen-search-input']").waitFor();
   await page.locator("[data-omnibar-stage='open']").waitFor();
   await page.locator("[data-testid='zen-search-item']").first().waitFor();
   // The video starts blank; toGif trims everything before this moment.
   page.readyAt = Date.now();
+}
+
+/** Longer than the 150 ms default so a 15 fps GIF can show the motion. */
+const DEMO_TRANSITION_MS = 500;
+
+async function playOpenClose(page, kind) {
+  await openScene(page, "concept-enhanced", `&transition=${kind}&ms=${DEMO_TRANSITION_MS}`);
+  await pause(page, DEMO_TRANSITION_MS + 400);
+  await page.keyboard.press("Escape");
+  await pause(page, DEMO_TRANSITION_MS + 200);
+  await page.locator("[data-testid='zen-search-item']").first().waitFor();
+  await pause(page, DEMO_TRANSITION_MS + 400);
 }
 
 /** @type {Record<string, (page: import("@playwright/test").Page) => Promise<void>>} */
@@ -92,6 +104,12 @@ const FLOWS = {
     await page.locator("[role='tooltip']").waitFor();
     await pause(page, 2200);
   },
+  "transition-fade": (page) => playOpenClose(page, "fade"),
+  "transition-zoom": (page) => playOpenClose(page, "zoom"),
+  "transition-bottom": (page) => playOpenClose(page, "slide-up"),
+  "transition-top": (page) => playOpenClose(page, "slide-down"),
+  "transition-left": (page) => playOpenClose(page, "slide-right"),
+  "transition-right": (page) => playOpenClose(page, "slide-left"),
 };
 
 function toGif(video, gif, trimSeconds) {

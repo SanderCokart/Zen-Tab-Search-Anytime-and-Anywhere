@@ -1,7 +1,10 @@
 import { render } from "preact";
 import type { ComponentChildren } from "preact";
+import { useState } from "preact/hooks";
 import { SearchApp } from "@/features/search/ui/SearchApp";
+import type { SearchLayout } from "@/features/search/ui/types";
 import { DisplaySettingsApp } from "@/features/settings/ui/DisplaySettingsApp";
+import type { OmnibarView } from "@/shared/messaging/protocol";
 import { TimerPopup } from "@/features/timers/ui/TimerPopup";
 import { HostOverridesPopup } from "@/features/hosts/ui/HostOverridesPopup";
 import { PrototypeTodoClearClose } from "@/features/todos/ui/prototype-clear-close";
@@ -18,9 +21,10 @@ import "@/screenshots/harness.css";
 
 const scene = sceneFromSearch(window.location.search);
 const paintBench = new URLSearchParams(window.location.search).get("scene") === "paint-bench";
-installBrowserMock(paintBench ? paintBenchSettings() : displaySettingsFor(scene), {
-  updateAvailable: scene.updateAvailable,
-});
+installBrowserMock(
+  paintBench ? paintBenchSettings() : displaySettingsFor(scene, window.location.search),
+  { updateAvailable: scene.updateAvailable },
+);
 document.documentElement.dataset.harnessScene = paintBench ? "paint-bench" : scene.id;
 if ((SPOTLIGHT_CONCEPT_SCENES as readonly string[]).includes(scene.id)) {
   document.documentElement.dataset.harnessLayout = "spotlight";
@@ -41,6 +45,24 @@ function FakeZenChrome({
       </div>
       <div class="relative min-h-0 flex-1 bg-[#0f0f0f]">{children}</div>
     </div>
+  );
+}
+
+function OverlaySearch({
+  layout,
+  initialView,
+}: {
+  layout: SearchLayout;
+  initialView?: OmnibarView;
+}) {
+  const [generation, setGeneration] = useState(0);
+  return (
+    <SearchApp
+      key={generation}
+      onClose={() => setGeneration((n) => n + 1)}
+      layout={layout}
+      initialView={initialView}
+    />
   );
 }
 
@@ -101,11 +123,7 @@ function HarnessApp() {
   }
 
   const search = (
-    <SearchApp
-      onClose={() => undefined}
-      layout={scene.layout ?? "overlay"}
-      initialView={scene.initialView}
-    />
+    <OverlaySearch layout={scene.layout ?? "overlay"} initialView={scene.initialView} />
   );
 
   if (scene.layout === "popup") {
