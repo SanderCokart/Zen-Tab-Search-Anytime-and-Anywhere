@@ -206,6 +206,15 @@ function mountSearchApp(
   return { root, onClose, sendMessage, writeText };
 }
 
+function resolvedMotion() {
+  return { stop: vi.fn(), finished: Promise.resolve() };
+}
+
+beforeEach(() => {
+  motionAnimate.mockReset();
+  motionAnimate.mockImplementation(resolvedMotion);
+});
+
 describe("SearchApp", () => {
   it("renders results and activates the selected tab with Enter", async () => {
     const { root, onClose, sendMessage } = mountSearchApp();
@@ -430,7 +439,7 @@ describe("SearchApp", () => {
       (document.activeElement ?? window).dispatchEvent(
         new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
       );
-      expect(onClose).toHaveBeenCalledTimes(1);
+      await vi.waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 
       render(null, root);
       root.remove();
@@ -453,7 +462,7 @@ describe("SearchApp", () => {
     expect(root.querySelector("[data-testid='zen-tab-context-menu']")).toBeTruthy();
 
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(onClose).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 
     render(null, root);
     root.remove();
@@ -906,6 +915,7 @@ describe("SearchApp", () => {
   });
 
   it("fades the scrim while sliding the chassis in and out before closing", async () => {
+    play.mockClear();
     motionAnimate.mockReset();
     const finishes: (() => void)[] = [];
     motionAnimate.mockImplementation(() => {
@@ -928,6 +938,8 @@ describe("SearchApp", () => {
       ),
     );
     await vi.waitFor(() => expect(motionAnimate).toHaveBeenCalledTimes(2));
+    expect(play).toHaveBeenCalledWith("whoosh-in");
+    expect(play).not.toHaveBeenCalledWith("down");
 
     const scrim = root.querySelector<HTMLElement>("[data-omnibar-scrim]")!;
     const chassis = root.querySelector<HTMLElement>("[data-omnibar]")!;
@@ -945,8 +957,11 @@ describe("SearchApp", () => {
     );
     finishes.splice(0).forEach((fn) => fn());
 
+    play.mockClear();
     scrim.click();
     await vi.waitFor(() => expect(motionAnimate).toHaveBeenCalledTimes(4));
+    expect(play).toHaveBeenCalledWith("whoosh-out");
+    expect(play).not.toHaveBeenCalledWith("up");
     expect(onClose).not.toHaveBeenCalled();
     expect(motionAnimate).toHaveBeenNthCalledWith(
       3,
@@ -963,6 +978,60 @@ describe("SearchApp", () => {
 
     finishes.splice(0).forEach((fn) => fn());
     await vi.waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+
+    render(null, root);
+    root.remove();
+  });
+
+  it("whooshes a fade in and out", async () => {
+    play.mockClear();
+    motionAnimate.mockReset();
+    const finishes: (() => void)[] = [];
+    motionAnimate.mockImplementation(() => {
+      let done!: () => void;
+      const finished = new Promise<void>((resolve) => {
+        done = resolve;
+      });
+      finishes.push(done);
+      return { stop: vi.fn(() => done()), finished };
+    });
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", {
+      openTransition: "fade",
+      openTransitionMs: 300,
+    });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-omnibar-stage]")?.getAttribute("data-omnibar-stage")).toBe(
+        "open",
+      ),
+    );
+    await vi.waitFor(() => expect(play).toHaveBeenCalledWith("whoosh-in"));
+    play.mockClear();
+    root.querySelector<HTMLElement>("[data-omnibar-scrim]")!.click();
+    await vi.waitFor(() => expect(play).toHaveBeenCalledWith("whoosh-out"));
+    expect(play).not.toHaveBeenCalledWith("down");
+    expect(play).not.toHaveBeenCalledWith("up");
+    finishes.splice(0).forEach((fn) => fn());
+    render(null, root);
+    root.remove();
+  });
+
+  it("clicks the overlay open and shut when the transition is none", async () => {
+    play.mockClear();
+    const onClose = vi.fn();
+    const { root } = mountSearchApp(onClose, tabs, "overlay", { openTransition: "none" });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-omnibar-stage]")?.getAttribute("data-omnibar-stage")).toBe(
+        "open",
+      ),
+    );
+    await vi.waitFor(() => expect(play).toHaveBeenCalledWith("down"));
+    expect(play).not.toHaveBeenCalledWith("whoosh-in");
+
+    play.mockClear();
+    root.querySelector<HTMLElement>("[data-omnibar-scrim]")!.click();
+    await vi.waitFor(() => expect(play).toHaveBeenCalledWith("up"));
+    expect(play).not.toHaveBeenCalledWith("whoosh-out");
+    expect(onClose).toHaveBeenCalledOnce();
 
     render(null, root);
     root.remove();
@@ -3310,8 +3379,9 @@ describe("SearchApp issue filter, accordions, timers dock and sound", () => {
       displaySettings: { soundEnabled: true },
     });
     await vi.waitFor(() => expect(entryUrls(root)).toHaveLength(5));
-    // Rendering and loading are silent.
-    expect(play).not.toHaveBeenCalled();
+    // Opening the overlay clicks; typing stays silent until a key.
+    await vi.waitFor(() => expect(play).toHaveBeenCalledWith("whoosh-in"));
+    play.mockClear();
 
     press("a");
     expect(play).toHaveBeenCalledWith("type");
@@ -3836,7 +3906,7 @@ describe("complexity flags", () => {
     });
     const root = document.createElement("div");
     document.body.appendChild(root);
-    render(<SearchApp onClose={vi.fn()} layout="overlay" />, root);
+    render(<SearchApp onClose={vi.fn()} layout="overlay" reveal={1} />, root);
     await vi.waitFor(() => expect(root.textContent).toContain("Pick a preset"));
     expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-layout")).toBe("setup");
     expect(root.querySelector("[data-testid='zen-search-input']")).toBeNull();
@@ -3846,16 +3916,62 @@ describe("complexity flags", () => {
     const slider = root.querySelector<HTMLInputElement>("[data-testid='zen-complexity-preset']")!;
     expect(slider.value).toBe("0");
     expect(slider.max).toBe("3");
+    const transition = root.querySelector<HTMLSelectElement>(
+      "[data-testid='zen-setup-open-transition']",
+    )!;
+    expect(transition.value).toBe("fade");
+    expect(
+      transition.compareDocumentPosition(
+        root.querySelector("[data-testid='zen-complexity-continue']")!,
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
 
     slider.value = "3";
     slider.dispatchEvent(new Event("input", { bubbles: true }));
     await vi.waitFor(() => expect(slider.value).toBe("3"));
-    expect(root.querySelector(".zs-mod-meta")?.textContent).toBe("Dev");
+    expect(slider.getAttribute("aria-valuetext")).toBe("DEV");
+    expect(root.querySelector(".zs-mod-meta")).toBeNull();
     expect(root.querySelector("[data-testid='zen-search-input']")).toBeNull();
     expect(root.querySelector("[data-omnibar]")?.getAttribute("data-omnibar-layout")).toBe("setup");
 
+    const transitionAfter = root.querySelector<HTMLSelectElement>(
+      "[data-testid='zen-setup-open-transition']",
+    )!;
+    play.mockClear();
+    motionAnimate.mockClear();
+    transitionAfter.value = "zoom";
+    transitionAfter.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() => expect(transitionAfter.value).toBe("zoom"));
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-omnibar-stage]")?.getAttribute("data-open-transition")).toBe(
+        "zoom",
+      ),
+    );
+    await vi.waitFor(() =>
+      expect(set).toHaveBeenCalledWith({
+        displaySettings: expect.objectContaining({ openTransition: "zoom" }),
+      }),
+    );
+    expect(motionAnimate).not.toHaveBeenCalled();
+    expect(play).not.toHaveBeenCalledWith("whoosh-in");
+
+    motionAnimate.mockClear();
+    play.mockClear();
+    render(<SearchApp onClose={vi.fn()} layout="overlay" reveal={2} />, root);
+    await vi.waitFor(() => expect(root.textContent).toContain("Pick a preset"));
+    await vi.waitFor(() => expect(motionAnimate).toHaveBeenCalled());
+    expect(motionAnimate).toHaveBeenCalledWith(
+      root.querySelector("[data-omnibar]"),
+      { opacity: [1, 1], x: [0, 0], y: [0, 0], scale: [0, 1] },
+      expect.objectContaining({ duration: 0.15 }),
+    );
+    expect(play).toHaveBeenCalledWith("whoosh-in");
+
     root.querySelector<HTMLButtonElement>("[data-testid='zen-complexity-continue']")!.click();
     await vi.waitFor(() => expect(set).toHaveBeenCalledWith({ complexitySetupDone: true }));
+    expect(set).toHaveBeenCalledWith({
+      displaySettings: expect.objectContaining({ openTransition: "zoom" }),
+    });
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-search-input']")).not.toBeNull(),
     );

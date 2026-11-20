@@ -12,8 +12,8 @@ import {
   OPEN_TRANSITION_MS_STEP,
   readDisplaySettings,
   saveDisplaySettings,
+  OPEN_TRANSITION_OPTIONS,
   type DisplaySettings,
-  type OpenTransition,
   type ThemeColorKey,
 } from "@/features/settings/model/display-settings";
 import { themeColorStyle } from "@/features/settings/model/theme-colors";
@@ -62,16 +62,6 @@ const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
   { value: "system", label: "System" },
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
-];
-
-const OPEN_TRANSITION_OPTIONS: readonly { value: OpenTransition; label: string }[] = [
-  { value: "none", label: "None" },
-  { value: "fade", label: "Fade" },
-  { value: "slide-up", label: "Bottom" },
-  { value: "slide-down", label: "Top" },
-  { value: "slide-right", label: "Left" },
-  { value: "slide-left", label: "Right" },
-  { value: "zoom", label: "Zoom" },
 ];
 
 const PINNED_VISIBILITY = [
@@ -363,8 +353,9 @@ export function DisplaySettingsApp() {
                   <span class={monoLabelClass}>Duration</span>
                 </div>
               </div>
-              <div class="flex w-fit flex-col items-center gap-[var(--zen-space-2)] text-center">
-                <Dial
+              <div class="flex flex-col gap-[var(--zen-space-2)]">
+                <span class={monoLabelClass}>Opacity</span>
+                <Slider
                   label="Background opacity"
                   data-testid="zen-background-opacity"
                   min={MIN_BACKGROUND_OPACITY}
@@ -372,14 +363,10 @@ export function DisplaySettingsApp() {
                   step={0.05}
                   disabled={!loaded}
                   value={settings.backgroundOpacity}
-                  valueText={`${Math.round(settings.backgroundOpacity * 100)} percent`}
+                  display={String(Math.round(settings.backgroundOpacity * 100))}
+                  unit="%"
                   onChange={(backgroundOpacity) => updateSettings({ backgroundOpacity })}
                 />
-                <Lcd class="zs-readout zs-digits">
-                  {Math.round(settings.backgroundOpacity * 100)}
-                  <u>%</u>
-                </Lcd>
-                <span class={monoLabelClass}>Opacity</span>
               </div>
             </Module>
 

@@ -32,6 +32,8 @@ export const SOUND_VOICES = [
   "print-9",
   "print-10",
   "open",
+  "whoosh-in",
+  "whoosh-out",
   "mark",
   "success",
   "warning",
@@ -40,14 +42,18 @@ export const SOUND_VOICES = [
 
 export type SoundVoice = (typeof SOUND_VOICES)[number];
 
-/** A filtered noise burst: the click of a key or the rattle of a spring. */
+/** A filtered noise burst: the click of a key, a spring, or a sliding whoosh. */
 export interface BurstSpec {
   filter: BiquadFilterType;
   freq: number;
+  /** Glides the filter to this frequency over the decay. */
+  to?: number;
   q: number;
   level: number;
   /** Seconds. */
   decay: number;
+  /** Seconds; 0 (the default) peaks at once, a whoosh needs a rise. */
+  attack?: number;
   /** Seconds after the voice starts. */
   at?: number;
 }
@@ -73,6 +79,27 @@ export interface VoiceSpec {
 }
 
 const ms = (value: number) => value / 1000;
+
+const WHOOSH_BURSTS: readonly BurstSpec[] = [
+  {
+    filter: "bandpass",
+    freq: 320,
+    to: 2600,
+    q: 0.75,
+    level: 0.2,
+    decay: ms(320),
+    attack: ms(45),
+  },
+  {
+    filter: "lowpass",
+    freq: 700,
+    to: 4800,
+    q: 0.45,
+    level: 0.1,
+    decay: ms(280),
+    attack: ms(35),
+  },
+];
 
 export const VOICE_TABLE: Record<SoundVoice, VoiceSpec> = {
   down: {
@@ -194,6 +221,9 @@ export const VOICE_TABLE: Record<SoundVoice, VoiceSpec> = {
     bursts: [{ filter: "bandpass", freq: 2600, q: 1, level: 0.2, decay: ms(14) }],
     tones: [{ wave: "sine", freq: 520, to: 820, level: 0.12, decay: ms(70), attack: ms(3) }],
   },
+  // Deck sliding in or out: the same rising air on both edges.
+  "whoosh-in": { bursts: WHOOSH_BURSTS, tones: [] },
+  "whoosh-out": { bursts: WHOOSH_BURSTS, tones: [] },
   // Marking a todo. Two notes long enough to survive a dropped audio buffer.
   mark: {
     bursts: [],
@@ -299,20 +329,36 @@ export function createSoundEngine({
   const playBurst = (ctx: AudioContext, out: AudioNode, burst: BurstSpec, start: number) => {
     if (!noise) return;
     const at = start + (burst.at ?? 0);
+    const attack = burst.attack ?? 0;
     const source = ctx.createBufferSource();
     source.buffer = noise;
     source.playbackRate.value = vary(0.1);
     const filter = ctx.createBiquadFilter();
     filter.type = burst.filter;
-    filter.frequency.value = burst.freq * vary(0.06);
+    const pitch = vary(0.06);
+    const from = Math.max(20, burst.freq * pitch);
+    filter.frequency.setValueAtTime(from, at);
+    if (burst.to !== undefined) {
+      filter.frequency.exponentialRampToValueAtTime(
+        Math.max(20, burst.to * pitch),
+        at + burst.decay,
+      );
+    }
     filter.Q.value = burst.q;
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(burst.level * vary(0.08), at);
+    const peak = burst.level * vary(0.08);
+    if (attack > 0) {
+      gain.gain.setValueAtTime(SILENCE, at);
+      gain.gain.linearRampToValueAtTime(peak, at + attack);
+    } else {
+      gain.gain.setValueAtTime(peak, at);
+    }
     gain.gain.exponentialRampToValueAtTime(SILENCE, at + burst.decay);
     source.connect(filter);
     filter.connect(gain);
     gain.connect(out);
-    source.start(at, Math.random() * 0.4);
+    const headroom = (noise.duration || 0) - burst.decay - 0.02;
+    source.start(at, headroom > 0 ? Math.random() * Math.min(0.4, headroom) : 0);
     source.stop(at + burst.decay + 0.02);
   };
 
@@ -351,7 +397,7 @@ export function createSoundEngine({
           master.connect(ctx.destination);
         }
         if (!noise) {
-          noise = ctx.createBuffer(1, Math.floor(ctx.sampleRate / 2), ctx.sampleRate);
+          noise = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 2), ctx.sampleRate);
           const samples = noise.getChannelData(0);
           for (let index = 0; index < samples.length; index++) {
             samples[index] = Math.random() * 2 - 1;

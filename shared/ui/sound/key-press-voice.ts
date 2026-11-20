@@ -5,7 +5,7 @@ import type { SoundVoice } from "@/shared/ui/sound/engine";
  * Shortcuts stay silent; arrow keys tick, and everything that types has a release.
  */
 export function typingKeyVoice(event: KeyboardEvent): SoundVoice | undefined {
-  if (event.ctrlKey || event.metaKey) return undefined;
+  if (event.ctrlKey || event.metaKey || event.altKey) return undefined;
   if (event.key === " ") return "type-space";
   if (event.key === "Backspace" || event.key === "Delete") return "type-big";
   if (event.key.length === 1) return "type";

@@ -1,16 +1,23 @@
 import { primaryButtonClass } from "@/features/search/ui/lib/styles";
 import type { ComplexityFlags } from "@/features/settings/model/complexity";
-import type { DisplaySettings } from "@/features/settings/model/display-settings";
+import {
+  OPEN_TRANSITION_OPTIONS,
+  type DisplaySettings,
+  type OpenTransition,
+} from "@/features/settings/model/display-settings";
 import { ComplexitySettings } from "@/features/settings/ui/ComplexitySettings";
 import { cn } from "@/shared/ui/cn";
+import { Select } from "@/shared/ui/primitives/Select";
 
 export function ComplexitySetupCard({
   settings,
   onChange,
+  onOpenTransitionChange,
   onContinue,
 }: {
   settings: DisplaySettings;
   onChange: (flags: ComplexityFlags) => void;
+  onOpenTransitionChange: (openTransition: OpenTransition) => void;
   onContinue: () => void;
 }) {
   return (
@@ -23,7 +30,17 @@ export function ComplexitySetupCard({
           <ComplexitySettings settings={settings} onChange={onChange} />
         </div>
       </div>
-      <div class="flex shrink-0 justify-end pt-[var(--zen-space-5)]">
+      <div class="flex shrink-0 items-center justify-between gap-[var(--zen-space-4)] pt-[var(--zen-space-5)]">
+        <div class="flex flex-col gap-[var(--zen-space-2)]">
+          <span class="zs-label !font-normal !text-[var(--zs-ink-3)]">Transition</span>
+          <Select
+            label="Transition"
+            data-testid="zen-setup-open-transition"
+            options={OPEN_TRANSITION_OPTIONS}
+            value={settings.openTransition}
+            onChange={onOpenTransitionChange}
+          />
+        </div>
         <button
           type="button"
           class={cn(

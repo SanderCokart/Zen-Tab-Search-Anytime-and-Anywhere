@@ -28,11 +28,11 @@ export function SearchQueryHelp({
       data-testid="zen-search-help"
       class="shrink-0 cursor-pointer border-0 bg-transparent p-0 font-mono text-[length:var(--zen-text-sm)] leading-none text-[var(--zs-lcd-dim)] hover:text-[var(--zs-lcd-ink)]"
       tooltip={
-        <span class="flex flex-col gap-[calc(var(--zen-space-1)*0.5)] text-left tracking-[0.08em] text-[var(--zs-tip-ink)] normal-case">
+        <span class="grid grid-cols-[max-content_max-content] items-baseline gap-x-[var(--zen-space-2)] gap-y-[calc(var(--zen-space-1)*0.5)] text-left tracking-[0.08em] text-[var(--zs-tip-ink)] normal-case">
           {hints.map((hint) => (
-            <span key={hint.key} class="flex items-baseline gap-[var(--zen-space-2)]">
-              <span class="zs-label-red min-w-[11ch] font-semibold">{hint.key}</span>
-              <span>{hint.meaning}</span>
+            <span key={hint.key} class="contents">
+              <span class="zs-label-red whitespace-nowrap font-semibold">{hint.key}</span>
+              <span class="whitespace-nowrap">{hint.meaning}</span>
             </span>
           ))}
         </span>

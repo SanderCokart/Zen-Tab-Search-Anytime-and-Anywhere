@@ -331,19 +331,22 @@ describe("DisplaySettingsApp", () => {
     document.body.appendChild(root);
     render(<DisplaySettingsApp />, root);
 
-    const dial = await vi.waitFor(() => {
-      const element = root.querySelector<HTMLElement>("[data-testid='zen-background-opacity']");
-      expect(element?.getAttribute("aria-disabled")).not.toBe("true");
+    const slider = await vi.waitFor(() => {
+      const element = root.querySelector<HTMLInputElement>(
+        "[data-testid='zen-background-opacity']",
+      );
+      expect(element?.disabled).toBe(false);
       return element!;
     });
-    expect(dial.getAttribute("aria-valuemin")).toBe("0");
-    expect(dial.getAttribute("aria-valuemax")).toBe("1");
-    expect(dial.getAttribute("aria-valuenow")).toBe("0.75");
-    dial.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    expect(slider.min).toBe("0");
+    expect(slider.max).toBe("1");
+    expect(slider.value).toBe("0.8");
+    slider.value = "0.75";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
 
     await vi.waitFor(() =>
       expect(set).toHaveBeenCalledWith({
-        displaySettings: { ...DEFAULT_DISPLAY_SETTINGS, backgroundOpacity: 0.7 },
+        displaySettings: { ...DEFAULT_DISPLAY_SETTINGS, backgroundOpacity: 0.75 },
       }),
     );
 

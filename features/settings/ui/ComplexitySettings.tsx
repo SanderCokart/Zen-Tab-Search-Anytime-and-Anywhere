@@ -115,7 +115,7 @@ export function ComplexitySettings({
   const index = sliderIndex(match, settings);
 
   return (
-    <Module title="Complexity" meta={PRESET_LABELS[match]} wide>
+    <Module title="Complexity" wide>
       <Slider
         fill
         label="Complexity preset"

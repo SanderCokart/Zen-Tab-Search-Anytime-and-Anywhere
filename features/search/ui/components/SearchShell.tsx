@@ -4,6 +4,7 @@ import type { DisplaySettings } from "@/features/settings/model/display-settings
 import {
   createOpenMotionController,
   isOpenMotionEnabled,
+  usesOpenWhoosh,
   type OpenMotionController,
 } from "@/features/search/ui/lib/open-motion";
 import { useCtrlWheelFontSize } from "@/features/search/ui/hooks/useCtrlWheelFontSize";
@@ -74,6 +75,9 @@ export function SearchShell({
   const seenGeneration = useRef<number | undefined>(undefined);
   const seenCloseRequest = useRef(closeRequest);
   const playedInPage = useRef(false);
+  const exiting = useRef(false);
+  const soundRef = useRef(sound);
+  soundRef.current = sound;
   // Ctrl + wheel changes the font size on the overlay; the popup's size is fixed.
   useCtrlWheelFontSize(overlay, displaySettings, layout === "overlay", sound);
 
@@ -81,10 +85,6 @@ export function SearchShell({
 
   useLayoutEffect(() => {
     if (layout !== "overlay" || !scrim || !chassisEl) return;
-    if (!isOpenMotionEnabled(displaySettings.openTransition, displaySettings.openTransitionMs)) {
-      controller.current?.reset(scrim, chassisEl);
-      return;
-    }
     if (!open || shownGeneration === 0) return;
     if (shownGeneration === undefined) {
       if (playedInPage.current) return;
@@ -94,12 +94,19 @@ export function SearchShell({
     } else {
       seenGeneration.current = shownGeneration;
     }
+    exiting.current = false;
+    if (!isOpenMotionEnabled(displaySettings.openTransition, displaySettings.openTransitionMs)) {
+      controller.current?.reset(scrim, chassisEl);
+      soundRef.current?.play("down");
+      return;
+    }
     void controller.current?.enter(
       scrim,
       chassisEl,
       displaySettings.openTransition,
       displaySettings.openTransitionMs,
     );
+    if (usesOpenWhoosh(displaySettings.openTransition)) soundRef.current?.play("whoosh-in");
   }, [
     chassisEl,
     displaySettings.openTransition,
@@ -114,9 +121,12 @@ export function SearchShell({
     if (layout !== "overlay" || closeRequest === seenCloseRequest.current) return;
     seenCloseRequest.current = closeRequest;
     if (!isOpenMotionEnabled(displaySettings.openTransition, displaySettings.openTransitionMs)) {
+      soundRef.current?.play("up");
       onCloseRef.current();
       return;
     }
+    exiting.current = true;
+    if (usesOpenWhoosh(displaySettings.openTransition)) soundRef.current?.play("whoosh-out");
     void controller.current
       ?.exit(scrim, chassisEl, displaySettings.openTransition, displaySettings.openTransitionMs)
       .then((finished) => {
@@ -133,10 +143,12 @@ export function SearchShell({
 
   // Presses are heard on the way down and up, from one listener for the whole surface.
   const onPointerDown = (event: PointerEvent) => {
+    if (exiting.current) return;
     const voice = keyPressVoice(event.target, false);
     if (voice) sound?.play(voice);
   };
   const onPointerUp = (event: PointerEvent) => {
+    if (exiting.current) return;
     const voice = keyPressVoice(event.target, true);
     if (voice) sound?.play(voice);
   };

@@ -113,7 +113,8 @@ async function deliverOmnibarHide(overlayId: string): Promise<boolean> {
  */
 async function toggleWindowOmnibar(): Promise<boolean> {
   const animated = await hasOpenMotion();
-  const result = await toggleOverlay(undefined, animated);
+  // The page plays the close sound (or exit motion) before it hides itself.
+  const result = await toggleOverlay(undefined, true);
   if (!result) return false;
   if (result.state === "shown") {
     if (!(await deliverOmnibarHide(result.overlayId))) {

@@ -275,21 +275,21 @@ describe("display settings", () => {
       await expect(readDisplaySettings()).resolves.toMatchObject({ theme: "system" });
     });
 
-    it("snaps the open duration onto 100ms steps inside 0..2000", () => {
-      expect(clampOpenTransitionMs(250)).toBe(300);
+    it("snaps the open duration onto 50ms steps inside 0..1000", () => {
+      expect(clampOpenTransitionMs(224)).toBe(200);
       expect(clampOpenTransitionMs(-20)).toBe(0);
-      expect(clampOpenTransitionMs(2400)).toBe(2000);
-      expect(clampOpenTransitionMs(Number.NaN)).toBe(300);
+      expect(clampOpenTransitionMs(2400)).toBe(1000);
+      expect(clampOpenTransitionMs(Number.NaN)).toBe(150);
     });
 
     it("keeps a stored open transition and falls back from an unknown one", async () => {
       store({ openTransition: "zoom", openTransitionMs: 250 });
       await expect(readDisplaySettings()).resolves.toMatchObject({
         openTransition: "zoom",
-        openTransitionMs: 300,
+        openTransitionMs: 250,
       });
       store({ openTransition: "spin" });
-      await expect(readDisplaySettings()).resolves.toMatchObject({ openTransition: "none" });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ openTransition: "fade" });
     });
 
     it("keeps a stored search engine and falls back from an unknown one", async () => {
@@ -348,9 +348,9 @@ describe("display settings", () => {
       });
     }
 
-    it("defaults to 75% and stays inside 0% to 100% on 5% steps", async () => {
+    it("defaults to 80% and stays inside 0% to 100% on 5% steps", async () => {
       store({});
-      await expect(readDisplaySettings()).resolves.toMatchObject({ backgroundOpacity: 0.75 });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ backgroundOpacity: 0.8 });
       expect(clampBackgroundOpacity(0.2)).toBe(0.2);
       expect(clampBackgroundOpacity(-0.3)).toBe(0);
       expect(clampBackgroundOpacity(0)).toBe(0);

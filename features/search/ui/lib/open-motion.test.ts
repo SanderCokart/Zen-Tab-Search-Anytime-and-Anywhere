@@ -3,6 +3,7 @@ import {
   createOpenMotionController,
   isOpenMotionEnabled,
   openMotionHiddenPose,
+  usesOpenWhoosh,
 } from "@/features/search/ui/lib/open-motion";
 
 interface FakeControl {
@@ -62,6 +63,14 @@ describe("open-motion", () => {
     expect(isOpenMotionEnabled("none", 300)).toBe(false);
     expect(isOpenMotionEnabled("slide-up", 0)).toBe(false);
     expect(isOpenMotionEnabled("slide-up", 300)).toBe(true);
+  });
+
+  it("whooshes on fade, slides and zoom, not on none", () => {
+    expect(usesOpenWhoosh("slide-up")).toBe(true);
+    expect(usesOpenWhoosh("slide-left")).toBe(true);
+    expect(usesOpenWhoosh("zoom")).toBe(true);
+    expect(usesOpenWhoosh("fade")).toBe(true);
+    expect(usesOpenWhoosh("none")).toBe(false);
   });
 
   it("fades the scrim while sliding the chassis in and out", async () => {

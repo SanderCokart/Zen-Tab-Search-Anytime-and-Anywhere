@@ -246,7 +246,7 @@ Pin a tab’s hostnames to a fixed IP, like a per-tab hosts file. Open the edito
 
 The **Theme** module picks **System**, **Light**, or **Dark**. System follows the browser's colour scheme. Accent, frame, panels, and text start on **AUTO**, which takes each colour from the theme, so light and dark keep a fitting palette until you pick your own.
 
-**Background opacity** is a dial from 0% to 100%, in 5% steps, and it starts at 75%. It fades the panels so the page behind the omnibar shows through. Text, keys, and the timer readout stay solid. The options page is not affected.
+**Background opacity** is a slider from 0% to 100%, in 5% steps, and it starts at 80%. It fades the panels so the page behind the omnibar shows through. Text, keys, and the timer readout stay solid. The options page is not affected.
 
 The interface uses IBM Plex Mono and Inter, bundled with the extension, so the overlay looks the same on every machine.
 

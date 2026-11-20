@@ -8,8 +8,8 @@ export interface MotionPose {
   scale: number;
 }
 
-const ENTER_EASE = [0.2, 0.8, 0.2, 1] as const;
-const EXIT_EASE = [0.4, 0, 0.8, 0.2] as const;
+/** Slow at both ends, faster in the middle, for enter and exit. */
+const OPEN_EASE = "easeInOut";
 
 export const OPEN_MOTION_SHOWN_POSE: MotionPose = {
   opacity: 1,
@@ -30,6 +30,11 @@ export function prefersReducedMotion(): boolean {
 /** True when an open/close transition should actually animate. */
 export function isOpenMotionEnabled(kind: OpenTransition, durationMs: number): boolean {
   return kind !== "none" && durationMs > 0 && !prefersReducedMotion();
+}
+
+/** Any moving open (fade, slide, zoom) gets a whoosh. None stays silent. */
+export function usesOpenWhoosh(kind: OpenTransition): boolean {
+  return kind !== "none";
 }
 
 /** Off-screen or collapsed pose the deck starts from on enter and returns to on exit. */
@@ -146,13 +151,13 @@ export function createOpenMotionController(): OpenMotionController {
     const duration = durationMs / 1000;
     const controls: AnimationPlaybackControlsWithThen[] = [];
     if (scrim) {
-      controls.push(animate(scrim, { opacity: [0, 1] }, { duration, ease: ENTER_EASE }));
+      controls.push(animate(scrim, { opacity: [0, 1] }, { duration, ease: OPEN_EASE }));
     }
     if (chassis) {
       controls.push(
         animate(chassis, enterKeyframes(openMotionHiddenPose(kind)), {
           duration,
-          ease: ENTER_EASE,
+          ease: OPEN_EASE,
         }),
       );
     }
@@ -175,13 +180,13 @@ export function createOpenMotionController(): OpenMotionController {
     const duration = durationMs / 1000;
     const controls: AnimationPlaybackControlsWithThen[] = [];
     if (scrim) {
-      controls.push(animate(scrim, { opacity: 0 }, { duration, ease: EXIT_EASE }));
+      controls.push(animate(scrim, { opacity: 0 }, { duration, ease: OPEN_EASE }));
     }
     if (chassis) {
       controls.push(
         animate(chassis, exitKeyframes(openMotionHiddenPose(kind)), {
           duration,
-          ease: EXIT_EASE,
+          ease: OPEN_EASE,
         }),
       );
     }

@@ -22,6 +22,17 @@ export const OPEN_TRANSITIONS = [
 ] as const;
 export type OpenTransition = (typeof OPEN_TRANSITIONS)[number];
 
+/** Labels by the edge the deck comes from. */
+export const OPEN_TRANSITION_OPTIONS: readonly { value: OpenTransition; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "fade", label: "Fade" },
+  { value: "slide-up", label: "Bottom" },
+  { value: "slide-down", label: "Top" },
+  { value: "slide-right", label: "Left" },
+  { value: "slide-left", label: "Right" },
+  { value: "zoom", label: "Zoom" },
+];
+
 /**
  * The default for every preference, and the single source of the fallbacks the
  * schema below uses. Declared before the schema so each field can name its own
@@ -63,7 +74,7 @@ const DEFAULTS = {
    * How solid the omnibar background is, from clear (0) to solid (1).
    * Text and controls stay opaque.
    */
-  backgroundOpacity: 0.75,
+  backgroundOpacity: 0.8,
   /** Focus an already-open tab when another app opens the same address. */
   reuseExternalTabs: false,
   /** Overlay fills the window. Off, it is a centered Spotlight card. */
@@ -93,9 +104,9 @@ const DEFAULTS = {
   /** Light, dark, or whichever the system asks for. */
   theme: "system" as (typeof THEME_PREFERENCES)[number],
   /** How the omnibar comes in. "none" shows it at once. */
-  openTransition: "none" as OpenTransition,
-  /** How long that entrance takes, in milliseconds, on 100ms steps. */
-  openTransitionMs: 300,
+  openTransition: "fade" as OpenTransition,
+  /** How long that entrance takes, in milliseconds, on 50ms steps. */
+  openTransitionMs: 150,
   /** "auto" takes the colour from the theme; a hex value overrides it. */
   accentColor: "auto",
   chassisColor: "auto",
@@ -161,17 +172,17 @@ export function customColor(value: string): string | undefined {
 
 /** Lowest omnibar-background opacity: 0 is fully transparent, so the page behind shows through. */
 export const MIN_BACKGROUND_OPACITY = 0;
-/** Fully solid. The stored default is 75%. */
+/** Fully solid. The stored default is 80%. */
 export const MAX_BACKGROUND_OPACITY = 1;
 
 /** Open animation length. 0 shows the deck at once. */
 export const MIN_OPEN_TRANSITION_MS = 0;
-export const MAX_OPEN_TRANSITION_MS = 2000;
-export const OPEN_TRANSITION_MS_STEP = 100;
+export const MAX_OPEN_TRANSITION_MS = 1000;
+export const OPEN_TRANSITION_MS_STEP = 50;
 
-/** Snaps an open-animation length onto 100ms steps, inside 0..2000. */
+/** Snaps an open-animation length onto 50ms steps, inside 0..1000. */
 export function clampOpenTransitionMs(value: number): number {
-  if (!Number.isFinite(value)) return 300;
+  if (!Number.isFinite(value)) return DEFAULTS.openTransitionMs;
   const clamped = Math.min(MAX_OPEN_TRANSITION_MS, Math.max(MIN_OPEN_TRANSITION_MS, value));
   return Math.round(clamped / OPEN_TRANSITION_MS_STEP) * OPEN_TRANSITION_MS_STEP;
 }

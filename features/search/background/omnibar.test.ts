@@ -181,6 +181,10 @@ describe("toggleOmnibar", () => {
     await toggleOmnibar(20, { warmSnapshot });
 
     expect(warmSnapshot).not.toHaveBeenCalled();
+    expect(toggleOmnibarOverlayMock).toHaveBeenCalledWith(
+      "moz-extension://test/omnibar.html",
+      true,
+    );
   });
 
   it("asks an animated omnibar to exit instead of hiding it immediately on toggle-off", async () => {

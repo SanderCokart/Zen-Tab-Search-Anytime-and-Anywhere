@@ -71,6 +71,8 @@ describe("voice table", () => {
         expect(burst.level, voice).toBeGreaterThan(0);
         expect(burst.level, voice).toBeLessThanOrEqual(1);
         expect(burst.decay, voice).toBeGreaterThan(0);
+        expect(burst.decay, voice).toBeGreaterThan(burst.attack ?? 0);
+        if (burst.to !== undefined) expect(burst.to, voice).toBeGreaterThan(0);
         expect(burst.at ?? 0, voice).toBeGreaterThanOrEqual(0);
       }
       for (const tone of tones) {
@@ -137,6 +139,27 @@ describe("createSoundEngine", () => {
 
     engine.play("tick");
     expect(createContext).toHaveBeenCalledTimes(1);
+  });
+
+  it("plays the same whoosh on the way out as on the way in", () => {
+    expect(VOICE_TABLE["whoosh-out"]).toEqual(VOICE_TABLE["whoosh-in"]);
+  });
+
+  it("sweeps a whoosh filter across the decay", () => {
+    const { context, raw } = fakeContext();
+    const filter = {
+      ...fakeNode(),
+      type: "",
+      frequency: fakeParam(),
+      Q: fakeParam(),
+    };
+    raw.createBiquadFilter.mockReturnValue(filter);
+    createSoundEngine({ volume: 0.4, createContext: () => context }).play("whoosh-in");
+    const spec = VOICE_TABLE["whoosh-in"].bursts[0]!;
+    expect(filter.frequency.setValueAtTime).toHaveBeenCalled();
+    expect(filter.frequency.exponentialRampToValueAtTime).toHaveBeenCalled();
+    const to = filter.frequency.exponentialRampToValueAtTime.mock.calls[0]![0] as number;
+    expect(to).toBeGreaterThan(spec.freq);
   });
 
   it("resumes a suspended context", () => {

@@ -47,17 +47,13 @@ import {
   useDisplaySettings,
   type DisplaySettingsCache,
 } from "@/features/search/ui/hooks/useDisplaySettings";
-import {
-  DEFAULT_DISPLAY_SETTINGS,
-  saveDisplaySettings,
-} from "@/features/settings/model/display-settings";
+import { saveDisplaySettings } from "@/features/settings/model/display-settings";
 import {
   applyPreset,
   COMPLEXITY_SETUP_DONE_KEY,
   type ComplexityFlags,
 } from "@/features/settings/model/complexity";
 import { ComplexitySetupCard } from "@/features/search/ui/components/ComplexitySetupCard";
-import { isOpenMotionEnabled } from "@/features/search/ui/lib/open-motion";
 import { useOverlayEntrance } from "@/features/search/ui/hooks/useOverlayEntrance";
 import { useEssentialTabNames } from "@/features/search/ui/hooks/useEssentialTabNames";
 import { useSearchNavigation } from "@/features/search/ui/hooks/useSearchNavigation";
@@ -302,15 +298,12 @@ export function SearchApp({
   );
 
   const requestClose = useCallback(() => {
-    if (
-      layout !== "overlay" ||
-      !isOpenMotionEnabled(displaySettings.openTransition, displaySettings.openTransitionMs)
-    ) {
+    if (layout !== "overlay") {
       onClose();
       return;
     }
     setCloseRequest((current) => current + 1);
-  }, [displaySettings.openTransition, displaySettings.openTransitionMs, layout, onClose]);
+  }, [layout, onClose]);
 
   const activateTab = useCallback(
     (tabId: number | undefined, domId: string | undefined, label: string) => {
@@ -547,8 +540,15 @@ export function SearchApp({
     >
       {setupInProgress ? (
         <ComplexitySetupCard
-          settings={{ ...DEFAULT_DISPLAY_SETTINGS, ...setupDraft }}
+          settings={{ ...displaySettings, ...setupDraft }}
           onChange={setSetupDraft}
+          onOpenTransitionChange={(openTransition) => {
+            const next = { ...displaySettings, openTransition };
+            setDisplaySettings(next);
+            void saveDisplaySettings(next).catch((error) =>
+              debugError("Could not save open transition:", error),
+            );
+          }}
           onContinue={() => {
             const next = { ...displaySettings, ...setupDraft };
             setDisplaySettings(next);
