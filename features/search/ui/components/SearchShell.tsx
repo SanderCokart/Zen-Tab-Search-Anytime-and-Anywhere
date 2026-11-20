@@ -1,8 +1,10 @@
 import type { ComponentChildren } from "preact";
-import { useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import type { DisplaySettings } from "@/features/settings/model/display-settings";
+import { replayOpenMotion } from "@/features/search/ui/lib/open-motion";
 import { useCtrlWheelFontSize } from "@/features/search/ui/hooks/useCtrlWheelFontSize";
 import { themeColorStyle } from "@/features/settings/model/theme-colors";
+import { cn } from "@/shared/ui/cn";
 import { uiScaleStyle } from "@/features/settings/model/ui-scale";
 import type { SearchLayout } from "@/features/search/ui/types";
 import { SoundProvider, type SoundApi } from "@/shared/ui/sound/SoundContext";
@@ -33,6 +35,8 @@ export function SearchShell({
   chassis,
   open = true,
   sound,
+  /** 0 while the preloaded omnibar is hidden. The page replays motion on show. */
+  shownGeneration,
   children,
 }: {
   layout: SearchLayout;
@@ -44,6 +48,7 @@ export function SearchShell({
   open?: boolean;
   /** The sound player for everything inside; silent when left out. */
   sound?: SoundApi;
+  shownGeneration?: number;
   children: ComponentChildren;
 }) {
   const theme = useResolvedTheme(displaySettings.theme);
@@ -52,8 +57,27 @@ export function SearchShell({
   // Only the overlay needs the zoom: it holds its size on screen.
   const zoom = usePageZoom(layout === "overlay");
   const [overlay, setOverlay] = useState<HTMLDivElement | null>(null);
+  const [chassisEl, setChassisEl] = useState<HTMLDivElement | null>(null);
+  const [motionOn, setMotionOn] = useState(false);
+  const seenGeneration = useRef<number | undefined>(undefined);
+  const playedInPage = useRef(false);
   // Ctrl + wheel changes the font size on the overlay; the popup's size is fixed.
   useCtrlWheelFontSize(overlay, displaySettings, layout === "overlay", sound);
+
+  useLayoutEffect(() => {
+    if (layout !== "overlay" || !open || !chassisEl) return;
+    if (displaySettings.openTransition === "none" || shownGeneration === 0) return;
+    if (shownGeneration === undefined) {
+      if (playedInPage.current) return;
+      playedInPage.current = true;
+    } else if (seenGeneration.current === shownGeneration) {
+      return;
+    } else {
+      seenGeneration.current = shownGeneration;
+    }
+    setMotionOn(true);
+    replayOpenMotion(chassisEl);
+  }, [chassisEl, displaySettings.openTransition, layout, open, shownGeneration]);
 
   // Presses are heard on the way down and up, from one listener for the whole surface.
   const onPointerDown = (event: PointerEvent) => {
@@ -104,13 +128,18 @@ export function SearchShell({
       }}
     >
       <div
-        class="zs-chassis flex min-h-0 shrink-0 flex-col overflow-hidden p-[var(--zen-space-6)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+        ref={setChassisEl}
+        class={cn(
+          "zs-chassis flex min-h-0 shrink-0 flex-col overflow-hidden p-[var(--zen-space-6)] shadow-[0_8px_32px_rgba(0,0,0,0.5)]",
+          motionOn && "zs-open-motion",
+        )}
         onClick={(event) => event.stopPropagation()}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         data-omnibar
         data-omnibar-layout={chassis ?? (displaySettings.fullscreen ? "fullscreen" : "spotlight")}
         data-omnibar-aspect={aspect}
+        data-open-transition={displaySettings.openTransition}
       >
         {children}
       </div>

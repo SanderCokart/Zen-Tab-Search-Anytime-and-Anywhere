@@ -897,6 +897,23 @@ describe("SearchApp", () => {
     full.root.remove();
   });
 
+  it("plays the open transition once the overlay is shown", async () => {
+    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", { openTransition: "slide-up" });
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-omnibar-stage]")?.getAttribute("data-omnibar-stage")).toBe(
+        "open",
+      ),
+    );
+    await vi.waitFor(() =>
+      expect(root.querySelector("[data-omnibar]")?.classList.contains("zs-open-motion")).toBe(true),
+    );
+    expect(root.querySelector("[data-omnibar]")?.getAttribute("data-open-transition")).toBe(
+      "slide-up",
+    );
+    render(null, root);
+    root.remove();
+  });
+
   it("shows a preloaded deck again without asking for another snapshot", async () => {
     const { root, sendMessage } = mountSearchApp(
       vi.fn(),
@@ -2036,16 +2053,14 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-search-item']")).toBeTruthy(),
     );
-    root
-      .querySelector("[data-testid='zen-search-item']")!
-      .dispatchEvent(
-        new MouseEvent("contextmenu", {
-          bubbles: true,
-          cancelable: true,
-          clientX: 20,
-          clientY: 20,
-        }),
-      );
+    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
     await vi.waitFor(() => expect(menu()?.textContent).toContain("Mark as todo"));
 
     [...menu()!.querySelectorAll("[role='menuitem']")]
@@ -2077,16 +2092,14 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-search-item']")).toBeTruthy(),
     );
-    root
-      .querySelector("[data-testid='zen-search-item']")!
-      .dispatchEvent(
-        new MouseEvent("contextmenu", {
-          bubbles: true,
-          cancelable: true,
-          clientX: 20,
-          clientY: 20,
-        }),
-      );
+    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
     await vi.waitFor(() => expect(menu()?.textContent).toContain("Close tab"));
     expect(menu()?.textContent).not.toContain("Mark as todo");
     expect(menu()?.querySelector("[aria-label='Status']")).toBeNull();

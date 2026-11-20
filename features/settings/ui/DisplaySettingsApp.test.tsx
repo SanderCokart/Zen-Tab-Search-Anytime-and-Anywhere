@@ -279,6 +279,44 @@ describe("DisplaySettingsApp", () => {
     root.remove();
   });
 
+  it("saves the open transition picked in the segmented control", async () => {
+    const set = vi.fn(async () => undefined);
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: {
+            get: vi.fn(async () => ({ displaySettings: {} })),
+            set,
+          },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    render(<DisplaySettingsApp />, root);
+
+    const zoom = await vi.waitFor(() => {
+      const button = [
+        ...root.querySelectorAll<HTMLButtonElement>(
+          "[role='radiogroup'][aria-label='Open'] [role='radio']",
+        ),
+      ].find((item) => item.textContent?.includes("Zoom"));
+      expect(button?.disabled).toBe(false);
+      return button!;
+    });
+    zoom.click();
+
+    await vi.waitFor(() =>
+      expect(set).toHaveBeenCalledWith({
+        displaySettings: { ...DEFAULT_DISPLAY_SETTINGS, openTransition: "zoom" },
+      }),
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
   it("turns the omnibar background down from the opacity dial", async () => {
     const set = vi.fn(async () => undefined);
     Object.assign(globalThis, {

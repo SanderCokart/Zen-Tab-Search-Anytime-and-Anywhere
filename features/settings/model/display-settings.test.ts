@@ -274,6 +274,13 @@ describe("display settings", () => {
       await expect(readDisplaySettings()).resolves.toMatchObject({ theme: "system" });
     });
 
+    it("keeps a stored open transition and falls back from an unknown one", async () => {
+      store({ openTransition: "zoom" });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ openTransition: "zoom" });
+      store({ openTransition: "spin" });
+      await expect(readDisplaySettings()).resolves.toMatchObject({ openTransition: "none" });
+    });
+
     it("keeps a stored search engine and falls back from an unknown one", async () => {
       store({ searchEngine: "duckduckgo" });
       await expect(readDisplaySettings()).resolves.toMatchObject({ searchEngine: "duckduckgo" });

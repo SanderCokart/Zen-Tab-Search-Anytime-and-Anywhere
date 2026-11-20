@@ -524,6 +524,7 @@ export function SearchApp({
       aspect={layout === "overlay" ? overlayAspect : "1/1"}
       chassis={setupInProgress ? "setup" : undefined}
       open={layout === "overlay" ? overlayOpen : true}
+      shownGeneration={reveal}
       sound={sound}
     >
       {setupInProgress ? (

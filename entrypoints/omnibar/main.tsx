@@ -1,6 +1,7 @@
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { createSearchSessionCache, SearchApp } from "@/features/search/ui/SearchApp";
+import { replayOpenMotion } from "@/features/search/ui/lib/open-motion";
 import { sendExtensionMessage, subscribeToOmnibarShown } from "@/shared/messaging/client";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { parseOmnibarView, type OmnibarView } from "@/shared/messaging/protocol";
@@ -38,6 +39,7 @@ function OmnibarPage() {
     () =>
       subscribeToOmnibarShown((shown) => {
         if (shown.overlayId !== overlayId) return false;
+        replayOpenMotion(document.querySelector("[data-omnibar]"));
         setView(shown.view);
         setReveal((current) => current + 1);
         return true;

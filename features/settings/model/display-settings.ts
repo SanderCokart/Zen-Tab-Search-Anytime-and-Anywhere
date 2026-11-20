@@ -11,6 +11,17 @@ import { THEME_PREFERENCES } from "@/shared/ui/theme";
 
 export const DISPLAY_SETTINGS_STORAGE_KEY = "displaySettings";
 
+export const OPEN_TRANSITIONS = [
+  "none",
+  "fade",
+  "slide-up",
+  "slide-down",
+  "slide-left",
+  "slide-right",
+  "zoom",
+] as const;
+export type OpenTransition = (typeof OPEN_TRANSITIONS)[number];
+
 /**
  * The default for every preference, and the single source of the fallbacks the
  * schema below uses. Declared before the schema so each field can name its own
@@ -81,6 +92,8 @@ const DEFAULTS = {
   searchEngine: DEFAULT_SEARCH_ENGINE,
   /** Light, dark, or whichever the system asks for. */
   theme: "system" as (typeof THEME_PREFERENCES)[number],
+  /** How the omnibar comes in. "none" shows it at once. */
+  openTransition: "none" as OpenTransition,
   /** "auto" takes the colour from the theme; a hex value overrides it. */
   accentColor: "auto",
   chassisColor: "auto",
@@ -243,6 +256,7 @@ const displaySettingsSchema = v.pipe(
       statusBar: boolean(DEFAULTS.statusBar),
       searchEngine: v.fallback(v.picklist(SEARCH_ENGINE_IDS), DEFAULTS.searchEngine),
       theme: v.fallback(v.picklist(THEME_PREFERENCES), DEFAULTS.theme),
+      openTransition: v.fallback(v.picklist(OPEN_TRANSITIONS), DEFAULTS.openTransition),
       accentColor: color("accentColor"),
       chassisColor: color("chassisColor"),
       panelColor: color("panelColor"),

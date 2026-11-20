@@ -10,6 +10,10 @@ import {
   showOmnibarOverlay,
   toggleOmnibarOverlay,
 } from "@/features/zen/omnibar-overlay";
+import {
+  readDisplaySettings,
+  type OpenTransition,
+} from "@/features/settings/model/display-settings";
 import { OMNIBAR_SHOWN_TYPE, type OmnibarView } from "@/shared/messaging/protocol";
 
 export interface ToggleOmnibarOptions {
@@ -72,11 +76,25 @@ async function showReadyOverlay(
   view?: OmnibarView,
 ): Promise<void> {
   omnibarAnchorTabId = isUsableTabId(result.anchorTabId) ? result.anchorTabId : undefined;
-  // The preloaded page is already drawn. Showing it is the whole open.
+  const motion = await openTransition();
+  // A page created for this show mounts itself from the URL.
+  if (result.created) {
+    await showOmnibarOverlay(result.overlayId);
+    return;
+  }
+  // Motion has to start while the page is still hidden, or the first frame
+  // is the finished deck and the animation plays after it.
+  if (motion !== "none") await notifyOmnibarShown(result.overlayId, view);
   await showOmnibarOverlay(result.overlayId);
-  // A page created for this show mounts itself from the URL. A preloaded page
-  // is told it was shown, so it can clear the query and take focus.
-  if (!result.created) void notifyOmnibarShown(result.overlayId, view);
+  if (motion === "none") void notifyOmnibarShown(result.overlayId, view);
+}
+
+async function openTransition(): Promise<OpenTransition> {
+  try {
+    return (await readDisplaySettings()).openTransition;
+  } catch {
+    return "none";
+  }
 }
 
 /**

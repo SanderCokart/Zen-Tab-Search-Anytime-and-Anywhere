@@ -10,6 +10,7 @@ import {
   readDisplaySettings,
   saveDisplaySettings,
   type DisplaySettings,
+  type OpenTransition,
   type ThemeColorKey,
 } from "@/features/settings/model/display-settings";
 import { themeColorStyle } from "@/features/settings/model/theme-colors";
@@ -57,6 +58,16 @@ const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
   { value: "system", label: "System" },
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
+];
+
+const OPEN_TRANSITION_OPTIONS: readonly { value: OpenTransition; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "fade", label: "Fade" },
+  { value: "slide-up", label: "Up" },
+  { value: "slide-down", label: "Down" },
+  { value: "slide-left", label: "Left" },
+  { value: "slide-right", label: "Right" },
+  { value: "zoom", label: "Zoom" },
 ];
 
 const PINNED_VISIBILITY = [
@@ -316,6 +327,16 @@ export function DisplaySettingsApp() {
                     );
                   })}
                 </div>
+              </div>
+              <div class="flex flex-col gap-[var(--zen-space-2)]">
+                <span class={monoLabelClass}>Open</span>
+                <Segmented
+                  label="Open"
+                  options={OPEN_TRANSITION_OPTIONS}
+                  value={settings.openTransition}
+                  disabled={!loaded}
+                  onChange={(openTransition) => updateSettings({ openTransition })}
+                />
               </div>
               <div class="flex w-fit flex-col items-center gap-[var(--zen-space-2)] text-center">
                 <Dial

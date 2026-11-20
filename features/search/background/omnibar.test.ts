@@ -133,6 +133,40 @@ describe("toggleOmnibar", () => {
     expect(sendTabMessageMock).not.toHaveBeenCalled();
   });
 
+  it("arms an open transition before the preloaded omnibar is shown", async () => {
+    toggleOmnibarOverlayMock.mockResolvedValue({
+      state: "ready",
+      overlayId: "o1",
+      created: false,
+      anchorTabId: 42,
+    });
+    const order: string[] = [];
+    vi.mocked(showOmnibarOverlay).mockImplementation(async () => {
+      order.push("show");
+      return true;
+    });
+    Object.assign(globalThis, {
+      browser: {
+        runtime: {
+          getURL: (path: string) => `moz-extension://test${path}`,
+          sendMessage: vi.fn(async () => {
+            order.push("shown");
+            return true;
+          }),
+        },
+        storage: {
+          local: {
+            get: vi.fn(async () => ({ displaySettings: { openTransition: "slide-up" } })),
+          },
+        },
+      },
+    });
+
+    await toggleOmnibar(20);
+
+    expect(order).toEqual(["shown", "show"]);
+  });
+
   it("does not warm a snapshot when the toggle hides the window-hosted omnibar", async () => {
     toggleOmnibarOverlayMock.mockResolvedValue({ state: "hidden", overlayId: "o1" });
     Object.assign(globalThis, {
