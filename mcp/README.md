@@ -355,6 +355,9 @@ or `folderId`. New tabs need a `url`. Patching an existing tab does not change i
 
 - **Folders hold pinned tabs.** That is Zen's model, so creating a folder with tabs, or moving
   tabs into one, pins them.
+- **Pinned tabs at a space root** use `"pinned": true` on a tab node (unpin with `false`).
+  A tab that stays in a folder cannot be unpinned, and `essential` overrides `pinned`. A newly
+  pinned tab stores the page it loads as its pinned URL.
 - **New tabs open in the background.** Their title stays "New Tab" until the page loads.
   Use `zen_activate_tab` if you need to switch to one.
 - **`zen_apply_patch` creates when a node has no `id`**, so repeating a create-heavy tree will

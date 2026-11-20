@@ -50,6 +50,7 @@ function workspace(partial: Partial<WorkspaceAdapter> = {}): WorkspaceAdapter {
     deleteSpaces: async () => undefined,
     setEssential: async () => undefined,
     clearEssential: async () => undefined,
+    setPinned: async () => 0,
     getPinnedUrl: async () => "",
     setPinnedUrl: async () => undefined,
     replacePinnedUrlWithCurrent: async () => undefined,

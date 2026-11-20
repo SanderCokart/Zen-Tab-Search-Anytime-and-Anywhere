@@ -41,6 +41,7 @@ function workspace(partial: Partial<BridgeWorkspace> = {}): BridgeWorkspace {
     deleteSpaces: async () => undefined,
     setEssential: async () => undefined,
     clearEssential: async () => undefined,
+    setPinned: async () => 0,
     getPinnedUrl: async () => "https://example.com",
     setPinnedUrl: async () => undefined,
     replacePinnedUrlWithCurrent: async () => undefined,
@@ -269,6 +270,17 @@ describe("createBridgeCommandHandler", () => {
     expect(createSpace).toHaveBeenCalledWith("Work");
     expect(closeTabs).toHaveBeenCalledWith([4, 5]);
     expect(setEssential).toHaveBeenCalledWith([4]);
+  });
+
+  it("pins and unpins tabs", async () => {
+    const setPinned = vi.fn(async () => 1);
+    const handle = createBridgeCommandHandler(workspace({ setPinned }));
+    await expect(handle({ type: "setPinned", tabIds: [4], pinned: true })).resolves.toEqual({
+      tabIds: [4],
+      pinned: true,
+      changed: 1,
+    });
+    expect(setPinned).toHaveBeenCalledWith([4], true);
   });
 
   it("deletes folders and spaces in bulk", async () => {

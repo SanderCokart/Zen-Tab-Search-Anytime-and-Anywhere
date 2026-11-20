@@ -36,6 +36,12 @@ const tabPatch = z.object({
   spaceId: spaceId.optional().describe("Explicit space; nested children inherit this"),
   folderId: folderId.optional().describe("Explicit parent folder; nested children inherit this"),
   essential: z.boolean().optional().describe("Mark or unmark the tab as essential after moving"),
+  pinned: z
+    .boolean()
+    .optional()
+    .describe(
+      "Pin or unpin the tab. Tabs in a folder are always pinned; essential overrides this",
+    ),
 });
 
 const folderPatch: z.ZodType<Extract<PatchTreeNode, { type: "folder" }>> = z.lazy(() =>

@@ -183,6 +183,12 @@ function createFakeZen() {
         Object.assign(findTab(id), { essential: false, spaceId: "general" });
       }
     },
+    setPinned: async (tabIds, pinned) => {
+      for (const id of tabIds) {
+        Object.assign(findTab(id), { pinned });
+      }
+      return tabIds.length;
+    },
     renameFolder: async () => undefined,
     moveTabsToFolder: async (tabIds, folderId) => {
       const folder = folders.find((entry) => entry.id === folderId);

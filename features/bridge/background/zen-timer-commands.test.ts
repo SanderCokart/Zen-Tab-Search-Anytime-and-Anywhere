@@ -38,6 +38,7 @@ function workspace(tabs: TabInfo[] = []): BridgeWorkspace {
     deleteSpaces: async () => undefined,
     setEssential: async () => undefined,
     clearEssential: async () => undefined,
+    setPinned: async () => 0,
     getPinnedUrl: async () => "https://example.com",
     setPinnedUrl: async () => undefined,
     replacePinnedUrlWithCurrent: async () => undefined,

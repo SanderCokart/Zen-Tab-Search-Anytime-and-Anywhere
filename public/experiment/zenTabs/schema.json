@@ -520,6 +520,25 @@
         ]
       },
       {
+        "name": "setPinned",
+        "type": "function",
+        "description": "Pins or unpins tabs; a newly pinned tab stores its loaded page as its pinned URL",
+        "async": true,
+        "parameters": [
+          {
+            "name": "tabIds",
+            "type": "array",
+            "items": { "type": "integer" },
+            "description": "Extension tab IDs"
+          },
+          {
+            "name": "pinned",
+            "type": "boolean",
+            "description": "true to pin, false to unpin"
+          }
+        ]
+      },
+      {
         "name": "getPinnedUrl",
         "type": "function",
         "description": "Returns the stored pinned URL for a pinned or essential tab",

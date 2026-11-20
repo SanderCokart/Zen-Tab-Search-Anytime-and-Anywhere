@@ -44,6 +44,72 @@ function recorder() {
   return { commands, request };
 }
 
+describe("applyPatchTree pinned tabs", () => {
+  it("opens a new tab pinned at a space root", async () => {
+    const { commands, request } = recorder();
+    await applyPatchTree(
+      [{ type: "tab", name: "Odoo", url: "https://github.com/", spaceId: "work", pinned: true }],
+      { snapshot, request },
+    );
+    expect(commands[0]).toMatchObject({ type: "openTab", spaceId: "work", pinned: true });
+  });
+
+  it("leaves pinning to the folder for a new tab inside one", async () => {
+    const { commands, request } = recorder();
+    await applyPatchTree(
+      [
+        {
+          type: "tab",
+          name: "Odoo",
+          url: "https://github.com/",
+          spaceId: "work",
+          folderId: "docs",
+          pinned: true,
+        },
+      ],
+      { snapshot, request },
+    );
+    expect(commands[0]).toMatchObject({ type: "openTab", folderId: "docs", pinned: false });
+    expect(commands.some((command) => command.type === "setPinned")).toBe(false);
+  });
+
+  it("pins and unpins existing tabs only when the state changes", async () => {
+    const { commands, request } = recorder();
+    await applyPatchTree(
+      [
+        { type: "tab", id: 1, pinned: true },
+        { type: "tab", id: 1, pinned: false },
+      ],
+      { snapshot, request },
+    );
+    expect(commands.filter((command) => command.type === "setPinned")).toEqual([
+      { type: "setPinned", tabIds: [1], pinned: true },
+    ]);
+  });
+
+  it("refuses to unpin a tab that stays in a folder", async () => {
+    const { commands, request } = recorder();
+    const result = await applyPatchTree([{ type: "tab", id: 2, pinned: false }], {
+      snapshot,
+      request,
+    });
+    expect(result.results[0]).toMatchObject({ status: "failed" });
+    expect(commands).toEqual([]);
+  });
+
+  it("unpins a tab it moves out of a folder to a space root", async () => {
+    const { commands, request } = recorder();
+    await applyPatchTree(
+      [{ type: "space", id: "work", children: [{ type: "tab", id: 2, pinned: false }] }],
+      { snapshot, request },
+    );
+    expect(commands.map((command) => command.type)).toEqual(
+      expect.arrayContaining(["removeTabsFromFolder", "setPinned"]),
+    );
+    expect(commands.at(-1)).toEqual({ type: "setPinned", tabIds: [2], pinned: false });
+  });
+});
+
 describe("applyPatchTree", () => {
   it("lets nested children inherit space and folder, and creates instead of patching when id is omitted", async () => {
     const { commands, request } = recorder();

@@ -41,6 +41,7 @@ export type BridgeWorkspace = Pick<
   | "deleteSpaces"
   | "setEssential"
   | "clearEssential"
+  | "setPinned"
   | "getPinnedUrl"
   | "setPinnedUrl"
   | "replacePinnedUrlWithCurrent"
@@ -306,6 +307,7 @@ export function createBridgeCommandHandler(
         return [command.tabId, command.targetTabId];
       case "setEssential":
       case "clearEssential":
+      case "setPinned":
       case "moveTabsToFolder":
       case "removeTabsFromFolder":
       case "moveTabsToSpace":
@@ -567,6 +569,11 @@ export function createBridgeCommandHandler(
       case "clearEssential":
         await workspace.clearEssential(command.tabIds);
         return { tabIds: command.tabIds, essential: false };
+
+      case "setPinned": {
+        const changed = await workspace.setPinned(command.tabIds, command.pinned);
+        return { tabIds: command.tabIds, pinned: command.pinned, changed };
+      }
 
       case "closeTab":
         await workspace.closeTabs(command.tabIds);

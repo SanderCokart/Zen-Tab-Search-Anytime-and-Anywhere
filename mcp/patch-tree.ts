@@ -15,6 +15,7 @@ export type TabPatchNode = {
   spaceId?: string;
   folderId?: string;
   essential?: boolean;
+  pinned?: boolean;
 };
 
 export type FolderPatchNode = {
@@ -49,7 +50,10 @@ export type PatchNodeResult = {
 export type PatchSnapshot = {
   spaces: Pick<SpaceInfo, "id" | "name">[];
   folders: ZenFolderInfo[];
-  tabs: Pick<TabSummary, "id" | "title" | "customLabel" | "spaceId" | "folderId" | "essential">[];
+  tabs: Pick<
+    TabSummary,
+    "id" | "title" | "customLabel" | "spaceId" | "folderId" | "essential" | "pinned"
+  >[];
 };
 
 export type PatchRequest = (command: BridgeCommand) => Promise<unknown>;
@@ -61,6 +65,7 @@ type WorkNode = {
   name?: string;
   url?: string;
   essential?: boolean;
+  pinned?: boolean;
   /** Desired space; set from nesting or an explicit detached location. */
   spaceId?: string;
   /** Desired parent folder. `null` is the space root; omitted means "do not move". */
@@ -144,6 +149,7 @@ function walk(
       name: node.name,
       url: node.url,
       essential: node.essential,
+      pinned: node.pinned,
       spaceId,
       folderId: inheritedParentFolder(inherited, node.folderId, spaceId),
       parent: inherited.parent,
@@ -265,6 +271,23 @@ function willMoveFolder(node: WorkNode, current: ZenFolderInfo | undefined): boo
   return false;
 }
 
+/** Whether the tab ends up inside a folder once the patch has run. */
+function endsInFolder(node: WorkNode, current: PatchSnapshot["tabs"][number] | undefined): boolean {
+  if (typeof node.folderId === "string") {
+    return true;
+  }
+  if (node.folderId === null) {
+    return false;
+  }
+  if (node.parent?.type === "folder") {
+    return true;
+  }
+  if (node.parent?.type === "space") {
+    return false;
+  }
+  return Boolean(current?.folderId);
+}
+
 async function moveTabToLocation(node: WorkNode, request: PatchRequest): Promise<void> {
   const tabId = node.resolvedId;
   if (typeof tabId !== "number") {
@@ -336,6 +359,17 @@ export async function applyPatchTree(
   }
 
   const live = () => all.filter((node) => node.status !== "failed");
+
+  // Zen folders only hold pinned tabs, so a tab that stays in one cannot be unpinned.
+  for (const node of live()) {
+    if (node.type !== "tab" || node.pinned !== false || node.essential === true) {
+      continue;
+    }
+    const current = snapshot.tabs.find((tab) => tab.id === node.inputId);
+    if (endsInFolder(node, current)) {
+      fail(node, "Tabs in a folder are always pinned. Place the tab at a space root to unpin it.");
+    }
+  }
 
   // 1. Clear essential on tabs that will move, or that the patch unmarks.
   for (const node of live()) {
@@ -464,7 +498,8 @@ export async function applyPatchTree(
             spaceId,
             ...(folderId ? { folderId } : {}),
             active: false,
-            pinned: false,
+            // Folders pin their tabs themselves; essential tabs are pinned by setEssential.
+            pinned: node.pinned === true && !folderId && node.essential !== true,
           }),
         );
         node.resolvedId = opened.id;
@@ -485,6 +520,14 @@ export async function applyPatchTree(
         }
         if (moving) {
           await moveTabToLocation(node, request);
+        }
+        const wantsPinChange =
+          node.pinned !== undefined &&
+          node.essential !== true &&
+          !(node.pinned && endsInFolder(node, current)) &&
+          (moving || current?.essential === true || node.pinned !== (current?.pinned === true));
+        if (wantsPinChange) {
+          await request({ type: "setPinned", tabIds: [Number(node.inputId)], pinned: node.pinned! });
         }
       }
     } catch (error) {

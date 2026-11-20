@@ -86,6 +86,8 @@ export interface WorkspaceAdapter {
   deleteSpaces(spaceIds: string[], anchorTabId?: number): Promise<void>;
   setEssential(tabIds: number[]): Promise<void>;
   clearEssential(tabIds: number[]): Promise<void>;
+  /** Pins or unpins tabs and returns how many changed. */
+  setPinned(tabIds: number[], pinned: boolean): Promise<number>;
   getPinnedUrl(tabId: number): Promise<string>;
   setPinnedUrl(tabId: number, url: string): Promise<void>;
   replacePinnedUrlWithCurrent(tabId: number): Promise<void>;
@@ -543,9 +545,17 @@ export function createZenWorkspaceAdapter(
     },
 
     async openTab(url, { pinned }) {
-      const tab = await host.createTab({ url, active: false, pinned });
+      // Zen stores a tab's pinned URL when it is pinned. A tab created pinned
+      // is still about:blank then, so pin it through the experiment, which
+      // stores the real URL once the page loads.
+      const zenTabs = getApi();
+      const pinLater = pinned && typeof zenTabs?.setPinned === "function";
+      const tab = await host.createTab({ url, active: false, pinned: pinned && !pinLater });
       if (!isUsableTabId(tab.id)) {
         throw new Error("Zen did not return an ID for the new tab");
+      }
+      if (pinLater) {
+        await zenTabs.setPinned!([tab.id], true);
       }
       return tab.id;
     },
@@ -637,6 +647,14 @@ export function createZenWorkspaceAdapter(
         throw new Error("Zen essentials API unavailable");
       }
       await zenTabs.clearEssential(tabIds);
+    },
+
+    async setPinned(tabIds, pinned) {
+      const zenTabs = getApi();
+      if (!zenTabs?.setPinned) {
+        throw new Error("Zen pin API unavailable");
+      }
+      return zenTabs.setPinned(tabIds, pinned);
     },
 
     async getPinnedUrl(tabId) {

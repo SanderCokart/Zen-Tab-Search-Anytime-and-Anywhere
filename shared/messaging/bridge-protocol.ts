@@ -12,7 +12,7 @@ export const BRIDGE_PORT = 47652;
 export const BRIDGE_URL = `ws://127.0.0.1:${BRIDGE_PORT}`;
 export const BRIDGE_TOKEN_STORAGE_KEY = "mcpBridgeToken";
 // Bump when a command is added or changed, so mismatched releases say so.
-export const BRIDGE_PROTOCOL_VERSION = 7;
+export const BRIDGE_PROTOCOL_VERSION = 8;
 
 const tabIdSchema = v.pipe(v.number(), v.integer(), v.minValue(0));
 const tabIdsSchema = v.pipe(v.array(tabIdSchema), v.minLength(1), v.maxLength(200));
@@ -101,6 +101,7 @@ export const bridgeCommandSchema = v.variant("type", [
   v.object({ type: v.literal("deleteSpace"), spaceIds: idsSchema }),
   v.object({ type: v.literal("setEssential"), tabIds: tabIdsSchema }),
   v.object({ type: v.literal("clearEssential"), tabIds: tabIdsSchema }),
+  v.object({ type: v.literal("setPinned"), tabIds: tabIdsSchema, pinned: v.boolean() }),
   v.object({ type: v.literal("closeTab"), tabIds: tabIdsSchema }),
   v.object({
     type: v.literal("renameFolder"),

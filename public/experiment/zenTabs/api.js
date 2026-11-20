@@ -859,6 +859,91 @@ this.zenTabs = class extends ExtensionAPI {
       return win;
     }
 
+    // Pinned-URL helpers. Zen stores a pinned tab's "home" URL in
+    // `_zenPinnedInitialState.entry.url` and only re-checks it against the
+    // page on navigation (`gZenPinnedTabManager.onLocationChange`). Whenever we
+    // change that state, we re-check it ourselves, or the "changed" slash stays.
+    const PIN_HEAL_INTERVAL_MS = 250;
+    const PIN_HEAL_TIMEOUT_MS = 15_000;
+
+    function storedPinnedUrl(tab) {
+      const url = tab._zenPinnedInitialState?.entry?.url;
+      return typeof url === "string" ? url : "";
+    }
+
+    function currentTabUrl(tab) {
+      return String(tab.linkedBrowser?.currentURI?.spec || "");
+    }
+
+    function isBlankPinUrl(url) {
+      return !url || url === "about:blank";
+    }
+
+    // Same comparison Zen makes: ignore the fragment, compare normalized URIs.
+    function samePinnedPage(a, b) {
+      try {
+        const io = getServices().io;
+        return io.newURI(a.split("#")[0]).spec === io.newURI(b.split("#")[0]).spec;
+      } catch {
+        return a === b;
+      }
+    }
+
+    function syncPinChangedIndicator(tab) {
+      const manager = chromeWindowForNativeTab(tab)?.gZenPinnedTabManager;
+      if (!manager || !tab.pinned || tab.hasAttribute("zen-essential")) {
+        return;
+      }
+      const stored = storedPinnedUrl(tab);
+      const current = currentTabUrl(tab);
+      if (isBlankPinUrl(current)) {
+        return;
+      }
+      if (!isBlankPinUrl(stored) && samePinnedPage(stored, current)) {
+        manager.resetPinChangedUrl?.(tab);
+      } else {
+        manager.pinHasChangedUrl?.(tab);
+      }
+    }
+
+    function storeCurrentAsPinnedUrl(tab) {
+      const sync = chromeWindowForNativeTab(tab)?.gZenWindowSync;
+      const url = currentTabUrl(tab);
+      if (typeof sync?.setPinnedUrl !== "function" || isBlankPinUrl(url)) {
+        return false;
+      }
+      sync.setPinnedUrl(tab, url, tab.zenStaticIcon || tab.image || null);
+      syncPinChangedIndicator(tab);
+      return true;
+    }
+
+    // A tab pinned while it is still loading gets about:blank (or nothing) as
+    // its pinned URL, because Zen captures the session entry at pin time. Once
+    // the page has loaded, store the real URL instead.
+    function healPinnedUrlAfterLoad(tab, waited = 0) {
+      if (!tab.pinned || tab.closing || !tab.linkedBrowser) {
+        return;
+      }
+      const loaded = !isBlankPinUrl(currentTabUrl(tab));
+      // Zen fills _zenPinnedInitialState asynchronously after TabPinned; wait
+      // for it, or its late write would replace ours with the blank entry.
+      if (loaded && tab._zenPinnedInitialState) {
+        if (isBlankPinUrl(storedPinnedUrl(tab))) {
+          storeCurrentAsPinnedUrl(tab);
+        } else {
+          syncPinChangedIndicator(tab);
+        }
+        return;
+      }
+      if (waited >= PIN_HEAL_TIMEOUT_MS) {
+        return;
+      }
+      setTimeout(
+        () => healPinnedUrlAfterLoad(tab, waited + PIN_HEAL_INTERVAL_MS),
+        PIN_HEAL_INTERVAL_MS,
+      );
+    }
+
     function ensureMovable(tabs) {
       const essential = tabs.find((tab) => tab.getAttribute("zen-essential") === "true");
       if (essential) {
@@ -1658,6 +1743,9 @@ this.zenTabs = class extends ExtensionAPI {
                 ? { insertAfter: parent.groupContainer.lastElementChild }
                 : {}),
             });
+            for (const tab of tabs) {
+              healPinnedUrlAfterLoad(tab);
+            }
             return String(folder.id);
           } catch (error) {
             throw new Error(`createFolder failed: ${formatError(error)}`);
@@ -1699,6 +1787,7 @@ this.zenTabs = class extends ExtensionAPI {
             for (const tab of tabs) {
               if (!tab.pinned) {
                 folderWindow.gBrowser.pinTab(tab);
+                healPinnedUrlAfterLoad(tab);
               }
             }
             folder.addTabs(tabs);
@@ -1965,6 +2054,39 @@ this.zenTabs = class extends ExtensionAPI {
           }
         },
 
+        async setPinned(tabIds = [], pinned = true) {
+          try {
+            const tabs = nativeTabsFor(tabIds);
+            if (tabs.some((tab) => tab.hasAttribute("zen-essential"))) {
+              throw new Error("Essential tabs cannot be pinned or unpinned; clear essential first.");
+            }
+            let changed = 0;
+            for (const tab of tabs) {
+              const gBrowser = chromeWindowForNativeTab(tab)?.gBrowser;
+              if (!gBrowser) {
+                throw new Error("The tab's Zen window is not available.");
+              }
+              if (pinned) {
+                if (!tab.pinned) {
+                  gBrowser.pinTab(tab);
+                  changed++;
+                }
+                healPinnedUrlAfterLoad(tab);
+              } else if (tab.pinned) {
+                // Zen folders only hold pinned tabs, so leave the folder first.
+                if (tab.group?.isZenFolder) {
+                  gBrowser.ungroupTab(tab);
+                }
+                gBrowser.unpinTab(tab);
+                changed++;
+              }
+            }
+            return changed;
+          } catch (error) {
+            throw new Error(`setPinned failed: ${formatError(error)}`);
+          }
+        },
+
         async getPinnedUrl(tabId) {
           try {
             const [tab] = nativeTabsFor([tabId]);
@@ -1987,6 +2109,7 @@ this.zenTabs = class extends ExtensionAPI {
             }
             const image = tab.zenStaticIcon || tab.image || null;
             win.gZenWindowSync.setPinnedUrl(tab, url, image);
+            syncPinChangedIndicator(tab);
             return true;
           } catch (error) {
             throw new Error(`setPinnedUrl failed: ${formatError(error)}`);
@@ -2000,17 +2123,25 @@ this.zenTabs = class extends ExtensionAPI {
               throw new Error("Tab is not pinned.");
             }
             const win = chromeWindowForNativeTab(tab);
-            const manager = win?.gZenPinnedTabManager;
-            if (typeof manager?.replacePinnedUrlWithCurrent === "function") {
-              manager.replacePinnedUrlWithCurrent(tab);
-              return true;
+            const sync = win?.gZenWindowSync;
+            if (typeof sync?.setPinnedTabState !== "function") {
+              throw new Error("Zen pinned URL is not available in this window.");
             }
-            if (typeof win?.gZenWindowSync?.setPinnedTabState === "function") {
-              win.gZenWindowSync.setPinnedTabState(tab);
-              manager?.resetPinChangedUrl?.(tab);
-              return true;
+            // Zen's own replacePinnedUrlWithCurrent does not wait for this, and
+            // its session cache can still hold an older entry (about:blank for
+            // a tab pinned while loading). Wait, then make sure "current" is
+            // what the page actually shows.
+            await sync.setPinnedTabState(tab);
+            const current = currentTabUrl(tab);
+            const stored = storedPinnedUrl(tab);
+            if (
+              !isBlankPinUrl(current) &&
+              (isBlankPinUrl(stored) || !samePinnedPage(stored, current))
+            ) {
+              storeCurrentAsPinnedUrl(tab);
             }
-            throw new Error("Zen pinned URL is not available in this window.");
+            syncPinChangedIndicator(tab);
+            return true;
           } catch (error) {
             throw new Error(`replacePinnedUrlWithCurrent failed: ${formatError(error)}`);
           }
