@@ -332,11 +332,11 @@ export function DisplaySettingsApp() {
                   })}
                 </div>
               </div>
-              <div class="flex flex-wrap items-center gap-[var(--zen-space-6)]">
+              <div class="flex flex-wrap items-start gap-[var(--zen-space-6)]">
                 <div class="flex flex-col gap-[var(--zen-space-2)]">
-                  <span class={monoLabelClass}>Open</span>
+                  <span class={monoLabelClass}>Transition</span>
                   <Select
-                    label="Open"
+                    label="Transition"
                     data-testid="zen-open-transition"
                     options={OPEN_TRANSITION_OPTIONS}
                     value={settings.openTransition}
