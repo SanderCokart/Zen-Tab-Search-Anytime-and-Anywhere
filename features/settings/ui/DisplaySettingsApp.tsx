@@ -195,8 +195,20 @@ function TestKey({
 }
 
 export function DisplaySettingsApp() {
-  const [settings, setSettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
-  const [loaded, setLoaded] = useState(false);
+  const [stored, setStored] = useState<DisplaySettings | null>(null);
+  useEffect(() => {
+    void readDisplaySettings()
+      .catch(() => DEFAULT_DISPLAY_SETTINGS)
+      .then(setStored);
+  }, []);
+  // Paint nothing until storage answers. The defaults are not the user's
+  // settings, so drawing them first flips switches once the real values land.
+  // The blank frame follows the system colour scheme (`color-scheme` on html).
+  return stored ? <SettingsPage initial={stored} /> : null;
+}
+
+function SettingsPage({ initial }: { initial: DisplaySettings }) {
+  const [settings, setSettings] = useState<DisplaySettings>(initial);
   const theme = useResolvedTheme(settings.theme);
   // The page plays its own interface sounds, from the same settings it edits.
   const sound = useSoundEngine({
@@ -204,13 +216,6 @@ export function DisplaySettingsApp() {
     volume: settings.soundVolume,
   });
   useEffect(() => {
-    void readDisplaySettings()
-      .then((stored) => {
-        setSettings(stored);
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -242,7 +247,7 @@ export function DisplaySettingsApp() {
     if (voice) sound.play(voice);
   };
 
-  const soundOff = !loaded || !settings.soundEnabled;
+  const soundOff = !settings.soundEnabled;
   const gapsAreDefault =
     settings.gapPaddingRatio === DEFAULT_DISPLAY_SETTINGS.gapPaddingRatio &&
     GAP_CONTROLS.every(([key]) => settings[key] === DEFAULT_DISPLAY_SETTINGS[key]);
@@ -270,11 +275,7 @@ export function DisplaySettingsApp() {
             </p>
           </header>
           <div class="zs-mod-grid">
-            <ComplexitySettings
-              settings={settings}
-              disabled={!loaded}
-              onChange={(flags) => updateSettings(flags)}
-            />
+            <ComplexitySettings settings={settings} onChange={(flags) => updateSettings(flags)} />
             <Module title="Theme" wide>
               <div class="flex flex-wrap items-end justify-between gap-[var(--zen-space-4)]">
                 <Segmented
@@ -282,7 +283,6 @@ export function DisplaySettingsApp() {
                   label="Theme"
                   options={THEME_OPTIONS}
                   value={settings.theme}
-                  disabled={!loaded}
                   onChange={(next) => updateSettings({ theme: next })}
                 />
                 <div class="flex flex-wrap gap-[var(--zen-space-3)]" data-testid="zen-theme-colors">
@@ -293,7 +293,6 @@ export function DisplaySettingsApp() {
                         <span class={monoLabelClass}>{short}</span>
                         <div class="flex items-center gap-[var(--zen-space-1)]">
                           <ColorPickerField
-                            disabled={!loaded}
                             label={label}
                             caption={isDefault ? "AUTO" : settings[key].toUpperCase()}
                             color={customColor(settings[key]) ?? AUTO_SWATCH[theme][key]}
@@ -311,7 +310,7 @@ export function DisplaySettingsApp() {
                             label={`Reset ${label.toLowerCase()}`}
                             tooltip="Reset to default"
                             class="zs-key zs-key-mini flex items-center justify-center text-[var(--zs-ink-2)]"
-                            disabled={!loaded || isDefault}
+                            disabled={isDefault}
                             onClick={() => updateSettings({ [key]: DEFAULT_DISPLAY_SETTINGS[key] })}
                           >
                             <ResetIcon class="size-[var(--zen-icon-md)]" />
@@ -330,7 +329,6 @@ export function DisplaySettingsApp() {
                     data-testid="zen-open-transition"
                     options={OPEN_TRANSITION_OPTIONS}
                     value={settings.openTransition}
-                    disabled={!loaded}
                     onChange={(openTransition) => updateSettings({ openTransition })}
                   />
                 </div>
@@ -341,7 +339,6 @@ export function DisplaySettingsApp() {
                     min={MIN_OPEN_TRANSITION_MS}
                     max={MAX_OPEN_TRANSITION_MS}
                     step={OPEN_TRANSITION_MS_STEP}
-                    disabled={!loaded}
                     value={settings.openTransitionMs}
                     valueText={`${settings.openTransitionMs} milliseconds`}
                     onChange={(openTransitionMs) => updateSettings({ openTransitionMs })}
@@ -361,7 +358,6 @@ export function DisplaySettingsApp() {
                   min={MIN_BACKGROUND_OPACITY}
                   max={MAX_BACKGROUND_OPACITY}
                   step={0.05}
-                  disabled={!loaded}
                   value={settings.backgroundOpacity}
                   display={String(Math.round(settings.backgroundOpacity * 100))}
                   unit="%"
@@ -382,7 +378,6 @@ export function DisplaySettingsApp() {
                   min={MIN_FONT_SIZE}
                   max={MAX_FONT_SIZE}
                   step={1}
-                  disabled={!loaded}
                   value={settings.fontSize}
                   unit="px"
                   onChange={(fontSize) => updateSettings({ fontSize })}
@@ -399,7 +394,6 @@ export function DisplaySettingsApp() {
                   min={MIN_UI_SCALE}
                   max={MAX_UI_SCALE}
                   step={0.05}
-                  disabled={!loaded}
                   value={settings.uiScale}
                   display={String(Math.round(settings.uiScale * 100))}
                   unit="%"
@@ -409,7 +403,7 @@ export function DisplaySettingsApp() {
               <button
                 type="button"
                 class={cn(settingsKeyClass, "self-start")}
-                disabled={!loaded || sizesAreDefault}
+                disabled={sizesAreDefault}
                 onClick={() =>
                   updateSettings({
                     fontSize: DEFAULT_DISPLAY_SETTINGS.fontSize,
@@ -447,7 +441,6 @@ export function DisplaySettingsApp() {
                   data-testid="zen-sound-enabled"
                   showState
                   checked={settings.soundEnabled}
-                  disabled={!loaded}
                   onChange={(soundEnabled) => updateSettings({ soundEnabled })}
                 >
                   <FieldText
@@ -486,7 +479,6 @@ export function DisplaySettingsApp() {
                           min={MIN_GAP}
                           max={MAX_GAP}
                           step={GAP_STEP}
-                          disabled={!loaded}
                           value={settings[key]}
                           unit="px"
                           onChange={(value) => updateSettings({ [key]: value })}
@@ -498,7 +490,7 @@ export function DisplaySettingsApp() {
                     <button
                       type="button"
                       class={settingsKeyClass}
-                      disabled={!loaded || gapsAreDefault}
+                      disabled={gapsAreDefault}
                       onClick={() =>
                         updateSettings({
                           ...Object.fromEntries(
@@ -521,7 +513,6 @@ export function DisplaySettingsApp() {
                       min={MIN_GAP_PADDING_RATIO}
                       max={MAX_GAP_PADDING_RATIO}
                       step={GAP_PADDING_RATIO_STEP}
-                      disabled={!loaded}
                       value={settings.gapPaddingRatio}
                       valueText={`${formatGapPaddingRatio(settings.gapPaddingRatio)} to 1`}
                       onChange={(gapPaddingRatio) => updateSettings({ gapPaddingRatio })}
@@ -542,7 +533,6 @@ export function DisplaySettingsApp() {
                   key={key}
                   data-testid={`zen-${key}`}
                   checked={settings[key]}
-                  disabled={!loaded}
                   onChange={(checked) => updateSettings({ [key]: checked })}
                 >
                   <Hint text={hint}>
@@ -553,7 +543,6 @@ export function DisplaySettingsApp() {
               <Switch
                 data-testid="zen-groupFolders"
                 checked={settings.groupFolders}
-                disabled={!loaded}
                 onChange={(checked) =>
                   updateSettings({
                     groupFolders: checked,
@@ -569,7 +558,7 @@ export function DisplaySettingsApp() {
                 class={cn("ml-[var(--zen-space-4)]", !settings.groupFolders && "opacity-50")}
                 data-testid="zen-groupSubfolders"
                 checked={settings.groupSubfolders}
-                disabled={!loaded || !settings.groupFolders}
+                disabled={!settings.groupFolders}
                 onChange={(checked) => updateSettings({ groupSubfolders: checked })}
               >
                 <Hint text="Adds nested folder sections inside their parent folder.">
@@ -584,7 +573,6 @@ export function DisplaySettingsApp() {
                   key={key}
                   data-testid={`zen-${key}`}
                   checked={settings[key]}
-                  disabled={!loaded}
                   onChange={(checked) => updateSettings({ [key]: checked })}
                 >
                   <Hint text={hint}>
@@ -601,7 +589,6 @@ export function DisplaySettingsApp() {
                 <Switch
                   data-testid="zen-reuseExternalTabs"
                   checked={settings.reuseExternalTabs}
-                  disabled={!loaded}
                   onChange={(reuseExternalTabs) => updateSettings({ reuseExternalTabs })}
                 >
                   <Hint text="When another app opens a link in Zen, such as a mail client, focus the tab that already has that address instead of opening a new one.">
@@ -611,7 +598,6 @@ export function DisplaySettingsApp() {
                 <Switch
                   data-testid="zen-detectForgeIssues"
                   checked={settings.detectForgeIssues}
-                  disabled={!loaded}
                   onChange={(checked) =>
                     updateSettings({
                       detectForgeIssues: checked,
@@ -628,7 +614,7 @@ export function DisplaySettingsApp() {
                   class={cn(!settings.detectForgeIssues && "opacity-50")}
                   data-testid="zen-filterIssuesInOverlay"
                   checked={settings.filterIssuesInOverlay}
-                  disabled={!loaded || !settings.detectForgeIssues}
+                  disabled={!settings.detectForgeIssues}
                   onChange={(filterIssuesInOverlay) => updateSettings({ filterIssuesInOverlay })}
                 >
                   <Hint text="Removes issue tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect.">
@@ -639,7 +625,7 @@ export function DisplaySettingsApp() {
                   class={cn(!settings.detectForgeIssues && "opacity-50")}
                   data-testid="zen-filterRequestsInOverlay"
                   checked={settings.filterRequestsInOverlay}
-                  disabled={!loaded || !settings.detectForgeIssues}
+                  disabled={!settings.detectForgeIssues}
                   onChange={(filterRequestsInOverlay) =>
                     updateSettings({ filterRequestsInOverlay })
                   }
@@ -654,7 +640,7 @@ export function DisplaySettingsApp() {
                   class={cn(!settings.detectForgeIssues && "opacity-50")}
                   data-testid="zen-confirmOrganizeForgeTabs"
                   checked={settings.confirmOrganizeForgeTabs}
-                  disabled={!loaded || !settings.detectForgeIssues}
+                  disabled={!settings.detectForgeIssues}
                   onChange={(confirmOrganizeForgeTabs) =>
                     updateSettings({ confirmOrganizeForgeTabs })
                   }

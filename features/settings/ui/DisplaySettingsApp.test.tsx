@@ -1,9 +1,51 @@
 import { render } from "preact";
 import { describe, expect, it, vi } from "vitest";
+import { applyPreset } from "@/features/settings/model/complexity";
 import { DEFAULT_DISPLAY_SETTINGS } from "@/features/settings/model/display-settings";
 import { DisplaySettingsApp } from "@/features/settings/ui/DisplaySettingsApp";
 
+/** Accent, frame, panels, text — the last one is the text colour. */
+const COLOR_PICKER_COUNT = 4;
+
 describe("DisplaySettingsApp", () => {
+  it("paints nothing until storage answers, then only the stored values", async () => {
+    let answer: ((value: unknown) => void) | undefined;
+    Object.assign(globalThis, {
+      browser: {
+        storage: {
+          local: {
+            get: vi.fn(() => new Promise((resolve) => (answer = resolve))),
+            set: vi.fn(async () => undefined),
+          },
+          onChanged: { addListener: vi.fn(), removeListener: vi.fn() },
+        },
+      },
+    });
+    const root = document.createElement("div");
+    document.body.appendChild(root);
+    render(<DisplaySettingsApp />, root);
+
+    const respond = await vi.waitFor(() => {
+      expect(answer).toBeDefined();
+      return answer!;
+    });
+    expect(root.innerHTML).toBe("");
+
+    respond({ displaySettings: { ...DEFAULT_DISPLAY_SETTINGS, ...applyPreset("simple") } });
+    const spaces = await vi.waitFor(() => {
+      const input = root.querySelector<HTMLInputElement>("[data-testid='zen-hideSpacesInOverlay']");
+      expect(input).toBeTruthy();
+      return input!;
+    });
+    expect(spaces.checked).toBe(true);
+    expect(root.querySelector<HTMLInputElement>("[data-testid='zen-groupFolders']")?.checked).toBe(
+      false,
+    );
+
+    render(null, root);
+    root.remove();
+  });
+
   it("disables subfolder grouping when folder grouping is disabled", async () => {
     const set = vi.fn(async () => undefined);
     Object.assign(globalThis, {
@@ -28,12 +70,15 @@ describe("DisplaySettingsApp", () => {
     document.body.appendChild(root);
     render(<DisplaySettingsApp />, root);
 
-    await vi.waitFor(() => expect(root.textContent).toContain("Settings"));
-    const colorButton = root.querySelector<HTMLButtonElement>(
-      "button[aria-label='Choose text color']",
-    );
-    await vi.waitFor(() => expect(colorButton?.disabled).toBe(false));
-    colorButton?.click();
+    // Pickr takes over the swatch button once mounted and relabels it.
+    const colorButton = await vi.waitFor(() => {
+      const buttons = root.querySelectorAll<HTMLButtonElement>(
+        "[data-testid='zen-theme-colors'] button[aria-label='toggle color picker dialog']",
+      );
+      expect(buttons).toHaveLength(COLOR_PICKER_COUNT);
+      return buttons[COLOR_PICKER_COUNT - 1]!;
+    });
+    colorButton.click();
     await vi.waitFor(() => expect(document.querySelector(".pcr-app")).toBeTruthy());
     expect(document.querySelector(".pcr-type[data-type='HEXA']")).toBeTruthy();
     expect(document.querySelector(".pcr-type[data-type='RGBA']")).toBeTruthy();
