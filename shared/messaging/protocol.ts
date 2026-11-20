@@ -424,6 +424,14 @@ export const omnibarShownSchema = v.object({
   view: v.optional(omnibarViewSchema),
 });
 
+/** Broadcast when Alt+F toggles an animated overlay off, so it can exit before hiding. */
+export const OMNIBAR_HIDE_TYPE = "omnibarHide" as const;
+
+export const omnibarHideSchema = v.object({
+  type: v.literal(OMNIBAR_HIDE_TYPE),
+  overlayId: v.string(),
+});
+
 export const searchSnapshotSchema = v.object({
   tabs: v.array(tabInfoSchema),
   spaces: v.array(spaceInfoSchema),
@@ -505,6 +513,7 @@ export type ContentCommand = v.InferOutput<typeof contentCommandSchema>;
 export type ErrorResponse = v.InferOutput<typeof errorResponseSchema>;
 export type OmnibarView = v.InferOutput<typeof omnibarViewSchema>;
 export type OmnibarShown = v.InferOutput<typeof omnibarShownSchema>;
+export type OmnibarHide = v.InferOutput<typeof omnibarHideSchema>;
 
 export type ClearTimerResponse = { success: true; cleared: boolean };
 export type ClearAllTimersResponse = { success: true; cleared: number };
@@ -602,6 +611,11 @@ export function parseBridgeStatusChangedMessage(value: unknown): boolean | undef
 
 export function parseOmnibarShownMessage(value: unknown): OmnibarShown | undefined {
   const parsed = v.safeParse(omnibarShownSchema, value);
+  return parsed.success ? parsed.output : undefined;
+}
+
+export function parseOmnibarHideMessage(value: unknown): OmnibarHide | undefined {
+  const parsed = v.safeParse(omnibarHideSchema, value);
   return parsed.success ? parsed.output : undefined;
 }
 

@@ -4,12 +4,14 @@ import {
   type ExtensionRequestType,
   type ExtensionSuccessMap,
   type ForgePageInfo,
+  type OmnibarHide,
   type OmnibarShown,
   forgePageInfoSchema,
   isErrorResponse,
   isSnapshotChangedMessage,
   isTabZoomChangedMessage,
   parseBridgeStatusChangedMessage,
+  parseOmnibarHideMessage,
   parseOmnibarShownMessage,
   parseExtensionSuccess,
 } from "@/shared/messaging/protocol";
@@ -103,6 +105,24 @@ export function subscribeToOmnibarShown(onShown: (shown: OmnibarShown) => boolea
       return undefined;
     }
     return new Promise<true>((resolve) => setTimeout(() => resolve(true), 0));
+  };
+  browser.runtime.onMessage.addListener(listener);
+  return () => {
+    browser.runtime.onMessage.removeListener(listener);
+  };
+}
+
+/**
+ * Calls `onHide` when Alt+F toggles an animated overlay off. Returning true
+ * tells the background the page will animate out and call `hideOmnibar` itself.
+ */
+export function subscribeToOmnibarHide(onHide: (hide: OmnibarHide) => boolean): () => void {
+  const listener = (message: unknown) => {
+    const hide = parseOmnibarHideMessage(message);
+    if (hide === undefined || !onHide(hide)) {
+      return undefined;
+    }
+    return Promise.resolve(true);
   };
   browser.runtime.onMessage.addListener(listener);
   return () => {

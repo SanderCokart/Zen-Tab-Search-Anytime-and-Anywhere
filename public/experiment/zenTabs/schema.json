@@ -13,6 +13,12 @@
             "name": "pageUrl",
             "type": "string",
             "description": "moz-extension URL of the omnibar page"
+          },
+          {
+            "name": "deferHide",
+            "type": "boolean",
+            "optional": true,
+            "description": "When true, report an already-shown overlay without hiding it so the page can animate out"
           }
         ]
       },

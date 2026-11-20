@@ -1229,13 +1229,16 @@ this.zenTabs = class extends ExtensionAPI {
           return buildDebugInfo(anchorTabId);
         },
 
-        async toggleOmnibarOverlay(pageUrl) {
+        async toggleOmnibarOverlay(pageUrl, deferHide = false) {
           const win = omnibarWindow();
           if (!win) {
             throw new Error("No browser window to show the omnibar in.");
           }
           const current = omnibarOverlays.get(win);
           if (current?.shown && current.container.isConnected) {
+            if (deferHide) {
+              return { state: "shown", overlayId: current.id };
+            }
             hideOmnibarOverlay(win, current);
             return { state: "hidden", overlayId: current.id };
           }

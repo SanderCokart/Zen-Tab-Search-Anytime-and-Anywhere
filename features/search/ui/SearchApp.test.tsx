@@ -11,6 +11,14 @@ const motionReorder = vi.hoisted(() => ({
   onReorder: undefined as ((ids: number[]) => void) | undefined,
   dragStart: undefined as ((event: PointerEvent) => void) | undefined,
 }));
+const motionAnimate = vi.hoisted(() => vi.fn());
+
+vi.mock("motion", () => ({
+  animate: (...args: unknown[]) => {
+    const result = motionAnimate(...args);
+    return result ?? { stop: vi.fn(), finished: Promise.resolve() };
+  },
+}));
 
 // The real engine is silent in jsdom; this one records which voices are asked for.
 vi.mock("@/shared/ui/sound/engine", async (importOriginal) => ({
@@ -897,21 +905,65 @@ describe("SearchApp", () => {
     full.root.remove();
   });
 
-  it("plays the open transition once the overlay is shown", async () => {
-    const { root } = mountSearchApp(vi.fn(), tabs, "overlay", { openTransition: "slide-up" });
+  it("fades the scrim while sliding the chassis in and out before closing", async () => {
+    motionAnimate.mockReset();
+    const finishes: (() => void)[] = [];
+    motionAnimate.mockImplementation(() => {
+      let done!: () => void;
+      const finished = new Promise<void>((resolve) => {
+        done = resolve;
+      });
+      finishes.push(done);
+      return { stop: vi.fn(() => done()), finished };
+    });
+
+    const onClose = vi.fn();
+    const { root } = mountSearchApp(onClose, tabs, "overlay", {
+      openTransition: "slide-up",
+      openTransitionMs: 300,
+    });
     await vi.waitFor(() =>
       expect(root.querySelector("[data-omnibar-stage]")?.getAttribute("data-omnibar-stage")).toBe(
         "open",
       ),
     );
-    await vi.waitFor(() =>
-      expect(root.querySelector("[data-omnibar-stage]")?.classList.contains("zs-open-motion")).toBe(
-        true,
-      ),
+    await vi.waitFor(() => expect(motionAnimate).toHaveBeenCalledTimes(2));
+
+    const scrim = root.querySelector<HTMLElement>("[data-omnibar-scrim]")!;
+    const chassis = root.querySelector<HTMLElement>("[data-omnibar]")!;
+    expect(motionAnimate).toHaveBeenNthCalledWith(
+      1,
+      scrim,
+      { opacity: [0, 1] },
+      expect.objectContaining({ duration: 0.3 }),
     );
-    expect(root.querySelector("[data-omnibar-stage]")?.getAttribute("data-open-transition")).toBe(
-      "slide-up",
+    expect(motionAnimate).toHaveBeenNthCalledWith(
+      2,
+      chassis,
+      { opacity: [1, 1], x: [0, 0], y: ["100vh", 0], scale: [1, 1] },
+      expect.objectContaining({ duration: 0.3 }),
     );
+    finishes.splice(0).forEach((fn) => fn());
+
+    scrim.click();
+    await vi.waitFor(() => expect(motionAnimate).toHaveBeenCalledTimes(4));
+    expect(onClose).not.toHaveBeenCalled();
+    expect(motionAnimate).toHaveBeenNthCalledWith(
+      3,
+      scrim,
+      { opacity: 0 },
+      expect.objectContaining({ duration: 0.3 }),
+    );
+    expect(motionAnimate).toHaveBeenNthCalledWith(
+      4,
+      chassis,
+      { opacity: 1, x: 0, y: "100vh", scale: 1 },
+      expect.objectContaining({ duration: 0.3 }),
+    );
+
+    finishes.splice(0).forEach((fn) => fn());
+    await vi.waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+
     render(null, root);
     root.remove();
   });

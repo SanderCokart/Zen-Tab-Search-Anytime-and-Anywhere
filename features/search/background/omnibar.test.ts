@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { toggleOmnibar } from "@/features/search/background/omnibar";
 import { sendTabMessage } from "@/shared/messaging/client";
 import { resolveAnchorTabId } from "@/features/zen/anchor";
-import { showOmnibarOverlay, toggleOmnibarOverlay } from "@/features/zen/omnibar-overlay";
+import {
+  hideOmnibarOverlay,
+  showOmnibarOverlay,
+  toggleOmnibarOverlay,
+} from "@/features/zen/omnibar-overlay";
 
 vi.mock("@/shared/messaging/client", () => ({
   sendTabMessage: vi.fn(async () => undefined),
@@ -177,5 +181,59 @@ describe("toggleOmnibar", () => {
     await toggleOmnibar(20, { warmSnapshot });
 
     expect(warmSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("asks an animated omnibar to exit instead of hiding it immediately on toggle-off", async () => {
+    toggleOmnibarOverlayMock.mockResolvedValue({ state: "shown", overlayId: "o1" });
+    const sendMessage = vi.fn(async () => true);
+    vi.mocked(hideOmnibarOverlay).mockClear();
+    Object.assign(globalThis, {
+      browser: {
+        runtime: {
+          getURL: (path: string) => `moz-extension://test${path}`,
+          sendMessage,
+        },
+        storage: {
+          local: {
+            get: vi.fn(async () => ({
+              displaySettings: { openTransition: "slide-up", openTransitionMs: 300 },
+            })),
+          },
+        },
+      },
+    });
+
+    await toggleOmnibar(20);
+
+    expect(toggleOmnibarOverlayMock).toHaveBeenCalledWith(
+      "moz-extension://test/omnibar.html",
+      true,
+    );
+    expect(sendMessage).toHaveBeenCalledWith({ type: "omnibarHide", overlayId: "o1" });
+    expect(hideOmnibarOverlay).not.toHaveBeenCalled();
+  });
+
+  it("falls back to hiding immediately if the page does not acknowledge omnibarHide", async () => {
+    toggleOmnibarOverlayMock.mockResolvedValue({ state: "shown", overlayId: "o1" });
+    vi.mocked(hideOmnibarOverlay).mockClear();
+    Object.assign(globalThis, {
+      browser: {
+        runtime: {
+          getURL: (path: string) => `moz-extension://test${path}`,
+          sendMessage: vi.fn(async () => false),
+        },
+        storage: {
+          local: {
+            get: vi.fn(async () => ({
+              displaySettings: { openTransition: "slide-up", openTransitionMs: 300 },
+            })),
+          },
+        },
+      },
+    });
+
+    await toggleOmnibar(20);
+
+    expect(hideOmnibarOverlay).toHaveBeenCalledOnce();
   });
 });

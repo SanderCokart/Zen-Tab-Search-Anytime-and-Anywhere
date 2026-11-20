@@ -6,8 +6,9 @@ import { getZenTabsApi, type OmnibarOverlayToggle } from "@/features/zen/api";
  */
 export async function toggleOmnibarOverlay(
   pageUrl: string,
+  deferHide?: boolean,
 ): Promise<OmnibarOverlayToggle | undefined> {
-  return getZenTabsApi()?.toggleOmnibarOverlay?.(pageUrl);
+  return getZenTabsApi()?.toggleOmnibarOverlay?.(pageUrl, deferHide);
 }
 
 export async function showOmnibarOverlay(overlayId: string): Promise<boolean> {

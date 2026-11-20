@@ -1,8 +1,11 @@
 import { render } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { createSearchSessionCache, SearchApp } from "@/features/search/ui/SearchApp";
-import { replayOpenMotion } from "@/features/search/ui/lib/open-motion";
-import { sendExtensionMessage, subscribeToOmnibarShown } from "@/shared/messaging/client";
+import {
+  sendExtensionMessage,
+  subscribeToOmnibarHide,
+  subscribeToOmnibarShown,
+} from "@/shared/messaging/client";
 import { formatError, LOG_PREFIX } from "@/shared/log";
 import { parseOmnibarView, type OmnibarView } from "@/shared/messaging/protocol";
 import "@/shared/ui/fonts.css";
@@ -33,19 +36,26 @@ function hide() {
 
 function OmnibarPage() {
   const [reveal, setReveal] = useState(openedAtLoad ? 1 : 0);
+  const [hideRequest, setHideRequest] = useState(0);
   const [view, setView] = useState(initialView);
 
-  useEffect(
-    () =>
-      subscribeToOmnibarShown((shown) => {
-        if (shown.overlayId !== overlayId) return false;
-        replayOpenMotion(document.querySelector("[data-omnibar-stage]"));
-        setView(shown.view);
-        setReveal((current) => current + 1);
-        return true;
-      }),
-    [],
-  );
+  useEffect(() => {
+    const unsubShown = subscribeToOmnibarShown((shown) => {
+      if (shown.overlayId !== overlayId) return false;
+      setView(shown.view);
+      setReveal((current) => current + 1);
+      return true;
+    });
+    const unsubHide = subscribeToOmnibarHide((request) => {
+      if (request.overlayId !== overlayId) return false;
+      setHideRequest((current) => current + 1);
+      return true;
+    });
+    return () => {
+      unsubShown();
+      unsubHide();
+    };
+  }, []);
 
   return (
     <SearchApp
@@ -55,6 +65,7 @@ function OmnibarPage() {
       initialView={view}
       cache={sessionCache}
       reveal={reveal}
+      hideRequest={hideRequest}
     />
   );
 }

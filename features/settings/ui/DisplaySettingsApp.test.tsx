@@ -279,7 +279,7 @@ describe("DisplaySettingsApp", () => {
     root.remove();
   });
 
-  it("saves the open transition picked in the segmented control", async () => {
+  it("saves the open transition picked in the select", async () => {
     const set = vi.fn(async () => undefined);
     Object.assign(globalThis, {
       browser: {
@@ -296,16 +296,13 @@ describe("DisplaySettingsApp", () => {
     document.body.appendChild(root);
     render(<DisplaySettingsApp />, root);
 
-    const zoom = await vi.waitFor(() => {
-      const button = [
-        ...root.querySelectorAll<HTMLButtonElement>(
-          "[role='radiogroup'][aria-label='Open'] [role='radio']",
-        ),
-      ].find((item) => item.textContent?.includes("Zoom"));
-      expect(button?.disabled).toBe(false);
-      return button!;
+    const select = await vi.waitFor(() => {
+      const element = root.querySelector<HTMLSelectElement>("[data-testid='zen-open-transition']");
+      expect(element?.disabled).toBe(false);
+      return element!;
     });
-    zoom.click();
+    select.value = "zoom";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
 
     await vi.waitFor(() =>
       expect(set).toHaveBeenCalledWith({

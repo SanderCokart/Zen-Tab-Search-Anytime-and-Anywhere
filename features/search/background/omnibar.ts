@@ -10,11 +10,12 @@ import {
   showOmnibarOverlay,
   toggleOmnibarOverlay,
 } from "@/features/zen/omnibar-overlay";
+import { readDisplaySettings } from "@/features/settings/model/display-settings";
 import {
-  readDisplaySettings,
-  type OpenTransition,
-} from "@/features/settings/model/display-settings";
-import { OMNIBAR_SHOWN_TYPE, type OmnibarView } from "@/shared/messaging/protocol";
+  OMNIBAR_HIDE_TYPE,
+  OMNIBAR_SHOWN_TYPE,
+  type OmnibarView,
+} from "@/shared/messaging/protocol";
 
 export interface ToggleOmnibarOptions {
   /** The command tab's URL, which saves a `tabs.get` when it is the anchor. */
@@ -62,9 +63,9 @@ export async function hideOmnibar(): Promise<void> {
 type OverlayToggle = Awaited<ReturnType<typeof toggleOmnibarOverlay>>;
 
 /** Undefined when the experiment cannot host the omnibar, so callers fall back. */
-async function toggleOverlay(view?: OmnibarView): Promise<OverlayToggle> {
+async function toggleOverlay(view?: OmnibarView, deferHide?: boolean): Promise<OverlayToggle> {
   try {
-    return await toggleOmnibarOverlay(omnibarPageUrl(view));
+    return await toggleOmnibarOverlay(omnibarPageUrl(view), deferHide);
   } catch (error) {
     debugLog(`${LOG_PREFIX} Window omnibar unavailable:`, formatError(error));
     return undefined;
@@ -74,9 +75,10 @@ async function toggleOverlay(view?: OmnibarView): Promise<OverlayToggle> {
 async function showReadyOverlay(
   result: Extract<NonNullable<OverlayToggle>, { state: "ready" }>,
   view?: OmnibarView,
+  motion?: boolean,
 ): Promise<void> {
   omnibarAnchorTabId = isUsableTabId(result.anchorTabId) ? result.anchorTabId : undefined;
-  const motion = await openTransition();
+  const animated = motion ?? (await hasOpenMotion());
   // A page created for this show mounts itself from the URL.
   if (result.created) {
     await showOmnibarOverlay(result.overlayId);
@@ -84,17 +86,25 @@ async function showReadyOverlay(
   }
   // Motion has to start while the page is still hidden, or the first frame
   // is the finished deck and the animation plays after it.
-  if (motion !== "none") await notifyOmnibarShown(result.overlayId, view);
+  if (animated) await notifyOmnibarShown(result.overlayId, view);
   await showOmnibarOverlay(result.overlayId);
-  if (motion === "none") void notifyOmnibarShown(result.overlayId, view);
+  if (!animated) void notifyOmnibarShown(result.overlayId, view);
 }
 
-async function openTransition(): Promise<OpenTransition> {
+async function hasOpenMotion(): Promise<boolean> {
   try {
-    return (await readDisplaySettings()).openTransition;
+    const settings = await readDisplaySettings();
+    return settings.openTransition !== "none" && settings.openTransitionMs > 0;
   } catch {
-    return "none";
+    return false;
   }
+}
+
+async function deliverOmnibarHide(overlayId: string): Promise<boolean> {
+  return browser.runtime
+    .sendMessage({ type: OMNIBAR_HIDE_TYPE, overlayId })
+    .then((reply: unknown) => reply === true)
+    .catch(() => false);
 }
 
 /**
@@ -102,10 +112,17 @@ async function openTransition(): Promise<OpenTransition> {
  * when the experiment cannot, so the caller falls back to the in-page overlay.
  */
 async function toggleWindowOmnibar(): Promise<boolean> {
-  const result = await toggleOverlay();
+  const animated = await hasOpenMotion();
+  const result = await toggleOverlay(undefined, animated);
   if (!result) return false;
+  if (result.state === "shown") {
+    if (!(await deliverOmnibarHide(result.overlayId))) {
+      await hideOmnibarOverlay();
+    }
+    return true;
+  }
   if (result.state === "ready") {
-    await showReadyOverlay(result);
+    await showReadyOverlay(result, undefined, animated);
   }
   return true;
 }

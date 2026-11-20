@@ -57,6 +57,7 @@ import {
   type ComplexityFlags,
 } from "@/features/settings/model/complexity";
 import { ComplexitySetupCard } from "@/features/search/ui/components/ComplexitySetupCard";
+import { isOpenMotionEnabled } from "@/features/search/ui/lib/open-motion";
 import { useOverlayEntrance } from "@/features/search/ui/hooks/useOverlayEntrance";
 import { useEssentialTabNames } from "@/features/search/ui/hooks/useEssentialTabNames";
 import { useSearchNavigation } from "@/features/search/ui/hooks/useSearchNavigation";
@@ -109,6 +110,8 @@ export interface SearchAppProps {
    * a new value clears the query and focuses the input without a new snapshot.
    */
   reveal?: number;
+  /** Bumped when Alt+F toggles an animated overlay off so it exits before hiding. */
+  hideRequest?: number;
 }
 
 export type SearchSessionCache = SearchSnapshotCache & DisplaySettingsCache & StoredStateCache;
@@ -129,6 +132,7 @@ export function SearchApp({
   initialView,
   cache,
   reveal,
+  hideRequest = 0,
 }: SearchAppProps) {
   const compact = layout === "popup";
   // The overlay has room to swap its columns for the timer and host override
@@ -141,6 +145,7 @@ export function SearchApp({
   );
 
   const [query, setQuery] = useState(initialQuery);
+  const [closeRequest, setCloseRequest] = useState(0);
   const revealSeen = useRef(reveal);
   const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("asc");
   const todoOrder = useTodoOrder(cache);
@@ -296,27 +301,38 @@ export function SearchApp({
     [sound, statusMenu],
   );
 
+  const requestClose = useCallback(() => {
+    if (
+      layout !== "overlay" ||
+      !isOpenMotionEnabled(displaySettings.openTransition, displaySettings.openTransitionMs)
+    ) {
+      onClose();
+      return;
+    }
+    setCloseRequest((current) => current + 1);
+  }, [displaySettings.openTransition, displaySettings.openTransitionMs, layout, onClose]);
+
   const activateTab = useCallback(
     (tabId: number | undefined, domId: string | undefined, label: string) => {
       void sendExtensionMessage({ type: "switchTab", tabId, domId: domId || undefined })
-        .then(onClose)
+        .then(requestClose)
         .catch((error) => debugError(`Could not switch ${label}:`, error));
     },
-    [onClose],
+    [requestClose],
   );
 
   const activateItem = useCallback(
     (item: SearchItem) => {
       if (item.kind === "space") {
         void sendExtensionMessage({ type: "switchSpace", spaceId: item.data.id })
-          .then(onClose)
+          .then(requestClose)
           .catch((error) => debugError("Could not switch space:", error));
         return;
       }
       if (!isActivatableTab(item.data)) return;
       activateTab(tabBrowserId(item.data), item.data.domId, "tab");
     },
-    [activateTab, onClose],
+    [activateTab, requestClose],
   );
 
   const activateForgeEntry = useCallback(
@@ -386,7 +402,7 @@ export function SearchApp({
     bestForgeIndex: results.bestForgeIndex,
     bestTabWordCount: results.bestTabWordCount,
     bestForgeWordCount: results.bestForgeWordCount,
-    onClose,
+    onClose: requestClose,
     onActivateItem: activateItem,
     onActivateForgeEntry: activateForgeEntry,
     onActivateTodoTab: activateTodoTab,
@@ -437,7 +453,7 @@ export function SearchApp({
     const url = openFromQuery(displaySettings.searchEngine, typed);
     if (!url) return;
     void sendExtensionMessage({ type: "openUrl", url })
-      .then(onClose)
+      .then(requestClose)
       .catch((error) => debugError("Could not open web search:", error));
   };
 
@@ -461,11 +477,11 @@ export function SearchApp({
       if (event.key !== "Escape") return;
       event.preventDefault();
       event.stopPropagation();
-      onClose();
+      requestClose();
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [onClose]);
+  }, [requestClose]);
 
   const timersOpen = swapsViews ? view?.kind === "timers" : showTimers;
   const toggleTimers = () => {
@@ -520,11 +536,13 @@ export function SearchApp({
     <SearchShell
       layout={layout}
       onClose={onClose}
+      onRequestClose={requestClose}
       displaySettings={displaySettings}
       aspect={layout === "overlay" ? overlayAspect : "1/1"}
       chassis={setupInProgress ? "setup" : undefined}
       open={layout === "overlay" ? overlayOpen : true}
       shownGeneration={reveal}
+      closeRequest={closeRequest + hideRequest}
       sound={sound}
     >
       {setupInProgress ? (
@@ -641,7 +659,7 @@ export function SearchApp({
                 onToggleTodo={onToggleTodo}
                 onOpenTimer={openTimer}
                 onOpenStatusMenu={toggleStatusMenu}
-                onClose={onClose}
+                onClose={requestClose}
                 displaySettings={displaySettings}
               />
             )}
@@ -655,7 +673,7 @@ export function SearchApp({
               onClearTimer={timerActions.clearTimer}
               onOpenTimer={openTimer}
               onActivateTimer={(tabId) => {
-                void sendExtensionMessage({ type: "switchTab", tabId }).then(onClose);
+                void sendExtensionMessage({ type: "switchTab", tabId }).then(requestClose);
               }}
             />
           )}
@@ -666,7 +684,7 @@ export function SearchApp({
               onClearAll={timerActions.clearAllTimers}
               onClearTimer={timerActions.clearTimer}
               onActivateTimer={(tabId) => {
-                void sendExtensionMessage({ type: "switchTab", tabId }).then(onClose);
+                void sendExtensionMessage({ type: "switchTab", tabId }).then(requestClose);
               }}
             />
           )}
@@ -789,7 +807,7 @@ export function SearchApp({
                     return;
                   }
                   void sendExtensionMessage({ type: "openUrl", url })
-                    .then(onClose)
+                    .then(requestClose)
                     .catch((error) => debugError("Could not open project:", error));
                 }}
                 onSelect={navigation.setSelectedForgeIndex}

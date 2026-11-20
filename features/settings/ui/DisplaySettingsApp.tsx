@@ -36,6 +36,7 @@ import { Dial } from "@/shared/ui/primitives/Dial";
 import { Lcd } from "@/shared/ui/primitives/Lcd";
 import { FieldText, Module } from "@/shared/ui/primitives/Module";
 import { Segmented } from "@/shared/ui/primitives/Segmented";
+import { Select } from "@/shared/ui/primitives/Select";
 import { Slider } from "@/shared/ui/primitives/Slider";
 import { Switch } from "@/shared/ui/primitives/Switch";
 import type { SoundVoice } from "@/shared/ui/sound/engine";
@@ -332,10 +333,11 @@ export function DisplaySettingsApp() {
                 </div>
               </div>
               <div class="flex flex-wrap items-end gap-[var(--zen-space-6)]">
-                <div class="flex min-w-[calc(var(--zen-font-size)*28)] flex-1 flex-col gap-[var(--zen-space-2)]">
+                <div class="flex flex-col gap-[var(--zen-space-2)]">
                   <span class={monoLabelClass}>Open</span>
-                  <Segmented
+                  <Select
                     label="Open"
+                    data-testid="zen-open-transition"
                     options={OPEN_TRANSITION_OPTIONS}
                     value={settings.openTransition}
                     disabled={!loaded}
