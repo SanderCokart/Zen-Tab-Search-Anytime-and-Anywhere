@@ -1073,7 +1073,7 @@ this.zenTabs = class extends ExtensionAPI {
       // OS hit-tests those through anything on top that does not opt out. Over one,
       // a click drags the window and a right-click opens the Windows system menu.
       container.style.cssText =
-        "position:fixed;inset:0;z-index:2147483647;display:flex;visibility:hidden;pointer-events:none;background:transparent;-moz-window-dragging:no-drag;";
+        "position:fixed;inset:0;z-index:2147483647;display:flex;opacity:0;pointer-events:none;background:transparent;-moz-window-dragging:no-drag;";
 
       // Mirrors how Firefox builds extension popup browsers (ExtensionPopups.sys.mjs).
       const browser = doc.createXULElement("browser");
@@ -1139,7 +1139,7 @@ this.zenTabs = class extends ExtensionAPI {
 
     function showOmnibarOverlay(entry) {
       entry.shown = true;
-      entry.container.style.visibility = "visible";
+      entry.container.style.opacity = "1";
       entry.container.style.pointerEvents = "auto";
       entry.browser.focus();
     }
@@ -1149,7 +1149,7 @@ this.zenTabs = class extends ExtensionAPI {
         return false;
       }
       entry.shown = false;
-      entry.container.style.visibility = "hidden";
+      entry.container.style.opacity = "0";
       entry.container.style.pointerEvents = "none";
       try {
         if (entry.container.contains(win.document.activeElement)) {
@@ -1242,8 +1242,8 @@ this.zenTabs = class extends ExtensionAPI {
           for (const [otherWin, entry] of omnibarOverlays) {
             hideOmnibarOverlay(otherWin, entry);
           }
-          // Not shown yet: the page still holds the last search, so the caller
-          // remounts it first and then calls showOmnibarOverlay.
+          // Not shown yet. The page stays mounted while hidden, so the caller
+          // only has to reveal it.
           const created = !current?.container.isConnected;
           const entry = ensureOmnibarOverlay(win, pageUrl, true);
           return {

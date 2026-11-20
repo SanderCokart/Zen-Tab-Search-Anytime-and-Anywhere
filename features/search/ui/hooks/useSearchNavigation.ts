@@ -30,6 +30,11 @@ export interface UseSearchNavigationOptions {
   /** Shift+Enter: look the query up in the chosen search engine. */
   onWebSearch?: () => void;
   /**
+   * Focus the input on mount. The preloaded omnibar stays hidden with this off,
+   * and focuses later when it is actually shown.
+   */
+  focusOnMount?: boolean;
+  /**
    * Alt+Left / Alt+Right in the issue navigator: collapse the group of the
    * selected entry, or expand the collapsed group nearest to it. Ctrl+Up and
    * Ctrl+Down page through the list. Plain Left and Right move the caret.
@@ -77,6 +82,7 @@ export function useSearchNavigation({
   onActivateTodoTab,
   onWebSearch,
   onForgeGroupKey,
+  focusOnMount = true,
 }: UseSearchNavigationOptions) {
   const [paneOverride, setPaneOverride] = useState<{ query: string; pane: SearchPane } | null>(
     null,
@@ -207,6 +213,7 @@ export function useSearchNavigation({
   }, [selectedIndex]);
 
   useEffect(() => {
+    if (!focusOnMount) return;
     // Focus at once so keys typed straight after Alt+F reach the input rather
     // than the page; the delayed retry covers the toolbar popup, which can
     // take focus back while it opens. An inert input leaves focus with the
@@ -218,7 +225,7 @@ export function useSearchNavigation({
     focusInput();
     const timer = window.setTimeout(focusInput, 100);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [focusOnMount]);
 
   const onKeyDown = (event: JSX.TargetedKeyboardEvent<HTMLInputElement>) => {
     const count = items.length;

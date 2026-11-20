@@ -21,6 +21,8 @@ export interface SearchInputProps {
   forge?: boolean;
   onQueryChange: (query: string) => void;
   onKeyDown: (event: JSX.TargetedKeyboardEvent<HTMLInputElement>) => void;
+  /** When this changes, the field shows `initialValue` again. The deck stays mounted. */
+  resetToken?: number;
 }
 
 /**
@@ -39,11 +41,20 @@ export function SearchInput({
   forge,
   onQueryChange,
   onKeyDown,
+  resetToken,
 }: SearchInputProps) {
   const typing = useTypingSound();
   const [value, setValue] = useState(initialValue);
   const frameRef = useRef<number | undefined>(undefined);
   const queryRef = useRef(value);
+  const resetSeen = useRef(resetToken);
+
+  useEffect(() => {
+    if (resetToken === undefined || resetToken === resetSeen.current) return;
+    resetSeen.current = resetToken;
+    setValue(initialValue);
+    queryRef.current = initialValue;
+  }, [resetToken, initialValue]);
 
   useEffect(() => {
     return () => {

@@ -101,7 +101,7 @@ describe("toggleOmnibar", () => {
     expect(warmSnapshot).not.toHaveBeenCalled();
   });
 
-  it("warms the window-hosted omnibar's snapshot before it remounts the page", async () => {
+  it("reveals a preloaded omnibar without reading a snapshot on the keypress", async () => {
     toggleOmnibarOverlayMock.mockResolvedValue({
       state: "ready",
       overlayId: "o1",
@@ -110,12 +110,16 @@ describe("toggleOmnibar", () => {
     });
     const order: string[] = [];
     const warmSnapshot = vi.fn(() => order.push("warm"));
+    vi.mocked(showOmnibarOverlay).mockImplementation(async () => {
+      order.push("show");
+      return true;
+    });
     Object.assign(globalThis, {
       browser: {
         runtime: {
           getURL: (path: string) => `moz-extension://test${path}`,
           sendMessage: vi.fn(async () => {
-            order.push("remount");
+            order.push("shown");
             return true;
           }),
         },
@@ -124,9 +128,8 @@ describe("toggleOmnibar", () => {
 
     await toggleOmnibar(20, { warmSnapshot });
 
-    expect(warmSnapshot).toHaveBeenCalledWith(42);
-    expect(order).toEqual(["warm", "remount"]);
-    expect(vi.mocked(showOmnibarOverlay)).toHaveBeenCalledWith("o1");
+    expect(warmSnapshot).not.toHaveBeenCalled();
+    expect(order).toEqual(["show", "shown"]);
     expect(sendTabMessageMock).not.toHaveBeenCalled();
   });
 

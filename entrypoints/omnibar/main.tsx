@@ -9,12 +9,10 @@ import "@/shared/ui/styles.css";
 
 const params = new URLSearchParams(window.location.search);
 const overlayId = params.get("overlay") ?? "";
-// Built hidden by a preload, this page waits for its first show; built by an
-// Alt+F, it mounts straight away and the background shows it without a remount.
-const initialSession = params.get("shown") === "1" ? 1 : 0;
+// Preload builds this page hidden and leaves it mounted. Alt+F only reveals it.
+// `shown=1` means this load is the open itself, so the input takes focus now.
+const openedAtLoad = params.get("shown") === "1";
 const initialView = readViewParam(params.get("view"));
-// Each show remounts the search, but paints from the last session's data while
-// it refreshes, so the first frame does not wait on a snapshot read.
 const sessionCache = createSearchSessionCache();
 
 function readViewParam(value: string | null): OmnibarView | undefined {
@@ -33,28 +31,28 @@ function hide() {
 }
 
 function OmnibarPage() {
-  // Each show remounts the search: empty query, last data, then a fresh snapshot.
-  const [session, setSession] = useState({ id: initialSession, view: initialView });
+  const [reveal, setReveal] = useState(openedAtLoad ? 1 : 0);
+  const [view, setView] = useState(initialView);
 
   useEffect(
     () =>
       subscribeToOmnibarShown((shown) => {
         if (shown.overlayId !== overlayId) return false;
-        setSession((current) => ({ id: current.id + 1, view: shown.view }));
+        setView(shown.view);
+        setReveal((current) => current + 1);
         return true;
       }),
     [],
   );
 
-  if (session.id === 0) return null;
   return (
     <SearchApp
-      key={session.id}
       onClose={hide}
       pageJump={5}
       layout="overlay"
-      initialView={session.view}
+      initialView={view}
       cache={sessionCache}
+      reveal={reveal}
     />
   );
 }

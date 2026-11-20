@@ -104,6 +104,11 @@ export interface SearchAppProps {
    * display settings at once instead of waiting for fresh ones.
    */
   cache?: SearchSessionCache;
+  /**
+   * Bumped each time the preloaded omnibar is shown. The deck stays mounted;
+   * a new value clears the query and focuses the input without a new snapshot.
+   */
+  reveal?: number;
 }
 
 export type SearchSessionCache = SearchSnapshotCache & DisplaySettingsCache & StoredStateCache;
@@ -123,6 +128,7 @@ export function SearchApp({
   layout = "popup",
   initialView,
   cache,
+  reveal,
 }: SearchAppProps) {
   const compact = layout === "popup";
   // The overlay has room to swap its columns for the timer and host override
@@ -135,6 +141,7 @@ export function SearchApp({
   );
 
   const [query, setQuery] = useState(initialQuery);
+  const revealSeen = useRef(reveal);
   const [forgeSortMode, setForgeSortMode] = useState<ForgeIssueSortMode>("asc");
   const todoOrder = useTodoOrder(cache);
   const [forgeKindFilter, setForgeKindFilter] = useState<ForgeKindFilter>("all");
@@ -384,6 +391,7 @@ export function SearchApp({
     onActivateForgeEntry: activateForgeEntry,
     onActivateTodoTab: activateTodoTab,
     onWebSearch: () => searchWebRef.current(),
+    focusOnMount: reveal === undefined || reveal > 0,
     onForgeGroupKey: (action, entry, index) => {
       const { collapsed, setCollapsed } = forgeCollapse;
       const providers = groupForgeIssueEntries(results.listedForgeIssueEntries, forgeSortMode);
@@ -403,6 +411,26 @@ export function SearchApp({
         .length;
     },
   });
+
+  const revealing = reveal !== undefined && reveal !== revealSeen.current;
+  const revealedQuery = initialView?.kind === "search" ? initialView.query : "";
+
+  useEffect(() => {
+    if (!revealing || reveal === undefined) return;
+    revealSeen.current = reveal;
+    setQuery(revealedQuery);
+    setView(swapsViews && initialView && initialView.kind !== "search" ? initialView : undefined);
+    setTimerTabId(null);
+    setShowTimers(false);
+    setContextMenu(null);
+    setStatusMenu(null);
+    setPinnedUrlDialog(null);
+    const frame = requestAnimationFrame(() => {
+      const input = navigation.inputRef.current;
+      if (input && !input.hasAttribute("inert")) input.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [reveal, initialView, swapsViews, navigation.inputRef]);
 
   searchWebRef.current = () => {
     const typed = navigation.inputRef.current?.value ?? query;
@@ -520,7 +548,8 @@ export function SearchApp({
             <SearchInput
               inputRef={navigation.inputRef}
               compact={compact}
-              initialValue={initialQuery}
+              initialValue={revealing ? revealedQuery : query}
+              resetToken={reveal}
               inert={view?.kind === "timer" || view?.kind === "hosts"}
               searchEngine={displaySettings.searchEngine}
               onSearchEngineChange={onSearchEngineChange}

@@ -115,6 +115,7 @@ function mountSearchApp(
   initialView?: OmnibarView,
   snapshotTimers: Partial<TabTimer>[] = [],
   updateAvailable = false,
+  reveal?: number,
 ) {
   const sendMessage = vi.fn(async (message: { type: string; tabId?: number }) => {
     if (message.type === "getSnapshot") {
@@ -190,7 +191,10 @@ function mountSearchApp(
   });
   const root = document.createElement("div");
   document.body.appendChild(root);
-  render(<SearchApp onClose={onClose} layout={layout} initialView={initialView} />, root);
+  render(
+    <SearchApp onClose={onClose} layout={layout} initialView={initialView} reveal={reveal} />,
+    root,
+  );
   return { root, onClose, sendMessage, writeText };
 }
 
@@ -891,6 +895,42 @@ describe("SearchApp", () => {
     ).toBe(true);
     render(null, full.root);
     full.root.remove();
+  });
+
+  it("shows a preloaded deck again without asking for another snapshot", async () => {
+    const { root, sendMessage } = mountSearchApp(
+      vi.fn(),
+      tabs,
+      "overlay",
+      undefined,
+      [],
+      [],
+      [],
+      { kind: "search", query: "gitlab" },
+      [],
+      false,
+      0,
+    );
+    const snapshots = () =>
+      sendMessage.mock.calls.filter((call) => call[0]?.type === "getSnapshot").length;
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")?.value).toBe(
+        "gitlab",
+      ),
+    );
+    await vi.waitFor(() => expect(snapshots()).toBe(1));
+    const before = snapshots();
+
+    render(<SearchApp onClose={vi.fn()} layout="overlay" reveal={1} />, root);
+
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLInputElement>("[data-testid='zen-search-input']")?.value).toBe(
+        "",
+      ),
+    );
+    expect(snapshots()).toBe(before);
+    render(null, root);
+    root.remove();
   });
 
   it("reopens from its session cache on the first frame, before the snapshot returns", async () => {
@@ -1996,9 +2036,16 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-search-item']")).toBeTruthy(),
     );
-    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(
-      new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 20, clientY: 20 }),
-    );
+    root
+      .querySelector("[data-testid='zen-search-item']")!
+      .dispatchEvent(
+        new MouseEvent("contextmenu", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 20,
+          clientY: 20,
+        }),
+      );
     await vi.waitFor(() => expect(menu()?.textContent).toContain("Mark as todo"));
 
     [...menu()!.querySelectorAll("[role='menuitem']")]
@@ -2030,9 +2077,16 @@ describe("SearchApp", () => {
     await vi.waitFor(() =>
       expect(root.querySelector("[data-testid='zen-search-item']")).toBeTruthy(),
     );
-    root.querySelector("[data-testid='zen-search-item']")!.dispatchEvent(
-      new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 20, clientY: 20 }),
-    );
+    root
+      .querySelector("[data-testid='zen-search-item']")!
+      .dispatchEvent(
+        new MouseEvent("contextmenu", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 20,
+          clientY: 20,
+        }),
+      );
     await vi.waitFor(() => expect(menu()?.textContent).toContain("Close tab"));
     expect(menu()?.textContent).not.toContain("Mark as todo");
     expect(menu()?.querySelector("[aria-label='Status']")).toBeNull();

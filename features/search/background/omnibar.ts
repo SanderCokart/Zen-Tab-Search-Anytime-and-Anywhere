@@ -16,8 +16,8 @@ export interface ToggleOmnibarOptions {
   /** The command tab's URL, which saves a `tabs.get` when it is the anchor. */
   preferredUrl?: string;
   /**
-   * Starts the snapshot read for the anchor tab, so it runs while the content
-   * script builds the overlay instead of after the overlay asks for it.
+   * Starts the snapshot read for the in-page fallback, so it runs while that
+   * content script builds the overlay. The window-hosted page is already drawn.
    */
   warmSnapshot?: (anchorTabId: number) => void;
 }
@@ -72,25 +72,21 @@ async function showReadyOverlay(
   view?: OmnibarView,
 ): Promise<void> {
   omnibarAnchorTabId = isUsableTabId(result.anchorTabId) ? result.anchorTabId : undefined;
-  // The hidden page still shows the last search. Showing it before the
-  // remount flashed old results, then the loading fade, then the new ones.
-  const remounted = result.created || (await remountOmnibarPage(result.overlayId, view));
+  // The preloaded page is already drawn. Showing it is the whole open.
   await showOmnibarOverlay(result.overlayId);
-  // A preloaded page still loading missed the broadcast; keep asking until it mounts.
-  if (!remounted) void retryRemount(result.overlayId, view);
+  // A page created for this show mounts itself from the URL. A preloaded page
+  // is told it was shown, so it can clear the query and take focus.
+  if (!result.created) void notifyOmnibarShown(result.overlayId, view);
 }
 
 /**
  * Toggles the overlay the experiment hosts in the browser window. Returns false
  * when the experiment cannot, so the caller falls back to the in-page overlay.
  */
-async function toggleWindowOmnibar(warmSnapshot?: (anchorTabId: number) => void): Promise<boolean> {
+async function toggleWindowOmnibar(): Promise<boolean> {
   const result = await toggleOverlay();
   if (!result) return false;
   if (result.state === "ready") {
-    // The page asks for this snapshot once it remounts; start it now so the
-    // read overlaps the remount instead of following it.
-    if (isUsableTabId(result.anchorTabId)) warmSnapshot?.(result.anchorTabId);
     await showReadyOverlay(result);
   }
   return true;
@@ -110,26 +106,21 @@ export async function openOmnibarView(view: OmnibarView): Promise<boolean> {
   return true;
 }
 
-/** Longest wait for the page to remount before showing it anyway. */
-const REMOUNT_TIMEOUT_MS = 250;
-const REMOUNT_RETRIES = 20;
+const SHOWN_RETRIES = 20;
 
-async function remountOmnibarPage(overlayId: string, view?: OmnibarView): Promise<boolean> {
-  const remounted = browser.runtime
+async function deliverOmnibarShown(overlayId: string, view?: OmnibarView): Promise<boolean> {
+  return browser.runtime
     .sendMessage({ type: OMNIBAR_SHOWN_TYPE, overlayId, view })
     .then((reply: unknown) => reply === true)
     .catch(() => false);
-  const timeout = new Promise<boolean>((resolve) =>
-    setTimeout(() => resolve(false), REMOUNT_TIMEOUT_MS),
-  );
-  return Promise.race([remounted, timeout]);
 }
 
-async function retryRemount(overlayId: string, view?: OmnibarView): Promise<void> {
-  for (let attempt = 0; attempt < REMOUNT_RETRIES; attempt += 1) {
-    // With no page listening yet, sendMessage rejects at once, so space the tries.
+/** The preloaded page may still be loading on the first show. Ask until it answers. */
+async function notifyOmnibarShown(overlayId: string, view?: OmnibarView): Promise<void> {
+  if (await deliverOmnibarShown(overlayId, view)) return;
+  for (let attempt = 0; attempt < SHOWN_RETRIES; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 100));
-    if (await remountOmnibarPage(overlayId, view)) return;
+    if (await deliverOmnibarShown(overlayId, view)) return;
   }
 }
 
@@ -137,7 +128,7 @@ export async function toggleOmnibar(
   preferredTabId?: number,
   options: ToggleOmnibarOptions = {},
 ): Promise<void> {
-  if (await toggleWindowOmnibar(options.warmSnapshot)) return;
+  if (await toggleWindowOmnibar()) return;
 
   const tabId = await resolveAnchorTabId(preferredTabId);
   if (!isUsableTabId(tabId)) return;
@@ -159,10 +150,7 @@ export async function toggleOmnibar(
       await sendTabMessage(tabId, { type: "toggleOmnibar", anchorTabId: tabId });
       return;
     } catch (error) {
-      debugLog(
-        `${LOG_PREFIX} In-page omnibar unavailable:`,
-        formatError(error),
-      );
+      debugLog(`${LOG_PREFIX} In-page omnibar unavailable:`, formatError(error));
     }
   }
 }
