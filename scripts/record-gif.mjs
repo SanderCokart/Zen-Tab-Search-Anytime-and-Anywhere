@@ -75,8 +75,8 @@ const FLOWS = {
     }
   },
   "query-exclude": async (page) => {
-    await openScene(page, "concept-simple");
-    await pause(page, 800);
+    await openScene(page, "concept-dev");
+    await pause(page, 900);
     const input = page.locator("[data-testid='zen-search-input']");
     await input.click();
     for (const ch of "-gitlab") {
