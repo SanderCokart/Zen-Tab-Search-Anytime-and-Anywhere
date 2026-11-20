@@ -37,6 +37,8 @@ export interface SearchDocument {
   urlField?: SearchField;
   /** Label+title, used when neither field matches a multi-word query alone. */
   combinedField?: SearchField;
+  /** Normalized, space-padded texts a `-word` exclude is tested against. */
+  excludeTexts: string[];
 }
 
 const SCHEME_RE = /^https?:\/\//i;
@@ -55,9 +57,11 @@ export function urlSearchText(url: string): string {
 export function buildSearchDocuments(items: SearchItem[]): SearchDocument[] {
   return items.map((item) => {
     if (item.kind === "space") {
+      const fields = [compileSearchField(item.data.name), compileSearchField(item.data.icon || "")];
       return {
         item,
-        fields: [compileSearchField(item.data.name), compileSearchField(item.data.icon || "")],
+        fields,
+        excludeTexts: toExcludeTexts(fields.map((field) => field.normalized)),
       };
     }
 
@@ -73,6 +77,7 @@ export function buildSearchDocuments(items: SearchItem[]): SearchDocument[] {
       ],
       urlField: compileSearchField(urlSearchText(item.data.url || "")),
       combinedField: compileSearchField(tabNameSearchText(item.data)),
+      excludeTexts: toExcludeTexts(tabExcludeTexts(item.data)),
     };
   });
 }
@@ -176,62 +181,59 @@ function urlHostSearchText(url: string): string {
   }
 }
 
-function normalizedHasExcludeWord(normalized: string, word: string): boolean {
-  if (!normalized || !word) {
-    return false;
-  }
-  return ` ${normalized} `.includes(` ${word} `);
+/** Normalizes each text once and pads it so a whole word is a plain substring test. */
+function toExcludeTexts(texts: readonly string[]): string[] {
+  return texts
+    .map((text) => normalizeSearchText(text))
+    .filter(Boolean)
+    .map((normalized) => ` ${normalized} `);
 }
 
-function textsMatchExclude(texts: readonly string[], excludeWords: readonly string[]): boolean {
-  const normalized = texts.map((text) => normalizeSearchText(text));
-  return excludeWords.some((word) =>
-    normalized.some((value) => normalizedHasExcludeWord(value, word)),
-  );
+function tabExcludeTexts(tab: TabInfo): string[] {
+  const labeled = Boolean(tab.customLabel?.trim());
+  return [
+    labeled ? tab.customLabel || "" : tab.title || "",
+    tab.workspaceName || "",
+    tab.folderName || "",
+    urlHostSearchText(tab.url || ""),
+  ];
+}
+
+function forgeEntryExcludeTexts(entry: ForgeIssueEntry): string[] {
+  const labeled = Boolean(entry.tab.customLabel?.trim());
+  return [
+    labeled ? entry.tab.customLabel || "" : forgeEntryDisplayTitle(entry),
+    labeled ? "" : entry.title,
+    entry.projectLabel,
+    urlHostSearchText(entry.tab.url || ""),
+  ];
+}
+
+function excludeTextsMatch(
+  excludeTexts: readonly string[],
+  excludeWords: readonly string[],
+): boolean {
+  return excludeWords.some((word) => {
+    if (!word) return false;
+    const needle = ` ${word} `;
+    return excludeTexts.some((text) => text.includes(needle));
+  });
 }
 
 function documentMatchesExclude(
   document: SearchDocument,
   excludeWords: readonly string[],
 ): boolean {
-  if (excludeWords.length === 0) {
-    return false;
-  }
-  if (document.item.kind === "space") {
-    return textsMatchExclude(
-      document.fields.map((field) => field.normalized),
-      excludeWords,
-    );
-  }
-  const tab = document.item.data;
-  const labeled = Boolean(tab.customLabel?.trim());
-  return textsMatchExclude(
-    [
-      labeled ? tab.customLabel || "" : tab.title || "",
-      tab.workspaceName || "",
-      tab.folderName || "",
-      urlHostSearchText(tab.url || ""),
-    ],
-    excludeWords,
-  );
+  return excludeWords.length > 0 && excludeTextsMatch(document.excludeTexts, excludeWords);
 }
 
 function forgeEntryMatchesExclude(
   entry: ForgeIssueEntry,
   excludeWords: readonly string[],
 ): boolean {
-  if (excludeWords.length === 0) {
-    return false;
-  }
-  const labeled = Boolean(entry.tab.customLabel?.trim());
-  return textsMatchExclude(
-    [
-      labeled ? entry.tab.customLabel || "" : forgeEntryDisplayTitle(entry),
-      labeled ? "" : entry.title,
-      entry.projectLabel,
-      urlHostSearchText(entry.tab.url || ""),
-    ],
-    excludeWords,
+  return (
+    excludeWords.length > 0 &&
+    excludeTextsMatch(compiledForgeEntry(entry).excludeTexts, excludeWords)
   );
 }
 
@@ -250,15 +252,6 @@ export function countExactQueryWords(value: string, query: string): number {
   return countExactQueryWordsPrepared(compileSearchField(value).tokenSet, queryWords);
 }
 
-export function hasDirectMatch(value: string, queryLowerCase: string): boolean {
-  const queryWords = tokenizeSearchText(queryLowerCase);
-  if (queryWords.length === 0) {
-    return false;
-  }
-  const tokenSet = compileSearchField(value).tokenSet;
-  return queryWords.every((word) => tokenSet.has(word));
-}
-
 export function forgeEntryDisplayTitle(entry: ForgeIssueEntry): string {
   return entry.tab.customLabel?.trim() || entry.title;
 }
@@ -267,7 +260,7 @@ function tabNameSearchText(tab: TabInfo): string {
   return `${tab.customLabel || ""} ${tab.title || ""}`.trim();
 }
 
-export function maxExactWordCount(fields: SearchField[], queryWords: string[]): number {
+function maxExactWordCount(fields: SearchField[], queryWords: string[]): number {
   let best = 0;
   for (const field of fields) {
     const count = countExactQueryWordsPrepared(field.tokenSet, queryWords);
@@ -562,11 +555,31 @@ export function forgeEntrySearchTexts(entry: ForgeIssueEntry): string[] {
   return unique;
 }
 
-function compileForgeEntryFields(entry: ForgeIssueEntry): SearchField[] {
-  return forgeEntrySearchTexts(entry).map(compileSearchField);
+interface CompiledForgeEntry {
+  fields: SearchField[];
+  excludeTexts: string[];
 }
 
-export function isSameForgeEntry(first: ForgeIssueEntry, second: ForgeIssueEntry): boolean {
+const compiledForgeEntries = new WeakMap<ForgeIssueEntry, CompiledForgeEntry>();
+
+/** Compiled once per entry object, so typing does not re-normalize every entry. */
+function compiledForgeEntry(entry: ForgeIssueEntry): CompiledForgeEntry {
+  let compiled = compiledForgeEntries.get(entry);
+  if (!compiled) {
+    compiled = {
+      fields: forgeEntrySearchTexts(entry).map(compileSearchField),
+      excludeTexts: toExcludeTexts(forgeEntryExcludeTexts(entry)),
+    };
+    compiledForgeEntries.set(entry, compiled);
+  }
+  return compiled;
+}
+
+function compileForgeEntryFields(entry: ForgeIssueEntry): SearchField[] {
+  return compiledForgeEntry(entry).fields;
+}
+
+function isSameForgeEntry(first: ForgeIssueEntry, second: ForgeIssueEntry): boolean {
   return (
     first.ref.url === second.ref.url &&
     first.tab.id === second.tab.id &&

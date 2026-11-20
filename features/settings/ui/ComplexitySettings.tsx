@@ -16,7 +16,7 @@ import {
 import { Switch } from "@/shared/ui/primitives/Switch";
 import { Slider } from "@/shared/ui/primitives/Slider";
 import { Module } from "@/shared/ui/primitives/Module";
-import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
+import { TooltipFor, tooltipTriggerProps, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 const PRESET_LABELS: Record<ComplexityMatch, string> = {
   simple: "Simple",
@@ -206,15 +206,12 @@ function FlagSwitch({
       <Switch data-testid={testId} checked={checked} disabled={disabled} onChange={onChange}>
         <span
           class="block font-[family-name:var(--font-title)] leading-tight font-medium"
-          onMouseEnter={(event) => tooltip.showAfterPause(event.currentTarget)}
-          onMouseLeave={tooltip.hide}
-          onFocus={(event) => tooltip.show(event.currentTarget)}
-          onBlur={tooltip.hide}
+          {...tooltipTriggerProps(tooltip)}
         >
           {label}
         </span>
       </Switch>
-      {tooltip.anchor && <TooltipLegend content={hint} anchor={tooltip.anchor} />}
+      <TooltipFor tooltip={tooltip} content={hint} />
     </>
   );
 }

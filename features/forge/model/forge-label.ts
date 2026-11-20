@@ -276,3 +276,13 @@ export function forgeRowParts(ref: ForgeRef, displayTitle: string): ForgeRowPart
   }
   return { tag, ref: `${ref.kind === "merge_request" ? "!" : "#"}${ref.id}`, title };
 }
+
+/** The folder (and group) name for a platform's change requests. */
+export function forgeRequestsFolderName(platform: ForgePlatform): "PRs" | "MRs" {
+  return platform === "github" ? "PRs" : "MRs";
+}
+
+/** The folder name for requests merging into `targetBranch`; unknown until the page was read. */
+export function forgeBranchFolderName(targetBranch?: string): string {
+  return targetBranch ?? "target unknown";
+}

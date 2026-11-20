@@ -61,6 +61,14 @@ export function tabBrowserId(tab: TabInfo): number | undefined {
   return isUsableTabId(tab.id) ? tab.id : undefined;
 }
 
+/** The browser ids of the tabs that have a usable one, in order. */
+export function tabBrowserIds(tabs: readonly TabInfo[]): number[] {
+  return tabs.flatMap((tab) => {
+    const id = tabBrowserId(tab);
+    return id === undefined ? [] : [id];
+  });
+}
+
 export function canRenameTab(tab: TabInfo): boolean {
   if (isEssentialTab(tab)) {
     return typeof tab.domId === "string" && tab.domId.length > 0;

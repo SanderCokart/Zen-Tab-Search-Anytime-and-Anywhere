@@ -5,11 +5,19 @@ import {
 import {
   forgeRowParts,
   relatedIssueIdFromLabel,
+  forgeBranchFolderName,
+  forgeRequestsFolderName,
   type ForgeIssueEntry,
   type ForgePlatform,
 } from "@/features/forge/model/forge-label";
 import type { ZenFolderInfo } from "@/shared/messaging/bridge-protocol";
-import { isEssentialTab, tabBrowserId, type ForgeOrganizeMode } from "@/shared/types";
+import { pluralize } from "@/shared/text";
+import {
+  isEssentialTab,
+  tabBrowserId,
+  tabBrowserIds,
+  type ForgeOrganizeMode,
+} from "@/shared/types";
 
 export const FORGE_ORGANIZE_MODES = [
   "tree",
@@ -43,7 +51,7 @@ export function countMovableForgeTabs(entries: readonly ForgeIssueEntry[]): numb
 }
 
 export function organizeForgeConfirmMessage(mode: ForgeOrganizeMode, tabCount: number): string {
-  const tabs = tabCount === 1 ? "1 tab" : `${tabCount} tabs`;
+  const tabs = pluralize(tabCount, "tab");
   if (mode === "byIssue") {
     return `Group issues with their MRs/PRs and move ${tabs} into folders?`;
   }
@@ -76,10 +84,7 @@ export function organizeForgePreviewTree(mode: ForgeOrganizeMode): string {
 }
 
 function tabIdsOf(entries: readonly ForgeIssueEntry[]): number[] {
-  return entries.flatMap((entry) => {
-    const id = movableForgeTabId(entry.tab);
-    return id === undefined ? [] : [id];
-  });
+  return tabBrowserIds(entries.map((entry) => entry.tab).filter((tab) => !isEssentialTab(tab)));
 }
 
 export function forgeProjectFolderName(
@@ -91,14 +96,6 @@ export function forgeProjectFolderName(
     (other) => other !== projectLabel && (other.split("/").pop() || other) === short,
   );
   return clash ? projectLabel : short;
-}
-
-function requestsFolderName(platform: ForgePlatform): string {
-  return platform === "github" ? "PRs" : "MRs";
-}
-
-function branchFolderName(targetBranch?: string): string {
-  return targetBranch ?? "target unknown";
 }
 
 export function issueGroupFolderName(id: string, issue: ForgeIssueEntry | undefined): string {
@@ -123,14 +120,14 @@ function treeChildren(platform: ForgePlatform, project: ForgeIssueProjectGroup):
       continue;
     }
     requestLeaves.push({
-      name: branchFolderName(branch.targetBranch),
+      name: forgeBranchFolderName(branch.targetBranch),
       tabIds: ids,
       children: [],
     });
   }
   if (requestLeaves.length > 0) {
     children.push({
-      name: requestsFolderName(platform),
+      name: forgeRequestsFolderName(platform),
       tabIds: [],
       children: requestLeaves,
     });
@@ -205,7 +202,7 @@ function byIssueChildren(
       continue;
     }
     requestChildren.push({
-      name: branchFolderName(branch.targetBranch),
+      name: forgeBranchFolderName(branch.targetBranch),
       tabIds: ids,
       children: [],
     });
@@ -213,7 +210,7 @@ function byIssueChildren(
 
   if (requestChildren.length > 0) {
     children.push({
-      name: requestsFolderName(platform),
+      name: forgeRequestsFolderName(platform),
       tabIds: [],
       children: requestChildren,
     });

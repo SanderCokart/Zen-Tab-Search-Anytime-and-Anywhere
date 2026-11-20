@@ -1,4 +1,3 @@
-import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import {
   AUTO_COLOR,
@@ -47,7 +46,7 @@ import { ColorPickerField } from "@/features/settings/ui/ColorPickerField";
 import { ComplexitySettings } from "@/features/settings/ui/ComplexitySettings";
 import { BridgeSettings } from "@/features/bridge/ui/BridgeSettings";
 import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
-import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
+import { TipHint } from "@/shared/ui/primitives/Tooltip";
 import { debugError } from "@/shared/debug";
 import { sendExtensionMessage } from "@/shared/messaging/client";
 
@@ -90,62 +89,57 @@ const TRUNCATE_SETTINGS = [
   ],
 ] as const;
 
-function Hint({ text, children }: { text: string; children: ComponentChildren }) {
-  const tooltip = useTooltip();
-  return (
-    <>
-      <span
-        onMouseEnter={(event) => tooltip.showAfterPause(event.currentTarget)}
-        onMouseLeave={tooltip.hide}
-        onFocus={(event) => tooltip.show(event.currentTarget)}
-        onBlur={tooltip.hide}
-        onClick={tooltip.hide}
-        tabIndex={0}
-      >
-        {children}
-      </span>
-      {tooltip.anchor && <TooltipLegend content={text} anchor={tooltip.anchor} />}
-    </>
-  );
-}
-
-/**
- * Setting key, full label (the accessible name), the short label on the module,
- * hint. In the order the omnibar lays them out, top to bottom, then the columns.
- */
-const GAP_CONTROLS: readonly (readonly [GapSettingKey, string, string, string])[] = [
-  ["spaceGap", "Between spaces", "Spaces", "Separates the tiles in the spaces grid."],
-  [
-    "essentialGap",
-    "Between essential tabs",
-    "Essentials",
-    "Separates the tiles in the essential-tabs grid.",
-  ],
-  [
-    "tabGap",
-    "Between tabs",
-    "Tabs",
-    "Separates one tab row from the next, inside folders as well.",
-  ],
-  [
-    "sectionGap",
-    "Between sections",
-    "Sections",
-    "Separates the spaces block, the essential-tabs block and the tab list from each other.",
-  ],
-  [
-    "folderGap",
-    "Between folders",
-    "Folders",
-    "Separates each folder section from what comes before it.",
-  ],
-  [
-    "issueGap",
-    "Between issues and requests",
-    "Issues and requests",
-    "Separates one entry in the issues and requests column from the next.",
-  ],
-  ["todoGap", "Between todos", "Todos", "Separates one todo-column entry from the next."],
+/** In the order the omnibar lays them out, top to bottom, then the columns. */
+const GAP_CONTROLS: readonly {
+  key: GapSettingKey;
+  /** The accessible name. */
+  label: string;
+  /** The short label on the module. */
+  scope: string;
+  hint: string;
+}[] = [
+  {
+    key: "spaceGap",
+    label: "Between spaces",
+    scope: "Spaces",
+    hint: "Separates the tiles in the spaces grid.",
+  },
+  {
+    key: "essentialGap",
+    label: "Between essential tabs",
+    scope: "Essentials",
+    hint: "Separates the tiles in the essential-tabs grid.",
+  },
+  {
+    key: "tabGap",
+    label: "Between tabs",
+    scope: "Tabs",
+    hint: "Separates one tab row from the next, inside folders as well.",
+  },
+  {
+    key: "sectionGap",
+    label: "Between sections",
+    scope: "Sections",
+    hint: "Separates the spaces block, the essential-tabs block and the tab list from each other.",
+  },
+  {
+    key: "folderGap",
+    label: "Between folders",
+    scope: "Folders",
+    hint: "Separates each folder section from what comes before it.",
+  },
+  {
+    key: "issueGap",
+    label: "Between issues and requests",
+    scope: "Issues and requests",
+    hint: "Separates one entry in the issues and requests column from the next.",
+  },
+  {
+    key: "todoGap",
+    label: "Between todos",
+    scope: "Todos",
+    hint: "Separates one todo-column entry from the next.",
+  },
 ];
 
 /** The ratio as the readout shows it: "1", "0.5", "2.25". */
@@ -250,7 +244,7 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
   const soundOff = !settings.soundEnabled;
   const gapsAreDefault =
     settings.gapPaddingRatio === DEFAULT_DISPLAY_SETTINGS.gapPaddingRatio &&
-    GAP_CONTROLS.every(([key]) => settings[key] === DEFAULT_DISPLAY_SETTINGS[key]);
+    GAP_CONTROLS.every(({ key }) => settings[key] === DEFAULT_DISPLAY_SETTINGS[key]);
   const sizesAreDefault =
     settings.fontSize === DEFAULT_DISPLAY_SETTINGS.fontSize &&
     settings.uiScale === DEFAULT_DISPLAY_SETTINGS.uiScale;
@@ -464,13 +458,13 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
               </p>
               <div class="flex flex-wrap items-start gap-[var(--zen-space-5)]">
                 <div class="zs-mod-two min-w-0 flex-1">
-                  {GAP_CONTROLS.map(([key, label, short, hint]) => (
-                    <Hint key={key} text={hint}>
+                  {GAP_CONTROLS.map(({ key, label, scope, hint }) => (
+                    <TipHint key={key} text={hint}>
                       <div class="flex items-center gap-[var(--zen-space-3)]" key={key}>
                         <span
                           class={cn(monoLabelClass, "w-[calc(var(--zen-font-size)*7)] shrink-0")}
                         >
-                          {short}
+                          {scope}
                         </span>
                         <Slider
                           class="[--zs-slider-width:calc(var(--zen-font-size)*9.2)]"
@@ -484,7 +478,7 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                           onChange={(value) => updateSettings({ [key]: value })}
                         />
                       </div>
-                    </Hint>
+                    </TipHint>
                   ))}
                   <div class="flex items-center justify-self-end">
                     <button
@@ -494,7 +488,7 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                       onClick={() =>
                         updateSettings({
                           ...Object.fromEntries(
-                            GAP_CONTROLS.map(([key]) => [key, DEFAULT_DISPLAY_SETTINGS[key]]),
+                            GAP_CONTROLS.map(({ key }) => [key, DEFAULT_DISPLAY_SETTINGS[key]]),
                           ),
                           gapPaddingRatio: DEFAULT_DISPLAY_SETTINGS.gapPaddingRatio,
                         })
@@ -505,7 +499,7 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                     </button>
                   </div>
                 </div>
-                <Hint text="Padding to gap. Turn it down for more gap, up for more padding; at 1 each gap is split evenly.">
+                <TipHint text="Padding to gap. Turn it down for more gap, up for more padding; at 1 each gap is split evenly.">
                   <div class="flex w-fit flex-col items-center gap-[var(--zen-space-2)] text-center">
                     <Dial
                       label="Padding to gap ratio"
@@ -523,7 +517,7 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                     </Lcd>
                     <span class={monoLabelClass}>Ratio</span>
                   </div>
-                </Hint>
+                </TipHint>
               </div>
             </Module>
 
@@ -535,9 +529,9 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                   checked={settings[key]}
                   onChange={(checked) => updateSettings({ [key]: checked })}
                 >
-                  <Hint text={hint}>
+                  <TipHint text={hint}>
                     <FieldText label={label} />
-                  </Hint>
+                  </TipHint>
                 </Switch>
               ))}
               <Switch
@@ -550,9 +544,9 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                   })
                 }
               >
-                <Hint text="Shows each folder as a separate section in the tab results.">
+                <TipHint text="Shows each folder as a separate section in the tab results.">
                   <FieldText label="Group tabs by folders" />
-                </Hint>
+                </TipHint>
               </Switch>
               <Switch
                 class={cn("ml-[var(--zen-space-4)]", !settings.groupFolders && "opacity-50")}
@@ -561,9 +555,9 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                 disabled={!settings.groupFolders}
                 onChange={(checked) => updateSettings({ groupSubfolders: checked })}
               >
-                <Hint text="Adds nested folder sections inside their parent folder.">
+                <TipHint text="Adds nested folder sections inside their parent folder.">
                   <FieldText label="Group by subfolders" />
-                </Hint>
+                </TipHint>
               </Switch>
             </Module>
 
@@ -575,9 +569,9 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                   checked={settings[key]}
                   onChange={(checked) => updateSettings({ [key]: checked })}
                 >
-                  <Hint text={hint}>
+                  <TipHint text={hint}>
                     <FieldText label={label} />
-                  </Hint>
+                  </TipHint>
                 </Switch>
               ))}
             </Module>
@@ -591,9 +585,9 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                   checked={settings.reuseExternalTabs}
                   onChange={(reuseExternalTabs) => updateSettings({ reuseExternalTabs })}
                 >
-                  <Hint text="When another app opens a link in Zen, such as a mail client, focus the tab that already has that address instead of opening a new one.">
+                  <TipHint text="When another app opens a link in Zen, such as a mail client, focus the tab that already has that address instead of opening a new one.">
                     <span class={monoLabelClass}>Reuse an open tab</span>
-                  </Hint>
+                  </TipHint>
                 </Switch>
                 <Switch
                   data-testid="zen-detectForgeIssues"
@@ -606,9 +600,9 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                     })
                   }
                 >
-                  <Hint text="Finds issue and pull-request tabs and shows them in the issue navigator.">
+                  <TipHint text="Finds issue and pull-request tabs and shows them in the issue navigator.">
                     <span class={monoLabelClass}>Auto-detect GitHub and GitLab issues</span>
-                  </Hint>
+                  </TipHint>
                 </Switch>
                 <Switch
                   class={cn(!settings.detectForgeIssues && "opacity-50")}
@@ -617,9 +611,9 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                   disabled={!settings.detectForgeIssues}
                   onChange={(filterIssuesInOverlay) => updateSettings({ filterIssuesInOverlay })}
                 >
-                  <Hint text="Removes issue tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect.">
+                  <TipHint text="Removes issue tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect.">
                     <span class={monoLabelClass}>Show issues only in the Issue Navigator</span>
-                  </Hint>
+                  </TipHint>
                 </Switch>
                 <Switch
                   class={cn(!settings.detectForgeIssues && "opacity-50")}
@@ -630,11 +624,11 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                     updateSettings({ filterRequestsInOverlay })
                   }
                 >
-                  <Hint text="Removes merge-request and pull-request tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect.">
+                  <TipHint text="Removes merge-request and pull-request tabs from the overlay tab results. They remain available in the issue navigator. Needs auto-detect.">
                     <span class={monoLabelClass}>
                       Show merge requests or pull requests only in the Issue Navigator
                     </span>
-                  </Hint>
+                  </TipHint>
                 </Switch>
                 <Switch
                   class={cn(!settings.detectForgeIssues && "opacity-50")}
@@ -645,9 +639,9 @@ function SettingsPage({ initial }: { initial: DisplaySettings }) {
                     updateSettings({ confirmOrganizeForgeTabs })
                   }
                 >
-                  <Hint text="Ask before the Issues and requests column creates Zen folders and moves tabs into them. Uncheck, or choose Don't ask this again on that prompt, to skip it.">
+                  <TipHint text="Ask before the Issues and requests column creates Zen folders and moves tabs into them. Uncheck, or choose Don't ask this again on that prompt, to skip it.">
                     <span class={monoLabelClass}>Confirm before organizing issue tabs</span>
-                  </Hint>
+                  </TipHint>
                 </Switch>
               </div>
             </Module>

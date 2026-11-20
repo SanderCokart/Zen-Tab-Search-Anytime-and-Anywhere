@@ -9,7 +9,7 @@ import { applyPreset } from "@/features/settings/model/complexity";
 import type { OmnibarView } from "@/shared/messaging/protocol";
 import type { SearchLayout } from "@/features/search/ui/types";
 
-export type HarnessSurface = "search" | "settings" | "timer" | "hosts" | "prototype-todo-clear";
+export type HarnessSurface = "search" | "settings" | "timer" | "hosts";
 
 export interface HarnessScene {
   id: string;
@@ -172,7 +172,6 @@ const SCENES: Record<string, HarnessScene> = {
     displaySettings: applyPreset("pro"),
   },
   "concept-dev": { id: "concept-dev", surface: "search", layout: "overlay" },
-  "prototype-todo-clear": { id: "prototype-todo-clear", surface: "prototype-todo-clear" },
 };
 
 export function sceneFromSearch(search: string): HarnessScene {

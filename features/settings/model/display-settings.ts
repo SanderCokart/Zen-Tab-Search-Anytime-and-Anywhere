@@ -7,6 +7,7 @@ import {
   clampUiScale,
 } from "@/features/settings/model/ui-scale";
 import { clampVolume, DEFAULT_SOUND_VOLUME } from "@/shared/ui/sound/engine";
+import { snapClamp } from "@/shared/number";
 import { THEME_PREFERENCES } from "@/shared/ui/theme";
 
 export const DISPLAY_SETTINGS_STORAGE_KEY = "displaySettings";
@@ -182,9 +183,12 @@ export const OPEN_TRANSITION_MS_STEP = 50;
 
 /** Snaps an open-animation length onto 50ms steps, inside 0..1000. */
 export function clampOpenTransitionMs(value: number): number {
-  if (!Number.isFinite(value)) return DEFAULTS.openTransitionMs;
-  const clamped = Math.min(MAX_OPEN_TRANSITION_MS, Math.max(MIN_OPEN_TRANSITION_MS, value));
-  return Math.round(clamped / OPEN_TRANSITION_MS_STEP) * OPEN_TRANSITION_MS_STEP;
+  return snapClamp(value, {
+    min: MIN_OPEN_TRANSITION_MS,
+    max: MAX_OPEN_TRANSITION_MS,
+    step: OPEN_TRANSITION_MS_STEP,
+    fallback: DEFAULTS.openTransitionMs,
+  });
 }
 
 /** Snaps an omnibar background opacity onto the dial's 5% steps, inside 0%..100%. */

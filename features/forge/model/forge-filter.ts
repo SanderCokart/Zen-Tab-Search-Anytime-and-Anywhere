@@ -1,4 +1,4 @@
-import type { ForgeIssueEntry } from "@/features/forge/model/forge-label";
+import { forgeRequestsFolderName, type ForgeIssueEntry } from "@/features/forge/model/forge-label";
 
 /** Which kinds of entry the Issues & requests navigator lists. */
 export type ForgeKindFilter = "all" | "issues" | "requests";
@@ -47,7 +47,6 @@ export function hidesForgeEntryInOverlay(
 
 /** "PRs" when every entry is a GitHub one, otherwise "MRs". */
 export function forgeRequestsLabel(entries: readonly ForgeIssueEntry[]): "PRs" | "MRs" {
-  return entries.length > 0 && entries.every((entry) => entry.ref.platform === "github")
-    ? "PRs"
-    : "MRs";
+  const allGithub = entries.length > 0 && entries.every((entry) => entry.ref.platform === "github");
+  return forgeRequestsFolderName(allGithub ? "github" : "gitlab");
 }

@@ -3,7 +3,7 @@ import { debugError } from "@/shared/debug";
 import { sendExtensionMessage, subscribeToSnapshotChanged } from "@/shared/messaging/client";
 import {
   isActivatableTab,
-  tabBrowserId,
+  tabBrowserIds,
   type SpaceInfo,
   type TabInfo,
   type TabTimer,
@@ -79,6 +79,19 @@ function sameRankingTabs(first: TabInfo[], second: TabInfo[]): boolean {
   );
 }
 
+/** Same todos for the same tabs, so an identical reload keeps the current Map. */
+function sameTodos(first: Map<number, TabTodo>, second: Map<number, TabTodo>): boolean {
+  if (first.size !== second.size) {
+    return false;
+  }
+  for (const [tabId, todo] of second) {
+    if (first.get(tabId)?.status !== todo.status) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function sameSpaces(first: SpaceInfo[], second: SpaceInfo[]): boolean {
   if (first.length !== second.length) {
     return false;
@@ -131,7 +144,8 @@ export function useSearchSnapshot(cache?: SearchSnapshotCache): SearchSnapshotSt
       sendExtensionMessage({ type: "getTodos", tabIds })
         .then((list) => {
           if (!cancelled && request === todoRequest) {
-            setTodos(todosByTabId(list));
+            const next = todosByTabId(list);
+            setTodos((current) => (sameTodos(current, next) ? current : next));
           }
         })
         .catch((error) => debugError("Could not load todos:", error));
@@ -159,12 +173,7 @@ export function useSearchSnapshot(cache?: SearchSnapshotCache): SearchSnapshotSt
           setTimers(new Map(snapshot.timers.map((item) => [item.tabId, item])));
           setStatuses(statusesByTabId(snapshot.statuses));
           setLoadError(null);
-          loadTodos(
-            nextTabs.flatMap((tab) => {
-              const id = tabBrowserId(tab);
-              return id === undefined ? [] : [id];
-            }),
-          );
+          loadTodos(tabBrowserIds(nextTabs));
         })
         .catch((error) => {
           debugError("Could not load search data:", error);

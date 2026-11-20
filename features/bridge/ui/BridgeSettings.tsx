@@ -10,6 +10,7 @@ import {
   mcpServerReleasePageUrl,
 } from "@/features/bridge/model/mcp-install";
 import { settingsKeyClass } from "@/shared/ui/button-styles";
+import { copyText } from "@/shared/ui/lib/copy-text";
 import { Lcd } from "@/shared/ui/primitives/Lcd";
 import { FieldText, Module } from "@/shared/ui/primitives/Module";
 import { Switch } from "@/shared/ui/primitives/Switch";
@@ -61,11 +62,11 @@ export function BridgeSettings() {
     if (!token) {
       return;
     }
-    void navigator.clipboard.writeText(token).then(() => setCopied(true));
+    void copyText(token).then(() => setCopied(true));
   };
 
   const copyConfig = () => {
-    void navigator.clipboard.writeText(mcpConfigFragment()).then(() => setConfigCopied(true));
+    void copyText(mcpConfigFragment()).then(() => setConfigCopied(true));
   };
 
   // Fetched rather than linked, so a missing asset shows an error here instead of

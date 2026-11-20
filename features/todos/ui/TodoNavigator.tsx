@@ -5,7 +5,6 @@ import { hostname } from "@/features/search/ui/lib/format";
 import { NowTag } from "@/features/search/ui/components/NowTag";
 import { PrefixHint } from "@/features/search/ui/components/PrefixHint";
 import { TODO_NAVIGATOR_PREFIXES } from "@/features/search/model/ranking";
-import { useCloseOnOutsideClick } from "@/features/search/ui/hooks/useCloseOnOutsideClick";
 import { StatusButton } from "@/features/status/ui/StatusButton";
 import { TRAFFIC_LIGHT_OPTIONS } from "@/features/status/model/status";
 import { pointerMovedPastDragThreshold } from "@/features/todos/model/todo-pointer";
@@ -14,11 +13,16 @@ import { statusRowClass } from "@/features/status/ui/traffic-light";
 import {
   formatTabDisplayTitle,
   tabBrowserId,
+  tabBrowserIds,
   type TabInfo,
   type TrafficLight,
 } from "@/shared/types";
 import { cn } from "@/shared/ui/cn";
-import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
+import { ChevronDownIcon } from "@/shared/ui/primitives/ChevronDownIcon";
+import { ConfirmWell } from "@/shared/ui/primitives/ConfirmWell";
+import { MenuPanel, useDropdown } from "@/shared/ui/primitives/Menu";
+import { TooltipFor, tooltipTriggerProps, useTooltip } from "@/shared/ui/primitives/Tooltip";
+import { scrollIntoViewWhen } from "@/shared/ui/lib/scroll-into-view";
 
 /**
  * The third overlay column: tabs marked as todo. Clicking a row switches to its
@@ -230,11 +234,7 @@ function ReorderTodoRow({
       data-todo-selected={selected ? "true" : undefined}
       data-current={tab.active === true ? "true" : undefined}
       onContextMenu={(event: MouseEvent) => onContextMenu(tab, event)}
-      ref={(element: HTMLElement | null) => {
-        if (selected && typeof element?.scrollIntoView === "function") {
-          element.scrollIntoView({ block: "nearest", inline: "nearest" });
-        }
-      }}
+      ref={scrollIntoViewWhen(selected)}
     >
       <TodoRowBody
         tab={tab}
@@ -294,18 +294,12 @@ export function TodoNavigator({
   // The omnibar is a <browser> in Zen's chrome, not a tab, so `window.confirm`
   // has nowhere to show and returns false: the confirmation lives in the column.
   const [pendingClear, setPendingClear] = useState<PendingClear | null>(null);
-  const [clearMenuOpen, setClearMenuOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const clearTooltip = useTooltip();
-  useCloseOnOutsideClick(clearMenuOpen, "[data-testid='zen-todo-clear-wrap']", () =>
-    setClearMenuOpen(false),
-  );
+  const clearMenu = useDropdown("[data-testid='zen-todo-clear-wrap']");
   const pendingTabIds =
     pendingClear === null ? [] : todoTabIdsToClear(allTabs, statuses, pendingClear.filter);
-  const reorderIds = tabs.flatMap((tab) => {
-    const id = tabBrowserId(tab);
-    return id === undefined ? [] : [id];
-  });
+  const reorderIds = tabBrowserIds(tabs);
   const canReorder = onReorder !== undefined && reorderIds.length === tabs.length;
 
   const listClass =
@@ -342,11 +336,7 @@ export function TodoNavigator({
         data-status-light={light}
         data-todo-selected={selected ? "true" : undefined}
         data-current={tab.active === true ? "true" : undefined}
-        ref={(element) => {
-          if (selected && typeof element?.scrollIntoView === "function") {
-            element.scrollIntoView({ block: "nearest", inline: "nearest" });
-          }
-        }}
+        ref={scrollIntoViewWhen(selected)}
         onContextMenu={(event) => onContextMenu(tab, event)}
         onClick={(event) => {
           if (isTodoRowAction(event.target)) return;
@@ -389,41 +379,22 @@ export function TodoNavigator({
                 class="zs-key text-zen-subtle hover:text-zen-text h-[var(--zen-mini-key)] py-0 pr-[calc(var(--zen-icon-sm)+var(--zen-space-4))] pl-[var(--zen-space-3)] font-[inherit] text-[length:var(--zen-text-sm)] leading-none tracking-[0.04em] normal-case"
                 aria-label="Clear todos"
                 aria-haspopup="menu"
-                aria-expanded={clearMenuOpen}
+                aria-expanded={clearMenu.open}
                 data-testid="zen-todo-clear"
-                onMouseEnter={(event) => clearTooltip.showAfterPause(event.currentTarget)}
-                onMouseLeave={clearTooltip.hide}
-                onFocus={(event) => clearTooltip.show(event.currentTarget)}
-                onBlur={clearTooltip.hide}
+                {...tooltipTriggerProps(clearTooltip)}
                 onClick={() => {
                   clearTooltip.hide();
-                  setClearMenuOpen((open) => !open);
+                  clearMenu.toggle();
                 }}
               >
                 Clear…
               </button>
-              <svg
-                class="text-zen-subtle pointer-events-none absolute right-[var(--zen-space-2)] h-[var(--zen-icon-sm)] w-[var(--zen-icon-sm)]"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 9l6 6 6-6"
-                />
-              </svg>
-              {clearMenuOpen && (
-                <div
-                  class={cn(
-                    "zs-menu absolute top-full right-0 z-50 mt-[var(--zen-space-2)]",
-                    "flex min-w-[calc(var(--zen-font-size)*14)] flex-col p-[var(--zen-space-1)]",
-                  )}
+              <ChevronDownIcon class="text-zen-subtle pointer-events-none absolute right-[var(--zen-space-2)] h-[var(--zen-icon-sm)] w-[var(--zen-icon-sm)]" />
+              {clearMenu.open && (
+                <MenuPanel
+                  align="right"
+                  class="min-w-[calc(var(--zen-font-size)*14)]"
                   data-testid="zen-todo-clear-menu"
-                  role="menu"
                 >
                   {(
                     [
@@ -444,7 +415,7 @@ export function TodoNavigator({
                           data-testid={`zen-todo-clear-${group.close ? "close" : "done"}-${filter}`}
                           class="zs-label text-zen-subtle hover:text-zen-text flex w-full cursor-pointer items-center justify-between border-0 bg-transparent px-[var(--zen-space-2)] py-[var(--zen-space-1)] text-left font-[inherit] disabled:cursor-not-allowed disabled:opacity-40"
                           onClick={() => {
-                            setClearMenuOpen(false);
+                            clearMenu.close();
                             if (count > 0) {
                               setPendingClear({ filter, close: group.close });
                             }
@@ -456,52 +427,30 @@ export function TodoNavigator({
                       ))}
                     </div>
                   ))}
-                </div>
+                </MenuPanel>
               )}
             </span>
-            {clearTooltip.anchor && (
-              <TooltipLegend content="Mark several todos as done" anchor={clearTooltip.anchor} />
-            )}
+            <TooltipFor tooltip={clearTooltip} content="Mark several todos as done" />
           </>
         </span>
       </div>
       {pendingClear !== null && pendingTabIds.length > 0 && (
-        <div
-          class="zs-well mb-[var(--zen-space-2)] flex min-w-0 items-center justify-between gap-[var(--zen-space-2)] rounded-[var(--zs-r-lcd)] p-[var(--zen-space-2)] text-[length:var(--zen-text-sm)]"
-          role="alertdialog"
-          aria-label="Confirm clearing todos"
-          data-testid="zen-todo-clear-confirm"
-        >
-          <span class="min-w-0 truncate">
-            {clearMessage(pendingClear.filter, pendingTabIds.length, pendingClear.close)}
-          </span>
-          <span class="flex shrink-0 items-center gap-[var(--zen-space-2)]">
-            <button
-              type="button"
-              class={cn(
-                "zs-key px-[var(--zen-space-2)] font-[inherit] text-[length:var(--zen-text-sm)]",
-                pendingClear.close && "zs-key-red",
-              )}
-              data-own-sound=""
-              data-testid="zen-todo-clear-confirm-button"
-              onClick={() => {
-                const close = pendingClear.close;
-                setPendingClear(null);
-                onClear(pendingTabIds, close);
-              }}
-            >
-              {pendingClear.close ? "Done & close" : "Mark done"}
-            </button>
-            <button
-              type="button"
-              class="text-zen-subtle hover:text-zen-text cursor-pointer border-0 bg-transparent px-[var(--zen-space-1)] font-[inherit] text-[length:var(--zen-text-sm)] hover:underline"
-              data-testid="zen-todo-clear-cancel-button"
-              onClick={() => setPendingClear(null)}
-            >
-              Cancel
-            </button>
-          </span>
-        </div>
+        <ConfirmWell
+          layout="row"
+          label="Confirm clearing todos"
+          testId="zen-todo-clear-confirm"
+          message={clearMessage(pendingClear.filter, pendingTabIds.length, pendingClear.close)}
+          confirmLabel={pendingClear.close ? "Done & close" : "Mark done"}
+          confirmTestId="zen-todo-clear-confirm-button"
+          cancelTestId="zen-todo-clear-cancel-button"
+          danger={pendingClear.close}
+          onConfirm={() => {
+            const close = pendingClear.close;
+            setPendingClear(null);
+            onClear(pendingTabIds, close);
+          }}
+          onCancel={() => setPendingClear(null)}
+        />
       )}
       {canReorder ? (
         <Reorder.Group

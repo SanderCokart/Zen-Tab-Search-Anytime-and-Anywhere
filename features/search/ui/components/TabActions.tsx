@@ -3,7 +3,7 @@ import { TimerIcon } from "@/features/search/ui/components/TimerIcon";
 import { TooltipButton } from "@/features/search/ui/components/TooltipButton";
 import { StatusButton } from "@/features/status/ui/StatusButton";
 import { TodoIcon } from "@/features/todos/ui/TodoIcon";
-import { copyText } from "@/features/search/ui/lib/copy-text";
+import { copyText } from "@/shared/ui/lib/copy-text";
 import { miniKeyClass } from "@/features/search/ui/lib/styles";
 import {
   isEssentialTab,

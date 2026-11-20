@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildForgeIssueEntries } from "@/features/search/model/ranking";
-import { pluralize, summarizeSearch } from "@/features/search/model/stats";
+import { summarizeSearch } from "@/features/search/model/stats";
+import { pluralize } from "@/shared/text";
 import type { TabInfo } from "@/shared/types";
 
 function tab(id: number, url: string, extra: Partial<TabInfo> = {}): TabInfo {

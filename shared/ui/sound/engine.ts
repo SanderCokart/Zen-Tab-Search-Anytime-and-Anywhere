@@ -9,6 +9,15 @@
  * browser allows it to run.
  */
 
+import { clamp } from "@/shared/number";
+
+/**
+ * Length of the shared noise buffer. A burst reads from a random offset of at most
+ * 0.4s and runs for its decay (the longest is 320ms) at up to 1.1x playback rate,
+ * so it never needs more than about 0.8s.
+ */
+const NOISE_SECONDS = 1;
+
 export const SOUND_VOICES = [
   "down",
   "down-primary",
@@ -266,8 +275,7 @@ export const DEFAULT_SOUND_VOLUME = 0.4;
 
 /** Holds a volume in 0..1; anything that is not a number is the default. */
 export function clampVolume(value: number): number {
-  if (!Number.isFinite(value)) return DEFAULT_SOUND_VOLUME;
-  return Math.min(1, Math.max(0, value));
+  return clamp(value, 0, 1, DEFAULT_SOUND_VOLUME);
 }
 
 export interface SoundEngine {
@@ -397,7 +405,7 @@ export function createSoundEngine({
           master.connect(ctx.destination);
         }
         if (!noise) {
-          noise = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 2), ctx.sampleRate);
+          noise = ctx.createBuffer(1, Math.floor(ctx.sampleRate * NOISE_SECONDS), ctx.sampleRate);
           const samples = noise.getChannelData(0);
           for (let index = 0; index < samples.length; index++) {
             samples[index] = Math.random() * 2 - 1;

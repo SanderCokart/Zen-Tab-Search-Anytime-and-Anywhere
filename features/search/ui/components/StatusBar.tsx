@@ -2,7 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import { debugError } from "@/shared/debug";
 import { sendExtensionMessage, subscribeToBridgeStatusChanged } from "@/shared/messaging/client";
 import { cn } from "@/shared/ui/cn";
-import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
+import { TooltipFor, tooltipTriggerProps, useTooltip } from "@/shared/ui/primitives/Tooltip";
 import { UpdateNotice } from "@/features/updates/ui/UpdateNotice";
 import { useUpdateStatus } from "@/features/updates/ui/hooks/useUpdateStatus";
 
@@ -53,10 +53,7 @@ function McpStatusIcon() {
           "inline-flex shrink-0 items-center",
           connected ? "text-zen-muted" : "text-zen-subtle",
         )}
-        onMouseEnter={(event) => tooltip.showAfterPause(event.currentTarget)}
-        onMouseLeave={tooltip.hide}
-        onFocus={(event) => tooltip.show(event.currentTarget)}
-        onBlur={tooltip.hide}
+        {...tooltipTriggerProps(tooltip)}
       >
         <svg class="zen-icon size-[var(--zen-icon-sm)]" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M10 13a5 5 0 0 0 7.54.54l2-2a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
@@ -64,7 +61,7 @@ function McpStatusIcon() {
           {!connected && <path d="M4 4l16 16" />}
         </svg>
       </span>
-      {tooltip.anchor && <TooltipLegend content={label} anchor={tooltip.anchor} />}
+      <TooltipFor tooltip={tooltip} content={label} />
     </>
   );
 }

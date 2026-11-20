@@ -15,6 +15,51 @@ import {
 } from "@/features/settings/model/complexity";
 
 describe("complexity presets", () => {
+  it("keeps every tier's exact flag values", () => {
+    const simple = {
+      fullscreen: false,
+      hideSpacesInOverlay: true,
+      hideEssentialsInOverlay: true,
+      copyLink: false,
+      timers: false,
+      reuseExternalTabs: false,
+      groupFolders: false,
+      contextMenu: false,
+      todos: false,
+      statusColors: false,
+      mcp: false,
+      forgeTree: false,
+      hosts: false,
+      statusBar: false,
+    };
+    const enhanced = {
+      ...simple,
+      copyLink: true,
+      timers: true,
+      reuseExternalTabs: true,
+      groupFolders: true,
+      contextMenu: true,
+    };
+    const pro = {
+      ...enhanced,
+      fullscreen: true,
+      hideSpacesInOverlay: false,
+      hideEssentialsInOverlay: false,
+      todos: true,
+      statusColors: true,
+    };
+    expect(PRESETS.simple).toEqual(simple);
+    expect(PRESETS.enhanced).toEqual(enhanced);
+    expect(PRESETS.pro).toEqual(pro);
+    expect(PRESETS.dev).toEqual({
+      ...pro,
+      mcp: true,
+      forgeTree: true,
+      hosts: true,
+      statusBar: true,
+    });
+  });
+
   it("maps each named tier to a complete flag set", () => {
     expect(PRESET_IDS).toEqual(["simple", "enhanced", "pro", "dev"]);
     expect(PRESETS.simple.fullscreen).toBe(false);

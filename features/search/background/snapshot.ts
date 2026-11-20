@@ -1,5 +1,5 @@
 import type { SpaceInfo, TabInfo, TabStatus, TabTimer } from "@/shared/types";
-import { tabBrowserId } from "@/shared/types";
+import { tabBrowserIds } from "@/shared/types";
 import { debugLog } from "@/shared/debug";
 import { LOG_PREFIX } from "@/shared/log";
 import { SNAPSHOT_CHANGED_TYPE } from "@/shared/messaging/protocol";
@@ -34,10 +34,7 @@ export function createSnapshotReader(deps: {
       deps.readTargetBranches?.() ?? Promise.resolve({}),
     ]);
     const tabsReady = performance.now();
-    const tabIds = tabs.flatMap((tab) => {
-      const id = tabBrowserId(tab);
-      return id === undefined ? [] : [id];
-    });
+    const tabIds = tabBrowserIds(tabs);
     const timed = <T>(label: string, read: Promise<T>): Promise<T> => {
       const begun = performance.now();
       return read.finally(() => {

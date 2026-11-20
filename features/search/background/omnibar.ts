@@ -112,7 +112,8 @@ async function deliverOmnibarHide(overlayId: string): Promise<boolean> {
  * when the experiment cannot, so the caller falls back to the in-page overlay.
  */
 async function toggleWindowOmnibar(): Promise<boolean> {
-  const animated = await hasOpenMotion();
+  // The settings read runs alongside the toggle; only a ready overlay needs it.
+  const animated = hasOpenMotion();
   // The page plays the close sound (or exit motion) before it hides itself.
   const result = await toggleOverlay(undefined, true);
   if (!result) return false;
@@ -123,7 +124,7 @@ async function toggleWindowOmnibar(): Promise<boolean> {
     return true;
   }
   if (result.state === "ready") {
-    await showReadyOverlay(result, undefined, animated);
+    await showReadyOverlay(result, undefined, await animated);
   }
   return true;
 }
@@ -134,11 +135,12 @@ async function toggleWindowOmnibar(): Promise<boolean> {
  * the experiment cannot host it, so the caller opens the popup window instead.
  */
 export async function openOmnibarView(view: OmnibarView): Promise<boolean> {
+  const animated = hasOpenMotion();
   let result = await toggleOverlay(view);
   // Already showing: that toggle hid it, so show it again on the new view.
   if (result?.state === "hidden") result = await toggleOverlay(view);
   if (result?.state !== "ready") return false;
-  await showReadyOverlay(result, view);
+  await showReadyOverlay(result, view, await animated);
   return true;
 }
 

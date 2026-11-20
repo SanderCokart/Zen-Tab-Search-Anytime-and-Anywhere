@@ -39,100 +39,68 @@ export const FULLSCREEN_REQUIRED = [
   "forgeTree",
 ] as const satisfies readonly ComplexityFlagKey[];
 
-export const PRESETS: Record<ComplexityPresetId, ComplexityFlags> = {
-  simple: {
-    fullscreen: false,
-    hideSpacesInOverlay: true,
-    hideEssentialsInOverlay: true,
-    copyLink: false,
-    timers: false,
-    reuseExternalTabs: false,
-    groupFolders: false,
-    contextMenu: false,
-    todos: false,
-    statusColors: false,
-    mcp: false,
-    forgeTree: false,
-    hosts: false,
-    statusBar: false,
-  },
-  enhanced: {
-    fullscreen: false,
-    hideSpacesInOverlay: true,
-    hideEssentialsInOverlay: true,
-    copyLink: true,
-    timers: true,
-    reuseExternalTabs: true,
-    groupFolders: true,
-    contextMenu: true,
-    todos: false,
-    statusColors: false,
-    mcp: false,
-    forgeTree: false,
-    hosts: false,
-    statusBar: false,
-  },
-  pro: {
-    fullscreen: true,
-    hideSpacesInOverlay: false,
-    hideEssentialsInOverlay: false,
-    copyLink: true,
-    timers: true,
-    reuseExternalTabs: true,
-    groupFolders: true,
-    contextMenu: true,
-    todos: true,
-    statusColors: true,
-    mcp: false,
-    forgeTree: false,
-    hosts: false,
-    statusBar: false,
-  },
-  dev: {
-    fullscreen: true,
-    hideSpacesInOverlay: false,
-    hideEssentialsInOverlay: false,
-    copyLink: true,
-    timers: true,
-    reuseExternalTabs: true,
-    groupFolders: true,
-    contextMenu: true,
-    todos: true,
-    statusColors: true,
-    mcp: true,
-    forgeTree: true,
-    hosts: true,
-    statusBar: true,
-  },
+const SIMPLE_FLAGS: ComplexityFlags = {
+  fullscreen: false,
+  hideSpacesInOverlay: true,
+  hideEssentialsInOverlay: true,
+  copyLink: false,
+  timers: false,
+  reuseExternalTabs: false,
+  groupFolders: false,
+  contextMenu: false,
+  todos: false,
+  statusColors: false,
+  mcp: false,
+  forgeTree: false,
+  hosts: false,
+  statusBar: false,
 };
 
-/** Row actions that follow complexity flags. Omitted keys in TabActions stay on. */
-export function tabActionFlags(settings: DisplaySettings) {
+const ENHANCED_FLAGS: ComplexityFlags = {
+  ...SIMPLE_FLAGS,
+  copyLink: true,
+  timers: true,
+  reuseExternalTabs: true,
+  groupFolders: true,
+  contextMenu: true,
+};
+
+const PRO_FLAGS: ComplexityFlags = {
+  ...ENHANCED_FLAGS,
+  fullscreen: true,
+  hideSpacesInOverlay: false,
+  hideEssentialsInOverlay: false,
+  todos: true,
+  statusColors: true,
+};
+
+export const PRESETS: Record<ComplexityPresetId, ComplexityFlags> = {
+  simple: SIMPLE_FLAGS,
+  enhanced: ENHANCED_FLAGS,
+  pro: PRO_FLAGS,
+  dev: { ...PRO_FLAGS, mcp: true, forgeTree: true, hosts: true, statusBar: true },
+};
+
+/** Row actions that follow complexity flags. */
+export type TabActionFlags = Pick<
+  DisplaySettings,
+  "todos" | "copyLink" | "timers" | "statusColors" | "hosts"
+>;
+
+export function tabActionFlags(settings: DisplaySettings): TabActionFlags {
   return {
     todos: settings.todos,
     copyLink: settings.copyLink,
     timers: settings.timers,
     statusColors: settings.statusColors,
+    hosts: settings.hosts,
   };
 }
 
 export function pickComplexityFlags(settings: DisplaySettings): ComplexityFlags {
-  return {
-    fullscreen: settings.fullscreen,
-    hideSpacesInOverlay: settings.hideSpacesInOverlay,
-    hideEssentialsInOverlay: settings.hideEssentialsInOverlay,
-    copyLink: settings.copyLink,
-    timers: settings.timers,
-    reuseExternalTabs: settings.reuseExternalTabs,
-    groupFolders: settings.groupFolders,
-    contextMenu: settings.contextMenu,
-    todos: settings.todos,
-    statusColors: settings.statusColors,
-    mcp: settings.mcp,
-    forgeTree: settings.forgeTree,
-    hosts: settings.hosts,
-    statusBar: settings.statusBar,
-  };
+  return Object.fromEntries(
+    COMPLEXITY_FLAG_KEYS.map((key) => [key, settings[key]]),
+  ) as ComplexityFlags;
 }
 
 /**

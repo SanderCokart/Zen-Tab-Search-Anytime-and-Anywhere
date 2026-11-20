@@ -600,10 +600,6 @@ export function isTabZoomChangedMessage(value: unknown): boolean {
   return v.is(tabZoomChangedSchema, value);
 }
 
-export function isBridgeStatusChangedMessage(value: unknown): boolean {
-  return v.is(bridgeStatusChangedSchema, value);
-}
-
 export function parseBridgeStatusChangedMessage(value: unknown): boolean | undefined {
   const parsed = v.safeParse(bridgeStatusChangedSchema, value);
   return parsed.success ? parsed.output.connected : undefined;

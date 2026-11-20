@@ -3,24 +3,19 @@ import {
   forgeTreeKeys,
   nearestCollapsedGroup,
   groupToCollapse,
+  visibleForgeEntries,
 } from "@/features/forge/model/forge-collapse";
 import type { ForgeKindFilter } from "@/features/forge/model/forge-filter";
 import { ForgeIssueNavigator } from "@/features/forge/ui/ForgeIssueNavigator";
-import {
-  useForgeCollapse,
-  useStoredCollapse,
-  type StoredStateCache,
-} from "@/features/forge/ui/useForgeCollapse";
+import { useForgeCollapse, useStoredCollapse } from "@/features/forge/ui/useForgeCollapse";
+import type { StoredStateCache } from "@/shared/ui/hooks/useStoredValue";
+import { useComplexitySetup } from "@/features/search/ui/hooks/useComplexitySetup";
 import {
   collectTabFolderKeys,
   TAB_FOLDER_COLLAPSED_STORAGE_KEY,
 } from "@/features/search/model/tab-folder-collapse";
-import {
-  flattenForgeNavigatorEntries,
-  groupForgeIssueEntries,
-  type ForgeIssueSortMode,
-} from "@/features/search/model/ranking";
-import { pluralize } from "@/features/search/model/stats";
+import type { ForgeIssueSortMode } from "@/features/search/model/ranking";
+import { pluralize } from "@/shared/text";
 import { TodoNavigator } from "@/features/todos/ui/TodoNavigator";
 import { useTodoOrder } from "@/features/todos/ui/useTodoOrder";
 import { TimersDock } from "@/features/timers/ui/TimersDock";
@@ -42,17 +37,13 @@ import { SearchResultsList } from "@/features/search/ui/components/SearchResults
 import { SearchShell } from "@/features/search/ui/components/SearchShell";
 import { TabContextMenu } from "@/features/search/ui/components/TabContextMenu";
 import { TimerIcon } from "@/features/search/ui/components/TimerIcon";
-import { useCloseOnOutsideClick } from "@/features/search/ui/hooks/useCloseOnOutsideClick";
+import { useCloseOnOutsideClick } from "@/shared/ui/hooks/useCloseOnOutsideClick";
 import {
   useDisplaySettings,
   type DisplaySettingsCache,
 } from "@/features/search/ui/hooks/useDisplaySettings";
 import { saveDisplaySettings } from "@/features/settings/model/display-settings";
-import {
-  applyPreset,
-  COMPLEXITY_SETUP_DONE_KEY,
-  type ComplexityFlags,
-} from "@/features/settings/model/complexity";
+import { applyPreset, type ComplexityFlags } from "@/features/settings/model/complexity";
 import { ComplexitySetupCard } from "@/features/search/ui/components/ComplexitySetupCard";
 import { useOverlayEntrance } from "@/features/search/ui/hooks/useOverlayEntrance";
 import { useEssentialTabNames } from "@/features/search/ui/hooks/useEssentialTabNames";
@@ -66,14 +57,20 @@ import { useTabRename } from "@/features/search/ui/hooks/useTabRename";
 import { useTimerActions } from "@/features/search/ui/hooks/useTimerActions";
 import { useStatusActions } from "@/features/search/ui/hooks/useStatusActions";
 import { useTodoActions } from "@/features/search/ui/hooks/useTodoActions";
-import { copyText } from "@/features/search/ui/lib/copy-text";
+import { copyText } from "@/shared/ui/lib/copy-text";
 import { stripTimerPrefixFromTab } from "@/features/search/ui/lib/format";
 import { primaryButtonClass } from "@/features/search/ui/lib/styles";
 import type { SearchLayout } from "@/features/search/ui/types";
 import { debugError } from "@/shared/debug";
 import { sendExtensionMessage } from "@/shared/messaging/client";
 import type { OmnibarView } from "@/shared/messaging/protocol";
-import { isActivatableTab, tabBrowserId, type SearchItem, type TabInfo } from "@/shared/types";
+import {
+  isActivatableTab,
+  tabBrowserId,
+  tabBrowserIds,
+  type SearchItem,
+  type TabInfo,
+} from "@/shared/types";
 import {
   tabMatchesForgeProjectHome,
   type ForgeIssueEntry,
@@ -178,23 +175,10 @@ export function SearchApp({
     setStatuses,
   } = useSearchSnapshot(cache);
   const { displaySettings, loaded: settingsLoaded, setDisplaySettings } = useDisplaySettings(cache);
-  const [setupDone, setSetupDone] = useState(true);
+  const { setupDone, completeSetup } = useComplexitySetup();
   const [setupDraft, setSetupDraft] = useState<ComplexityFlags>(() => applyPreset("simple"));
   const setupInProgress = layout === "overlay" && !setupDone;
 
-  useEffect(() => {
-    if (layout !== "overlay") return;
-    let cancelled = false;
-    void browser.storage.local
-      .get(COMPLEXITY_SETUP_DONE_KEY)
-      .then((stored) => {
-        if (!cancelled) setSetupDone(stored[COMPLEXITY_SETUP_DONE_KEY] === true);
-      })
-      .catch((error) => debugError("Could not read complexity setup:", error));
-    return () => {
-      cancelled = true;
-    };
-  }, [layout]);
   const { essentialNames, setEssentialNames } = useEssentialTabNames();
   const sound = useSoundEngine({
     enabled: displaySettings.soundEnabled,
@@ -403,7 +387,7 @@ export function SearchApp({
     focusOnMount: reveal === undefined || reveal > 0,
     onForgeGroupKey: (action, entry, index) => {
       const { collapsed, setCollapsed } = forgeCollapse;
-      const providers = groupForgeIssueEntries(results.listedForgeIssueEntries, forgeSortMode);
+      const providers = results.forgeProviderGroups;
       let key: string | undefined;
       if (action === "collapse") {
         key = entry ? groupToCollapse(entry, collapsed) : undefined;
@@ -416,8 +400,7 @@ export function SearchApp({
       const next = new Set(collapsed);
       if (action === "collapse") next.add(key);
       else next.delete(key);
-      return flattenForgeNavigatorEntries(results.listedForgeIssueEntries, forgeSortMode, next)
-        .length;
+      return visibleForgeEntries(providers, next).length;
     },
   });
 
@@ -511,8 +494,8 @@ export function SearchApp({
   };
 
   const forgeKeys = useMemo(
-    () => forgeTreeKeys(groupForgeIssueEntries(results.listedForgeIssueEntries, forgeSortMode)),
-    [forgeSortMode, results.listedForgeIssueEntries],
+    () => forgeTreeKeys(results.forgeProviderGroups),
+    [results.forgeProviderGroups],
   );
   const showForgeCollapse = forgeKeys.length > 0 && !results.forgeNavigatorQuery.active;
   const forgeAllCollapsed =
@@ -555,10 +538,7 @@ export function SearchApp({
             void saveDisplaySettings(next).catch((error) =>
               debugError("Could not save complexity:", error),
             );
-            void browser.storage.local
-              .set({ [COMPLEXITY_SETUP_DONE_KEY]: true })
-              .catch((error) => debugError("Could not save complexity setup:", error));
-            setSetupDone(true);
+            completeSetup();
           }}
         />
       ) : (
@@ -831,10 +811,9 @@ export function SearchApp({
                 displaySettings={displaySettings}
                 onOrganize={(mode: ForgeOrganizeMode) => {
                   sound.play("tick");
-                  const tabIds = results.listedForgeIssueEntries.flatMap((entry) => {
-                    const id = tabBrowserId(entry.tab);
-                    return id === undefined ? [] : [id];
-                  });
+                  const tabIds = tabBrowserIds(
+                    results.listedForgeIssueEntries.map((entry) => entry.tab),
+                  );
                   void sendExtensionMessage({ type: "organizeForgeIssueTabs", mode, tabIds }).catch(
                     (error) => debugError("Could not organize issue tabs:", error),
                   );

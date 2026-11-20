@@ -92,8 +92,8 @@ describe("switches", () => {
 describe("gap settings", () => {
   it("lists the gaps in the order the omnibar lays them out, beside the ratio dial", async () => {
     await mount();
-    const order = [...root.querySelectorAll<HTMLElement>("[data-testid$='Gap']")].map(
-      (slider) => slider.getAttribute("data-testid"),
+    const order = [...root.querySelectorAll<HTMLElement>("[data-testid$='Gap']")].map((slider) =>
+      slider.getAttribute("data-testid"),
     );
     expect(order).toEqual([
       "zen-spaceGap",

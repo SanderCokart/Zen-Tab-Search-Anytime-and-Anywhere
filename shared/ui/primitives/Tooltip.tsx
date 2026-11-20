@@ -95,6 +95,45 @@ export function useTooltip(): {
   return { anchor, show, hide, showAfterPause };
 }
 
+export type TooltipState = ReturnType<typeof useTooltip>;
+
+type TooltipTriggerProps = {
+  onMouseEnter: (event: { currentTarget: HTMLElement }) => void;
+  onMouseLeave: () => void;
+  onFocus: (event: { currentTarget: HTMLElement }) => void;
+  onBlur: () => void;
+  onClick?: () => void;
+};
+
+/**
+ * The handlers that drive a tooltip: it opens after a pause on hover and at
+ * once on focus, and closes on leave and blur. `hideOnClick` also closes it
+ * when the element is clicked. Spread onto the element the legend describes.
+ */
+export function tooltipTriggerProps(
+  tooltip: Pick<TooltipState, "show" | "hide" | "showAfterPause">,
+  { hideOnClick = false }: { hideOnClick?: boolean } = {},
+): TooltipTriggerProps {
+  return {
+    onMouseEnter: (event) => tooltip.showAfterPause(event.currentTarget),
+    onMouseLeave: tooltip.hide,
+    onFocus: (event) => tooltip.show(event.currentTarget),
+    onBlur: tooltip.hide,
+    ...(hideOnClick ? { onClick: tooltip.hide } : {}),
+  };
+}
+
+/** The legend for `tooltip` while it is open, to sit beside the element it describes. */
+export function TooltipFor({
+  tooltip,
+  content,
+}: {
+  tooltip: Pick<TooltipState, "anchor">;
+  content: ComponentChildren;
+}) {
+  return tooltip.anchor ? <TooltipLegend content={content} anchor={tooltip.anchor} /> : null;
+}
+
 /**
  * The Spec-01 LCD legend: portalled so a row's overflow cannot clip it. String
  * labels print in one character at a time; richer content is shown as a block.
@@ -166,17 +205,10 @@ export function TipText({
   const tooltip = useTooltip();
   return (
     <>
-      <span
-        class={className}
-        aria-label={label}
-        onMouseEnter={(event) => tooltip.showAfterPause(event.currentTarget)}
-        onMouseLeave={tooltip.hide}
-        onFocus={(event) => tooltip.show(event.currentTarget)}
-        onBlur={tooltip.hide}
-      >
+      <span class={className} aria-label={label} {...tooltipTriggerProps(tooltip)}>
         {children}
       </span>
-      {tooltip.anchor && <TooltipLegend content={label} anchor={tooltip.anchor} />}
+      <TooltipFor tooltip={tooltip} content={label} />
     </>
   );
 }
@@ -214,6 +246,37 @@ export function TruncatedTip({
         {text}
       </span>
       {tooltip.anchor && <TooltipLegend content={text} anchor={tooltip.anchor} />}
+    </>
+  );
+}
+
+/**
+ * A focusable span whose legend describes `text`. Closes on click too, so it
+ * does not linger over what the click opened. `label` adds an accessible name.
+ */
+export function TipHint({
+  text,
+  label,
+  class: className,
+  children,
+}: {
+  text: string;
+  label?: string;
+  class?: string;
+  children: ComponentChildren;
+}) {
+  const tooltip = useTooltip();
+  return (
+    <>
+      <span
+        class={className}
+        aria-label={label}
+        {...tooltipTriggerProps(tooltip, { hideOnClick: true })}
+        tabIndex={0}
+      >
+        {children}
+      </span>
+      <TooltipFor tooltip={tooltip} content={text} />
     </>
   );
 }

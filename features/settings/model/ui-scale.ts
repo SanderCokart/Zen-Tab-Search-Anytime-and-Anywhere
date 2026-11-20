@@ -1,4 +1,5 @@
 import type { DisplaySettings } from "@/features/settings/model/display-settings";
+import { clamp, snapClamp } from "@/shared/number";
 
 /** The surfaces the search UI is rendered on. */
 export type UiSurface = "popup" | "overlay";
@@ -65,20 +66,17 @@ export function clampUiScale(value: number): number {
 
 /** Snaps a gap to the nearest {@link GAP_STEP} and holds it within range. */
 export function clampGap(value: number, fallback = 0): number {
-  if (!Number.isFinite(value)) {
-    return fallback;
-  }
-  const snapped = Math.round(value / GAP_STEP) * GAP_STEP;
-  return Math.min(MAX_GAP, Math.max(MIN_GAP, snapped));
+  return snapClamp(value, { min: MIN_GAP, max: MAX_GAP, step: GAP_STEP, fallback });
 }
 
 /** Snaps the padding-to-gap ratio to its step and holds it within range. */
 export function clampGapPaddingRatio(value: number, fallback = 1): number {
-  if (!Number.isFinite(value)) {
-    return fallback;
-  }
-  const snapped = Math.round(value / GAP_PADDING_RATIO_STEP) * GAP_PADDING_RATIO_STEP;
-  return Math.min(MAX_GAP_PADDING_RATIO, Math.max(MIN_GAP_PADDING_RATIO, snapped));
+  return snapClamp(value, {
+    min: MIN_GAP_PADDING_RATIO,
+    max: MAX_GAP_PADDING_RATIO,
+    step: GAP_PADDING_RATIO_STEP,
+    fallback,
+  });
 }
 
 /**
@@ -89,13 +87,6 @@ export function clampGapPaddingRatio(value: number, fallback = 1): number {
 export function splitGap(total: number, ratio: number): { gap: number; padding: number } {
   const padShare = ratio / (1 + ratio);
   return { gap: total * (1 - padShare), padding: (total * padShare) / 2 };
-}
-
-function clamp(value: number, min: number, max: number, fallback = min): number {
-  if (!Number.isFinite(value)) {
-    return fallback;
-  }
-  return Math.min(max, Math.max(min, value));
 }
 
 /** Trims float noise so the generated CSS stays readable. */

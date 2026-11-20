@@ -89,9 +89,9 @@ describe("parseExtensionSuccess", () => {
   });
 
   it("parses the todos of a tab list", () => {
-    expect(
-      parseExtensionSuccess("getTodos", [{ tabId: 1, status: "todo" }]),
-    ).toEqual([{ tabId: 1, status: "todo" }]);
+    expect(parseExtensionSuccess("getTodos", [{ tabId: 1, status: "todo" }])).toEqual([
+      { tabId: 1, status: "todo" },
+    ]);
   });
 });
 

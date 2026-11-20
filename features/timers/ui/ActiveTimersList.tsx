@@ -4,7 +4,7 @@ import type { TabTimer } from "@/shared/types";
 import { clearButtonClass } from "@/shared/ui/button-styles";
 import { cn } from "@/shared/ui/cn";
 import { Lcd } from "@/shared/ui/primitives/Lcd";
-import { TooltipLegend, useTooltip } from "@/shared/ui/primitives/Tooltip";
+import { TooltipFor, tooltipTriggerProps, useTooltip } from "@/shared/ui/primitives/Tooltip";
 
 export interface ActiveTimersListProps {
   /** Already sorted by the caller (soonest `endAt` first). */
@@ -33,7 +33,7 @@ const lcdActionClass =
 const GO_TO_TAB = "Go to this tab";
 
 function GoToTabButton({ name, onActivate }: { name: string; onActivate: () => void }) {
-  const { anchor, show, hide, showAfterPause } = useTooltip();
+  const tooltip = useTooltip();
   return (
     <>
       <button
@@ -41,17 +41,14 @@ function GoToTabButton({ name, onActivate }: { name: string; onActivate: () => v
         class="zs-row-title flex-1 cursor-pointer truncate border-0 bg-transparent p-0 text-left text-inherit"
         aria-label={`${name}. ${GO_TO_TAB}`}
         onClick={() => {
-          hide();
+          tooltip.hide();
           onActivate();
         }}
-        onMouseEnter={(event) => showAfterPause(event.currentTarget)}
-        onMouseLeave={hide}
-        onFocus={(event) => show(event.currentTarget)}
-        onBlur={hide}
+        {...tooltipTriggerProps(tooltip)}
       >
         {name}
       </button>
-      {anchor && <TooltipLegend content={GO_TO_TAB} anchor={anchor} />}
+      <TooltipFor tooltip={tooltip} content={GO_TO_TAB} />
     </>
   );
 }
@@ -70,7 +67,9 @@ export function SoonestTimerLcd({
   onActivate?: (tabId: number) => void;
 }) {
   const activate = onActivate ? () => onActivate(timer.tabId) : undefined;
-  const { anchor, show, hide, showAfterPause } = useTooltip();
+  const tooltip = useTooltip();
+  // Only a clickable readout is a control worth describing.
+  const trigger = tooltipTriggerProps(tooltip);
   const name = timerName(timer);
   return (
     <div
@@ -80,7 +79,7 @@ export function SoonestTimerLcd({
       tabIndex={activate ? 0 : undefined}
       aria-label={activate ? `${name}. ${GO_TO_TAB}` : undefined}
       onClick={() => {
-        hide();
+        tooltip.hide();
         activate?.();
       }}
       onKeyDown={
@@ -88,22 +87,18 @@ export function SoonestTimerLcd({
           ? (event) => {
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
-                hide();
+                tooltip.hide();
                 activate();
               }
             }
           : undefined
       }
-      onMouseEnter={(event) => {
-        if (activate) showAfterPause(event.currentTarget);
-      }}
-      onMouseLeave={hide}
-      onFocus={(event) => {
-        if (activate) show(event.currentTarget);
-      }}
-      onBlur={hide}
+      onMouseEnter={activate ? trigger.onMouseEnter : undefined}
+      onMouseLeave={trigger.onMouseLeave}
+      onFocus={activate ? trigger.onFocus : undefined}
+      onBlur={trigger.onBlur}
     >
-      {anchor && <TooltipLegend content={GO_TO_TAB} anchor={anchor} />}
+      <TooltipFor tooltip={tooltip} content={GO_TO_TAB} />
       <Lcd class="flex min-w-0 flex-col gap-[var(--zen-space-2)] px-[var(--zen-space-4)] py-[var(--zen-space-4)]">
         <span class="truncate text-[length:var(--zen-text-xs)] tracking-[0.06em] text-[var(--zs-lcd-dim)] uppercase">
           Next · {name}
@@ -169,7 +164,10 @@ export function ActiveTimersList({
             key={timer.tabId}
             class="flex min-h-[calc(var(--zen-row-height)*1.2)] items-center gap-[var(--zen-space-2)] px-[var(--zen-space-1)]"
           >
-            <GoToTabButton name={timerName(timer)} onActivate={() => onActivateTimer(timer.tabId)} />
+            <GoToTabButton
+              name={timerName(timer)}
+              onActivate={() => onActivateTimer(timer.tabId)}
+            />
             <Lcd class="zs-digits shrink-0 rounded-[var(--zen-radius)] px-[var(--zen-space-3)] py-[var(--zen-space-1)] text-[length:var(--zen-text-sm)] font-medium whitespace-nowrap shadow-none">
               <TimerCountdown endAt={timer.endAt} prefix="" format="short" />
             </Lcd>

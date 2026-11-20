@@ -7,7 +7,6 @@ import { DisplaySettingsApp } from "@/features/settings/ui/DisplaySettingsApp";
 import type { OmnibarView } from "@/shared/messaging/protocol";
 import { TimerPopup } from "@/features/timers/ui/TimerPopup";
 import { HostOverridesPopup } from "@/features/hosts/ui/HostOverridesPopup";
-import { PrototypeTodoClearClose } from "@/features/todos/ui/prototype-clear-close";
 import { installBrowserMock } from "@/screenshots/browser-mock";
 import { startPaintBench } from "@/screenshots/paint-bench";
 import { paintBenchSettings } from "@/screenshots/paint-bench-cases";
@@ -97,13 +96,6 @@ function CardFrame({ children, widthClass }: { children: ComponentChildren; widt
 }
 
 function HarnessApp() {
-  if (scene.surface === "prototype-todo-clear") {
-    return (
-      <FakeZenChrome>
-        <PrototypeTodoClearClose />
-      </FakeZenChrome>
-    );
-  }
   if (scene.surface === "settings") {
     return <DisplaySettingsApp />;
   }

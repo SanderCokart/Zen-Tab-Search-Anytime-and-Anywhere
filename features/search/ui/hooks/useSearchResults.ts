@@ -8,6 +8,7 @@ import {
 } from "@/features/forge/model/forge-filter";
 import {
   openedForgeCollapsed,
+  visibleForgeEntries,
   type ForgeCollapsedSet,
 } from "@/features/forge/model/forge-collapse";
 import {
@@ -19,7 +20,7 @@ import {
   filterSearchDocuments,
   queryHasFilterTerms,
   filterTodoTabs,
-  flattenForgeNavigatorEntries,
+  groupForgeIssueEntries,
   groupSearchItems,
   parseForgeNavigatorQuery,
   parseTodoNavigatorQuery,
@@ -180,11 +181,17 @@ export function useSearchResults({
     [currentTab, forgeIssueEntries],
   );
 
+  /** The listed entries grouped into provider, project and branch, in the chosen sort. */
+  const forgeProviderGroups = useMemo(
+    () => groupForgeIssueEntries(listedForgeIssueEntries, forgeSortMode),
+    [forgeSortMode, listedForgeIssueEntries],
+  );
+
   // What the arrow keys walk: the visible entries only, so a hidden or
   // collapsed one can never be selected.
   const navigatorEntries = useMemo(
-    () => flattenForgeNavigatorEntries(listedForgeIssueEntries, forgeSortMode, forgeTreeCollapsed),
-    [forgeTreeCollapsed, forgeSortMode, listedForgeIssueEntries],
+    () => visibleForgeEntries(forgeProviderGroups, forgeTreeCollapsed),
+    [forgeProviderGroups, forgeTreeCollapsed],
   );
 
   const bestForgeIndex = useMemo(
@@ -204,10 +211,15 @@ export function useSearchResults({
       ? forgeNavigatorQuery.filterQuery
       : query;
 
+  const listedForgeTabs = useMemo(
+    () => new Set(listedForgeIssueEntries.map((entry) => entry.tab)),
+    [listedForgeIssueEntries],
+  );
+
   const searchable = useMemo(() => {
     const forgeTabs =
       forgeNavigatorQuery.active && !displaySettings.forgeTree
-        ? visibleTabs.filter((tab) => listedForgeIssueEntries.some((entry) => entry.tab === tab))
+        ? visibleTabs.filter((tab) => listedForgeTabs.has(tab))
         : visibleTabs;
     return excludePinnedSearchSources(forgeTabs, spaces, {
       excludeSpaces: displaySettings.hideSpacesInOverlay,
@@ -218,7 +230,7 @@ export function useSearchResults({
     displaySettings,
     effectiveQuery,
     forgeNavigatorQuery.active,
-    listedForgeIssueEntries,
+    listedForgeTabs,
     spaces,
     visibleTabs,
   ]);
@@ -295,6 +307,7 @@ export function useSearchResults({
     currentTabForgeEntry,
     forgeKindCounts,
     requestsLabel,
+    forgeProviderGroups,
     navigatorEntries,
     bestForgeIndex,
     items,

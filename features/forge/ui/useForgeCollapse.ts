@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { useCallback, useMemo } from "preact/hooks";
 import {
   FORGE_COLLAPSED_STORAGE_KEY,
   MAX_COLLAPSED_GROUPS,
   parseCollapsedGroups,
   toggleCollapsedKey,
 } from "@/features/forge/model/forge-collapse";
-import { debugError } from "@/shared/debug";
+import { type StoredStateCache, useStoredValue } from "@/shared/ui/hooks/useStoredValue";
 
 export interface CollapseState {
   /** Keys of the collapsed groups. */
@@ -20,11 +20,6 @@ export interface CollapseState {
   loaded: boolean;
 }
 
-/** Outlives the component so a reopen starts from the last stored values. */
-export interface StoredStateCache {
-  stored?: Record<string, unknown>;
-}
-
 export type ForgeCollapseState = CollapseState;
 
 /**
@@ -36,83 +31,39 @@ export function useForgeCollapse(cache?: StoredStateCache): ForgeCollapseState {
   return useStoredCollapse(FORGE_COLLAPSED_STORAGE_KEY, cache);
 }
 
+function sameKeys(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((key, index) => key === b[index]);
+}
+
 /** The same, for any list of collapsed keys kept under `storageKey` in `storage.local`. */
 export function useStoredCollapse(storageKey: string, cache?: StoredStateCache): CollapseState {
-  const [keys, setStoredKeys] = useState<string[]>(
-    () => (cache?.stored?.[storageKey] as string[] | undefined) ?? [],
-  );
-  const [loaded, setLoaded] = useState(cache?.stored?.[storageKey] !== undefined);
-  // The latest list, so two toggles in one tick compose instead of overwriting.
-  const keysRef = useRef(keys);
+  const {
+    value: keys,
+    latest,
+    set,
+    loaded,
+  } = useStoredValue<readonly string[]>(storageKey, parseCollapsedGroups, cache, {
+    label: "collapsed groups",
+    isEqual: sameKeys,
+  });
 
-  const apply = useCallback(
-    (next: string[]) => {
-      keysRef.current = next;
-      if (cache) (cache.stored ??= {})[storageKey] = next;
-      setStoredKeys(next);
-    },
-    [cache, storageKey],
-  );
-
-  useEffect(() => {
-    let active = true;
-    void browser.storage.local
-      .get(storageKey)
-      .then((stored) => {
-        if (active) apply(parseCollapsedGroups(stored[storageKey]));
-      })
-      .catch((error) => debugError("Could not read collapsed groups:", error))
-      .finally(() => {
-        if (active) setLoaded(true);
-      });
-
-    const onChanged = (changes: Record<string, { newValue?: unknown }>, area: string) => {
-      if (area !== "local" || !(storageKey in changes)) return;
-      apply(parseCollapsedGroups(changes[storageKey]?.newValue));
-    };
-    browser.storage.onChanged.addListener(onChanged);
-    return () => {
-      active = false;
-      browser.storage.onChanged.removeListener(onChanged);
-    };
-  }, [apply, storageKey]);
-
-  const write = useCallback(
-    (next: string[]) => {
-      apply(next);
-      void browser.storage.local
-        .set({ [storageKey]: next })
-        .catch((error) => debugError("Could not save collapsed groups:", error));
-    },
-    [apply, storageKey],
-  );
-
+  // `latest` is read at call time, so two toggles in one tick compose.
   const toggle = useCallback(
-    (key: string) => write(toggleCollapsedKey(keysRef.current, key)),
-    [write],
+    (key: string) => set(toggleCollapsedKey(latest(), key)),
+    [latest, set],
   );
 
   const setCollapsed = useCallback(
     (key: string, collapsed: boolean) => {
-      if (keysRef.current.includes(key) === collapsed) return;
-      write(toggleCollapsedKey(keysRef.current, key));
+      if (latest().includes(key) === collapsed) return;
+      set(toggleCollapsedKey(latest(), key));
     },
-    [write],
+    [latest, set],
   );
 
   const setKeys = useCallback(
-    (next: readonly string[]) => {
-      const limited = [...next].slice(-MAX_COLLAPSED_GROUPS);
-      const current = keysRef.current;
-      if (
-        limited.length === current.length &&
-        limited.every((key, index) => key === current[index])
-      ) {
-        return;
-      }
-      write(limited);
-    },
-    [write],
+    (next: readonly string[]) => set([...next].slice(-MAX_COLLAPSED_GROUPS)),
+    [set],
   );
 
   const collapsed = useMemo(() => new Set(keys), [keys]);
