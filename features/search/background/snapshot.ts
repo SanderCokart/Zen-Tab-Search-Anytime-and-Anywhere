@@ -1,5 +1,7 @@
 import type { SpaceInfo, TabInfo, TabStatus, TabTimer, TabTodo } from "@/shared/types";
 import { tabBrowserId } from "@/shared/types";
+import { debugLog } from "@/shared/debug";
+import { LOG_PREFIX } from "@/shared/log";
 import { SNAPSHOT_CHANGED_TYPE } from "@/shared/messaging/protocol";
 import { mergeTabLastOpened, TAB_LAST_OPENED_STORAGE_KEY } from "@/features/zen/tab-last-opened";
 import {
@@ -26,21 +28,33 @@ export function createSnapshotReader(deps: {
   readTargetBranches?(): Promise<StoredTargetBranches>;
 }): (anchorTabId?: number) => Promise<SearchSnapshotPayload> {
   return async (anchorTabId?: number): Promise<SearchSnapshotPayload> => {
+    const started = performance.now();
     const [tabs, spaces, lastOpened, targetBranches] = await Promise.all([
       deps.queryTabs(anchorTabId),
       deps.getSpaces(anchorTabId),
       deps.readLastOpened?.() ?? Promise.resolve({}),
       deps.readTargetBranches?.() ?? Promise.resolve({}),
     ]);
+    const tabsReady = performance.now();
     const tabIds = tabs.flatMap((tab) => {
       const id = tabBrowserId(tab);
       return id === undefined ? [] : [id];
     });
+    const timed = <T>(label: string, read: Promise<T>): Promise<T> => {
+      const begun = performance.now();
+      return read.finally(() => {
+        debugLog(`${LOG_PREFIX} snapshot ${label}: ${(performance.now() - begun).toFixed(1)} ms`);
+      });
+    };
     const [timers, todos, statuses] = await Promise.all([
-      deps.getTimers(tabIds),
-      deps.getTodos ? deps.getTodos(tabIds) : Promise.resolve([]),
-      deps.getStatuses ? deps.getStatuses(tabIds) : Promise.resolve([]),
+      timed("timers", deps.getTimers(tabIds)),
+      timed("todos", deps.getTodos ? deps.getTodos(tabIds) : Promise.resolve([])),
+      timed("statuses", deps.getStatuses ? deps.getStatuses(tabIds) : Promise.resolve([])),
     ]);
+    debugLog(
+      `${LOG_PREFIX} snapshot tabs+spaces: ${(tabsReady - started).toFixed(1)} ms, ` +
+        `total: ${(performance.now() - started).toFixed(1)} ms, tabs: ${tabs.length}`,
+    );
     return {
       tabs: mergeTabTargetBranches(mergeTabLastOpened(tabs, lastOpened), targetBranches),
       spaces,
