@@ -1461,7 +1461,7 @@ describe("SearchApp", () => {
     const tip = root.querySelector("[role='tooltip']")!.textContent ?? "";
     expect(tip).toContain("#");
     expect(tip).toContain("!");
-    expect(tip).toContain("-word -word");
+    expect(tip).toContain("-Hide matches");
     expect(tip).toContain("Todos");
     expect(tip).toContain("Hide matches");
 

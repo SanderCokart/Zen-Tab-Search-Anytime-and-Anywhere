@@ -12,14 +12,26 @@ export function SearchQueryHelp({
   forge?: boolean;
 }) {
   const hints = [
-    ...(todos ? [{ key: "@", meaning: "Todos" }] : []),
+    ...(todos
+      ? [{ key: "@", meaning: "Todos", example: "@chores", result: 'Todos containing "chores"' }]
+      : []),
     ...(forge
       ? [
-          { key: "#", meaning: "Issues" },
-          { key: "!", meaning: "MRs and PRs" },
+          { key: "#", meaning: "Issues", example: "#login", result: 'Issues containing "login"' },
+          {
+            key: "!",
+            meaning: "MRs and PRs",
+            example: "!feature",
+            result: `PR's / MR's containing "feature"`,
+          },
         ]
       : []),
-    { key: "-word -word", meaning: "Hide matches" },
+    {
+      key: "-",
+      meaning: "Hide matches",
+      example: "-beta",
+      result: 'Does not contain "beta"',
+    },
   ];
 
   return (
@@ -28,13 +40,29 @@ export function SearchQueryHelp({
       data-testid="zen-search-help"
       class="shrink-0 cursor-pointer border-0 bg-transparent p-0 font-mono text-[length:var(--zen-text-sm)] leading-none text-[var(--zs-lcd-dim)] hover:text-[var(--zs-lcd-ink)]"
       tooltip={
-        <span class="grid grid-cols-[max-content_max-content] items-baseline gap-x-[var(--zen-space-2)] gap-y-[calc(var(--zen-space-1)*0.5)] text-left tracking-[0.08em] text-[var(--zs-tip-ink)] normal-case">
-          {hints.map((hint) => (
-            <span key={hint.key} class="contents">
-              <span class="zs-label-red whitespace-nowrap font-semibold">{hint.key}</span>
-              <span class="whitespace-nowrap">{hint.meaning}</span>
-            </span>
-          ))}
+        <span class="flex w-full flex-col gap-[var(--zen-space-2)] text-left tracking-[0.08em] text-[var(--zs-tip-ink)] normal-case">
+          <span class="flex w-full flex-col gap-[calc(var(--zen-space-1)*0.5)]">
+            {hints.map((hint) => (
+              <span
+                key={hint.key}
+                class="flex w-full items-baseline justify-between gap-[var(--zen-space-4)]"
+              >
+                <span class="zs-label-red font-semibold">{hint.key}</span>
+                <span>{hint.meaning}</span>
+              </span>
+            ))}
+          </span>
+          <span class="flex w-full flex-col gap-[calc(var(--zen-space-1)*0.5)] border-t border-current/30 pt-[var(--zen-space-2)] opacity-80">
+            {hints.map((hint) => (
+              <span
+                key={hint.key}
+                class="flex w-full items-baseline justify-between gap-[var(--zen-space-4)]"
+              >
+                <span class="whitespace-nowrap">{hint.example}</span>
+                <span class="whitespace-nowrap">{hint.result}</span>
+              </span>
+            ))}
+          </span>
         </span>
       }
     >

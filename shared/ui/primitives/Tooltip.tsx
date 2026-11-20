@@ -17,6 +17,7 @@ export type TooltipAnchor = { rect: DOMRect; container: Element };
 function tooltipStyle(
   { rect, container }: TooltipAnchor,
   nudge: { x: number; y: number },
+  capMeasure: boolean,
 ): JSX.CSSProperties {
   const below = rect.top < 48;
   const gap = 8;
@@ -25,7 +26,11 @@ function tooltipStyle(
   const fontSize = Number.parseFloat(getComputedStyle(container).fontSize) || 13;
   const maxWidth = Math.max(
     pad * 10,
-    Math.min(fontSize * 22, bounds.width - pad * 2, window.innerWidth - pad * 2),
+    Math.min(
+      capMeasure ? fontSize * 22 : Infinity,
+      bounds.width - pad * 2,
+      window.innerWidth - pad * 2,
+    ),
   );
   const shiftX = `calc(-50% + ${nudge.x}px)`;
   const shiftY = below ? `${nudge.y}px` : `calc(-100% + ${nudge.y}px)`;
@@ -136,7 +141,7 @@ export function TooltipLegend({
       role="tooltip"
       class="zs-tip"
       data-open={open || undefined}
-      style={tooltipStyle(anchor, nudge)}
+      style={tooltipStyle(anchor, nudge, typeof content === "string")}
     >
       {typeof content === "string" ? printChars(content) : content}
     </span>,
