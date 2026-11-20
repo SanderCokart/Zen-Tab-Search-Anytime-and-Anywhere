@@ -28,6 +28,22 @@ function getTabSessionStore(): TabSessionStore | undefined {
 export function createTabSessionValues<T>(key: string, schema: v.GenericSchema<unknown, T>) {
   const memory = new Map<number, T>();
   const hydrated = new Set<number>();
+  // Reads still in flight, so a second caller waits on the first instead of reading again.
+  const pending = new Map<number, Promise<void>>();
+
+  async function readTab(tabId: number): Promise<void> {
+    try {
+      const saved = await getTabSessionStore()?.getTabValue(tabId, key);
+      const parsed = v.safeParse(schema, saved);
+      // A write that landed while the read was in flight is newer than the session.
+      if (parsed.success && !hydrated.has(tabId)) {
+        memory.set(tabId, parsed.output);
+      }
+    } catch {
+      // The tab may already be gone; keep whatever is already in memory.
+    }
+    hydrated.add(tabId);
+  }
 
   /** Reads the saved value of each tab not read yet. Session reads happen once per tab. */
   async function hydrate(tabIds: number[]): Promise<void> {
@@ -37,18 +53,14 @@ export function createTabSessionValues<T>(key: string, schema: v.GenericSchema<u
     }
 
     await Promise.all(
-      missing.map(async (tabId) => {
-        try {
-          const saved = await getTabSessionStore()?.getTabValue(tabId, key);
-          const parsed = v.safeParse(schema, saved);
-          // A write that landed while the read was in flight is newer than the session.
-          if (parsed.success && !hydrated.has(tabId)) {
-            memory.set(tabId, parsed.output);
-          }
-        } catch {
-          // The tab may already be gone; keep whatever is already in memory.
+      missing.map((tabId) => {
+        const inFlight = pending.get(tabId);
+        if (inFlight) {
+          return inFlight;
         }
-        hydrated.add(tabId);
+        const read = readTab(tabId).finally(() => pending.delete(tabId));
+        pending.set(tabId, read);
+        return read;
       }),
     );
   }
